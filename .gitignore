@@ -1,0 +1,6 @@
+bin/
+var/log/*.log
+*.test
+*.out
+coverage.*
+.DS_Store

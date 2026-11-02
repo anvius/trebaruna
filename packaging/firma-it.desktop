@@ -1,0 +1,17 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=firma-it
+GenericName=Electronic signature
+GenericName[es]=Firma electrónica
+GenericName[it]=Firma elettronica
+Comment=Sign PDF, XML and any file with CAdES, PAdES or XAdES
+Comment[es]=Firma PDF, XML y cualquier fichero con CAdES, PAdES o XAdES
+Comment[it]=Firma PDF, XML e qualsiasi file con CAdES, PAdES o XAdES
+Exec=firma-it-desktop %f
+Icon=firma-it
+Terminal=false
+Categories=Office;Graphics;
+MimeType=application/pdf;text/xml;application/xml;
+Keywords=sign;signature;firma;firma digitale;pades;cades;xades;pdf;
+StartupNotify=true

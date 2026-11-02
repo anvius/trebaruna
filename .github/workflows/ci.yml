@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          # The PDF libraries require 1.27; see go.mod.
+          go-version: '1.27'
+          cache: true
+
+      # openssl and poppler are exercised by the integration tests: the CMS
+      # output is verified with openssl, and page rendering uses pdftoppm.
+      - name: Install test dependencies
+        run: sudo apt-get update && sudo apt-get install -y openssl poppler-utils
+
+      - name: Static analysis
+        run: |
+          go vet ./...
+          test -z "$(gofmt -l src tests)" || (echo "gofmt needed:"; gofmt -l src tests; exit 1)
+
+      - name: Unit, domain and integration tests
+        run: CGO_ENABLED=1 go test ./tests/... -count=1 -race
+
+      - name: Build the static CLI
+        run: CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o bin/firma-it ./src/entrypoint/main
+
+      - name: Smoke test
+        run: ./bin/firma-it version
+
+  cross:
+    name: Cross-compile
+    runs-on: ubuntu-latest
+    needs: test
+    strategy:
+      matrix:
+        include:
+          - {goos: linux, goarch: amd64}
+          - {goos: linux, goarch: arm64}
+          - {goos: darwin, goarch: amd64}
+          - {goos: darwin, goarch: arm64}
+          - {goos: windows, goarch: amd64}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27'
+      - name: Build ${{ matrix.goos }}/${{ matrix.goarch }}
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /tmp/firma-it ./src/entrypoint/main
+
+  gui:
+    name: Build the desktop app
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27'
+      # Fyne needs cgo and the windowing headers; this is why the GUI is a
+      # separate binary instead of part of the static CLI.
+      - name: Install GUI toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc pkg-config libgl1-mesa-dev xorg-dev \
+            libxkbcommon-dev libwayland-dev libegl1-mesa-dev
+      - name: Build
+        run: CGO_ENABLED=1 go build -tags gui -trimpath -o bin/firma-it-desktop ./src/entrypoint/desktop
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firma-it-desktop-linux-amd64
+          path: bin/firma-it-desktop
