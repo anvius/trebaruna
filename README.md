@@ -285,4 +285,20 @@ make check      # tests + vet + gofmt
 make cross      # las 5 plataformas
 ```
 
-Versión: `0.1.0-unstable` (major 0, sin releases estables todavía).
+Versión: `0.2.0-unstable` (major 0, sin releases estables todavía). Licencia: GPL-3.0-or-later.
+
+---
+
+## Licencia
+
+**GPL-3.0-or-later.** Es la recomendación de la FSF para programas, y aquí no es
+solo ideología: una herramienta de firma cuyo código no puedes auditar es una
+que tienes que creer. Cualquiera que distribuya una versión modificada debe
+publicar el código, lo que mantiene inspeccionable el camino de la firma.
+
+Todas las dependencias son permisivas (MIT, BSD, Apache-2.0, ISC), lo que hace
+posible distribuir bajo GPL. El detalle está en [`LICENSE`](LICENSE).
+
+No se ha copiado código propietario de AutoFirma ni de otros programas: los formatos
+son estándares ETSI y la compatibilidad de `doc/` se midió contra esas
+implementaciones, no se extrajo de ellas.
