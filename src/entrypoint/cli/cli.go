@@ -408,7 +408,7 @@ flags:
 examples:
   firma-it sign contratto.pdf --p12 mario.p12 --pass secret --reason Contratto
   firma-it sign fattura.xml --format cades --p12 mario.p12 --level t --tsa https://tsa.example/
-  firma-it sign atto.pdf --token "Carta Rossi" --pin 123456 --box 300,60,540,140
+  firma-it sign atto.pdf --token "Carta de Ejemplo" --pin 000000 --box 300,60,540,140
   firma-it sign doc.pdf --p12 self.p12 --json
 `)
 }

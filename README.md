@@ -170,8 +170,8 @@ cuenta. Cualquier QTST de la lista eIDAS sirve.
 ### Con smartcard
 
 ```bash
-firma-it sign atto.pdf --token "Carta Rossi" --pin 123456
-firma-it sign atto.pdf --token "Carta Rossi" --pin 123456 --format cades
+firma-it sign atto.pdf --token "Carta de Ejemplo" --pin 000000
+firma-it sign atto.pdf --token "Carta de Ejemplo" --pin 000000 --format cades
 ```
 
 Requiere `pcscd` activo y `opensc-pkcs11.so`. `--module` para otra ruta.
