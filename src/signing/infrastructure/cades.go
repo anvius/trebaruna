@@ -2,6 +2,7 @@ package infrastructure
 
 import (
 	"context"
+	"crypto"
 	"fmt"
 
 	"codeberg.org/simplicer/firma-it/src/signing/application"
@@ -53,8 +54,14 @@ func (s *CadesSigner) SignCades(ctx context.Context, request application.CadesRe
 
 	// RFC 3161 timestamps the signature value, which is why the CMS must be
 	// built first and completed afterwards.
+	// RFC 3161 timestamps a digest: the imprint must be the digest of the
+	// signature value, computed here so the token is verifiable by any tool.
+	signatureDigest, err := digestFor(signature.SignatureValue, crypto.SHA256)
+	if err != nil {
+		return nil, err
+	}
 	response, err := s.timestamps.Token(
-		ctx, signature.SignatureValue, request.TimestampURL,
+		ctx, signatureDigest, request.TimestampURL,
 		request.TimestampUser, request.TimestampSecret,
 	)
 	if err != nil {

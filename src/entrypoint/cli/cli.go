@@ -40,6 +40,14 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runVerify(args[1:], stdout, stderr)
 	case "trust":
 		return runTrust(args[1:], stdout, stderr)
+	case "timestamp", "tsa":
+		return runTimestamp(args[1:], stdout, stderr)
+	case "verify-tsr":
+		return runVerifyTimestamp(args[1:], stdout, stderr)
+	case "certificate", "cert":
+		return runCertificate(args[1:], stdout, stderr)
+	case "asic":
+		return runAsic(args[1:], stdout, stderr)
 	case "version", "--version", "-v":
 		fmt.Fprintln(stdout, Version)
 		return exitOK
@@ -395,6 +403,10 @@ usage:
   firma-it sign <document> [flags]
   firma-it verify <document> [flags]
   firma-it trust  sync|list [flags]
+  firma-it timestamp <file> --tsa <url>      (or --hash <hex>)
+  firma-it verify-tsr <token.tsr> [file]
+  firma-it certificate <file.p12|.pem|.crt>   (or: cert)
+  firma-it asic <document> <signature>        (ASiC-S / ASiC-E container)
 
 flags:
   --format   cades (.p7m) | pades (.pdf) | xades (.xml)   default: pades

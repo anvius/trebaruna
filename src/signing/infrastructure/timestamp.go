@@ -9,8 +9,6 @@ import (
 	"io"
 	"net/http"
 	"time"
-
-	"github.com/digitorus/timestamp"
 )
 
 // oidSignatureTimeStampToken is the CMS unsigned attribute that carries an
@@ -23,7 +21,10 @@ var oidSignatureTimeStampToken = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 
 // the cms package's job, because only that package knows the byte layout of the
 // unsigned attributes.
 type Timestamper interface {
-	Token(ctx context.Context, content []byte, url, username, secret string) ([]byte, error)
+	// Token requests a timestamp over a digest the caller already computed.
+	// Passing content here instead of its digest is what produced tokens whose
+	// imprint no other implementation could reproduce.
+	Token(ctx context.Context, digest []byte, url, username, secret string) ([]byte, error)
 }
 
 // Rfc3161Timestamper talks to any qualified timestamp authority.
@@ -38,13 +39,10 @@ func NewRfc3161Timestamper() *Rfc3161Timestamper {
 }
 
 // Token performs the request/response exchange defined by RFC 3161.
-func (t *Rfc3161Timestamper) Token(ctx context.Context, content []byte, url, username, secret string) ([]byte, error) {
-	request, err := timestamp.CreateRequest(bytes.NewReader(content), &timestamp.RequestOptions{
-		Hash:         crypto.SHA256,
-		Certificates: true,
-	})
+func (t *Rfc3161Timestamper) Token(ctx context.Context, digest []byte, url, username, secret string) ([]byte, error) {
+	request, err := BuildTimestampRequest(digest, crypto.SHA256)
 	if err != nil {
-		return nil, fmt.Errorf("build RFC 3161 request: %w", err)
+		return nil, err
 	}
 
 	httpRequest, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(request))
