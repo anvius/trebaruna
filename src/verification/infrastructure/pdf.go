@@ -1,7 +1,6 @@
 package infrastructure
 
 import (
-	"bytes"
 	"crypto/x509"
 	"fmt"
 	"os"
@@ -259,12 +258,8 @@ func (v *PDFVerifier) trustLevel(signer *verify.Signer, report domain.SignerRepo
 	if !signer.TrustedIssuer {
 		return domain.TrustUntrusted
 	}
-	if report.Timestamped && signer.TimestampTrusted {
-		return domain.TrustQualified
-	}
 	return domain.TrustAdvanced
 }
 
 // compile-time check.
 var _ SignatureExtractor = (*PDFVerifier)(nil)
-var _ = bytes.MinRead

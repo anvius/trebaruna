@@ -15,7 +15,7 @@ help:
 	@echo "make build-token  binario con PKCS#11 (requiere cgo y libdl)"
 	@echo "make build-gui    app nativa Fyne (requiere cgo + libgl/x11 dev)"
 	@echo "make deps-gui     paquetes de sistema que necesita la GUI"
-	@echo "make test         30 tests: dominio, caso de uso, CMS contra OpenSSL"
+	@echo "make test         tests: dominio, caso de uso, CMS contra OpenSSL"
 	@echo "make check        tests + go vet + gofmt"
 	@echo "make cross        linux/amd64, linux/arm64, darwin/{amd64,arm64}, windows/amd64"
 	@echo "make install          copia $(BIN) a ~/.local/bin"
@@ -64,7 +64,7 @@ install: build
 
 # Desktop integration: icon, launcher and the firma-it:// URI scheme, so a
 # website can hand a document to the app the way afirma:// does.
-install-desktop: build-gui
+install-desktop: build build-gui
 	install -Dm755 $(BIN) $(DESTDIR)$(PREFIX)/bin/firma-it
 	install -Dm755 $(BIN_GUI) $(DESTDIR)$(PREFIX)/bin/firma-it-desktop
 	install -Dm644 assets/icons/firma-it-256.png $(DESTDIR)$(PREFIX)/share/icons/hicolor/256x256/apps/firma-it.png
@@ -78,3 +78,21 @@ version:
 
 clean:
 	rm -rf bin
+.PHONY: format test-race check-gui package-desktop
+format:
+	gofmt -w src tests
+
+test-race:
+	CGO_ENABLED=1 $(GO) test ./tests/... -count=1 -race
+
+check-gui:
+	@if ! pkg-config --exists gl 2>/dev/null; then \
+	  echo "check-gui skipped: the Fyne system headers are missing."; \
+	  echo "Run 'make deps-gui' for the package list, or build the GUI in CI."; \
+	  exit 0; \
+	fi
+	CGO_ENABLED=1 $(GO) vet -tags gui ./src/...
+	CGO_ENABLED=1 $(GO) build -tags gui -o /dev/null ./src/entrypoint/desktop
+
+package-desktop:
+	bash bin/package-desktop.sh $(shell $(GO) env GOOS)

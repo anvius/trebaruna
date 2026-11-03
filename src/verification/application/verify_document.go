@@ -30,6 +30,7 @@ type Clock interface {
 type VerifyDocument struct {
 	pdf   DocumentExtractor
 	cades DocumentExtractor
+	xades DocumentExtractor
 	trust TrustProvider
 	clock Clock
 }
@@ -37,6 +38,13 @@ type VerifyDocument struct {
 // NewVerifyDocument wires the use case.
 func NewVerifyDocument(pdf, cades DocumentExtractor, trust TrustProvider, clock Clock) *VerifyDocument {
 	return &VerifyDocument{pdf: pdf, cades: cades, trust: trust, clock: clock}
+}
+
+// WithXades attaches the XML verifier, which is optional so a caller that only
+// checks PDFs does not need a XAdES implementation.
+func (u *VerifyDocument) WithXades(xades DocumentExtractor) *VerifyDocument {
+	u.xades = xades
+	return u
 }
 
 // Request is one verification.
@@ -99,6 +107,8 @@ func (u *VerifyDocument) extractorFor(format string) DocumentExtractor {
 		return u.pdf
 	case "cades":
 		return u.cades
+	case "xades":
+		return u.xades
 	}
 	return nil
 }
@@ -151,8 +161,9 @@ func (u *VerifyDocument) evaluateSigner(
 	signer.ExpiredNow = validity.ExpiredNow()
 	signer.Findings = append(signer.Findings, findings...)
 
-	// An expired-at-signing certificate is fatal regardless of what else passed.
-	if validity.ExpiredAtSigning() {
+	// A broken signature or an expired-at-signing certificate is fatal regardless
+	// of what else passed: one bad fact spoils the whole verdict.
+	if signer.Integrity == verification.StatusBad || validity.ExpiredAtSigning() {
 		signer.Trust = verification.TrustBroken
 		return signer
 	}
@@ -161,14 +172,10 @@ func (u *VerifyDocument) evaluateSigner(
 		signer.CertificateStatus = status
 	}
 
-	// Upgrade the verdict only when the issuer appears as a qualified provider.
-	// A self-signed certificate never qualifies: its "issuer" is itself, and a
-	// name match in a trust list is not a chain to a trusted root.
-	if !signer.SelfSigned && list.QualifiedCount() > 0 && signer.Issuer != "" {
-		if list.Mentions(signer.Issuer) && signer.Trust != verification.TrustBroken {
-			signer.Trust = verification.TrustQualified
-		}
-	}
+	// Downloaded TSL XML is inventory, not a trust anchor. Neither an issuer
+	// name match nor a timestamp proves QES qualification. Until LOTL/TSL
+	// signatures, service history and certificate qualifiers are validated,
+	// never upgrade a verdict from that inventory.
 
 	return signer
 }

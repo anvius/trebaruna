@@ -12,6 +12,7 @@ import (
 	"codeberg.org/simplicer/firma-it/src/verification/application"
 	verification "codeberg.org/simplicer/firma-it/src/verification/domain"
 	verificationinfra "codeberg.org/simplicer/firma-it/src/verification/infrastructure"
+	"codeberg.org/simplicer/firma-it/src/verification/messaging"
 )
 
 // Verification exit codes. They are distinct on purpose: a script must be able
@@ -57,10 +58,10 @@ func runVerify(args []string, stdout, stderr io.Writer) int {
 
 	useCase := application.NewVerifyDocument(
 		pdfVerifier,
-		nil,
+		verificationinfra.NewCadesVerifier(),
 		verificationinfra.NewCachedTrustProvider(),
 		systemClock{},
-	)
+	).WithXades(verificationinfra.NewXadesVerifier())
 
 	report, err := useCase.Execute(application.Request{
 		Path:      path,
@@ -72,7 +73,7 @@ func runVerify(args []string, stdout, stderr io.Writer) int {
 		return exitUnverified
 	}
 
-	catalogue := messagesFor(firstNonEmptyString(*lang, os.Getenv("LANG")))
+	catalogue := messaging.For(firstNonEmptyString(*lang, os.Getenv("LANG")))
 
 	if *asJSON {
 		encodeVerificationJSON(stdout, report)
@@ -207,7 +208,7 @@ func encodeVerificationJSON(writer io.Writer, report verification.DocumentReport
 }
 
 // printVerification writes the human report.
-func printVerification(writer io.Writer, report verification.DocumentReport, catalogue Catalogue) {
+func printVerification(writer io.Writer, report verification.DocumentReport, catalogue messaging.Catalogue) {
 	fmt.Fprintf(writer, "%s\n", report.Path)
 	fmt.Fprintf(writer, "  %s: %s\n", catalogue.LabelFormat, report.Format)
 
@@ -248,17 +249,5 @@ func printVerification(writer io.Writer, report verification.DocumentReport, cat
 	for _, warning := range report.Warnings {
 		fmt.Fprintf(writer, "\n  %s %s\n", catalogue.StatusMark(warning.Status),
 			catalogue.FindingName(warning.Code, warning.Message))
-	}
-}
-
-// messagesFor picks a language from a locale string.
-func messagesFor(locale string) Catalogue {
-	switch {
-	case strings.HasPrefix(strings.ToLower(locale), "it"):
-		return italianMessages
-	case strings.HasPrefix(strings.ToLower(locale), "en"):
-		return englishMessages
-	default:
-		return spanishMessages
 	}
 }

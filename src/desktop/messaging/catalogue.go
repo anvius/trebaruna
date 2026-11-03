@@ -83,6 +83,14 @@ type Catalogue struct {
 	OptionsSection  string
 	SealSection     string
 
+	// Verification tab.
+	VerifyTab              string
+	SignTab                string
+	VerifySection          string
+	VerifyHint             string
+	VerifyButton           string
+	VerificationUnreadable string
+
 	// Preview and free-space messages.
 	PreviewButton     string
 	SuggestButton     string

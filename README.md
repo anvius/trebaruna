@@ -144,6 +144,12 @@ Códigos de salida: `0` verificado, `1` alterado, `3` emisor no reconocido o
 indeterminado. Distinguirlos importa: un script debe poder separar «lo han
 cambiado» de «no sé quién lo firmó».
 
+Funciona con PDF, `.p7m` (CAdES) y XML firmado (XAdES). **Lo que garantiza**:
+integridad, identidad y vigencia del certificado, y si la firma sea autofirmada.
+**Lo que todavía no afirma**: que un emisor sea «cualificado» según la TSL, ni
+que un sello de tiempo acredite la hora — descargar una lista no es validarla.
+Ver `doc/HANDOFF.md` §7.1 antes de usarlo como prueba.
+
 ### Autoridades de confianza
 
 ```bash

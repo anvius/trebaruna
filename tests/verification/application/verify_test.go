@@ -203,6 +203,33 @@ func TestVerifyWarnsWhenTheTrustListIsStale(t *testing.T) {
 	}
 }
 
+// TestTrustListInventoryNeverQualifies: a name match in the TSL is inventory,
+// not proof. Downloading the file without validating its signature must not
+// upgrade a verdict.
+func TestTrustListInventoryNeverQualifies(t *testing.T) {
+	signer := scenario()
+	signer.SelfSigned = false
+	signer.Issuer = "ACME EXAMPLE SL"
+	signer.Trust = domain.TrustAdvanced
+
+	list := trustdomain.TrustList{
+		Services: []trustdomain.TrustService{{
+			ProviderName: "ACME EXAMPLE SL", ServiceType: "CA/QC",
+			Status: "granted", Qualified: true,
+		}},
+	}
+
+	useCase := newUseCase([]domain.SignerReport{signer}, list, nil)
+
+	report, err := useCase.Execute(application.Request{Path: "/tmp/atto.pdf"})
+	if err != nil {
+		t.Fatalf("Execute: %v", err)
+	}
+	if report.Signers[0].Trust == domain.TrustQualified {
+		t.Error("unvalidated TSL inventory must never yield a qualified verdict")
+	}
+}
+
 func TestSelfSignedIsNeverQualified(t *testing.T) {
 	signer := scenario()
 	signer.SelfSigned = true

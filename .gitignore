@@ -4,3 +4,5 @@ var/log/*.log
 *.out
 coverage.*
 .DS_Store
+
+dist/

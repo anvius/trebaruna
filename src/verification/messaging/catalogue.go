@@ -1,4 +1,9 @@
-package cli
+// Package messaging holds every user-visible string of the verification report.
+//
+// Two surfaces render the same report: the CLI and the desktop app. Keeping the
+// catalogue here means a finding is translated once, and the init check below
+// guarantees no language silently falls back to English.
+package messaging
 
 import (
 	"fmt"
@@ -41,7 +46,7 @@ type Catalogue struct {
 	Findings map[string]string
 }
 
-var spanishMessages = Catalogue{
+var Spanish = Catalogue{
 	LabelFormat:      "Formato",
 	LabelVerdict:     "Veredicto",
 	LabelSignature:   "Firma",
@@ -86,7 +91,7 @@ var spanishMessages = Catalogue{
 	},
 }
 
-var italianMessages = Catalogue{
+var Italian = Catalogue{
 	LabelFormat:      "Formato",
 	LabelVerdict:     "Esito",
 	LabelSignature:   "Firma",
@@ -131,7 +136,7 @@ var italianMessages = Catalogue{
 	},
 }
 
-var englishMessages = Catalogue{
+var English = Catalogue{
 	LabelFormat:      "Format",
 	LabelVerdict:     "Verdict",
 	LabelSignature:   "Signature",
@@ -238,7 +243,7 @@ func init() {
 	}
 
 	for name, catalogue := range map[string]Catalogue{
-		"es": spanishMessages, "it": italianMessages, "en": englishMessages,
+		"es": Spanish, "it": Italian, "en": English,
 	} {
 		for _, code := range required {
 			if _, ok := catalogue.Findings[code]; !ok {
@@ -246,4 +251,15 @@ func init() {
 			}
 		}
 	}
+}
+
+// For picks a language from a locale string.
+func For(locale string) Catalogue {
+	switch {
+	case len(locale) >= 2 && (locale[:2] == "it" || locale[:2] == "It" || locale[:2] == "IT"):
+		return Italian
+	case len(locale) >= 2 && (locale[:2] == "en" || locale[:2] == "En" || locale[:2] == "EN"):
+		return English
+	}
+	return Spanish
 }

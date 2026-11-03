@@ -6,7 +6,9 @@
 package infrastructure
 
 import (
+	"bytes"
 	"crypto/x509"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"os"
@@ -60,7 +62,8 @@ func describeCertificate(certificate *x509.Certificate, report *domain.SignerRep
 	)
 	report.NotBefore = certificate.NotBefore
 	report.NotAfter = certificate.NotAfter
-	report.SelfSigned = certificate.Issuer.String() == certificate.Subject.String()
+	report.SelfSigned = bytes.Equal(certificate.RawIssuer, certificate.RawSubject) &&
+		certificate.CheckSignature(certificate.SignatureAlgorithm, certificate.RawTBSCertificate, certificate.Signature) == nil
 }
 
 // firstOf returns the first non-empty entry of a slice.
@@ -102,4 +105,23 @@ func FileExists(path string) error {
 		return fmt.Errorf("%q is empty", path)
 	}
 	return nil
+}
+
+// decodeBase64Element decodes base64 text that may contain line breaks.
+func decodeBase64Element(text string) []byte {
+	cleaned := make([]byte, 0, len(text))
+	for index := 0; index < len(text); index++ {
+		character := text[index]
+		if character == ' ' || character == '\n' || character == '\r' || character == '\t' {
+			continue
+		}
+		cleaned = append(cleaned, character)
+	}
+
+	decoded := make([]byte, base64.StdEncoding.DecodedLen(len(cleaned)))
+	written, err := base64.StdEncoding.Decode(decoded, cleaned)
+	if err != nil {
+		return nil
+	}
+	return decoded[:written]
 }

@@ -26,6 +26,7 @@ import (
 	"codeberg.org/simplicer/firma-it/src/desktop/application"
 	"codeberg.org/simplicer/firma-it/src/desktop/domain"
 	"codeberg.org/simplicer/firma-it/src/desktop/messaging"
+	reportmessaging "codeberg.org/simplicer/firma-it/src/verification/messaging"
 )
 
 //go:embed assets/icons/firma-it-256.png
@@ -50,6 +51,8 @@ type Window struct {
 	result application.PreviewResult
 	// hasPreview reports whether a document has been rendered.
 	hasPreview bool
+	// binaryPath is the CLI the window drives.
+	binaryPath string
 }
 
 // Options configures the window.
@@ -78,6 +81,7 @@ func NewWindow(options Options) *Window {
 			fileExists,
 		),
 		preview:     application.NewPreviewPage(NewPopplerRenderer(), application.InkFinder{}),
+		binaryPath:  options.BinaryPath,
 		window:      window,
 		messages:    catalogue,
 		palette:     DefaultPalette(),
@@ -88,14 +92,14 @@ func NewWindow(options Options) *Window {
 	// for users who sign several documents a day and find the cover an obstacle.
 	// Opening a document skips the cover: the user already made a choice.
 	if os.Getenv("FIRMA_IT_SKIP_WELCOME") != "" || options.DocumentPath != "" {
-		window.SetContent(desktop.buildContent(options.DocumentPath))
+		window.SetContent(desktop.withTabs(desktop.buildContent(options.DocumentPath)))
 		return desktop
 	}
 
 	// Otherwise the cover is set first and the form is built on demand: building
 	// it eagerly costs a render pass on a window the user may never reach.
 	welcome := NewWelcomeScreen(window, desktop.palette, catalogue, func() {
-		window.SetContent(desktop.buildContent(""))
+		window.SetContent(desktop.withTabs(desktop.buildContent("")))
 	})
 	window.SetContent(welcome.CanvasObject())
 
@@ -556,11 +560,28 @@ func NewTestWindow(options Options) fyne.Window {
 			fileExists,
 		),
 		preview:     application.NewPreviewPage(NewPopplerRenderer(), application.InkFinder{}),
+		binaryPath:  options.BinaryPath,
 		window:      window,
 		messages:    catalogue,
 		palette:     DefaultPalette(),
 		currentPage: 1,
 	}
-	window.SetContent(desktop.buildContent(options.DocumentPath))
+	window.SetContent(desktop.withTabs(desktop.buildContent(options.DocumentPath)))
 	return window
+}
+
+// withTabs wraps the signing form and the verification panel in tabs.
+//
+// Two tabs, not two windows: a user who has just signed something usually wants
+// to check it, and making that a separate launch breaks the flow.
+func (w *Window) withTabs(signingContent fyne.CanvasObject) fyne.CanvasObject {
+	report := reportmessaging.For(languageCode(w.messages.Language))
+	verification := newVerificationTab(w.window, w.messages, report, w.palette, w.binaryPath)
+
+	tabs := container.NewAppTabs(
+		container.NewTabItemWithIcon(w.messages.SignTab, theme.DocumentCreateIcon(), signingContent),
+		container.NewTabItemWithIcon(w.messages.VerifyTab, theme.SearchIcon(), verification.content()),
+	)
+	tabs.SetTabLocation(container.TabLocationTop)
+	return tabs
 }
