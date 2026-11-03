@@ -89,9 +89,11 @@ type Catalogue struct {
 	NoPreviewYet      string
 	PreviewOnlyForPDF string
 	RenderingMessage  string
-	PreviewReady      string
-	NoSuggestion      string
-	SuggestionApplied string
+	// PreviewUnavailable explains a missing renderer without blocking signing.
+	PreviewUnavailable string
+	PreviewReady       string
+	NoSuggestion       string
+	SuggestionApplied  string
 }
 
 // For returns the catalogue for a language.
@@ -145,14 +147,15 @@ var spanish = Catalogue{
 	OptionsSection:  "Formato y sello de tiempo",
 	SealSection:     "Sello visible",
 
-	PreviewButton:     "Ver página",
-	SuggestButton:     "Sugerir hueco",
-	NoPreviewYet:      "Elige un PDF y pulsa «Ver página»\npara verlo y arrastrar el sello.",
-	PreviewOnlyForPDF: "La vista previa solo está disponible para PAdES (PDF).",
-	RenderingMessage:  "Renderizando la página…",
-	PreviewReady:      "Documento de %d páginas · mostrando la %d · hueco propuesto: %s",
-	NoSuggestion:      "No encontré otro hueco: coloca el sello manualmente.",
-	SuggestionApplied: "Hueco aplicado. Arrástralo con el ratón para ajustarlo.",
+	PreviewButton:      "Ver página",
+	SuggestButton:      "Sugerir hueco",
+	NoPreviewYet:       "Elige un PDF y pulsa «Ver página»\npara verlo y arrastrar el sello.",
+	PreviewOnlyForPDF:  "La vista previa solo está disponible para PAdES (PDF).",
+	RenderingMessage:   "Renderizando la página…",
+	PreviewUnavailable: "Vista previa no disponible: falta poppler.\nPuedes firmar igualmente indicando el hueco a mano.",
+	PreviewReady:       "Documento de %d páginas · mostrando la %d · hueco propuesto: %s",
+	NoSuggestion:       "No encontré otro hueco: coloca el sello manualmente.",
+	SuggestionApplied:  "Hueco aplicado. Arrástralo con el ratón para ajustarlo.",
 }
 
 var italian = Catalogue{
@@ -194,14 +197,15 @@ var italian = Catalogue{
 	OptionsSection:  "Formato e marca temporale",
 	SealSection:     "Timbro visibile",
 
-	PreviewButton:     "Mostra pagina",
-	SuggestButton:     "Suggerisci spazio",
-	NoPreviewYet:      "Scegli un PDF e premi «Mostra pagina»\nper vederlo e trascinare il timbro.",
-	PreviewOnlyForPDF: "L'anteprima è disponibile solo per PAdES (PDF).",
-	RenderingMessage:  "Rendering della pagina…",
-	PreviewReady:      "Documento di %d pagine · pagina %d · spazio proposto: %s",
-	NoSuggestion:      "Nessun altro spazio trovato: posiziona il timbro a mano.",
-	SuggestionApplied: "Spazio applicato. Trascinalo col mouse per regolarlo.",
+	PreviewButton:      "Mostra pagina",
+	SuggestButton:      "Suggerisci spazio",
+	NoPreviewYet:       "Scegli un PDF e premi «Mostra pagina»\nper vederlo e trascinare il timbro.",
+	PreviewOnlyForPDF:  "L'anteprima è disponibile solo per PAdES (PDF).",
+	RenderingMessage:   "Rendering della pagina…",
+	PreviewUnavailable: "Anteprima non disponibile: manca poppler.\nPuoi firmare comunque indicando il riquadro a mano.",
+	PreviewReady:       "Documento di %d pagine · pagina %d · spazio proposto: %s",
+	NoSuggestion:       "Nessun altro spazio trovato: posiziona il timbro a mano.",
+	SuggestionApplied:  "Spazio applicato. Trascinalo col mouse per regolarlo.",
 }
 
 var english = Catalogue{
@@ -243,14 +247,15 @@ var english = Catalogue{
 	OptionsSection:  "Format and timestamp",
 	SealSection:     "Visible seal",
 
-	PreviewButton:     "Show page",
-	SuggestButton:     "Suggest space",
-	NoPreviewYet:      "Choose a PDF and press \"Show page\"\nto see it and drag the seal.",
-	PreviewOnlyForPDF: "Preview is only available for PAdES (PDF).",
-	RenderingMessage:  "Rendering the page…",
-	PreviewReady:      "%d-page document · showing %d · suggested space: %s",
-	NoSuggestion:      "No other space found: place the seal manually.",
-	SuggestionApplied: "Space applied. Drag it with the mouse to adjust.",
+	PreviewButton:      "Show page",
+	SuggestButton:      "Suggest space",
+	NoPreviewYet:       "Choose a PDF and press \"Show page\"\nto see it and drag the seal.",
+	PreviewOnlyForPDF:  "Preview is only available for PAdES (PDF).",
+	RenderingMessage:   "Rendering the page…",
+	PreviewUnavailable: "Preview unavailable: poppler is missing.\nYou can still sign by entering the box manually.",
+	PreviewReady:       "%d-page document · showing %d · suggested space: %s",
+	NoSuggestion:       "No other space found: place the seal manually.",
+	SuggestionApplied:  "Space applied. Drag it with the mouse to adjust.",
 }
 
 // LevelName renders a level name for display.

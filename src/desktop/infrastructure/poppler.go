@@ -5,6 +5,7 @@ package infrastructure
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"image"
 	"image/png"
@@ -18,6 +19,13 @@ import (
 	"codeberg.org/simplicer/firma-it/src/desktop/application"
 	"codeberg.org/simplicer/firma-it/src/desktop/domain"
 )
+
+// ErrRendererMissing reports that poppler is not installed.
+//
+// Preview needs an external rasteriser; signing does not. The distinction
+// matters on a clean machine (and on macOS, which ships no poppler): a missing
+// preview must degrade to manual placement, never block the signature.
+var ErrRendererMissing = errors.New("no PDF renderer available")
 
 // PopplerRenderer renders PDF pages with pdftoppm, which is present on every
 // desktop that already opens PDFs.
@@ -51,9 +59,7 @@ func (r *PopplerRenderer) RenderPage(ctx context.Context, documentPath string, p
 
 	binary, err := r.findPoppler("pdftoppm")
 	if err != nil {
-		return application.PagePreview{}, fmt.Errorf(
-			"pdftoppm not found: install poppler-utils to preview the page before signing",
-		)
+		return application.PagePreview{}, fmt.Errorf("%w: pdftoppm is not installed", ErrRendererMissing)
 	}
 
 	pageCount, widthPoints, heightPoints, err := readPageInfo(ctx, documentPath)
@@ -92,7 +98,7 @@ func (r *PopplerRenderer) RenderPage(ctx context.Context, documentPath string, p
 func readPageInfo(ctx context.Context, documentPath string) (pageCount int, width, height float64, err error) {
 	binary, lookErr := exec.LookPath("pdfinfo")
 	if lookErr != nil {
-		return 0, 0, 0, fmt.Errorf("pdfinfo not found: install poppler-utils")
+		return 0, 0, 0, fmt.Errorf("%w: pdfinfo is not installed", ErrRendererMissing)
 	}
 
 	command := exec.CommandContext(ctx, binary, documentPath)

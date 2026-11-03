@@ -57,9 +57,24 @@ func resolveBinary() string {
 		}
 	}
 	if executable, err := os.Executable(); err == nil {
-		sibling := filepath.Join(filepath.Dir(executable), "firma-it")
-		if _, statErr := os.Stat(sibling); statErr == nil {
-			return sibling
+		directory := filepath.Dir(executable)
+		// Inside a macOS bundle the layout is
+		//   Firma-it.app/Contents/MacOS/firma-it-desktop
+		//   Firma-it.app/Contents/MacOS/firma-it
+		// so the sibling lookup is right, but Contents/Resources is also checked
+		// because that is where a packager may put the CLI.
+		candidates := []string{
+			filepath.Join(directory, "firma-it"),
+			filepath.Join(directory, "..", "Resources", "firma-it"),
+		}
+		for _, candidate := range candidates {
+			if _, statErr := os.Stat(candidate); statErr == nil {
+				absolute, absErr := filepath.Abs(candidate)
+				if absErr == nil {
+					return absolute
+				}
+				return candidate
+			}
 		}
 	}
 	return "firma-it"

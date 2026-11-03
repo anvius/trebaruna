@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"image"
 	"os"
@@ -371,7 +372,13 @@ func (w *Window) loadPreview(
 
 		result, err := w.preview.Execute(ctx, documentPath.Text, w.currentPage, application.DefaultSealSize())
 		if err != nil {
-			statusLine.SetText(fmt.Sprintf("%v", err))
+			// A missing rasteriser is a degraded experience, not a failure: the
+			// document can still be signed by typing the box coordinates.
+			message := fmt.Sprintf("%v", err)
+			if errors.Is(err, ErrRendererMissing) {
+				message = w.messages.PreviewUnavailable
+			}
+			fyne.Do(func() { statusLine.SetText(message) })
 			return
 		}
 

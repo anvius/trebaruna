@@ -63,6 +63,32 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
         run: CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /tmp/firma-it ./src/entrypoint/main
 
+  macos:
+    name: macOS app bundle
+    runs-on: macos-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          # Fyne needs cgo for Cocoa, which only exists on a macOS runner. This
+          # is why the .app cannot be cross-compiled from Linux.
+          go-version: '1.27'
+      - name: Build and package
+        run: VERSION="$(cat VERSION)" ./packaging/macos/build-app.sh
+      - name: Smoke test the CLI inside the bundle
+        run: ./dist/firma-it.app/Contents/MacOS/firma-it version
+      - name: Verify the bundle layout
+        run: |
+          test -f dist/firma-it.app/Contents/Info.plist
+          test -f dist/firma-it.app/Contents/MacOS/firma-it
+          test -f dist/firma-it.app/Contents/MacOS/firma-it-desktop
+          plutil -lint dist/firma-it.app/Contents/Info.plist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firma-it-macos-${{ runner.arch }}
+          path: dist/firma-it.app
+
   gui:
     name: Build the desktop app
     runs-on: ubuntu-latest

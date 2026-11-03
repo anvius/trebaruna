@@ -93,12 +93,32 @@ xcode-select --install
 La GUI es un **frontal del mismo binario**: no reimplementa nada, ejecuta
 `firma-it` y muestra el resultado. Por eso CLI y app no pueden divergir.
 
-Cross-compile:
+Cross-compile el CLI (funciona desde Linux):
 
 ```bash
-GOOS=darwin  GOARCH=arm64 CGO_ENABLED=0 go build -o bin/firma-it-macos  ./src/entrypoint/main
-GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -o bin/firma-it.exe    ./src/entrypoint/main
+GOOS=darwin  GOARCH=arm64 CGO_ENABLED=0 go build -o bin/firma-it-darwin-arm64 ./src/entrypoint/main
+GOOS=darwin  GOARCH=amd64 CGO_ENABLED=0 go build -o bin/firma-it-darwin-amd64 ./src/entrypoint/main
+GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -o bin/firma-it.exe          ./src/entrypoint/main
 ```
+
+### macOS
+
+El CLI está listo para Apple Silicon e Intel. **La app `.app` hay que
+construirla en un Mac**: Fyne enlaza con Cocoa y no se puede cross-compilar desde
+Linux.
+
+```bash
+# en un Mac, o en el job `macos` del CI
+VERSION="$(cat VERSION)" ./packaging/macos/build-app.sh
+# → dist/firma-it.app
+```
+
+Firma ad-hoc incluida: sirve para tu máquina. Para distribuirlo a terceros sin el
+aviso de Gatekeeper hace falta un **Developer ID de Apple y notarización** (cuenta
+de pago), que este repositorio no puede proporcionar.
+
+Sin poppler la app **sigue firmando**: la vista previa se degrada a introducir el
+hueco a mano, con un mensaje explícito.
 
 ---
 
