@@ -25,11 +25,24 @@ type trustSource struct {
 	URL       string
 }
 
-// knownSources lists the territories the EU LOTL points at.
+// knownSources lists the national trust lists, taken from the EU List of the
+// Lists. All ten were fetched and parsed on 2026-11-03; each returns between 18
+// and 979 services.
+//
+// They are written here rather than scraped at runtime: a signing tool must not
+// depend on a web page's layout to find its trust anchors. A territory missing
+// from this table can still be synced with --url.
 var knownSources = []trustSource{
-	{"IT", "https://eidas.agid.gov.it/TL/TSL-IT.xml"},
-	{"ES", "https://tsl.digital.gob.es/TSL.xml"},
+	{"AT", "https://www.signatur.rtr.at/vertrauensliste.xml"},
+	{"BE", "https://tsl.belgium.be/tsl-be.xml"},
 	{"DE", "https://tl.bundesnetzagentur.de/TL-DE.xml"},
+	{"ES", "https://tsl.digital.gob.es/TSL.xml"},
+	{"FR", "https://messervices.cyber.gouv.fr/visas/tl-fr_v6.xml"},
+	{"IE", "https://eidas.gov.ie/Irelandtslsignedv6.xml"},
+	{"IT", "https://eidas.agid.gov.it/TL/TSL-IT.xml"},
+	{"LU", "https://trusted-list.lu/tsl.xml"},
+	{"NL", "https://www.rdi.nl/site/binaries/content/assets/site-content/bestanden/current-tsl.xml"},
+	{"PT", "https://www.gns.gov.pt/media/TSLPT.xml"},
 }
 
 // runTrust implements `firma-it trust` with `sync` and `list`.

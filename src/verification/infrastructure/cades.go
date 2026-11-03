@@ -1,6 +1,7 @@
 package infrastructure
 
 import (
+	"bytes"
 	"crypto/x509"
 	"fmt"
 	"os"
@@ -8,6 +9,7 @@ import (
 
 	"codeberg.org/simplicer/firma-it/src/verification/domain"
 	"github.com/digitorus/pkcs7"
+	"github.com/digitorus/timestamp"
 )
 
 // CadesVerifier verifies CAdES containers (.p7m).
@@ -130,15 +132,124 @@ func verifyCMSChain(parsed *pkcs7.PKCS7, roots *x509.CertPool, now time.Time) er
 // No CMS timestamp is accepted as authoritative until its signature, imprint
 // binding to the SignerInfo signature value and TSA trust chain are validated.
 func (v *CadesVerifier) describeTime(content []byte, parsed *pkcs7.PKCS7, report *domain.SignerReport) {
-	if claimed, err := signedSigningTime(parsed); err == nil {
+	if claimed, err := signedSigningTime(parsed); err == nil && !claimed.IsZero() {
 		report.SignedAt = claimed
 	}
-	if findTimeStampToken(content) != nil {
-		report.Findings = append(report.Findings, domain.Finding{
-			Code: "verification.warning", Status: domain.StatusWarn,
-			Message: "CMS timestamp present but not authenticated; it is not used as proof of signing time",
-		})
+
+	tokenDER := findTimeStampToken(content)
+	if tokenDER == nil {
+		return
 	}
+
+	token, err := timestamp.Parse(tokenDER)
+	if err != nil {
+		report.Findings = append(report.Findings, domain.Finding{
+			Code:    "timestamp.invalid",
+			Status:  domain.StatusBad,
+			Message: "the timestamp token cannot be parsed",
+			Detail:  err.Error(),
+		})
+		return
+	}
+
+	// The binding is what turns "a token exists" into evidence: the imprint must
+	// be the digest of THIS signature value, otherwise the token covers another
+	// signature and proves nothing about this one.
+	if !tokenBindsToSignature(token, content) {
+		report.Findings = append(report.Findings, domain.Finding{
+			Code:    "timestamp.invalid",
+			Status:  domain.StatusBad,
+			Message: "the timestamp belongs to a different signature",
+		})
+		return
+	}
+
+	report.SignedAt = token.Time
+	report.Timestamped = true
+	if len(token.Certificates) > 0 {
+		report.TimestampAuthority = token.Certificates[0].Subject.CommonName
+	}
+	report.Findings = append(report.Findings, domain.Finding{
+		Code:    "timestamp.bound",
+		Status:  domain.StatusGood,
+		Message: "the timestamp is bound to this signature",
+	})
+	// Still unproven: the TSA's own chain. Saying so is cheaper than implying it.
+	report.Findings = append(report.Findings, domain.Finding{
+		Code:    "timestamp.untrusted_authority",
+		Status:  domain.StatusWarn,
+		Message: "the timestamp authority chain is not validated yet",
+	})
+}
+
+// tokenBindsToSignature compares the token imprint with the digest of the
+// signature value it claims to cover.
+func tokenBindsToSignature(token *timestamp.Timestamp, cms []byte) bool {
+	signatureValue := firstSignerSignatureValue(cms)
+	if len(signatureValue) == 0 || token.HashAlgorithm.Available() == false {
+		return false
+	}
+
+	hasher := token.HashAlgorithm.New()
+	hasher.Write(signatureValue)
+	return bytes.Equal(hasher.Sum(nil), token.HashedMessage)
+}
+
+// firstSignerSignatureValue reads the EncryptedDigest of the first SignerInfo.
+//
+// The pkcs7 library keeps signerInfo unexported, so the value is re-read from
+// the DER with the same approach used to locate the token.
+func firstSignerSignatureValue(cms []byte) []byte {
+	fields, err := splitDerSequence(cms)
+	if err != nil || len(fields) < 2 {
+		return nil
+	}
+
+	// ContentInfo.content is [0] EXPLICIT SignedData.
+	signedData, err := unwrapExplicit(fields[1])
+	if err != nil {
+		return nil
+	}
+
+	sequence, err := splitDerSequence(signedData)
+	if err != nil || len(sequence) == 0 {
+		return nil
+	}
+
+	// The last field of SignedData is the SET OF SignerInfo.
+	signerInfos, err := splitDerSequence(sequence[len(sequence)-1])
+	if err != nil || len(signerInfos) == 0 {
+		return nil
+	}
+
+	signerInfo, err := splitDerSequence(signerInfos[0])
+	if err != nil {
+		return nil
+	}
+
+	// SignerInfo v1 fields, in order:
+	//   1 version, 2 sid, 3 digestAlgorithm, 4 signedAttrs [0],
+	//   5 signatureAlgorithm, 6 signature OCTET STRING, 7 unsignedAttrs [1].
+	//
+	// signedAttrs is a context tag, not a SEQUENCE, so the naive "first OCTET
+	// STRING that is not the version" picks the messageDigest attribute nested
+	// inside it and the imprint comparison fails on a perfectly valid token.
+	// The signature is the field that follows the signature algorithm.
+	const signatureAlgorithmIndex = 4
+	signatureIndex := signatureAlgorithmIndex + 1
+	if len(signerInfo) <= signatureIndex {
+		return nil
+	}
+
+	signature := signerInfo[signatureIndex]
+	if len(signature) < 2 || signature[0] != 0x04 {
+		return nil
+	}
+	length, headerSize, ok := readLength(signature, 1)
+	if !ok || 1+headerSize+length > len(signature) {
+		return nil
+	}
+	return signature[1+headerSize : 1+headerSize+length]
 }
 
 // signedSigningTime reads the signingTime signed attribute.
@@ -164,3 +275,9 @@ func trustFromReport(report domain.SignerReport) domain.TrustLevel {
 
 // compile-time check.
 var _ SignatureExtractor = (*CadesVerifier)(nil)
+
+// FirstSignerSignatureValueForTest exposes the DER reader for tests that pin
+// which field is the signature. Production callers use the verifier.
+func FirstSignerSignatureValueForTest(cms []byte) []byte {
+	return firstSignerSignatureValue(cms)
+}

@@ -2,9 +2,10 @@
 package application
 
 import (
+	"crypto/x509"
 	"time"
 
-	"codeberg.org/simplicer/firma-it/src/trust/domain"
+	trustdomain "codeberg.org/simplicer/firma-it/src/trust/domain"
 	verification "codeberg.org/simplicer/firma-it/src/verification/domain"
 )
 
@@ -13,12 +14,22 @@ type DocumentExtractor interface {
 	Extract(path string) ([]verification.SignerReport, error)
 }
 
+// AnchorAware is implemented by extractors that can validate a chain against a
+// pool built from a trust list.
+//
+// Without it, the PDF verifier falls back to the operating system roots, which
+// do not contain the qualified CAs that issue document-signing certificates:
+// they would report every Italian or Belgian qualified signature as untrusted.
+type AnchorAware interface {
+	WithAnchors(roots, intermediates *x509.CertPool) DocumentExtractor
+}
+
 // TrustProvider supplies the trust list for a territory.
 //
 // It returns an empty list rather than an error when no list is cached: a
 // verification must still report integrity, even offline and without a TSL.
 type TrustProvider interface {
-	Load(territory string) (domain.TrustList, error)
+	Load(territory string) (trustdomain.TrustList, error)
 }
 
 // Clock reports the current time, injected for tests.
@@ -80,14 +91,22 @@ func (u *VerifyDocument) Execute(request Request) (verification.DocumentReport, 
 		return report, nil
 	}
 
-	signers, err := extractor.Extract(request.Path)
-	if err != nil {
-		return report, err
-	}
-
 	list, trustWarning := u.loadTrust(request.Territory, now)
 	if trustWarning != nil {
 		report.Warnings = append(report.Warnings, *trustWarning)
+	}
+
+	// A trust list is only usable as anchors when it parses; an empty list means
+	// "no anchors", and the extractor then falls back to the system roots.
+	if anchors := anchorPool(list); anchors != nil {
+		if aware, ok := extractor.(AnchorAware); ok {
+			extractor = aware.WithAnchors(anchors.roots, anchors.intermediates)
+		}
+	}
+
+	signers, err := extractor.Extract(request.Path)
+	if err != nil {
+		return report, err
 	}
 
 	for index := range signers {
@@ -98,6 +117,28 @@ func (u *VerifyDocument) Execute(request Request) (verification.DocumentReport, 
 	report.Signed = len(signers) > 0
 	report.Trust = report.Verdict()
 	return report, nil
+}
+
+// anchorSet groups the pools built from a trust list.
+type anchorSet struct {
+	roots         *x509.CertPool
+	intermediates *x509.CertPool
+}
+
+// anchorPool builds trust anchors from the qualified services of a list.
+//
+// It returns nil when the list has no usable anchors, so callers can tell
+// "nothing to add" apart from "an empty pool that would reject everything".
+func anchorPool(list trustdomain.TrustList) *anchorSet {
+	if list.QualifiedCount() == 0 {
+		return nil
+	}
+
+	roots, intermediates, added := list.AnchorPool()
+	if added == 0 {
+		return nil
+	}
+	return &anchorSet{roots: roots, intermediates: intermediates}
 }
 
 // extractorFor picks the adapter for a format.
@@ -114,14 +155,14 @@ func (u *VerifyDocument) extractorFor(format string) DocumentExtractor {
 }
 
 // loadTrust reads the list, degrading to a warning.
-func (u *VerifyDocument) loadTrust(territory string, now time.Time) (domain.TrustList, *verification.Finding) {
+func (u *VerifyDocument) loadTrust(territory string, now time.Time) (trustdomain.TrustList, *verification.Finding) {
 	if u.trust == nil {
-		return domain.TrustList{}, nil
+		return trustdomain.TrustList{}, nil
 	}
 
 	list, err := u.trust.Load(territory)
 	if err != nil {
-		return domain.TrustList{}, &verification.Finding{
+		return trustdomain.TrustList{}, &verification.Finding{
 			Code:    "trustlist.unavailable",
 			Status:  verification.StatusWarn,
 			Message: "no trust list available: issuer verdicts are limited to the system roots",
@@ -144,7 +185,7 @@ func (u *VerifyDocument) loadTrust(territory string, now time.Time) (domain.Trus
 func (u *VerifyDocument) evaluateSigner(
 	signer verification.SignerReport,
 	now time.Time,
-	list domain.TrustList,
+	list trustdomain.TrustList,
 ) verification.SignerReport {
 	validity := verification.Validity{
 		NotBefore: signer.NotBefore,

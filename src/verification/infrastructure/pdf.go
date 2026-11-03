@@ -23,6 +23,20 @@ type PDFVerifier struct {
 	// CheckRevocation enables OCSP/CRL lookups. Off by default: a verification
 	// that reaches the network must be an explicit choice.
 	CheckRevocation bool
+	// Intermediates complements Roots when the anchors come from a trust list.
+	Intermediates *x509.CertPool
+}
+
+// WithAnchors returns a copy that validates chains against the given pools.
+//
+// This is what makes a qualified signature readable: the CA that issues
+// document-signing certificates is not in the operating system store, so
+// without the trust list every qualified signature would look untrusted.
+func (v *PDFVerifier) WithAnchors(roots, intermediates *x509.CertPool) SignatureExtractor {
+	clone := *v
+	clone.Roots = roots
+	clone.Intermediates = intermediates
+	return &clone
 }
 
 // NewPDFVerifier builds the adapter with the current clock.

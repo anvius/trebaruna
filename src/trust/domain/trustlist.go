@@ -240,3 +240,61 @@ func (l TrustList) Mentions(issuer string) bool {
 	}
 	return false
 }
+
+// QualifiedAnchors returns the certificates of services that can issue
+// qualified signatures.
+//
+// They are candidate trust anchors for a signature chain. Using them is what
+// lets a verifier recognise "this issuer can issue qualified certificates",
+// which the system web roots cannot answer: a qualified CA is usually not in
+// the Mozilla/OS store.
+//
+// A candidate anchor is only as trustworthy as the list it came from, so the
+// caller must have validated the list itself; see TrustListIntegrity.
+func (l TrustList) QualifiedAnchors() []*x509.Certificate {
+	var anchors []*x509.Certificate
+
+	for _, service := range l.Services {
+		if !service.CanIssueQualifiedSignature() {
+			continue
+		}
+		anchors = append(anchors, service.Certificates...)
+	}
+	return anchors
+}
+
+// AnchorPool builds a certificate pool from the qualified anchors.
+//
+// Self-signed entries are added as roots; the rest are added to an intermediate
+// pool by the caller, because a TSL also publishes intermediate and end-entity
+// certificates and treating them as roots would accept chains that do not exist.
+func (l TrustList) AnchorPool() (*x509.CertPool, *x509.CertPool, int) {
+	roots := x509.NewCertPool()
+	intermediates := x509.NewCertPool()
+	added := 0
+
+	for _, certificate := range l.QualifiedAnchors() {
+		if isSelfSigned(certificate) {
+			roots.AddCert(certificate)
+			added++
+			continue
+		}
+		intermediates.AddCert(certificate)
+	}
+
+	return roots, intermediates, added
+}
+
+// TrustListIntegrity describes whether a downloaded list can be relied upon.
+type TrustListIntegrity struct {
+	// Signed reports whether the XML carries an enveloped signature.
+	Signed bool
+	// SignatureValid reports whether that signature verifies against a known key.
+	SignatureValid bool
+	// Signer is the subject of the certificate that signed the list.
+	Signer string
+	// Trusted reports whether the signing certificate chains to a known root.
+	Trusted bool
+	// Reason explains the outcome.
+	Reason string
+}

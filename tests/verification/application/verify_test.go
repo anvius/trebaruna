@@ -4,7 +4,12 @@ package application_test
 // integration tests against OpenSSL and pdfsig.
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"errors"
+	"math/big"
 	"testing"
 	"time"
 
@@ -271,4 +276,69 @@ func TestWorstSignerDecidesTheDocument(t *testing.T) {
 	if report.Verdict() != domain.TrustBroken {
 		t.Errorf("verdict = %s, want broken: one broken signature spoils the document", report.Verdict())
 	}
+}
+
+// TestTrustAnchorsAreOfferedToTheExtractor guards the wiring: without it, every
+// qualified signature looks untrusted because its CA is not in the OS store.
+func TestTrustAnchorsAreOfferedToTheExtractor(t *testing.T) {
+	extractor := &anchorRecorder{signers: []domain.SignerReport{scenario()}}
+
+	list := trustdomain.TrustList{
+		Territory: "IT",
+		Services: []trustdomain.TrustService{{
+			ProviderName: "Qualified CA",
+			ServiceType:  "CA/QC",
+			Status:       "granted",
+			Qualified:    true,
+			Certificates: []*x509.Certificate{selfSignedCA(t)},
+		}},
+	}
+
+	useCase := application.NewVerifyDocument(extractor, nil,
+		fakeTrust{list: list}, fixedClock{moment: time.Now()})
+
+	if _, err := useCase.Execute(application.Request{Path: "/tmp/atto.pdf"}); err != nil {
+		t.Fatalf("Execute: %v", err)
+	}
+	if !extractor.receivedAnchors {
+		t.Error("the extractor was never given the trust list anchors")
+	}
+}
+
+// anchorRecorder records whether anchors were supplied.
+type anchorRecorder struct {
+	signers         []domain.SignerReport
+	receivedAnchors bool
+}
+
+func (a *anchorRecorder) Extract(string) ([]domain.SignerReport, error) { return a.signers, nil }
+
+func (a *anchorRecorder) WithAnchors(roots, intermediates *x509.CertPool) application.DocumentExtractor {
+	a.receivedAnchors = roots != nil
+	return a
+}
+
+// selfSignedCA builds a CA certificate usable as an anchor.
+func selfSignedCA(t *testing.T) *x509.Certificate {
+	t.Helper()
+
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("generate key: %v", err)
+	}
+	template := &x509.Certificate{
+		SerialNumber:          big.NewInt(1),
+		Subject:               pkix.Name{CommonName: "Qualified CA"},
+		NotBefore:             time.Now().Add(-time.Hour),
+		NotAfter:              time.Now().Add(24 * time.Hour),
+		KeyUsage:              x509.KeyUsageCertSign,
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+	}
+	der, err := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
+	if err != nil {
+		t.Fatalf("create certificate: %v", err)
+	}
+	certificate, _ := x509.ParseCertificate(der)
+	return certificate
 }
