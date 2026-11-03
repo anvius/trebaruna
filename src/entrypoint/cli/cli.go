@@ -36,6 +36,10 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	switch args[0] {
 	case "sign":
 		return runSign(args[1:], stdout, stderr)
+	case "verify":
+		return runVerify(args[1:], stdout, stderr)
+	case "trust":
+		return runTrust(args[1:], stdout, stderr)
 	case "version", "--version", "-v":
 		fmt.Fprintln(stdout, Version)
 		return exitOK
@@ -174,6 +178,7 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 func extractDocument(args []string) (documentPath string, remaining []string, err error) {
 	valueFlags := map[string]bool{
 		"-format": true, "--format": true, "-level": true, "--level": true,
+		"-lang": true, "--lang": true, "-territory": true, "--territory": true,
 		"-out": true, "--out": true, "-p12": true, "--p12": true,
 		"-pem": true, "--pem": true, "-pass": true, "--pass": true,
 		"-pin": true, "--pin": true, "-token": true, "--token": true,
@@ -388,6 +393,8 @@ func printUsage(writer io.Writer) {
 
 usage:
   firma-it sign <document> [flags]
+  firma-it verify <document> [flags]
+  firma-it trust  sync|list [flags]
 
 flags:
   --format   cades (.p7m) | pades (.pdf) | xades (.xml)   default: pades

@@ -37,7 +37,11 @@ func (v Validity) Evaluate() (Status, []Finding) {
 	status := StatusGood
 
 	// 1. Was the certificate within its window at signing time?
-	if !v.AtSigning.IsZero() {
+	//
+	// A zero NotAfter means the certificate could not be read at all, which is
+	// reported elsewhere: claiming "expired" without a date would be a finding
+	// the evidence does not support.
+	if !v.AtSigning.IsZero() && !v.NotAfter.IsZero() && !v.NotBefore.IsZero() {
 		switch {
 		case v.AtSigning.Before(v.NotBefore):
 			findings = append(findings, Finding{
@@ -94,7 +98,7 @@ func (v Validity) Evaluate() (Status, []Finding) {
 	}
 
 	// 3. Expired today: informational, never fatal on its own.
-	if !v.Now.IsZero() && v.Now.After(v.NotAfter) {
+	if !v.Now.IsZero() && !v.NotAfter.IsZero() && v.Now.After(v.NotAfter) {
 		findings = append(findings, Finding{
 			Code:    "certificate.expired_now",
 			Status:  StatusWarn,
@@ -110,8 +114,11 @@ func (v Validity) Evaluate() (Status, []Finding) {
 }
 
 // ExpiredAtSigning reports the fatal condition.
+//
+// It requires a known validity window: without dates there is nothing to compare
+// and the honest answer is "unknown", not "expired".
 func (v Validity) ExpiredAtSigning() bool {
-	if v.AtSigning.IsZero() {
+	if v.AtSigning.IsZero() || v.NotAfter.IsZero() || v.NotBefore.IsZero() {
 		return false
 	}
 	return v.AtSigning.After(v.NotAfter) || v.AtSigning.Before(v.NotBefore)
@@ -119,7 +126,7 @@ func (v Validity) ExpiredAtSigning() bool {
 
 // ExpiredNow reports whether the certificate is past its window as of Now.
 func (v Validity) ExpiredNow() bool {
-	return !v.Now.IsZero() && v.Now.After(v.NotAfter)
+	return !v.Now.IsZero() && !v.NotAfter.IsZero() && v.Now.After(v.NotAfter)
 }
 
 // Remaining returns how long the certificate stays usable, which the UI shows

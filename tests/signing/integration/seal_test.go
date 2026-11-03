@@ -56,7 +56,9 @@ func TestDrawSealPrintsTheTimestamp(t *testing.T) {
 	}
 
 	rendered := renderText(appearance)
-	if !strings.Contains(rendered, "2026-11-02") {
+	// The stamp uses the local day/month/year order, which is what a European
+	// reader expects; ISO order is for machine-readable output, not for a seal.
+	if !strings.Contains(rendered, "02/11/2026") {
 		t.Errorf("seal is missing the date; rendered %q", rendered)
 	}
 	if !strings.Contains(rendered, "14:05:09") {

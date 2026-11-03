@@ -36,6 +36,8 @@ firma: los tamaños y el método de análisis están en
 | CAdES-T con sello RFC 3161 | ✅ | `openssl` + pyHanko: sello `intact` y `trusted` |
 | Sello en hueco exacto | ✅ | datos del certificado, 64×48 pt, sin truncar |
 | Varios sellos, una firma | ✅ | `--box` repetible; `seal_count` en el JSON |
+| Verificación PDF + TSL | ✅ | detección de manipulación, exit codes 0/1/3 |
+| Caducidad matizada | ✅ | caducado-al-firmar (fatal) vs caducado-hoy (aviso) |
 | Varias firmas encadenadas | ✅ | 5 firmas válidas en un PDF |
 | P12 de cualquier CA o autofirmado | ✅ | se firma y se reporta el estado |
 | XAdES-BES (enveloped y enveloping) | ✅ | `signxml` (implementación independiente): firma y digests válidos |
@@ -109,6 +111,30 @@ firma-it sign contratto.pdf --p12 mario.p12 --pass secret
 firma-it sign fattura.xml  --format cades --p12 mario.p12
 firma-it sign atto.xml     --format xades --p12 mario.p12 --enveloping
 ```
+
+### Verificar
+
+```bash
+firma-it verify contratto_signed.pdf
+firma-it verify atto.pdf.p7m --territory IT --json
+firma-it verify doc.pdf --lang it      # es | it | en
+```
+
+Códigos de salida: `0` verificado, `1` alterado, `3` emisor no reconocido o
+indeterminado. Distinguirlos importa: un script debe poder separar «lo han
+cambiado» de «no sé quién lo firmó».
+
+### Autoridades de confianza
+
+```bash
+firma-it trust sync              # descarga IT, ES y DE
+firma-it trust sync --territory IT
+firma-it trust list              # qué hay cacheado y hasta cuándo vale
+```
+
+Las listas TSL son de 3–5 MB y cambian pocas veces al año, así que se cachean en
+`~/.cache/firma-it/tsl/`. **Nunca se descargan durante una firma**: una operación
+local que habla con la red en silencio es una que falla sin conexión.
 
 ### El sello
 

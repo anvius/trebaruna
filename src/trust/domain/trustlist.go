@@ -222,3 +222,21 @@ func (l TrustList) ActiveCount() int {
 	}
 	return count
 }
+
+// Mentions reports whether an issuer name appears as a provider in the list.
+//
+// It is a weaker check than Qualified(): it only says the name is listed, which
+// is enough to upgrade a verdict when the library already validated the chain
+// against the system roots. It is deliberately not used to grant qualified
+// status on its own, because a name match is not a cryptographic proof.
+func (l TrustList) Mentions(issuer string) bool {
+	if issuer == "" {
+		return false
+	}
+	for _, service := range l.Services {
+		if service.ProviderName == issuer && service.CanIssueQualifiedSignature() {
+			return true
+		}
+	}
+	return false
+}

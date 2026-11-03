@@ -1,0 +1,211 @@
+// Package application orchestrates verification.
+package application
+
+import (
+	"time"
+
+	"codeberg.org/simplicer/firma-it/src/trust/domain"
+	verification "codeberg.org/simplicer/firma-it/src/verification/domain"
+)
+
+// DocumentExtractor reads the signatures of one document.
+type DocumentExtractor interface {
+	Extract(path string) ([]verification.SignerReport, error)
+}
+
+// TrustProvider supplies the trust list for a territory.
+//
+// It returns an empty list rather than an error when no list is cached: a
+// verification must still report integrity, even offline and without a TSL.
+type TrustProvider interface {
+	Load(territory string) (domain.TrustList, error)
+}
+
+// Clock reports the current time, injected for tests.
+type Clock interface {
+	Now() time.Time
+}
+
+// VerifyDocument is the use case behind `firma-it verify`.
+type VerifyDocument struct {
+	pdf   DocumentExtractor
+	cades DocumentExtractor
+	trust TrustProvider
+	clock Clock
+}
+
+// NewVerifyDocument wires the use case.
+func NewVerifyDocument(pdf, cades DocumentExtractor, trust TrustProvider, clock Clock) *VerifyDocument {
+	return &VerifyDocument{pdf: pdf, cades: cades, trust: trust, clock: clock}
+}
+
+// Request is one verification.
+type Request struct {
+	// Path is the document to verify.
+	Path string
+	// Format is "pdf", "cades" or "xades". Empty means "detect from the suffix".
+	Format string
+	// Territory selects the trust list, e.g. "IT" or "ES".
+	Territory string
+}
+
+// Execute verifies and returns the report.
+func (u *VerifyDocument) Execute(request Request) (verification.DocumentReport, error) {
+	now := u.clock.Now()
+
+	report := verification.DocumentReport{
+		Path:       request.Path,
+		VerifiedAt: now,
+	}
+
+	format := detectFormat(request.Path, request.Format)
+	report.Format = format
+
+	extractor := u.extractorFor(format)
+	if extractor == nil {
+		report.Warnings = append(report.Warnings, verification.Finding{
+			Code:    "format.unsupported",
+			Status:  verification.StatusUnknown,
+			Message: "no verifier is available for this format",
+			Detail:  format,
+		})
+		return report, nil
+	}
+
+	signers, err := extractor.Extract(request.Path)
+	if err != nil {
+		return report, err
+	}
+
+	list, trustWarning := u.loadTrust(request.Territory, now)
+	if trustWarning != nil {
+		report.Warnings = append(report.Warnings, *trustWarning)
+	}
+
+	for index := range signers {
+		signers[index] = u.evaluateSigner(signers[index], now, list)
+	}
+
+	report.Signers = signers
+	report.Signed = len(signers) > 0
+	report.Trust = report.Verdict()
+	return report, nil
+}
+
+// extractorFor picks the adapter for a format.
+func (u *VerifyDocument) extractorFor(format string) DocumentExtractor {
+	switch format {
+	case "pdf":
+		return u.pdf
+	case "cades":
+		return u.cades
+	}
+	return nil
+}
+
+// loadTrust reads the list, degrading to a warning.
+func (u *VerifyDocument) loadTrust(territory string, now time.Time) (domain.TrustList, *verification.Finding) {
+	if u.trust == nil {
+		return domain.TrustList{}, nil
+	}
+
+	list, err := u.trust.Load(territory)
+	if err != nil {
+		return domain.TrustList{}, &verification.Finding{
+			Code:    "trustlist.unavailable",
+			Status:  verification.StatusWarn,
+			Message: "no trust list available: issuer verdicts are limited to the system roots",
+			Detail:  err.Error(),
+		}
+	}
+
+	if !list.Fresh(now) {
+		return list, &verification.Finding{
+			Code:    "trustlist.stale",
+			Status:  verification.StatusWarn,
+			Message: "the trust list is past its nextUpdate: run 'firma-it trust sync'",
+			Detail:  list.NextUpdate.UTC().Format(time.RFC3339),
+		}
+	}
+	return list, nil
+}
+
+// evaluateSigner adds the validity checks the extractor could not do alone.
+func (u *VerifyDocument) evaluateSigner(
+	signer verification.SignerReport,
+	now time.Time,
+	list domain.TrustList,
+) verification.SignerReport {
+	validity := verification.Validity{
+		NotBefore: signer.NotBefore,
+		NotAfter:  signer.NotAfter,
+		AtSigning: signer.SignedAt,
+		// Only a verified RFC 3161 token makes the moment trustworthy.
+		HasTrustedTime: signer.Timestamped,
+		Now:            now,
+		RevokedAt:      signer.RevokedAt,
+	}
+
+	status, findings := validity.Evaluate()
+	signer.ExpiredAtSigning = validity.ExpiredAtSigning()
+	signer.ExpiredNow = validity.ExpiredNow()
+	signer.Findings = append(signer.Findings, findings...)
+
+	// An expired-at-signing certificate is fatal regardless of what else passed.
+	if validity.ExpiredAtSigning() {
+		signer.Trust = verification.TrustBroken
+		return signer
+	}
+
+	if signer.CertificateStatus == verification.StatusGood {
+		signer.CertificateStatus = status
+	}
+
+	// Upgrade the verdict only when the issuer appears as a qualified provider.
+	// A self-signed certificate never qualifies: its "issuer" is itself, and a
+	// name match in a trust list is not a chain to a trusted root.
+	if !signer.SelfSigned && list.QualifiedCount() > 0 && signer.Issuer != "" {
+		if list.Mentions(signer.Issuer) && signer.Trust != verification.TrustBroken {
+			signer.Trust = verification.TrustQualified
+		}
+	}
+
+	return signer
+}
+
+// detectFormat infers the container from the suffix.
+func detectFormat(path, explicit string) string {
+	if explicit != "" {
+		return explicit
+	}
+	switch {
+	case hasSuffix(path, ".p7m"), hasSuffix(path, ".p7s"):
+		return "cades"
+	case hasSuffix(path, ".pdf"):
+		return "pdf"
+	case hasSuffix(path, ".xml"), hasSuffix(path, ".xsig"):
+		return "xades"
+	}
+	return "unknown"
+}
+
+// hasSuffix compares case-insensitively.
+func hasSuffix(value, suffix string) bool {
+	if len(value) < len(suffix) {
+		return false
+	}
+	tail := value[len(value)-len(suffix):]
+	for index := 0; index < len(suffix); index++ {
+		left, right := tail[index], suffix[index]
+		if 'A' <= left && left <= 'Z' {
+			left += 'a' - 'A'
+		}
+		if 'A' <= right && right <= 'Z' {
+			right += 'a' - 'A'
+		}
+		if left != right {
+			return false
+		}
+	}
+	return true
+}

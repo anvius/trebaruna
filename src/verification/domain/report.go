@@ -129,6 +129,8 @@ type SignerReport struct {
 	SelfSigned bool
 	// Revoked reports a revocation, when a status source was consulted.
 	Revoked bool
+	// RevokedAt is the revocation moment, when known.
+	RevokedAt time.Time
 }
 
 // DocumentReport is the full verification result for one file.
