@@ -28,6 +28,76 @@ import (
 // strictly better than trusting the bytes blindly and strictly worse than
 // checking against a pinned key; TrustListIntegrity.Trusted records which one
 // happened.
+// InspectListSignatureWithAnchors verifies a list against the certificates the
+// LOTL publishes for its territory.
+//
+// This is the check that matters: the anchor comes from the Commission, not from
+// the document being checked. A list signed by an operator whose certificate
+// appears in the LOTL for that territory is authenticated; anything else stays
+// inventory.
+func InspectListSignatureWithAnchors(content []byte, anchors []*x509.Certificate) domain.TrustListIntegrity {
+	if len(anchors) == 0 {
+		return domain.TrustListIntegrity{
+			Reason: "no signing certificate is published for this territory",
+		}
+	}
+
+	document := etree.NewDocument()
+	if err := document.ReadFromBytes(content); err != nil {
+		return domain.TrustListIntegrity{Reason: fmt.Sprintf("cannot parse XML: %v", err)}
+	}
+
+	signature := findElement(document.Root(), "Signature", signatureNamespace)
+	if signature == nil {
+		return domain.TrustListIntegrity{Reason: "the list carries no XML signature"}
+	}
+
+	embedded := findSigningCertificate(signature)
+	if embedded == nil {
+		return domain.TrustListIntegrity{
+			Signed: true,
+			Reason: "the signature does not embed its certificate",
+		}
+	}
+
+	integrity := domain.TrustListIntegrity{
+		Signed: true,
+		Signer: embedded.Subject.String(),
+	}
+
+	// The embedded certificate must be one of the published ones. Comparing the
+	// raw DER is exact: a certificate is immutable, so equality is the right test.
+	published := false
+	for _, anchor := range anchors {
+		if bytes.Equal(anchor.Raw, embedded.Raw) {
+			published = true
+			break
+		}
+	}
+	if !published {
+		integrity.Reason = "the signing certificate is not the one published in the EU list of the lists"
+		return integrity
+	}
+
+	// The signature is checked here rather than through goxmldsig: that library
+	// stops at 1000 namespace traversals, and a national list has far more, so
+	// every large list failed with "traversal limit reached" while its signature
+	// was perfectly valid.
+	if err := verifyXMLSignature(document.Root(), embedded); err != nil {
+		integrity.Reason = fmt.Sprintf("the signature does not verify: %v", err)
+		return integrity
+	}
+
+	integrity.SignatureValid = true
+	integrity.Trusted = true
+	integrity.Reason = "the list is signed by the operator published in the EU list of the lists"
+	return integrity
+}
+
+// InspectListSignature verifies a list against a caller-supplied root pool.
+//
+// Kept for callers that pin roots themselves; the LOTL-anchored variant above is
+// what the CLI uses.
 func InspectListSignature(content []byte, roots *x509.CertPool) domain.TrustListIntegrity {
 	document := etree.NewDocument()
 	if err := document.ReadFromBytes(content); err != nil {

@@ -4,13 +4,12 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
-	"codeberg.org/simplicer/firma-it/src/trust/domain"
+	trustapplication "codeberg.org/simplicer/firma-it/src/trust/application"
 	trustinfra "codeberg.org/simplicer/firma-it/src/trust/infrastructure"
 	verificationinfra "codeberg.org/simplicer/firma-it/src/verification/infrastructure"
 )
@@ -63,15 +62,16 @@ func runTrust(args []string, stdout, stderr io.Writer) int {
 	return exitUsage
 }
 
-// runTrustSync downloads and stores the lists.
+// runTrustSync downloads the national lists, authenticates each signature
+// against the certificates the EU publishes, and stores only what verifies.
 func runTrustSync(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("trust sync", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 
 	var (
-		territory = flags.String("territory", "", "download one territory, e.g. IT (default: all known)")
-		url       = flags.String("url", "", "download an explicit URL instead of the built-in table")
+		territory = flags.String("territory", "", "sync one territory, e.g. IT (default: all XML territories)")
 		directory = flags.String("dir", "", "cache directory (default: XDG cache)")
+		lotlURL   = flags.String("lotl", "https://ec.europa.eu/tools/lotl/eu-lotl.xml", "EU list of the lists")
 	)
 	if err := flags.Parse(args); err != nil {
 		return exitUsage
@@ -81,132 +81,81 @@ func runTrustSync(args []string, stdout, stderr io.Writer) int {
 	if cache == "" {
 		cache = verificationinfra.DefaultCacheDirectory()
 	}
-	if err := os.MkdirAll(cache, 0o755); err != nil {
-		fmt.Fprintf(stderr, "cannot create %s: %v\n", cache, err)
+
+	syncer := &trustapplication.SyncTerritory{
+		LOTL:          trustapplication.HTTPLOTL{URL: *lotlURL},
+		Lists:         trustapplication.HTTPList{},
+		CacheDir:      cache,
+		QuarantineDir: filepath.Join(cache, "rejected"),
+	}
+
+	territories, err := selectTerritories(syncer, *territory, *lotlURL)
+	if err != nil {
+		fmt.Fprintf(stderr, "%v\n", err)
+		return exitUsage
+	}
+	if len(territories) == 0 {
+		fmt.Fprintf(stderr, "no territory to sync\n")
 		return exitUsage
 	}
 
-	sources := selectSources(*territory, *url)
-	if len(sources) == 0 {
-		fmt.Fprintf(stderr, "unknown territory %q\n", *territory)
-		return exitUsage
-	}
+	rejected := 0
+	for _, code := range territories {
+		fmt.Fprintf(stdout, "%s … ", code)
 
-	client := &http.Client{Timeout: 3 * time.Minute}
-	failures := 0
-
-	for _, source := range sources {
-		fmt.Fprintf(stdout, "%s … ", source.Territory)
-
-		list, err := download(client, source)
-		if err != nil {
-			fmt.Fprintf(stdout, "failed: %v\n", err)
-			failures++
+		result, syncErr := syncer.Execute(code)
+		if syncErr != nil {
+			fmt.Fprintf(stdout, "failed: %v\n", syncErr)
+			rejected++
 			continue
 		}
 
-		path := filepath.Join(cache, source.Territory+".xml")
-		if err := os.WriteFile(path, list.content, 0o644); err != nil {
-			fmt.Fprintf(stdout, "cannot write: %v\n", err)
-			failures++
+		if !result.Authenticated {
+			// An unauthenticated list is not trusted: saying "ok" here would be
+			// the exact mistake this whole flow exists to prevent.
+			fmt.Fprintf(stdout, "REJECTED: %s\n", result.Reason)
+			rejected++
 			continue
 		}
 
-		fmt.Fprintf(stdout, "%d services, %d qualified, valid until %s\n",
-			list.parsed.ServiceCount(), list.parsed.QualifiedCount(),
-			list.parsed.NextUpdate.Format("2006-01-02"))
+		fmt.Fprintf(stdout, "%d services, %d qualified, valid until %s (signature verified)\n",
+			result.Services, result.Qualified, result.NextUpdate.Format("2006-01-02"))
 	}
 
-	if failures > 0 {
+	if rejected > 0 {
+		fmt.Fprintf(stdout, "\n%d list(s) rejected; see %s\n", rejected,
+			filepath.Join(cache, "rejected"))
 		return exitUnverified
 	}
 	return exitVerified
 }
 
-// downloaded groups the raw bytes and the parsed list.
-type downloaded struct {
-	content []byte
-	parsed  domain.TrustList
-}
-
-// download fetches and parses one list before storing it.
+// selectTerritories resolves which territories to sync.
 //
-// Parsing first matters: a captive portal returns HTML with status 200, and
-// caching that would break every later verification with a confusing error.
-func download(client *http.Client, source trustSource) (downloaded, error) {
-	response, err := client.Get(source.URL)
+// With no argument, every XML territory the LOTL publishes is synced: that is
+// what makes "sign in any EU country" real instead of a claim.
+func selectTerritories(syncer *trustapplication.SyncTerritory, requested, lotlURL string) ([]string, error) {
+	if requested != "" {
+		return []string{strings.ToUpper(strings.TrimSpace(requested))}, nil
+	}
+
+	content, err := trustapplication.HTTPLOTL{URL: lotlURL}.Fetch()
 	if err != nil {
-		return downloaded{}, err
-	}
-	defer func() { _ = response.Body.Close() }()
-
-	if response.StatusCode != http.StatusOK {
-		return downloaded{}, fmt.Errorf("HTTP %d", response.StatusCode)
+		return nil, fmt.Errorf("fetch the EU list of the lists: %w", err)
 	}
 
-	content, err := io.ReadAll(io.LimitReader(response.Body, 32<<20))
+	lotl, err := trustinfra.LOTLParser{}.Parse(strings.NewReader(string(content)))
 	if err != nil {
-		return downloaded{}, err
+		return nil, err
 	}
 
-	if !looksLikeTrustList(content) {
-		return downloaded{}, fmt.Errorf("the response is not a trust list (got %q)", firstBytes(content, 40))
-	}
-
-	parsed, err := trustinfra.TSLParser{}.Parse(strings.NewReader(string(content)))
-	if err != nil {
-		return downloaded{}, fmt.Errorf("parse: %w", err)
-	}
-	if parsed.ServiceCount() == 0 {
-		return downloaded{}, fmt.Errorf("the list carries no services")
-	}
-
-	return downloaded{content: content, parsed: parsed}, nil
-}
-
-// looksLikeTrustList rejects HTML and other accidental responses.
-func looksLikeTrustList(content []byte) bool {
-	head := string(content)
-	if len(head) > 4096 {
-		head = head[:4096]
-	}
-	lower := strings.ToLower(head)
-	if strings.Contains(lower, "<!doctype html") || strings.Contains(lower, "<html") {
-		return false
-	}
-	return strings.Contains(lower, "trustservicestatuslist") ||
-		strings.Contains(lower, "trustservicelist")
-}
-
-// firstBytes renders a short prefix for an error message.
-func firstBytes(content []byte, limit int) string {
-	if len(content) > limit {
-		content = content[:limit]
-	}
-	return strings.TrimSpace(string(content))
-}
-
-// selectSources resolves the requested territories.
-func selectSources(territory, explicitURL string) []trustSource {
-	if explicitURL != "" {
-		label := strings.ToUpper(strings.TrimSpace(territory))
-		if label == "" {
-			label = "CUSTOM"
-		}
-		return []trustSource{{Territory: label, URL: explicitURL}}
-	}
-
-	if territory == "" {
-		return knownSources
-	}
-
-	wanted := strings.ToUpper(strings.TrimSpace(territory))
-	for _, source := range knownSources {
-		if source.Territory == wanted {
-			return []trustSource{source}
+	var territories []string
+	for _, entry := range lotl.Entries {
+		if entry.XML() && entry.CanSign() {
+			territories = append(territories, entry.Territory)
 		}
 	}
-	return nil
+	return territories, nil
 }
 
 // runTrustList shows what is cached.

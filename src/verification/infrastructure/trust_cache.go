@@ -73,6 +73,10 @@ func (p CachedTrustProvider) Load(territory string) (domain.TrustList, error) {
 			continue
 		}
 
+		// Only authenticated lists reach this directory: sync writes a list here
+		// after checking its signature against the LOTL. Marking it here is what
+		// lets the verifier use its certificates as anchors.
+		list.Authenticated = true
 		list.Source = path
 		if list.Territory == "" {
 			list.Territory = candidate

@@ -7,6 +7,7 @@ package domain
 
 import (
 	"crypto/x509"
+	"strings"
 	"time"
 )
 
@@ -301,4 +302,50 @@ type TrustListIntegrity struct {
 	Trusted bool
 	// Reason explains the outcome.
 	Reason string
+}
+
+// LOTLEntry is one national list advertised by the EU list of the lists.
+type LOTLEntry struct {
+	// Territory is the ISO code, e.g. "IT".
+	Territory string
+	// Location is where the list is published.
+	Location string
+	// MimeType and TSLType come from the LOTL and describe the format.
+	MimeType string
+	// Certificates are the scheme operator's signing certificates, published by
+	// the Commission. They are the anchor that makes a downloaded list
+	// verifiable instead of merely plausible.
+	Certificates []*x509.Certificate
+}
+
+// LOTL is the EU list of the lists.
+type LOTL struct {
+	Entries    []LOTLEntry
+	Issued     time.Time
+	NextUpdate time.Time
+}
+
+// Find returns the entry for a territory.
+func (l LOTL) Find(territory string) (LOTLEntry, bool) {
+	wanted := strings.ToUpper(strings.TrimSpace(territory))
+	for _, entry := range l.Entries {
+		if entry.Territory == wanted {
+			return entry, true
+		}
+	}
+	return LOTLEntry{}, false
+}
+
+// CanSign reports whether the entry publishes at least one signing certificate.
+//
+// Entries that only publish a PDF have no certificates to check against, so a
+// list downloaded from them cannot be authenticated and must stay inventory.
+func (e LOTLEntry) CanSign() bool { return len(e.Certificates) > 0 }
+
+// XML reports whether the published list is XML, which is what this tool parses.
+func (e LOTLEntry) XML() bool {
+	if strings.Contains(strings.ToLower(e.MimeType), "tsl+xml") {
+		return true
+	}
+	return strings.HasSuffix(strings.ToLower(e.Location), ".xml")
 }
