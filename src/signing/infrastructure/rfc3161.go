@@ -2,17 +2,18 @@ package infrastructure
 
 // A hand-written RFC 3161 timestamp request.
 //
-// The library's CreateRequest has two defects that break interoperability:
+// Why not the library's CreateRequest:
 //
-//  1. It reads the input in blocks of the digest size and hashes each block, so
-//     the imprint is the digest of digests rather than of the document. The
-//     resulting token verifies only against the same broken routine.
-//  2. It sets Request.Certificates before consulting opts, so "ask the TSA to
-//     include its certificate" is silently ignored and every token arrives
-//     without the certificate needed to verify it.
+//  1. Its contract is "give me a reader and I will hash it". We were already
+//     passing a digest, so it hashed the digest: sha256(sha256(document)).
+//     That is our misuse, not a library defect, and it produced tokens that
+//     OpenSSL rejected.
+//  2. CreateRequest sets Request.Certificates before consulting opts, so
+//     "include the TSA certificate" is ignored and tokens arrive without the
+//     certificate needed to verify them.
 //
-// Building the request here is ~40 lines and removes both. The caller passes a
-// digest it computed itself, which is what RFC 3161 actually specifies.
+// Building the request here makes the contract explicit: the caller hashes, and
+// this function only encodes. ~40 lines, and the imprint is unambiguous.
 
 import (
 	"bytes"

@@ -47,21 +47,26 @@ func runTimestamp(args []string, stdout, stderr io.Writer) int {
 		flags.PrintDefaults()
 	}
 
-	// The file argument is optional when --hash is given, so the positional
-	// extractor is bypassed in that case.
-	var path string
-	remaining := args
+	// Flags may follow the positional argument, which Go's flag package does not
+	// support on its own: split them first so `timestamp a.pdf --tsa url` works.
+	flagArguments, positional := splitArguments(args, map[string]bool{
+		"-out": true, "--out": true, "-tsa": true, "--tsa": true,
+		"-tsa-user": true, "--tsa-user": true, "-tsa-pass": true, "--tsa-pass": true,
+		"-hash": true, "--hash": true,
+	})
+	if err := flags.Parse(flagArguments); err != nil {
+		return exitUsage
+	}
+
+	// The document is optional when a digest is supplied.
+	path := ""
 	if *hashHex == "" {
-		var err error
-		path, remaining, err = extractDocument(args)
-		if err != nil {
-			fmt.Fprintf(stderr, "%v\n", err)
+		if len(positional) != 1 {
+			fmt.Fprintln(stderr, "timestamp needs exactly one document, or --hash <hex>")
 			flags.Usage()
 			return exitUsage
 		}
-	}
-	if err := flags.Parse(remaining); err != nil {
-		return exitUsage
+		path = positional[0]
 	}
 
 	if *tsaURL == "" {
@@ -232,6 +237,11 @@ func runVerifyTimestamp(args []string, stdout, stderr io.Writer) int {
 		}
 	}
 
+	// Exit codes: no comparison must never look like a pass. Scripted callers
+	// rely on the code, so "structure only" reports untrusted (3).
+	if note != "" {
+		return exitUnverified
+	}
 	if !matches {
 		return exitTampered
 	}

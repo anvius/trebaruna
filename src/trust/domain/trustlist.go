@@ -54,6 +54,10 @@ type TrustList struct {
 	Services []TrustService
 	// Source records where the list came from, for the report.
 	Source string
+	// Authenticated reports whether the list itself was verified against a
+	// pinned publication key. A downloaded list that fails this check is
+	// inventory: it may be displayed, never used to grant trust.
+	Authenticated bool
 }
 
 // Provider is the answer about one certificate's issuer.

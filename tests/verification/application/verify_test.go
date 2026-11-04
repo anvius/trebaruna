@@ -285,6 +285,8 @@ func TestTrustAnchorsAreOfferedToTheExtractor(t *testing.T) {
 
 	list := trustdomain.TrustList{
 		Territory: "IT",
+		// Only an authenticated list may act as a trust anchor.
+		Authenticated: true,
 		Services: []trustdomain.TrustService{{
 			ProviderName: "Qualified CA",
 			ServiceType:  "CA/QC",
@@ -341,4 +343,33 @@ func selfSignedCA(t *testing.T) *x509.Certificate {
 	}
 	certificate, _ := x509.ParseCertificate(der)
 	return certificate
+}
+
+// TestUnauthenticatedListGrantsNoAnchors: a downloaded file is not a trust
+// anchor. Until the list signature is checked against a pinned key, its
+// certificates must never be offered to a verifier.
+func TestUnauthenticatedListGrantsNoAnchors(t *testing.T) {
+	extractor := &anchorRecorder{signers: []domain.SignerReport{scenario()}}
+
+	list := trustdomain.TrustList{
+		Territory: "IT",
+		// Authenticated deliberately left false, as a freshly downloaded file.
+		Services: []trustdomain.TrustService{{
+			ProviderName: "Qualified CA",
+			ServiceType:  "CA/QC",
+			Status:       "granted",
+			Qualified:    true,
+			Certificates: []*x509.Certificate{selfSignedCA(t)},
+		}},
+	}
+
+	useCase := application.NewVerifyDocument(extractor, nil,
+		fakeTrust{list: list}, fixedClock{moment: time.Now()})
+
+	if _, err := useCase.Execute(application.Request{Path: "/tmp/atto.pdf"}); err != nil {
+		t.Fatalf("Execute: %v", err)
+	}
+	if extractor.receivedAnchors {
+		t.Error("an unauthenticated trust list must not supply trust anchors")
+	}
 }

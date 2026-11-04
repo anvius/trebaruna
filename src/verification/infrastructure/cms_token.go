@@ -13,6 +13,10 @@ import (
 // CMS parsing, the DER is scanned for that OID and the value that follows it is
 // handed to the timestamp package.
 //
+// Authentication of the token happens in cades.go: this file only locates it.
+// Finding a token is never evidence; proving its imprint matches this
+// signature is.
+//
 // A raw scan is safe here because the OID is specific and the result is not
 // trusted blindly: if the bytes do not parse as a TimeStampToken, the caller
 // reports an invalid timestamp instead of accepting it.

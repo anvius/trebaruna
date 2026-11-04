@@ -98,6 +98,8 @@ func (u *VerifyDocument) Execute(request Request) (verification.DocumentReport, 
 
 	// A trust list is only usable as anchors when it parses; an empty list means
 	// "no anchors", and the extractor then falls back to the system roots.
+	// Cached lists are inventory until authenticated against pinned publication
+	// keys. Their contents must never grant trust to a document.
 	if anchors := anchorPool(list); anchors != nil {
 		if aware, ok := extractor.(AnchorAware); ok {
 			extractor = aware.WithAnchors(anchors.roots, anchors.intermediates)
@@ -130,7 +132,7 @@ type anchorSet struct {
 // It returns nil when the list has no usable anchors, so callers can tell
 // "nothing to add" apart from "an empty pool that would reject everything".
 func anchorPool(list trustdomain.TrustList) *anchorSet {
-	if list.QualifiedCount() == 0 {
+	if !list.Authenticated || list.QualifiedCount() == 0 {
 		return nil
 	}
 
