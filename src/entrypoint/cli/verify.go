@@ -145,10 +145,25 @@ type signerJSON struct {
 	// Qualification explains the QES verdict: which condition held and which
 	// did not. A boolean alone cannot be audited.
 	Qualification *qualificationJSON `json:"qualification,omitempty"`
-	Expired       bool               `json:"certificate_expired_now"`
-	ExpiredAt     string             `json:"certificate_expired_at_signing"`
-	SelfSign      bool               `json:"self_signed"`
-	Findings      []findingJSON      `json:"findings"`
+	// TimestampProof is the evidence about the authority behind the token. It
+	// is separate from "timestamped" because a token can be bound without its
+	// authority being accredited.
+	TimestampProof *timestampJSON `json:"timestamp,omitempty"`
+	Expired        bool           `json:"certificate_expired_now"`
+	ExpiredAt      string         `json:"certificate_expired_at_signing"`
+	SelfSign       bool           `json:"self_signed"`
+	Findings       []findingJSON  `json:"findings"`
+}
+
+// timestampJSON is what was proven about the timestamp authority.
+type timestampJSON struct {
+	Bound        bool     `json:"bound"`
+	Accredited   bool     `json:"accredited"`
+	TimeStamping bool     `json:"time_stamping_certificate"`
+	Service      string   `json:"service,omitempty"`
+	Provider     string   `json:"provider,omitempty"`
+	GrantedSince string   `json:"granted_since,omitempty"`
+	Missing      []string `json:"missing,omitempty"`
 }
 
 // qualificationJSON is the evidence behind a QES verdict.
@@ -208,6 +223,21 @@ func encodeVerificationJSON(writer io.Writer, report verification.DocumentReport
 			}
 			if !evidence.ServiceGrantedSince.IsZero() {
 				entry.Qualification.ServiceGrantedSince = evidence.ServiceGrantedSince.Format(time.RFC3339)
+			}
+		}
+		if stamp := signer.TimestampEvidence; stamp.Bound {
+			entry.TimestampProof = &timestampJSON{
+				Bound:        stamp.Bound,
+				Accredited:   stamp.Accredited,
+				TimeStamping: stamp.CertificateCanTimestamp,
+				Service:      stamp.ServiceName,
+				Provider:     stamp.ProviderName,
+			}
+			if !stamp.GrantedSince.IsZero() {
+				entry.TimestampProof.GrantedSince = stamp.GrantedSince.Format(time.RFC3339)
+			}
+			if !stamp.Accredited {
+				entry.TimestampProof.Missing = timestampMissing(stamp, signer.SignedAt)
 			}
 		}
 		if !signer.SignedAt.IsZero() {
@@ -281,4 +311,27 @@ func printVerification(writer io.Writer, report verification.DocumentReport, cat
 		fmt.Fprintf(writer, "\n  %s %s\n", catalogue.StatusMark(warning.Status),
 			catalogue.FindingName(warning.Code, warning.Message))
 	}
+}
+
+// timestampMissing explains what keeps a timestamp from being accredited.
+//
+// The reasons are repeated here rather than imported from the domain so the JSON
+// stays stable even if the internal wording changes.
+func timestampMissing(evidence verification.TimestampEvidence, at time.Time) []string {
+	var missing []string
+	if !evidence.CertificateCanTimestamp {
+		missing = append(missing, "the timestamp certificate lacks the time-stamping key usage")
+	}
+	if !evidence.ServiceListed {
+		missing = append(missing, "no granted TSA/QTST in the authenticated trust list issued it")
+	}
+	if !evidence.GrantedSince.IsZero() {
+		switch {
+		case at.IsZero():
+			missing = append(missing, "the token time is unknown, so the grant cannot be checked")
+		case at.Before(evidence.GrantedSince):
+			missing = append(missing, "the authority was not granted yet when the token was issued")
+		}
+	}
+	return missing
 }

@@ -182,20 +182,33 @@ func (v *CadesVerifier) describeTime(content []byte, parsed *pkcs7.PKCS7, report
 
 	report.SignedAt = token.Time
 	report.Timestamped = true
-	if len(token.Certificates) > 0 {
-		report.TimestampAuthority = token.Certificates[0].Subject.CommonName
+
+	facts := ReadTimestamp(token)
+	report.TimestampEvidence = domain.TimestampEvidence{
+		Bound:                   true,
+		CertificateCanTimestamp: facts.CanTimestamp,
+		CertificateIssuerDN:     facts.SignerIssuerDN,
+		Certificate:             facts.Signer,
 	}
+	if facts.Signer != nil {
+		report.TimestampAuthority = facts.Signer.Subject.CommonName
+	}
+
+	// The imprint matches, so the seal covers this signature. Whether the sealer
+	// is a qualified authority is a separate question that needs the trust list;
+	// the use case answers it and replaces these findings.
 	report.Findings = append(report.Findings, domain.Finding{
 		Code:    "timestamp.bound",
 		Status:  domain.StatusGood,
 		Message: "the timestamp is bound to this signature",
 	})
-	// Still unproven: the TSA's own chain. Saying so is cheaper than implying it.
-	report.Findings = append(report.Findings, domain.Finding{
-		Code:    "timestamp.untrusted_authority",
-		Status:  domain.StatusWarn,
-		Message: "the timestamp authority chain is not validated yet",
-	})
+	if !facts.CanTimestamp {
+		report.Findings = append(report.Findings, domain.Finding{
+			Code:    "timestamp.not_timestamping_certificate",
+			Status:  domain.StatusWarn,
+			Message: "the timestamp certificate lacks the timeStamping key usage",
+		})
+	}
 }
 
 // tokenBindsToSignature compares the token imprint with the digest of the

@@ -12,6 +12,7 @@
 package domain
 
 import (
+	"crypto/x509"
 	"fmt"
 	"time"
 )
@@ -182,6 +183,30 @@ func (q Qualification) Missing(at time.Time) []string {
 	return missing
 }
 
+// TimestampEvidence is what was checked about the authority that sealed a
+// signature.
+type TimestampEvidence struct {
+	// Bound reports a token whose imprint matches this signature.
+	Bound bool
+	// CertificateCanTimestamp reports id-kp-timeStamping on the signer.
+	CertificateCanTimestamp bool
+	// ServiceListed reports a granted TSA/QTST in an authenticated list.
+	ServiceListed bool
+	// ProviderName and ServiceName identify the matched service.
+	ProviderName string
+	ServiceName  string
+	// GrantedSince is when the service entered its current status.
+	GrantedSince time.Time
+	// Accredited reports whether every condition held at the token's own time.
+	Accredited bool
+	// CertificateIssuerDN is the subject of the CA that issued the timestamp
+	// certificate, which is what a list publishing the authority's CA contains.
+	CertificateIssuerDN string
+	// Certificate is the timestamp certificate itself, for lists that publish
+	// the end-entity unit instead of its issuer.
+	Certificate *x509.Certificate
+}
+
 // SignerReport is everything known about one signature in the document.
 type SignerReport struct {
 	// FieldName is the signature field, e.g. "F38a".
@@ -213,6 +238,10 @@ type SignerReport struct {
 	Timestamped bool
 	// TimestampAuthority names the TSA, when known.
 	TimestampAuthority string
+	// Timestamp is the evidence about the authority behind the token. It is
+	// separate from Timestamped because "a token exists and is bound" and "the
+	// authority is qualified" are different facts with different sources.
+	TimestampEvidence TimestampEvidence
 	// Integrity reports whether the signed bytes are untouched.
 	Integrity Status
 	// CertificateStatus reports whether the certificate was valid at signing.

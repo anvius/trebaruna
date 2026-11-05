@@ -61,7 +61,8 @@ func (s TrustService) HasQualifier(name string) bool {
 	return false
 }
 
-// Qualified reports whether this service can issue qualified signatures.
+// CanIssueQualifiedSignature reports whether this service issues qualified
+// signature certificates.
 func (s TrustService) CanIssueQualifiedSignature() bool {
 	if !s.Qualified || s.Status != StatusGranted {
 		return false
@@ -71,6 +72,17 @@ func (s TrustService) CanIssueQualifiedSignature() bool {
 		return true
 	}
 	return false
+}
+
+// CanTimestamp reports whether this service issues qualified timestamps.
+//
+// TSA/QTST is the qualified time-stamping authority; plain TSA is listed but not
+// qualified, and a seal from it proves time without qualifying it.
+func (s TrustService) CanTimestamp() bool {
+	if !s.Qualified || s.Status != StatusGranted {
+		return false
+	}
+	return s.ServiceType == "TSA/QTST"
 }
 
 // TrustList is a national trusted list.

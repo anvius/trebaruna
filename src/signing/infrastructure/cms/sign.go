@@ -20,6 +20,10 @@ type Request struct {
 	EmbeddedContent    bool
 	IncludeSigningTime bool
 	ExtraAttributes    []Attribute
+	// ContentType is the eContentType of the encapsulated content. Empty means
+	// id-data, which is what a CAdES document signature carries. A timestamp
+	// token declares id-ct-TSTInfo instead, and validators check it.
+	ContentType asn1.ObjectIdentifier
 }
 
 // Signature is the produced SignedData plus the material needed to timestamp
@@ -112,7 +116,7 @@ func buildSignedAttributes(contentDigest []byte, request Request) ([]byte, error
 	attributes := [][]byte{
 		encoder.seq(
 			encoder.oid(OIDContentType),
-			encoder.set(encoder.oid(OIDData)),
+			encoder.set(encoder.oid(contentTypeFor(request))),
 		),
 		encoder.seq(
 			encoder.oid(OIDMessageDigest),
@@ -143,6 +147,14 @@ func buildSignedAttributes(contentDigest []byte, request Request) ([]byte, error
 	return encoder.tagged(0x30, sortSet(attributes)...), nil
 }
 
+// contentTypeFor returns the declared content type, defaulting to id-data.
+func contentTypeFor(request Request) asn1.ObjectIdentifier {
+	if len(request.ContentType) == 0 {
+		return OIDData
+	}
+	return request.ContentType
+}
+
 // signingCertificateV2 encodes ESSCertIDv2 per RFC 5035.
 func signingCertificateV2(encoder *der, certificate *x509.Certificate) ([]byte, error) {
 	digest := sha256.Sum256(certificate.Raw)
@@ -168,14 +180,19 @@ func assemble(request Request, signedAttrs, signatureValue []byte) ([]byte, erro
 		return nil, err
 	}
 
+	contentType := request.ContentType
+	if len(contentType) == 0 {
+		contentType = OIDData
+	}
+
 	var encapContent []byte
 	if request.EmbeddedContent {
 		encapContent = encoder.seq(
-			encoder.oid(OIDData),
+			encoder.oid(contentType),
 			encoder.tagged(0xa0, encoder.octetString(request.Content)),
 		)
 	} else {
-		encapContent = encoder.seq(encoder.oid(OIDData))
+		encapContent = encoder.seq(encoder.oid(contentType))
 	}
 
 	certificates := encoder.tagged(0xa0, certificateSet(encoder, request)...)
