@@ -1,7 +1,9 @@
 package infrastructure
 
 import (
+	"bytes"
 	"crypto/x509"
+	"encoding/base64"
 	"fmt"
 	"os"
 	"time"
@@ -9,6 +11,7 @@ import (
 	"codeberg.org/simplicer/firma-it/src/verification/application"
 	"codeberg.org/simplicer/firma-it/src/verification/domain"
 	"github.com/beevik/etree"
+	"github.com/digitorus/timestamp"
 	dsig "github.com/russellhaering/goxmldsig"
 )
 
@@ -96,6 +99,7 @@ func (v *XadesVerifier) Extract(path string) ([]domain.SignerReport, error) {
 	}
 
 	v.describeSigningTime(signature, &report)
+	v.describeSignatureTimeStamp(signature, &report)
 
 	switch {
 	case report.Integrity == domain.StatusBad:
@@ -265,6 +269,141 @@ func (v *XadesVerifier) describeSigningTime(signature *etree.Element, report *do
 			}
 		}
 	})
+}
+
+// describeSignatureTimeStamp reads xades:SignatureTimeStamp and checks it.
+//
+// Two things must hold, and only the first is visible at a glance: the token must
+// be a real token, and its imprint must cover the ds:SignatureValue that is
+// actually in this file. A token lifted from another signature parses perfectly
+// and proves nothing, which is why the imprint is recomputed here rather than
+// trusted from the report of whoever produced the document.
+func (v *XadesVerifier) describeSignatureTimeStamp(signature *etree.Element, report *domain.SignerReport) {
+	var tokenText string
+	walk(signature, func(element *etree.Element) {
+		if tokenText == "" && element.Tag == "EncapsulatedTimeStamp" && element.NamespaceURI() == xadesNamespace {
+			tokenText = element.Text()
+		}
+	})
+	if tokenText == "" {
+		return
+	}
+
+	tokenDER, err := base64.StdEncoding.DecodeString(tokenText)
+	if err != nil {
+		report.Findings = append(report.Findings, domain.Finding{
+			Code:    "timestamp.invalid",
+			Status:  domain.StatusBad,
+			Message: "the timestamp token is not valid base64",
+			Detail:  err.Error(),
+		})
+		return
+	}
+
+	token, err := timestamp.Parse(tokenDER)
+	if err != nil {
+		report.Findings = append(report.Findings, domain.Finding{
+			Code:    "timestamp.invalid",
+			Status:  domain.StatusBad,
+			Message: "the timestamp token cannot be parsed or does not verify",
+			Detail:  err.Error(),
+		})
+		return
+	}
+
+	signatureValue := findSignatureValue(signature)
+	if signatureValue == nil {
+		report.Findings = append(report.Findings, domain.Finding{
+			Code:    "timestamp.invalid",
+			Status:  domain.StatusBad,
+			Message: "the signature has no SignatureValue for the token to cover",
+		})
+		return
+	}
+
+	// The covered content is the element as serialised in this document.
+	covered := serialiseElement(signatureValue)
+	hasher := token.HashAlgorithm.New()
+	if !token.HashAlgorithm.Available() {
+		report.Findings = append(report.Findings, domain.Finding{
+			Code:    "timestamp.invalid",
+			Status:  domain.StatusBad,
+			Message: "the token uses a digest algorithm this build does not support",
+		})
+		return
+	}
+	hasher.Write(covered)
+	if !bytes.Equal(hasher.Sum(nil), token.HashedMessage) {
+		report.Findings = append(report.Findings, domain.Finding{
+			Code:    "timestamp.invalid",
+			Status:  domain.StatusBad,
+			Message: "the timestamp covers a different signature value",
+		})
+		return
+	}
+
+	report.Timestamped = true
+	report.SignedAt = token.Time
+
+	facts := ReadTimestamp(token)
+	report.TimestampEvidence = domain.TimestampEvidence{
+		Bound:                   true,
+		CertificateCanTimestamp: facts.CanTimestamp,
+		CertificateIssuerDN:     facts.SignerIssuerDN,
+		Certificate:             facts.Signer,
+	}
+	if facts.Signer != nil {
+		report.TimestampAuthority = facts.Signer.Subject.CommonName
+	}
+
+	report.Findings = append(report.Findings, domain.Finding{
+		Code:    "timestamp.bound",
+		Status:  domain.StatusGood,
+		Message: "the timestamp is bound to this signature",
+	})
+	if !facts.CanTimestamp {
+		report.Findings = append(report.Findings, domain.Finding{
+			Code:    "timestamp.not_timestamping_certificate",
+			Status:  domain.StatusWarn,
+			Message: "the timestamp certificate lacks the timeStamping key usage",
+		})
+	}
+}
+
+// findSignatureValue locates ds:SignatureValue inside the signature.
+func findSignatureValue(signature *etree.Element) *etree.Element {
+	if signature == nil {
+		return nil
+	}
+	if signature.Tag == "SignatureValue" && signature.NamespaceURI() == "http://www.w3.org/2000/09/xmldsig#" {
+		return signature
+	}
+	for _, child := range signature.ChildElements() {
+		if found := findSignatureValue(child); found != nil {
+			return found
+		}
+	}
+	return nil
+}
+
+// serialiseElement renders an element exactly as it sits in the document.
+//
+// The token in the file covers the bytes a reader sees, so the digest is computed
+// over those bytes and not over a re-indented copy.
+func serialiseElement(element *etree.Element) []byte {
+	document := etree.NewDocument()
+	document.SetRoot(element.Copy())
+	document.Indent(0)
+	output, err := document.WriteToBytes()
+	if err != nil {
+		return nil
+	}
+	start := bytes.Index(output, []byte("<ds:SignatureValue"))
+	end := bytes.LastIndex(output, []byte("</ds:SignatureValue>"))
+	if start < 0 || end < 0 {
+		return nil
+	}
+	return output[start : end+len("</ds:SignatureValue>")]
 }
 
 // compile-time check.

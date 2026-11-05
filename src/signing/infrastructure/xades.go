@@ -1,6 +1,7 @@
 package infrastructure
 
 import (
+	"bytes"
 	"context"
 	"crypto"
 	"crypto/rand"
@@ -13,6 +14,7 @@ import (
 
 	"codeberg.org/simplicer/firma-it/src/signing/application"
 	"codeberg.org/simplicer/firma-it/src/signing/domain"
+	"codeberg.org/simplicer/firma-it/src/signing/infrastructure/cms"
 	"github.com/beevik/etree"
 	dsig "github.com/russellhaering/goxmldsig"
 )
@@ -62,10 +64,11 @@ const (
 // signs SignedInfo. Formatting is never touched: re-indenting an element
 // changes its text nodes and therefore its digest.
 func (s *XadesSigner) SignXades(ctx context.Context, request application.XadesRequest) ([]byte, error) {
-	if request.Level.NeedsTimestamp() {
+	// XAdES-T needs a token over the signature value, which only exists after
+	// the signature is computed. Everything else is refused with its reason.
+	if request.Level.NeedsTimestamp() && request.TimestampURL == "" {
 		return nil, fmt.Errorf(
-			"%s for XAdES needs xades:SignatureTimeStamp, which is not implemented yet.\n"+
-				"  use --level bes, or timestamp the result separately: firma-it timestamp <file> --tsa <url>",
+			"%s for XAdES needs a timestamp authority: pass --tsa <url>",
 			request.Level,
 		)
 	}
@@ -161,6 +164,15 @@ func (s *XadesSigner) SignXades(ctx context.Context, request application.XadesRe
 		return nil, fmt.Errorf("SignatureValue is missing from the assembled signature")
 	}
 	signatureValueElement.SetText(base64.StdEncoding.EncodeToString(signatureValue))
+
+	// XAdES-T: the token seals the SignatureValue element, not the document. It
+	// lives in xades:UnsignedProperties, which is why it can be added after the
+	// signature exists at all.
+	if request.Level.NeedsTimestamp() {
+		if err := s.attachSignatureTimeStamp(ctx, tree, signatureElement, signatureValue, request); err != nil {
+			return nil, err
+		}
+	}
 
 	output := etree.NewDocument()
 	output.SetRoot(tree.Root().Copy())
@@ -381,3 +393,151 @@ var _ = domain.Xades
 func hasXMLDeclaration(content []byte) bool {
 	return strings.HasPrefix(strings.TrimSpace(string(content)), "<?xml")
 }
+
+// attachSignatureTimeStamp adds xades:SignatureTimeStamp, turning BES into T.
+//
+// ETSI EN 319 132-1 says the token covers the canonical form of ds:SignatureValue.
+// The token is requested over the digest of the *re-serialised* element, because
+// the verifier will canonicalise what is in the file, not what was in memory.
+func (s *XadesSigner) attachSignatureTimeStamp(
+	ctx context.Context,
+	tree *etree.Document,
+	signatureElement *etree.Element,
+	signatureValue []byte,
+	request application.XadesRequest,
+) error {
+	timestamper := s.timestamps
+	if timestamper == nil {
+		return fmt.Errorf("XAdES-T needs a timestamp authority: pass --tsa <url>")
+	}
+
+	// The element as it will be read: base64 text plus its tags.
+	canonical, err := canonicalSignatureValue(tree, signatureElement)
+	if err != nil {
+		return err
+	}
+
+	digest := sha256.Sum256(canonical)
+	response, err := timestamper.Token(ctx, digest[:], request.TimestampURL, request.TimestampUser, request.TimestampSecret)
+	if err != nil {
+		return fmt.Errorf("request the XAdES signature timestamp: %w", err)
+	}
+
+	tokenDER, err := cms.ExtractToken(response)
+	if err != nil {
+		return fmt.Errorf("extract the timestamp token: %w", err)
+	}
+
+	// The token travels as a base64 element, exactly as the CMS package emits it.
+	unsigned := buildUnsignedProperties(base64.StdEncoding.EncodeToString(tokenDER))
+
+	fragment, err := parseFragment(unsigned)
+	if err != nil {
+		return fmt.Errorf("build xades:UnsignedProperties: %w", err)
+	}
+
+	qualifying := findQualifyingProperties(signatureElement)
+	if qualifying == nil {
+		return fmt.Errorf("the signature has no xades:QualifyingProperties to extend")
+	}
+	qualifying.AddChild(fragment)
+	return nil
+}
+
+// canonicalSignatureValue re-serialises ds:SignatureValue for hashing.
+//
+// The signature element is copied so the measurement never mutates the tree the
+// caller will write: canonicalising in place changes attribute order and
+// namespace declarations, which would invalidate the very digest being computed.
+func canonicalSignatureValue(tree *etree.Document, signatureElement *etree.Element) ([]byte, error) {
+	copyOfSignature := signatureElement.Copy()
+
+	// The copy is detached from its document, so every namespace it inherited
+	// must be declared on it; otherwise the canonical form differs from the one
+	// a verifier reconstructs from the file.
+	ensureNamespace(copyOfSignature, "ds", namespaceDS)
+	ensureNamespace(copyOfSignature, "xades", namespaceXades)
+
+	value := copyOfSignature.SelectElement("SignatureValue")
+	if value == nil {
+		return nil, fmt.Errorf("SignatureValue is missing from the signature")
+	}
+
+	// Wrap so the canonicaliser sees the element in a document of its own.
+	holder := etree.NewDocument()
+	holder.SetRoot(copyOfSignature)
+	holder.Indent(0)
+
+	output, err := holder.WriteToBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	// Extract just the element, dropping the prolog the writer adds.
+	start := bytes.Index(output, []byte("<ds:Signature"))
+	end := bytes.LastIndex(output, []byte("</ds:Signature>"))
+	if start < 0 || end < 0 {
+		return nil, fmt.Errorf("cannot isolate the serialised signature")
+	}
+	serialised := output[start : end+len("</ds:Signature>")]
+
+	// The token covers SignatureValue alone, so isolate it again from the
+	// serialised signature rather than hashing the whole element.
+	valueStart := bytes.Index(serialised, []byte("<ds:SignatureValue>"))
+	valueEnd := bytes.Index(serialised, []byte("</ds:SignatureValue>"))
+	if valueStart < 0 || valueEnd < 0 {
+		return nil, fmt.Errorf("cannot isolate SignatureValue for hashing")
+	}
+	_ = tree
+	return serialised[valueStart : valueEnd+len("</ds:SignatureValue>")], nil
+}
+
+// ensureNamespace declares a prefix on an element when it is not already bound.
+func ensureNamespace(element *etree.Element, prefix, uri string) {
+	attribute := "xmlns:" + prefix
+	if element.SelectAttr(attribute) != nil {
+		return
+	}
+	// A prefix already bound to the right URI by an ancestor needs no redeclaration.
+	if element.Space == prefix && element.NamespaceURI() == uri {
+		return
+	}
+	element.CreateAttr(attribute, uri)
+}
+
+// findQualifyingProperties locates xades:QualifyingProperties in the signature.
+func findQualifyingProperties(signature *etree.Element) *etree.Element {
+	if signature == nil {
+		return nil
+	}
+	if signature.Tag == "QualifyingProperties" && signature.NamespaceURI() == namespaceXades {
+		return signature
+	}
+	for _, child := range signature.ChildElements() {
+		if found := findQualifyingProperties(child); found != nil {
+			return found
+		}
+	}
+	return nil
+}
+
+// buildUnsignedProperties emits xades:UnsignedProperties with the token.
+//
+// The Id is required by the schema and referenced by nothing: the token covers
+// the signature, not the other way round.
+func buildUnsignedProperties(token string) string {
+	return `<xades:UnsignedProperties xmlns:xades="` + namespaceXades + `" Id="` + unsignedPropertiesID + `">` +
+		`<xades:UnsignedSignatureProperties>` +
+		`<xades:SignatureTimeStamp Id="` + signatureTimeStampID + `">` +
+		`<ds:CanonicalizationMethod xmlns:ds="` + namespaceDS + `" Algorithm="` + algorithmC14N + `"/>` +
+		`<xades:EncapsulatedTimeStamp>` + token + `</xades:EncapsulatedTimeStamp>` +
+		`</xades:SignatureTimeStamp>` +
+		`</xades:UnsignedSignatureProperties>` +
+		`</xades:UnsignedProperties>`
+}
+
+// Identifiers used by the timestamp extension.
+const (
+	unsignedPropertiesID = "firma-it-unsigned-properties"
+	signatureTimeStampID = "firma-it-signature-timestamp"
+)
