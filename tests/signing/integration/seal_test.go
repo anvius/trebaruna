@@ -4,7 +4,7 @@ package integration_test
 // behaves when it does not fit, using the real renderer and a real PDF.
 
 import (
-	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -122,19 +122,39 @@ func renderText(appearance *pdfsign.Appearance) string {
 	return builder.String()
 }
 
-// writeBlankPDF writes a minimal one-page PDF and returns its path.
+// writeBlankPDF writes a one-page PDF with a real cross-reference table.
+//
+// pdfsign parses the document before signing and refuses one whose startxref is
+// missing, so a stub without the table cannot exercise the signing path at all.
 func writeBlankPDF(t *testing.T, directory string) string {
 	t.Helper()
 
-	content := []byte("%PDF-1.7\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n" +
-		"2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n" +
-		"3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 595 842]/Resources<<>>>>endobj\n" +
-		"trailer<</Root 1 0 R/Size 4>>\n%%EOF\n")
+	objects := []string{
+		"<< /Type /Catalog /Pages 2 0 R >>",
+		"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+		"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << >> >>",
+	}
+
+	var builder strings.Builder
+	builder.WriteString("%PDF-1.7\n")
+	offsets := make([]int, len(objects))
+	for index, body := range objects {
+		offsets[index] = builder.Len()
+		fmt.Fprintf(&builder, "%d 0 obj\n%s\nendobj\n", index+1, body)
+	}
+
+	xref := builder.Len()
+	fmt.Fprintf(&builder, "xref\n0 %d\n", len(objects)+1)
+	builder.WriteString("0000000000 65535 f \n")
+	for _, offset := range offsets {
+		fmt.Fprintf(&builder, "%010d 00000 n \n", offset)
+	}
+	fmt.Fprintf(&builder, "trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n",
+		len(objects)+1, xref)
 
 	path := filepath.Join(directory, "blank.pdf")
-	if err := os.WriteFile(path, content, 0o644); err != nil {
+	if err := os.WriteFile(path, []byte(builder.String()), 0o644); err != nil {
 		t.Fatalf("write PDF: %v", err)
 	}
-	_ = bytes.MinRead
 	return path
 }

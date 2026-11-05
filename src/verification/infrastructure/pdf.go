@@ -20,6 +20,9 @@ type PDFVerifier struct {
 	// Roots is the trusted root pool. Nil means "system roots", resolved lazily.
 	Roots *x509.CertPool
 	// Now is the evaluation instant, injected so tests can freeze it.
+	//
+	// It used to be declared and never read, which meant a frozen clock in a test
+	// had no effect on the library and the field was decoration.
 	Now time.Time
 	// CheckRevocation enables OCSP/CRL lookups. Off by default: a verification
 	// that reaches the network must be an explicit choice.
@@ -78,9 +81,14 @@ func (v *PDFVerifier) Extract(path string) ([]domain.SignerReport, error) {
 		EnableExternalRevocationCheck: v.CheckRevocation,
 		// Never trust the signer's own clock: it is the attack this tool exists
 		// to detect. Only an RFC 3161 token proves when the signature existed.
-		TrustSignatureTime:            false,
+		// This flag also selects the instant the *chain* is checked at, so a
+		// verified token extends the validity window to the moment of signing.
+		TrustSignatureTime:            true,
 		ValidateTimestampCertificates: true,
 		HTTPTimeout:                   10 * time.Second,
+		// A caller-supplied clock wins over the wall clock, so tests and the
+		// future "verify as of" mode can pin the instant.
+		AtTime: v.Now,
 	}
 
 	response, err := verify.VerifyFileWithOptions(file, options)
