@@ -135,7 +135,9 @@ type Qualification struct {
 // IsQualified reports whether every eIDAS condition held at the given moment.
 //
 // The signing moment matters: a service granted after the signature was made did
-// not issue it, even if the same CA is listed today.
+// not issue it, even if the same CA is listed today. When the moment is unknown
+// and the list publishes a grant date, the comparison cannot be made, so the
+// answer is "not proven" rather than "probably fine".
 func (q Qualification) IsQualified(at time.Time) bool {
 	if q.DeclaredSealOnly {
 		return false
@@ -143,8 +145,10 @@ func (q Qualification) IsQualified(at time.Time) bool {
 	if !q.CertificateQualified || !q.DeviceQualified || !q.ServiceListed {
 		return false
 	}
-	if !q.ServiceGrantedSince.IsZero() && !at.IsZero() && at.Before(q.ServiceGrantedSince) {
-		return false
+	if !q.ServiceGrantedSince.IsZero() {
+		if at.IsZero() || at.Before(q.ServiceGrantedSince) {
+			return false
+		}
 	}
 	return true
 }
@@ -164,8 +168,13 @@ func (q Qualification) Missing(at time.Time) []string {
 	if !q.ServiceListed {
 		missing = append(missing, "no granted CA/QC in the authenticated trust list issued this chain")
 	}
-	if !q.ServiceGrantedSince.IsZero() && !at.IsZero() && at.Before(q.ServiceGrantedSince) {
-		missing = append(missing, "the issuing service was not granted yet when the signature was made")
+	if !q.ServiceGrantedSince.IsZero() {
+		switch {
+		case at.IsZero():
+			missing = append(missing, "the signing time is unknown, so the service grant cannot be checked against it")
+		case at.Before(q.ServiceGrantedSince):
+			missing = append(missing, "the issuing service was not granted yet when the signature was made")
+		}
 	}
 	if q.DeclaredSealOnly {
 		missing = append(missing, "the certificate is qualified for seals or web authentication, not for signatures")

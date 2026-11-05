@@ -320,3 +320,33 @@ func hasFinding(findings []domain.Finding, code string) bool {
 	}
 	return false
 }
+
+// TestUnknownSigningTimeWithGrantDateStaysAdvanced: when the list publishes a
+// grant date but the document carries no provable signing time, the comparison
+// cannot be made. Silence is not permission.
+func TestUnknownSigningTimeWithGrantDateStaysAdvanced(t *testing.T) {
+	ca := qualifiedCA(t, "Example Qualified CA")
+	signer := signingReport(ca)
+	signer.SignedAt = time.Time{}
+
+	got := verified(t, signer, qualifiedList(ca, time.Date(2019, 1, 1, 0, 0, 0, 0, time.UTC)))
+	if got.Trust == domain.TrustQualified {
+		t.Error("an unknown signing time cannot prove the service was already granted")
+	}
+	if got.Qualified {
+		t.Error("the qualification flag must follow the evidence")
+	}
+}
+
+// TestNoGrantDateStillQualifies keeps the opposite case working: a list that does
+// not publish a date leaves nothing to compare, and the other evidence stands.
+func TestNoGrantDateStillQualifies(t *testing.T) {
+	ca := qualifiedCA(t, "Example Qualified CA")
+	signer := signingReport(ca)
+	signer.SignedAt = time.Time{}
+
+	got := verified(t, signer, qualifiedList(ca, time.Time{}))
+	if got.Trust != domain.TrustQualified {
+		t.Errorf("trust = %s, want qualified: no grant date to contradict", got.Trust)
+	}
+}
