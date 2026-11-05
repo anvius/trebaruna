@@ -100,6 +100,9 @@ func (v *CadesVerifier) Extract(path string) ([]domain.SignerReport, error) {
 
 	v.describeTime(content, parsed, &report)
 
+	// The chain is validated at the proven signing time, not at the wall clock.
+	// A certificate valid when the signature was made but expired since must not
+	// turn into an untrusted issuer: that is the whole point of a timestamp.
 	if signer != nil {
 		switch {
 		case report.SelfSigned:
@@ -108,7 +111,7 @@ func (v *CadesVerifier) Extract(path string) ([]domain.SignerReport, error) {
 				Status:  domain.StatusWarn,
 				Message: "the certificate is self-signed: valid cryptography, no third-party trust",
 			})
-		case verifyCMSChain(parsed, v.Roots, v.Now) == nil:
+		case verifyCMSChain(parsed, v.Roots, chainInstant(&report, v.Now)) == nil:
 			report.CertificateStatus = domain.StatusGood
 			report.Findings = append(report.Findings, domain.Finding{
 				Code:    "certificate.trusted",
@@ -144,6 +147,21 @@ func issuerFromSet(certificates []*x509.Certificate, leaf *x509.Certificate) *x5
 		}
 	}
 	return nil
+}
+
+// chainInstant picks the moment the chain must have been valid at.
+//
+// A verified timestamp is evidence; the claimed signing time is not. Falling back
+// to "now" only happens when neither exists, which is the case for a bare
+// CAdES-BES whose signer asserted nothing.
+func chainInstant(report *domain.SignerReport, fallback time.Time) time.Time {
+	if report.Timestamped && !report.SignedAt.IsZero() {
+		return report.SignedAt
+	}
+	if fallback.IsZero() {
+		return time.Now()
+	}
+	return fallback
 }
 
 // verifyContent checks the signature against the carried content.

@@ -481,3 +481,65 @@ func hasFindingCode(findings []verification.Finding, code string) bool {
 	}
 	return false
 }
+
+// TestCadesChainUsesTheTimestampMoment is the CAdES counterpart of the PDF fix:
+// a certificate that was valid when the sealed signature was made, but has
+// expired since, must not read as an untrusted issuer.
+func TestCadesChainUsesTheTimestampMoment(t *testing.T) {
+	unit := newTimestampUnit(t, true)
+	directory := t.TempDir()
+
+	signed, err := cms.Sign(cms.Request{
+		Content:         []byte("Contenuto\n"),
+		Certificate:     unit.signer,
+		Chain:           []*x509.Certificate{unit.ca},
+		Signer:          unit.signerID,
+		EmbeddedContent: true,
+	})
+	if err != nil {
+		t.Fatalf("sign: %v", err)
+	}
+
+	// The token is issued now, which is inside the TSA certificate's window.
+	imprint := sha256.Sum256(signed.SignatureValue)
+	container, err := signed.WithTimestamp(unit.seal(t, imprint[:], time.Now().Truncate(time.Second)))
+	if err != nil {
+		t.Fatalf("attach timestamp: %v", err)
+	}
+
+	path := filepath.Join(directory, "sealed.p7m")
+	if err := os.WriteFile(path, container, 0o644); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	list := trustdomain.TrustList{
+		Territory:     "IT",
+		Authenticated: true,
+		Services: []trustdomain.TrustService{{
+			ProviderName: "Example TSP",
+			ServiceType:  "CA/QC",
+			Status:       trustdomain.StatusGranted,
+			Qualified:    true,
+			Certificates: []*x509.Certificate{unit.ca},
+		}},
+	}
+
+	// Verify as if ten years had passed: every certificate here has expired by
+	// then, but the token proves the signature was made before that.
+	future := time.Now().AddDate(10, 0, 0)
+	useCase := verificationapp.NewVerifyDocument(
+		nil, verificationinfra.NewCadesVerifier(),
+		staticTrust{list: list}, fixedClock{moment: future},
+	)
+
+	report, err := useCase.Execute(verificationapp.Request{Path: path, Format: "cades"})
+	if err != nil {
+		t.Fatalf("verify: %v", err)
+	}
+
+	got := report.Signers[0]
+	if got.CertificateStatus == verification.StatusUnknown {
+		t.Errorf("the chain must be judged at the timestamp, not at %s; findings: %+v",
+			future.Format("2006-01-02"), got.Findings)
+	}
+}
