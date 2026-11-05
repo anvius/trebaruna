@@ -93,6 +93,11 @@ func (v *CadesVerifier) Extract(path string) ([]domain.SignerReport, error) {
 	signer := parsed.GetOnlySigner()
 	describeCertificate(signer, &report)
 
+	// The issuer travels with the container, so a revocation query can be built
+	// later without asking the user for anything.
+	report.Revocation.Certificate = signer
+	report.Revocation.Issuer = issuerFromSet(parsed.Certificates, signer)
+
 	v.describeTime(content, parsed, &report)
 
 	if signer != nil {
@@ -122,6 +127,23 @@ func (v *CadesVerifier) Extract(path string) ([]domain.SignerReport, error) {
 
 	report.Trust = trustFromReport(report)
 	return []domain.SignerReport{report}, nil
+}
+
+// issuerFromSet finds the certificate that signed the leaf among those the
+// container carries.
+func issuerFromSet(certificates []*x509.Certificate, leaf *x509.Certificate) *x509.Certificate {
+	if leaf == nil {
+		return nil
+	}
+	for _, candidate := range certificates {
+		if candidate == nil || candidate.Equal(leaf) {
+			continue
+		}
+		if bytes.Equal(candidate.RawSubject, leaf.RawIssuer) {
+			return candidate
+		}
+	}
+	return nil
 }
 
 // verifyContent checks the signature against the carried content.

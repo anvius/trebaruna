@@ -1,6 +1,7 @@
 package infrastructure
 
 import (
+	"bytes"
 	"crypto/x509"
 	"fmt"
 	"os"
@@ -203,6 +204,10 @@ func (v *PDFVerifier) describeChain(signer *verify.Signer, report *domain.Signer
 	}
 
 	entry := signer.Certificates[0]
+	// The certificates travel with the report so a revocation query can be built
+	// for this certificate against its issuer.
+	report.Revocation.Certificate = entry.Certificate
+	report.Revocation.Issuer = issuerOf(signer, entry.Certificate)
 	report.Revoked = signer.RevokedCertificate || entry.RevokedBeforeSigning
 	if entry.RevocationTime != nil {
 		report.RevokedAt = *entry.RevocationTime
@@ -259,6 +264,24 @@ func (v *PDFVerifier) describeChain(signer *verify.Signer, report *domain.Signer
 			Message: warning.Error(),
 		})
 	}
+}
+
+// issuerOf finds the certificate that signed the leaf, among those the document
+// carries. Without it an OCSP request cannot be built, and the report says so
+// rather than guessing.
+func issuerOf(signer *verify.Signer, leaf *x509.Certificate) *x509.Certificate {
+	if signer == nil || leaf == nil {
+		return nil
+	}
+	for _, candidate := range signer.Certificates {
+		if candidate.Certificate == nil || candidate.Certificate.Equal(leaf) {
+			continue
+		}
+		if bytes.Equal(candidate.Certificate.RawSubject, leaf.RawIssuer) {
+			return candidate.Certificate
+		}
+	}
+	return nil
 }
 
 // formatMoment renders an instant for a report detail, or empty when unset.

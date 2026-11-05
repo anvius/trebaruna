@@ -63,6 +63,13 @@ func runVerify(args []string, stdout, stderr io.Writer) int {
 		systemClock{},
 	).WithXades(verificationinfra.NewXadesVerifier())
 
+	if !*offline {
+		// Our own checker replaces the library's: it distinguishes an answered
+		// "not revoked" from an unanswered query, and reports which responder
+		// spoke. The library collapses both into a boolean.
+		useCase = useCase.WithRevocation(verificationinfra.NewOCSPChecker())
+	}
+
 	report, err := useCase.Execute(application.Request{
 		Path:      path,
 		Format:    *format,
@@ -145,6 +152,9 @@ type signerJSON struct {
 	// Qualification explains the QES verdict: which condition held and which
 	// did not. A boolean alone cannot be audited.
 	Qualification *qualificationJSON `json:"qualification,omitempty"`
+	// Revocation is the outcome of a status check, including the case where none
+	// could be made. A boolean would hide that difference.
+	Revocation *revocationJSON `json:"revocation,omitempty"`
 	// TimestampProof is the evidence about the authority behind the token. It
 	// is separate from "timestamped" because a token can be bound without its
 	// authority being accredited.
@@ -153,6 +163,15 @@ type signerJSON struct {
 	ExpiredAt      string         `json:"certificate_expired_at_signing"`
 	SelfSign       bool           `json:"self_signed"`
 	Findings       []findingJSON  `json:"findings"`
+}
+
+// revocationJSON is the outcome of an OCSP or CRL query.
+type revocationJSON struct {
+	Status    string `json:"status"`
+	Checked   bool   `json:"checked"`
+	RevokedAt string `json:"revoked_at,omitempty"`
+	Source    string `json:"source,omitempty"`
+	Reason    string `json:"reason,omitempty"`
 }
 
 // timestampJSON is what was proven about the timestamp authority.
@@ -223,6 +242,17 @@ func encodeVerificationJSON(writer io.Writer, report verification.DocumentReport
 			}
 			if !evidence.ServiceGrantedSince.IsZero() {
 				entry.Qualification.ServiceGrantedSince = evidence.ServiceGrantedSince.Format(time.RFC3339)
+			}
+		}
+		if status := signer.Revocation.Status; status.Status != "" {
+			entry.Revocation = &revocationJSON{
+				Status:  string(status.Status),
+				Checked: signer.Revocation.Checked,
+				Source:  status.Source,
+				Reason:  status.Reason,
+			}
+			if !status.RevokedAt.IsZero() {
+				entry.Revocation.RevokedAt = status.RevokedAt.Format(time.RFC3339)
 			}
 		}
 		if stamp := signer.TimestampEvidence; stamp.Bound {

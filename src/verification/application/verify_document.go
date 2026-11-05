@@ -2,6 +2,7 @@
 package application
 
 import (
+	"context"
 	"crypto/x509"
 	"strings"
 	"time"
@@ -38,6 +39,14 @@ type Clock interface {
 	Now() time.Time
 }
 
+// RevocationChecker asks a responder whether a certificate is revoked.
+//
+// It is an interface so the use case can run offline, and so tests can assert
+// that a verification which was not asked to reach the network never does.
+type RevocationChecker interface {
+	Check(ctx context.Context, certificate, issuer *x509.Certificate) verification.Revocation
+}
+
 // VerifyDocument is the use case behind `firma-it verify`.
 type VerifyDocument struct {
 	pdf   DocumentExtractor
@@ -45,6 +54,8 @@ type VerifyDocument struct {
 	xades DocumentExtractor
 	trust TrustProvider
 	clock Clock
+	// revocation is nil until the caller asks for a network check.
+	revocation RevocationChecker
 }
 
 // NewVerifyDocument wires the use case.
@@ -56,6 +67,16 @@ func NewVerifyDocument(pdf, cades DocumentExtractor, trust TrustProvider, clock 
 // checks PDFs does not need a XAdES implementation.
 func (u *VerifyDocument) WithXades(xades DocumentExtractor) *VerifyDocument {
 	u.xades = xades
+	return u
+}
+
+// WithRevocation enables status checks.
+//
+// Passing nil keeps verification offline, which is the default: a tool that
+// contacts a third party without being asked tells that third party which
+// documents its user opens.
+func (u *VerifyDocument) WithRevocation(checker RevocationChecker) *VerifyDocument {
+	u.revocation = checker
 	return u
 }
 
@@ -216,10 +237,84 @@ func (u *VerifyDocument) evaluateSigner(
 		signer.CertificateStatus = status
 	}
 
+	u.evaluateRevocation(&signer)
 	u.evaluateTimestamp(&signer, list)
 	u.evaluateQualification(&signer, list)
 
 	return signer
+}
+
+// evaluateRevocation asks a responder, when one is configured.
+//
+// The result is recorded even when it is "unknown": silence about a check that
+// did not happen is how a report implies a certificate is fine when nobody
+// looked. A signature made before the revocation survives it, so only a
+// revocation that predates the signature is fatal.
+func (u *VerifyDocument) evaluateRevocation(signer *verification.SignerReport) {
+	if u.revocation == nil {
+		return
+	}
+
+	evidence := &signer.Revocation
+	if evidence.Certificate == nil {
+		evidence.Status = verification.Revocation{
+			Status:    verification.RevocationUnknown,
+			Reason:    "the signature does not embed the certificate to check",
+			CheckedAt: u.clock.Now(),
+		}
+		return
+	}
+
+	evidence.Status = u.revocation.Check(context.Background(), evidence.Certificate, evidence.Issuer)
+	evidence.Checked = evidence.Status.WasChecked()
+	signer.Revoked = evidence.Status.IsRevoked()
+	if signer.Revoked {
+		signer.RevokedAt = evidence.Status.RevokedAt
+	}
+
+	switch {
+	case evidence.Status.FatalAtSigning(signer.SignedAt):
+		signer.Findings = append(signer.Findings, verification.Finding{
+			Code:    "certificate.revoked_before_signing",
+			Status:  verification.StatusBad,
+			Message: "the certificate was revoked before the signature was made",
+			Detail:  formatRevocationMoment(evidence.Status.RevokedAt),
+		})
+		signer.Revoked = true
+		// A revoked certificate is as fatal as a tampered document: the signer
+		// was not entitled to sign, so nothing above can restore the verdict.
+		signer.Trust = verification.TrustBroken
+	case signer.Revoked:
+		signer.Findings = append(signer.Findings, verification.Finding{
+			Code:    "certificate.revoked_after_signing",
+			Status:  verification.StatusWarn,
+			Message: "the certificate was revoked after signing; the signature itself is unaffected",
+			Detail:  formatRevocationMoment(evidence.Status.RevokedAt),
+		})
+	case evidence.Checked:
+		signer.Findings = append(signer.Findings, verification.Finding{
+			Code:    "certificate.not_revoked",
+			Status:  verification.StatusGood,
+			Message: "a responder confirmed the certificate is not revoked",
+			Detail:  evidence.Status.Source,
+		})
+	default:
+		// Not an error about the certificate: an error about our knowledge.
+		signer.Findings = append(signer.Findings, verification.Finding{
+			Code:    "certificate.revocation_unchecked",
+			Status:  verification.StatusWarn,
+			Message: "the certificate revocation status could not be obtained",
+			Detail:  evidence.Status.Reason,
+		})
+	}
+}
+
+// formatRevocationMoment renders a date for a finding.
+func formatRevocationMoment(moment time.Time) string {
+	if moment.IsZero() {
+		return ""
+	}
+	return moment.UTC().Format(time.RFC3339)
 }
 
 // evaluateTimestamp decides whether the authority behind a timestamp is proven.

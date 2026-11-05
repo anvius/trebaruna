@@ -207,6 +207,22 @@ type TimestampEvidence struct {
 	Certificate *x509.Certificate
 }
 
+// RevocationEvidence carries the material a status check needs.
+//
+// The certificates travel with the report because a revocation query must be
+// signed for one certificate against its issuer; without them the use case can
+// only say the check was not possible.
+type RevocationEvidence struct {
+	// Certificate is the signing certificate.
+	Certificate *x509.Certificate
+	// Issuer is the certificate that signed it, when the document carries it.
+	Issuer *x509.Certificate
+	// Status is the outcome once a check has run.
+	Status Revocation
+	// Checked reports whether a responder was consulted at all.
+	Checked bool
+}
+
 // SignerReport is everything known about one signature in the document.
 type SignerReport struct {
 	// FieldName is the signature field, e.g. "F38a".
@@ -261,10 +277,14 @@ type SignerReport struct {
 	ExpiredAtSigning bool
 	// SelfSigned reports whether the certificate is its own issuer.
 	SelfSigned bool
-	// Revoked reports a revocation, when a status source was consulted.
+	// Revoked reports a positive revocation answer. It is only meaningful when
+	// Revocation.Checked is true: a boolean cannot tell "not revoked" from
+	// "never asked", so both travel together.
 	Revoked bool
 	// RevokedAt is the revocation moment, when known.
 	RevokedAt time.Time
+	// Revocation is the full outcome, including the cases a boolean loses.
+	Revocation RevocationEvidence
 }
 
 // DocumentReport is the full verification result for one file.
