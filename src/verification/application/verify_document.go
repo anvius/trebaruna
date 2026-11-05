@@ -3,6 +3,7 @@ package application
 
 import (
 	"crypto/x509"
+	"strings"
 	"time"
 
 	trustdomain "codeberg.org/simplicer/firma-it/src/trust/domain"
@@ -215,12 +216,98 @@ func (u *VerifyDocument) evaluateSigner(
 		signer.CertificateStatus = status
 	}
 
-	// Downloaded TSL XML is inventory, not a trust anchor. Neither an issuer
-	// name match nor a timestamp proves QES qualification. Until LOTL/TSL
-	// signatures, service history and certificate qualifiers are validated,
-	// never upgrade a verdict from that inventory.
+	u.evaluateQualification(&signer, list)
 
 	return signer
+}
+
+// evaluateQualification decides whether a signature can be called qualified.
+//
+// eIDAS sets three independent conditions, and all of them must hold:
+//
+//	certificate  a qualified certificate, proven by QcCompliance
+//	device       the private key lived in a QSCD, proven by QcSSCD or by the
+//	             QCWithQSCD qualifier the list publishes for the service
+//	issuer       a CA/QC that is granted now and was granted at signing time,
+//	             in a list authenticated against the EU root
+//
+// Anything less stays advanced. Overstating a signature is the one error this
+// tool cannot afford: a user asked to trust a document, and "qualified" is the
+// strongest claim the law recognises.
+func (u *VerifyDocument) evaluateQualification(signer *verification.SignerReport, list trustdomain.TrustList) {
+	evidence := verification.Qualification{
+		CertificateQualified: signer.Claims.Compliant,
+		DeviceQualified:      signer.Claims.DeviceQualified,
+	}
+	if evidence.DeviceQualified {
+		evidence.DeviceSource = "certificate claims QcSSCD"
+	}
+
+	// A certificate that publishes a QcType and excludes signatures is a
+	// qualified certificate for something else: a seal, a website. When the
+	// statement is absent the certificate says nothing, which is not the same as
+	// saying "not a signer".
+	if signer.Claims.TypeDeclared && !signer.Claims.SignatureType {
+		evidence.DeclaredSealOnly = true
+	}
+
+	// The service half needs an authenticated list. Inventory from a downloaded
+	// file grants nothing, however convincing its names look.
+	if list.Authenticated {
+		if service, found := matchingService(list, signer.IssuerDN, signer.SignedAt); found {
+			evidence.ServiceListed = true
+			evidence.ServiceProvider = service.ProviderName
+			evidence.ServiceName = service.ServiceName
+			evidence.ServiceGrantedSince = service.StatusSince
+			if !evidence.DeviceQualified && service.HasQualifier("QCWithQSCD") {
+				evidence.DeviceQualified = true
+				evidence.DeviceSource = "the trust list publishes QCWithQSCD for the issuing service"
+			}
+		}
+	}
+
+	signer.Qualification = evidence
+	signer.Qualified = evidence.IsQualified(signer.SignedAt)
+
+	at := signer.SignedAt
+	// Only an advanced, currently-sound signature can be promoted. A broken or
+	// untrusted one is already below advanced and "qualified" would contradict
+	// the findings above it.
+	if signer.Qualified && !evidence.DeclaredSealOnly && signer.Trust == verification.TrustAdvanced {
+		signer.Trust = verification.TrustQualified
+		signer.Findings = append(signer.Findings, verification.Finding{
+			Code:    "signature.qualified",
+			Status:  verification.StatusGood,
+			Message: "the signature is qualified: qualified certificate, qualified device and a listed qualified issuer",
+			Detail:  evidence.ServiceProvider,
+		})
+		return
+	}
+
+	// Not qualified: say why. A verdict without its reason is a verdict the
+	// user cannot challenge or fix.
+	missing := evidence.Missing(at)
+	if len(missing) > 0 && signer.Trust == verification.TrustAdvanced {
+		signer.Findings = append(signer.Findings, verification.Finding{
+			Code:    "signature.not_qualified",
+			Status:  verification.StatusWarn,
+			Message: "the signature is advanced but not qualified",
+			Detail:  strings.Join(missing, "; "),
+		})
+	}
+}
+
+// matchingService finds the granted qualified CA whose certificate issued this
+// chain. The service must have been granted before the signature was made: a
+// CA approved last year cannot have issued a document five years ago.
+func matchingService(list trustdomain.TrustList, issuerDN string, signedAt time.Time) (trustdomain.TrustService, bool) {
+	for _, service := range list.QualifiedServicesFor(issuerDN) {
+		if !service.StatusSince.IsZero() && !signedAt.IsZero() && signedAt.Before(service.StatusSince) {
+			continue
+		}
+		return service, true
+	}
+	return trustdomain.TrustService{}, false
 }
 
 // detectFormat infers the container from the suffix.

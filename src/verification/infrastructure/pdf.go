@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"codeberg.org/simplicer/firma-it/src/verification/application"
 	"codeberg.org/simplicer/firma-it/src/verification/domain"
 	"github.com/digitorus/pdfsign/verify"
 )
@@ -32,7 +33,12 @@ type PDFVerifier struct {
 // This is what makes a qualified signature readable: the CA that issues
 // document-signing certificates is not in the operating system store, so
 // without the trust list every qualified signature would look untrusted.
-func (v *PDFVerifier) WithAnchors(roots, intermediates *x509.CertPool) SignatureExtractor {
+//
+// The return type is the application layer's extractor on purpose. Declaring it
+// as this package's own SignatureExtractor is nominally a different type, so the
+// use case's type assertion silently failed and the anchors were dropped: every
+// qualified signature was reported as untrusted with a fully authenticated list.
+func (v *PDFVerifier) WithAnchors(roots, intermediates *x509.CertPool) application.DocumentExtractor {
 	clone := *v
 	clone.Roots = roots
 	clone.Intermediates = intermediates

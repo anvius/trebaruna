@@ -31,9 +31,15 @@ func (TSLParser) Parse(reader io.Reader) (domain.TrustList, error) {
 	decoder.CharsetReader = charsetReader
 
 	var (
-		current      domain.TrustService
-		inProvider   bool
-		inService    bool
+		current    domain.TrustService
+		inProvider bool
+		inService  bool
+		// inHistory guards the ServiceHistory subtree. History instances repeat
+		// ServiceStatus, ServiceTypeIdentifier and X509Certificate for the same
+		// service, years before the current entry. Without this flag they
+		// overwrite the current status, which turns withdrawn CAs into granted
+		// ones and makes them trust anchors.
+		inHistory    bool
 		depth        int
 		certificates []*x509.Certificate
 		territory    string
@@ -59,8 +65,15 @@ func (TSLParser) Parse(reader io.Reader) (domain.TrustList, error) {
 			case "TSPService":
 				inService = true
 				certificates = nil
+				// Each service starts clean. Reusing the previous struct leaked the
+				// provider's earlier service name, status and qualifiers into every
+				// later service of the same provider: 498 of 562 service names in
+				// the Italian list were wrong, and qualifiers accumulated.
+				current = domain.TrustService{ProviderName: current.ProviderName}
+			case "ServiceHistory":
+				inHistory = true
 			case "ServiceTypeIdentifier":
-				if text, err := readText(decoder); err == nil {
+				if text, err := readText(decoder); err == nil && !inHistory {
 					current.ServiceType = serviceTypeName(text)
 					// The /Q suffix is what marks a service as qualified:
 					// CA/QC, TSA/QTST, EDS/Q, PSES/Q, QESValidation/Q.
@@ -68,12 +81,34 @@ func (TSLParser) Parse(reader io.Reader) (domain.TrustList, error) {
 				}
 				depth--
 			case "ServiceStatus":
-				if text, err := readText(decoder); err == nil {
+				if text, err := readText(decoder); err == nil && !inHistory {
 					current.Status = lastPathSegment(text)
 				}
 				depth--
+			case "StatusStartingTime":
+				if text, err := readText(decoder); err == nil && !inHistory {
+					if parsed, err := time.Parse(time.RFC3339, strings.TrimSpace(text)); err == nil {
+						current.StatusSince = parsed
+					}
+				}
+				depth--
+			case "Qualifier":
+				// A Qualifier carries its identifier in the uri attribute, not in
+				// text: value QCWithQSCD is what proves the private key lives in a
+				// qualified device when the certificate itself does not say so.
+				if !inHistory {
+					if uri := attributeValue(element, "uri"); uri != "" {
+						current.Qualifiers = append(current.Qualifiers, lastPathSegment(uri))
+					}
+				}
+				// The element is empty, but skipping keeps the depth balanced if a
+				// list ever nests anything inside it.
+				if err := decoder.Skip(); err != nil {
+					return domain.TrustList{}, fmt.Errorf("read trust list XML: %w", err)
+				}
+				depth--
 			case "X509Certificate":
-				if text, err := readText(decoder); err == nil {
+				if text, err := readText(decoder); err == nil && !inHistory {
 					if parsed := parseBase64Certificate(text); parsed != nil {
 						certificates = append(certificates, parsed)
 					}
@@ -85,6 +120,8 @@ func (TSLParser) Parse(reader io.Reader) (domain.TrustList, error) {
 				if text, err := readText(decoder); err == nil {
 					text = strings.TrimSpace(text)
 					switch {
+					case inHistory:
+						// A history instance repeats the name of a past state.
 					case !inProvider && schemeName == "" && isSchemeName(element):
 						schemeName = text
 					case inProvider && !inService && current.ProviderName == "":
@@ -121,6 +158,8 @@ func (TSLParser) Parse(reader io.Reader) (domain.TrustList, error) {
 		case xml.EndElement:
 			depth--
 			switch element.Name.Local {
+			case "ServiceHistory":
+				inHistory = false
 			case "TSPService":
 				if inService {
 					current.Certificates = certificates
@@ -194,6 +233,16 @@ func lastPathSegment(value string) string {
 		return value[index+1:]
 	}
 	return value
+}
+
+// attributeValue returns an attribute's value regardless of namespace.
+func attributeValue(element xml.StartElement, name string) string {
+	for _, attribute := range element.Attr {
+		if attribute.Name.Local == name {
+			return strings.TrimSpace(attribute.Value)
+		}
+	}
+	return ""
 }
 
 // isSchemeName reports whether a Name element belongs to the scheme information.

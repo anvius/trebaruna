@@ -88,6 +88,8 @@ var Spanish = Catalogue{
 		"trustlist.stale":                      "la lista de confianza está caducada: ejecuta «firma-it trust sync»",
 		"format.unsupported":                   "no hay verificador para este formato",
 		"verification.warning":                 "aviso del verificador",
+		"signature.qualified":                  "firma cualificada: certificado cualificado, dispositivo cualificado y emisor cualificado vigente",
+		"signature.not_qualified":              "la firma es avanzada pero no cualificada",
 	},
 }
 
@@ -133,6 +135,8 @@ var Italian = Catalogue{
 		"trustlist.stale":                      "l'elenco di fiducia è scaduto: esegui «firma-it trust sync»",
 		"format.unsupported":                   "nessun verificatore per questo formato",
 		"verification.warning":                 "avviso del verificatore",
+		"signature.qualified":                  "firma qualificata: certificato qualificato, dispositivo qualificato ed emittente qualificato vigente",
+		"signature.not_qualified":              "la firma è avanzata ma non qualificata",
 	},
 }
 
@@ -178,6 +182,8 @@ var English = Catalogue{
 		"trustlist.stale":                      "the trust list is out of date: run 'firma-it trust sync'",
 		"format.unsupported":                   "no verifier is available for this format",
 		"verification.warning":                 "verifier warning",
+		"signature.qualified":                  "qualified signature: qualified certificate, qualified device and a currently granted qualified issuer",
+		"signature.not_qualified":              "the signature is advanced but not qualified",
 	},
 }
 
@@ -240,6 +246,7 @@ func init() {
 		"certificate.revoked_before_signing", "certificate.revoked_after_signing",
 		"certificate.revoked", "timestamp.invalid", "trustlist.unavailable",
 		"trustlist.stale", "format.unsupported", "verification.warning",
+		"signature.qualified", "signature.not_qualified",
 	}
 
 	for name, catalogue := range map[string]Catalogue{

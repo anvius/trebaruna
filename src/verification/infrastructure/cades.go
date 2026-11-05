@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"codeberg.org/simplicer/firma-it/src/verification/application"
 	"codeberg.org/simplicer/firma-it/src/verification/domain"
 	"github.com/digitorus/pkcs7"
 	"github.com/digitorus/timestamp"
@@ -29,6 +30,21 @@ type CadesVerifier struct {
 // NewCadesVerifier builds the adapter.
 func NewCadesVerifier() *CadesVerifier {
 	return &CadesVerifier{Now: time.Now()}
+}
+
+// WithAnchors returns a copy that validates chains against the given pools.
+//
+// It returns the application layer's extractor, not the local interface: the two
+// are nominally distinct types, so a local return type makes the use case's type
+// assertion fail and every trust list is silently ignored.
+func (v *CadesVerifier) WithAnchors(roots, intermediates *x509.CertPool) application.DocumentExtractor {
+	clone := *v
+	clone.Roots = roots
+	// The pool is not stored separately: pkcs7 already adds every certificate
+	// travelling in the container to its intermediate pool, which is where the
+	// listing publishes them too.
+	_ = intermediates
+	return &clone
 }
 
 // Extract verifies a CMS container and returns one report.

@@ -14,8 +14,13 @@ import (
 	"os"
 
 	"codeberg.org/simplicer/firma-it/src/signing/domain/identity"
+	"codeberg.org/simplicer/firma-it/src/trust/infrastructure"
 	"codeberg.org/simplicer/firma-it/src/verification/domain"
 )
+
+// ReadQualifiedStatements is re-exported so callers keep the dependency on the
+// verification layer instead of reaching into the trust layer.
+var ReadQualifiedStatements = infrastructure.ReadQualifiedStatements
 
 // SignatureExtractor reads the signatures a document carries.
 //
@@ -60,6 +65,22 @@ func describeCertificate(certificate *x509.Certificate, report *domain.SignerRep
 		firstOf(certificate.Issuer.Organization),
 		certificate.Issuer.CommonName,
 	)
+	// The trust list publishes CA subjects, so the exact distinguished name is
+	// what makes an issuer match precise. A display name would collide between
+	// providers that share a brand.
+	report.IssuerDN = certificate.Issuer.String()
+
+	// The certificate's own qualification claims. They are recorded here, next to
+	// the identity they belong to, and never turned into a verdict alone.
+	statements := infrastructure.ReadQualifiedStatements(certificate)
+	report.Claims = domain.CertificateClaims{
+		Recognised:      statements.Recognised,
+		Compliant:       statements.Compliant,
+		DeviceQualified: statements.SSCD,
+		TypeDeclared:    statements.TypeDeclared,
+		SignatureType:   statements.SignatureCertificate,
+	}
+
 	report.NotBefore = certificate.NotBefore
 	report.NotAfter = certificate.NotAfter
 	report.SelfSigned = bytes.Equal(certificate.RawIssuer, certificate.RawSubject) &&

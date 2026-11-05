@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"codeberg.org/simplicer/firma-it/src/verification/application"
 	"codeberg.org/simplicer/firma-it/src/verification/domain"
 	"github.com/beevik/etree"
 	dsig "github.com/russellhaering/goxmldsig"
@@ -19,11 +20,28 @@ import (
 type XadesVerifier struct {
 	// Now is the evaluation instant.
 	Now time.Time
+	// Roots and Intermediates are the pools built from an authenticated trust
+	// list. Nil means "no external anchor", and the issuer is then reported as
+	// unknown rather than guessed.
+	Roots         *x509.CertPool
+	Intermediates *x509.CertPool
 }
 
 // NewXadesVerifier builds the adapter.
 func NewXadesVerifier() *XadesVerifier {
 	return &XadesVerifier{Now: time.Now()}
+}
+
+// WithAnchors returns a copy that judges the issuer against the given pools.
+//
+// The return type is the application layer's extractor on purpose: a local
+// interface is a different nominal type, so the use case's assertion would fail
+// and the anchors would be dropped without a word.
+func (v *XadesVerifier) WithAnchors(roots, intermediates *x509.CertPool) application.DocumentExtractor {
+	clone := *v
+	clone.Roots = roots
+	clone.Intermediates = intermediates
+	return &clone
 }
 
 // xadesNamespace is the XAdES 1.3.2 namespace used by the signer.
@@ -100,13 +118,53 @@ func (v *XadesVerifier) Extract(path string) ([]domain.SignerReport, error) {
 		})
 		report.Trust = domain.TrustUntrusted
 	default:
-		// The chain is checked by the use case against the trust list; here it is
-		// enough to record that a certificate exists and verifies the signature.
+		// The XML signature verifies against the embedded certificate, which says
+		// nothing about who issued it. The chain decides that, and only an
+		// authenticated trust list can answer it.
+		if v.chainTrusted(certificate) {
+			report.CertificateStatus = domain.StatusGood
+			report.Findings = append(report.Findings, domain.Finding{
+				Code:    "certificate.trusted",
+				Status:  domain.StatusGood,
+				Message: "the issuer is a recognised authority",
+			})
+			report.Trust = domain.TrustAdvanced
+			break
+		}
 		report.CertificateStatus = domain.StatusUnknown
+		report.Findings = append(report.Findings, domain.Finding{
+			Code:    "certificate.untrusted_issuer",
+			Status:  domain.StatusUnknown,
+			Message: "the issuer is not in any trusted list",
+		})
 		report.Trust = domain.TrustUntrusted
 	}
 
 	return []domain.SignerReport{report}, nil
+}
+
+// chainTrusted reports whether the certificate chains to the supplied anchors.
+//
+// With no anchors the answer is "no": assuming the operating system store would
+// accept qualified CAs it does not contain, and assuming trust would be worse.
+func (v *XadesVerifier) chainTrusted(certificate *x509.Certificate) bool {
+	if certificate == nil || v.Roots == nil {
+		return false
+	}
+
+	options := x509.VerifyOptions{
+		Roots:         v.Roots,
+		Intermediates: v.Intermediates,
+		// Signing certificates carry the document-signing or email EKU, never
+		// server auth, so the strict default would reject every one of them.
+		KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
+	}
+	if !v.Now.IsZero() {
+		options.CurrentTime = v.Now
+	}
+
+	_, err := certificate.Verify(options)
+	return err == nil
 }
 
 // findSignature walks the tree looking for a ds:Signature element.

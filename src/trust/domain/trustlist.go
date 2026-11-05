@@ -23,15 +23,47 @@ type TrustService struct {
 	ServiceType string
 	// Status is granted, withdrawn or deprecated as published.
 	Status string
+	// StatusSince is when the current status took effect, when published.
+	// A service granted after the signature was made could not have issued it,
+	// so the moment is part of the evidence, not decoration.
+	StatusSince time.Time
+	// Qualifiers are the qualification identifiers the list publishes for this
+	// service, e.g. QCWithQSCD, QCWithSSCD, QCNoQSCD. They are the machine
+	// readable answer to "does the private key live in a qualified device".
+	Qualifiers []string
 	// Qualified reports whether the service is listed as qualified.
 	Qualified bool
 	// Certificates are the service's certificates, when the TSL publishes them.
 	Certificates []*x509.Certificate
 }
 
+// Statuses an ETSI TS 119 612 list publishes. Only "granted" means the service
+// is currently approved to issue. "accredited" is a pre-2016 status that Italy
+// still carries in history and that must never be read as current approval.
+const (
+	// StatusGranted means the service is approved and in force.
+	StatusGranted = "granted"
+	// StatusWithdrawn means the service no longer issues.
+	StatusWithdrawn = "withdrawn"
+	// StatusDeprecated means the service must not be used for new signatures.
+	StatusDeprecated = "deprecatedatnationallevel"
+	// StatusRecognised means it is recognised, not qualified under eIDAS.
+	StatusRecognised = "recognisedatnationallevel"
+)
+
+// HasQualifier reports whether the list publishes a qualification identifier.
+func (s TrustService) HasQualifier(name string) bool {
+	for _, qualifier := range s.Qualifiers {
+		if qualifier == name {
+			return true
+		}
+	}
+	return false
+}
+
 // Qualified reports whether this service can issue qualified signatures.
 func (s TrustService) CanIssueQualifiedSignature() bool {
-	if !s.Qualified || s.Status != "granted" {
+	if !s.Qualified || s.Status != StatusGranted {
 		return false
 	}
 	switch s.ServiceType {
@@ -221,7 +253,7 @@ func (l TrustList) QualifiedCount() int {
 func (l TrustList) ActiveCount() int {
 	count := 0
 	for _, service := range l.Services {
-		if service.Status == "granted" {
+		if service.Status == StatusGranted {
 			count++
 		}
 	}

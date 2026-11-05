@@ -131,20 +131,36 @@ type verificationJSON struct {
 
 // signerJSON is one signature in the JSON output.
 type signerJSON struct {
-	Field     string        `json:"field"`
-	Signer    string        `json:"signer"`
-	ID        string        `json:"identifier,omitempty"`
-	Issuer    string        `json:"issuer,omitempty"`
-	Format    string        `json:"format"`
-	SignedAt  string        `json:"signed_at,omitempty"`
-	Timestamp bool          `json:"timestamped"`
-	TSA       string        `json:"timestamp_authority,omitempty"`
-	Integrity string        `json:"integrity"`
-	Trust     string        `json:"trust"`
-	Expired   bool          `json:"certificate_expired_now"`
-	ExpiredAt string        `json:"certificate_expired_at_signing"`
-	SelfSign  bool          `json:"self_signed"`
-	Findings  []findingJSON `json:"findings"`
+	Field     string `json:"field"`
+	Signer    string `json:"signer"`
+	ID        string `json:"identifier,omitempty"`
+	Issuer    string `json:"issuer,omitempty"`
+	Format    string `json:"format"`
+	SignedAt  string `json:"signed_at,omitempty"`
+	Timestamp bool   `json:"timestamped"`
+	TSA       string `json:"timestamp_authority,omitempty"`
+	Integrity string `json:"integrity"`
+	Trust     string `json:"trust"`
+	Qualified bool   `json:"qualified"`
+	// Qualification explains the QES verdict: which condition held and which
+	// did not. A boolean alone cannot be audited.
+	Qualification *qualificationJSON `json:"qualification,omitempty"`
+	Expired       bool               `json:"certificate_expired_now"`
+	ExpiredAt     string             `json:"certificate_expired_at_signing"`
+	SelfSign      bool               `json:"self_signed"`
+	Findings      []findingJSON      `json:"findings"`
+}
+
+// qualificationJSON is the evidence behind a QES verdict.
+type qualificationJSON struct {
+	CertificateQualified bool     `json:"certificate_qualified"`
+	DeviceQualified      bool     `json:"device_qualified"`
+	DeviceSource         string   `json:"device_source,omitempty"`
+	ServiceListed        bool     `json:"service_listed"`
+	ServiceProvider      string   `json:"service_provider,omitempty"`
+	ServiceName          string   `json:"service_name,omitempty"`
+	ServiceGrantedSince  string   `json:"service_granted_since,omitempty"`
+	Missing              []string `json:"missing,omitempty"`
 }
 
 // findingJSON is one statement.
@@ -176,8 +192,23 @@ func encodeVerificationJSON(writer io.Writer, report verification.DocumentReport
 			TSA:       signer.TimestampAuthority,
 			Integrity: string(signer.Integrity),
 			Trust:     string(signer.Trust),
+			Qualified: signer.Qualified,
 			Expired:   signer.ExpiredNow,
 			SelfSign:  signer.SelfSigned,
+		}
+		if evidence := signer.Qualification; evidence.CertificateQualified || evidence.ServiceListed || evidence.DeviceQualified {
+			entry.Qualification = &qualificationJSON{
+				CertificateQualified: evidence.CertificateQualified,
+				DeviceQualified:      evidence.DeviceQualified,
+				DeviceSource:         evidence.DeviceSource,
+				ServiceListed:        evidence.ServiceListed,
+				ServiceProvider:      evidence.ServiceProvider,
+				ServiceName:          evidence.ServiceName,
+				Missing:              evidence.Missing(signer.SignedAt),
+			}
+			if !evidence.ServiceGrantedSince.IsZero() {
+				entry.Qualification.ServiceGrantedSince = evidence.ServiceGrantedSince.Format(time.RFC3339)
+			}
 		}
 		if !signer.SignedAt.IsZero() {
 			entry.SignedAt = signer.SignedAt.Format(time.RFC3339)

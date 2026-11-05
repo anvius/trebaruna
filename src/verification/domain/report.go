@@ -89,6 +89,90 @@ type Finding struct {
 	Detail string
 }
 
+// CertificateClaims are the qualification statements inside the certificate.
+type CertificateClaims struct {
+	// Recognised reports that the qcStatements extension was present and parsed.
+	Recognised bool
+	// Compliant reports the QcCompliance statement: a qualified certificate.
+	Compliant bool
+	// DeviceQualified reports the QcSSCD statement: the private key was held in
+	// a secure signature-creation device. eIDAS calls the device QSCD; the
+	// certificate statement still uses the older name.
+	DeviceQualified bool
+	// TypeDeclared reports whether the certificate published a QcType statement
+	// at all. QcType is optional, so its absence means "says nothing", never
+	// "is a seal".
+	TypeDeclared bool
+	// SignatureType reports a QcType entry for electronic signatures. A
+	// certificate can instead declare itself for seals or web authentication.
+	SignatureType bool
+}
+
+// Qualification is the evidence collected for a possible QES verdict.
+//
+// It is a report of what was checked, not a promise: missing evidence is listed
+// verbatim so the user can see which condition failed.
+type Qualification struct {
+	// CertificateQualified reports the QcCompliance claim.
+	CertificateQualified bool
+	// DeviceQualified reports a qualified signature-creation device, from either
+	// source: the QcSSCD statement or the QCWithQSCD qualifier of the service.
+	DeviceQualified bool
+	// DeviceSource records where the device fact came from.
+	DeviceSource string
+	// ServiceListed reports a granted CA/QC in the authenticated list that can
+	// issue this chain.
+	ServiceListed bool
+	// ServiceProvider and ServiceName identify the matched service.
+	ServiceProvider string
+	ServiceName     string
+	// ServiceGrantedSince is when the service entered its current status.
+	ServiceGrantedSince time.Time
+	// DeclaredSealOnly reports a certificate whose QcType excludes signatures.
+	DeclaredSealOnly bool
+}
+
+// IsQualified reports whether every eIDAS condition held at the given moment.
+//
+// The signing moment matters: a service granted after the signature was made did
+// not issue it, even if the same CA is listed today.
+func (q Qualification) IsQualified(at time.Time) bool {
+	if q.DeclaredSealOnly {
+		return false
+	}
+	if !q.CertificateQualified || !q.DeviceQualified || !q.ServiceListed {
+		return false
+	}
+	if !q.ServiceGrantedSince.IsZero() && !at.IsZero() && at.Before(q.ServiceGrantedSince) {
+		return false
+	}
+	return true
+}
+
+// Missing lists the conditions that are not satisfied.
+//
+// Returning the reasons instead of a boolean is deliberate: "not qualified" is
+// useless to a user who wants to know what would make it qualified.
+func (q Qualification) Missing(at time.Time) []string {
+	var missing []string
+	if !q.CertificateQualified {
+		missing = append(missing, "the certificate carries no QcCompliance statement")
+	}
+	if !q.DeviceQualified {
+		missing = append(missing, "the private key is not proven to live in a qualified device")
+	}
+	if !q.ServiceListed {
+		missing = append(missing, "no granted CA/QC in the authenticated trust list issued this chain")
+	}
+	if !q.ServiceGrantedSince.IsZero() && !at.IsZero() && at.Before(q.ServiceGrantedSince) {
+		missing = append(missing, "the issuing service was not granted yet when the signature was made")
+	}
+	if q.DeclaredSealOnly {
+		missing = append(missing, "the certificate is qualified for seals or web authentication, not for signatures")
+	}
+	return missing
+}
+
 // SignerReport is everything known about one signature in the document.
 type SignerReport struct {
 	// FieldName is the signature field, e.g. "F38a".
@@ -99,6 +183,18 @@ type SignerReport struct {
 	Identifier string
 	// Issuer is the CA that issued the certificate.
 	Issuer string
+	// IssuerDN is the issuer's distinguished name as printed by the CA.
+	// The trust list publishes CA subjects, so this is what makes a precise
+	// match possible instead of comparing a display name.
+	IssuerDN string
+	// Claims are the qualification statements the certificate itself carries.
+	// They are claims, not proof: the trust list supplies the other half.
+	Claims CertificateClaims
+	// Qualified reports whether every QES condition held at signing time.
+	Qualified bool
+	// Qualification is the evidence behind Qualified, so a report can explain
+	// what is missing instead of asserting a verdict nobody can check.
+	Qualification Qualification
 	// Format is CAdES, PAdES or XAdES as detected.
 	Format string
 	// SignedAt is when the signature claims to exist; the timestamp is

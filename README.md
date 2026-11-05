@@ -37,6 +37,7 @@ firma: los tamaños y el método de análisis están en
 | Sello en hueco exacto | ✅ | datos del certificado, 64×48 pt, sin truncar |
 | Varios sellos, una firma | ✅ | `--box` repetible; `seal_count` en el JSON |
 | Verificación PDF + TSL | ✅ | detección de manipulación, exit codes 0/1/3 |
+| Detección de firma cualificada (QES) | ✅ | exige tres pruebas: `QcCompliance`, dispositivo cualificado y `CA/QC` vigente en una lista **autenticada**; sin las tres se queda en *avanzada* y dice qué falta |
 | Caducidad matizada | ✅ | caducado-al-firmar (fatal) vs caducado-hoy (aviso) |
 | Varias firmas encadenadas | ✅ | 5 firmas válidas en un PDF |
 | P12 de cualquier CA o autofirmado | ✅ | se firma y se reporta el estado |
