@@ -52,6 +52,9 @@ type Request struct {
 	TimestampUser   string
 	TimestampSecret string
 	Enveloping      bool
+	// EmbedRevocation asks for PAdES B-LT: the signature plus a /DSS dictionary
+	// carrying the status answers. It reaches the network, so it is opt-in.
+	EmbedRevocation bool
 }
 
 // Execute performs the signature and returns the produced artefact.
@@ -161,6 +164,7 @@ func (u *SignDocument) sign(ctx context.Context, request Request, content []byte
 			Content:         content,
 			Signer:          request.Signer,
 			Level:           request.Level,
+			EmbedRevocation: request.EmbedRevocation,
 			Placement:       request.Placement,
 			Placements:      sealPlacements(request),
 			SignedAt:        request.SignedAt,

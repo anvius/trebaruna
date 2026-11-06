@@ -106,7 +106,11 @@ func (c *OCSPChecker) Check(ctx context.Context, certificate, issuer *x509.Certi
 			continue
 		}
 
-		return c.verdict(parsed, now)
+		verdict := c.verdict(parsed, now)
+		// Keep the answer as it arrived: a /DSS must embed the responder's own
+		// bytes, not a re-encoding, or its signature stops matching.
+		verdict.RawResponse = response
+		return verdict
 	}
 
 	return domain.Revocation{

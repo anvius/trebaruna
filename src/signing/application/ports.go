@@ -71,6 +71,9 @@ type PadesRequest struct {
 	TimestampURL    string
 	TimestampUser   string
 	TimestampSecret string
+	// EmbedRevocation asks for a /DSS dictionary. It needs a live status source,
+	// so it is opt-in: signing must not reach the network unasked.
+	EmbedRevocation bool
 }
 
 // XadesSigner produces a signed XML document.

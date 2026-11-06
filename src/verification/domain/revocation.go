@@ -39,6 +39,11 @@ type Revocation struct {
 	Reason string
 	// CheckedAt is when the query was made.
 	CheckedAt time.Time
+	// RawResponse is the responder's answer as it arrived, kept so a signed
+	// document can embed it in its /DSS. Without the original bytes the answer
+	// cannot be archived, and a revocation status nobody archived is a status
+	// that expires with the responder.
+	RawResponse []byte
 }
 
 // IsRevoked reports a positive revocation answer.

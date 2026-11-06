@@ -82,6 +82,8 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 		tsaURL     = flags.String("tsa", "", "RFC 3161 timestamp authority URL")
 		tsaUser    = flags.String("tsa-user", "", "TSA basic-auth username")
 		tsaSecret  = flags.String("tsa-pass", "", "TSA basic-auth password")
+		onlineRev  = flags.Bool("online-revocation", false,
+			"query OCSP and embed the answers in /DSS (required for --level lt)")
 		page       = flags.Int("page", 1, "page for the visible seal (1-based)")
 		boxes      = boxList{}
 		enveloping = flags.Bool("enveloping", false, "XAdES enveloping (default: enveloped)")
@@ -166,6 +168,7 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 		TimestampUser:   *tsaUser,
 		TimestampSecret: *tsaSecret,
 		Enveloping:      *enveloping,
+		EmbedRevocation: *onlineRev,
 	})
 	if err != nil {
 		fmt.Fprintf(stderr, "signing failed: %v\n", err)
