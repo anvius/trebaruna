@@ -55,6 +55,8 @@ type localTSA struct {
 	key         *rsa.PrivateKey
 	requests    int
 	imprint     []byte
+	// nonce is echoed when set, which the PDF signer requires.
+	nonce []byte
 }
 
 // Token builds a TimeStampResp over the digest it is given.
@@ -78,11 +80,15 @@ func (t *localTSA) Token(_ context.Context, digest []byte, _, _, _ string) ([]by
 		}
 		SerialNumber *big.Int
 		GenTime      time.Time `asn1:"generalized"`
+		Nonce        *big.Int  `asn1:"optional"`
 	}{
 		Version:      1,
 		Policy:       asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 99999, 1},
 		SerialNumber: big.NewInt(1),
 		GenTime:      time.Now().UTC(),
+	}
+	if len(t.nonce) > 0 {
+		info.Nonce = new(big.Int).SetBytes(t.nonce)
 	}
 	info.MessageImprint.HashAlgorithm.Algorithm = asn1.ObjectIdentifier{2, 16, 840, 1, 101, 3, 4, 2, 1}
 	info.MessageImprint.HashedMessage = append([]byte{}, digest[:len(digest)]...)
@@ -446,4 +452,27 @@ func TestVerifierRejectsATokenFromAnotherSignature(t *testing.T) {
 		}
 	}
 	t.Errorf("a token lifted from another signature must be rejected; findings: %+v", got.Findings)
+}
+
+// TestXadesLtaIsRefusedNotDowngraded: accepting LTA and emitting B-T would report
+// a level the file does not have, which is the one thing a verification tool must
+// never do. The refusal names the levels that do work.
+func TestXadesLtaIsRefusedNotDowngraded(t *testing.T) {
+	tsa := newLocalTSA(t)
+	signer := xadesTestSigner(t)
+
+	request := buildXadesRequest(signer, []byte(`<a>1</a>`), false)
+	request.Level = domain.LTA
+	request.TimestampURL = "http://tsa.example.invalid"
+
+	_, err := infrastructure.NewXadesSigner(tsa).SignXades(context.Background(), request)
+	if err == nil {
+		t.Fatal("XAdES LTA must be refused, not silently produced as B-T")
+	}
+	if !strings.Contains(err.Error(), "ArchiveTimeStamp") {
+		t.Errorf("the error must name what is missing, got: %v", err)
+	}
+	if tsa.requests != 0 {
+		t.Error("a refused level must not contact the timestamp authority")
+	}
 }

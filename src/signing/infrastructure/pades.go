@@ -43,6 +43,11 @@ func NewPadesSigner(timestamps Timestamper) *PadesSigner {
 // EN 319 142-1 forbids for PAdES), but it does not need one: the store lives
 // outside the signature.
 func (s *PadesSigner) SignPades(ctx context.Context, request application.PadesRequest) ([]byte, error) {
+	if request.Level.NeedsTimestamp() && request.TimestampURL == "" {
+		return nil, fmt.Errorf(
+			"%s needs a timestamp authority: pass --tsa <url>", request.Level)
+	}
+
 	if request.Level.EmbedsRevocation() && !request.EmbedRevocation {
 		return nil, fmt.Errorf(
 			"%s needs embedded revocation (DSS) and a source for it.\n"+
@@ -108,7 +113,57 @@ func (s *PadesSigner) SignPades(ctx context.Context, request application.PadesRe
 
 	// PAdES B-LT: the signature is complete at this point, so the validation
 	// material goes in a second, appended update that leaves its bytes intact.
-	return s.embedRevocation(ctx, signed, keyPair)
+	withStore, err := s.embedRevocation(ctx, signed, keyPair)
+	if err != nil {
+		return nil, err
+	}
+
+	if !request.Level.Archival() {
+		return withStore, nil
+	}
+
+	// PAdES B-LTA adds a document timestamp over everything written so far,
+	// including the /DSS: that is what protects the validation material itself
+	// from becoming worthless as its own certificates expire.
+	return s.addArchiveTimestamp(ctx, withStore, request)
+}
+
+// addArchiveTimestamp appends a DocTimeStamp over the whole document.
+//
+// ETSI EN 319 142-1 §6.4: the archive timestamp covers the entire file as it
+// stands, so anything appended afterwards breaks it. It is a signature in its own
+// right, with /Type /DocTimeStamp and /SubFilter /ETSI.RFC3161, and carries no
+// signing certificate — only the token.
+func (s *PadesSigner) addArchiveTimestamp(
+	ctx context.Context,
+	document []byte,
+	request application.PadesRequest,
+) ([]byte, error) {
+	if request.TimestampURL == "" {
+		return nil, fmt.Errorf("PAdES B-LTA needs a timestamp authority: pass --tsa <url>")
+	}
+
+	handler, err := pdfsign.Open(bytes.NewReader(document), int64(len(document)))
+	if err != nil {
+		return nil, fmt.Errorf("reopen the signed PDF for archival: %w", err)
+	}
+
+	builder := handler.Sign(nil, nil).
+		Type(pdfsign.DocumentTimestamp).
+		Format(pdfsign.DefaultFormat).
+		Digest(crypto.SHA256).
+		Timestamp(request.TimestampURL).
+		Context(ctx)
+
+	if request.TimestampUser != "" {
+		builder = builder.TimestampAuth(request.TimestampUser, request.TimestampSecret)
+	}
+
+	var output bytes.Buffer
+	if _, err := handler.Write(&output); err != nil {
+		return nil, fmt.Errorf("write the archive timestamp: %w", err)
+	}
+	return output.Bytes(), nil
 }
 
 // embedRevocation collects status data and appends it as a /DSS dictionary.

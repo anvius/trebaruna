@@ -73,6 +73,20 @@ func (s *XadesSigner) SignXades(ctx context.Context, request application.XadesRe
 		)
 	}
 
+	// Accepting LTA and emitting B-T would report a level the file does not have.
+	// An archive timestamp is a different structure from the signature one: it
+	// covers the whole document, references the existing unsigned properties and
+	// has to survive later additions, so it cannot be approximated.
+	if request.Level.Archival() {
+		return nil, fmt.Errorf(
+			"%s for XAdES needs xades:ArchiveTimeStamp, which is not implemented.\n"+
+				"  options:\n"+
+				"    --level t    XAdES-T: a timestamp over the signature value\n"+
+				"    --level bes  XAdES-BES",
+			request.Level,
+		)
+	}
+
 	keyPair, err := LoadKeyPair(request.Signer)
 	if err != nil {
 		return nil, err

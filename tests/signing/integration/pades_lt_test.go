@@ -26,8 +26,9 @@ import (
 	"github.com/digitorus/pdf"
 )
 
-// TestPadesWithoutRevocationSourceIsRefused: LT needs a live status source, and
-// asking for it without one must fail rather than emit a half-empty store.
+// TestPadesWithoutRevocationSourceIsRefused: LT is a timestamped signature *and*
+// a store. Each missing input is reported by name, in the order the level
+// requires them, so the user is not sent to fix the wrong flag.
 func TestPadesWithoutRevocationSourceIsRefused(t *testing.T) {
 	fixture := newFixture(t)
 	document := writeBlankPDF(t, fixture.directory)
@@ -38,6 +39,7 @@ func TestPadesWithoutRevocationSourceIsRefused(t *testing.T) {
 
 	signer := pemSigner(t, fixture)
 
+	// Without a TSA, the timestamp is what is missing.
 	_, err = infrastructure.NewPadesSigner(nil).SignPades(context.Background(), application.PadesRequest{
 		Content:  original,
 		Signer:   signer,
@@ -45,10 +47,25 @@ func TestPadesWithoutRevocationSourceIsRefused(t *testing.T) {
 		SignedAt: timeNow(),
 	})
 	if err == nil {
+		t.Fatal("PAdES B-LT without a timestamp authority must be refused")
+	}
+	if !strings.Contains(err.Error(), "--tsa") {
+		t.Errorf("the error must name --tsa, got: %v", err)
+	}
+
+	// With a TSA but no permission to reach OCSP, the store is what is missing.
+	_, err = infrastructure.NewPadesSigner(nil).SignPades(context.Background(), application.PadesRequest{
+		Content:      original,
+		Signer:       signer,
+		Level:        domain.LT,
+		SignedAt:     timeNow(),
+		TimestampURL: "http://tsa.example.invalid",
+	})
+	if err == nil {
 		t.Fatal("PAdES B-LT without --online-revocation must be refused")
 	}
 	if !strings.Contains(err.Error(), "--online-revocation") {
-		t.Errorf("the error must name the flag that fixes it, got: %v", err)
+		t.Errorf("the error must name --online-revocation, got: %v", err)
 	}
 }
 
