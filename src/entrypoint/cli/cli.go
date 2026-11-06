@@ -48,6 +48,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runCertificate(args[1:], stdout, stderr)
 	case "asic":
 		return runAsic(args[1:], stdout, stderr)
+	case "serve":
+		return runServe(args[1:], stdout, stderr)
 	case "version", "--version", "-v":
 		fmt.Fprintln(stdout, Version)
 		return exitOK
@@ -410,6 +412,7 @@ usage:
   firma-it verify-tsr <token.tsr> [file]
   firma-it certificate <file.p12|.pem|.crt>   (or: cert)
   firma-it asic <document> <signature>        (ASiC-S / ASiC-E container)
+  firma-it serve --root <dir> --listen 127.0.0.1:0   (local HTTP API)
 
 flags:
   --format   cades (.p7m) | pades (.pdf) | xades (.xml)   default: pades
