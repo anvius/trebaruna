@@ -32,13 +32,17 @@ func loadToken(signer domain.Signer) (KeyPair, error) {
 	if err != nil {
 		return KeyPair{}, err
 	}
-	defer func() { _ = context.Close() }()
 
+	// The session must stay open: the crypto.Signer returned below signs through
+	// it, and closing here produced "context is closed" on every signature. The
+	// context is released only on the error paths, where no key escapes.
 	pairs, err := context.Pairs()
 	if err != nil {
+		_ = context.Close()
 		return KeyPair{}, fmt.Errorf("list certificates on token %q: %w", signer.PKCS11Token(), err)
 	}
 	if len(pairs) == 0 {
+		_ = context.Close()
 		return KeyPair{}, fmt.Errorf(
 			"token %q exposes no certificate paired with a private key.\n"+
 				"  list it with: pkcs11-tool --module %s -O",
@@ -49,6 +53,7 @@ func loadToken(signer domain.Signer) (KeyPair, error) {
 	pair := pairs[0]
 	leaf, err := x509.ParseCertificate(pair.Certificate)
 	if err != nil {
+		_ = context.Close()
 		return KeyPair{}, fmt.Errorf("parse token certificate: %w", err)
 	}
 

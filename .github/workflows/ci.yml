@@ -23,8 +23,12 @@ jobs:
 
       # openssl and poppler are exercised by the integration tests: the CMS
       # output is verified with openssl, and page rendering uses pdftoppm.
+      # softhsm2 and opensc give the PKCS#11 tests a real token in software: the
+      # session-handling bug they guard against only appeared with a live driver.
       - name: Install test dependencies
-        run: sudo apt-get update && sudo apt-get install -y openssl poppler-utils
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y openssl poppler-utils softhsm2 opensc qpdf
 
       - name: Static analysis
         run: |
@@ -33,6 +37,17 @@ jobs:
 
       - name: Unit, domain and integration tests
         run: CGO_ENABLED=1 go test ./tests/... -count=1 -race
+
+      # The PKCS#11 adapter is behind the `token` tag, so the default run never
+      # compiles it. This job does, and exercises it against SoftHSM.
+      - name: PKCS#11 tests against SoftHSM
+        run: |
+          SOFTHSM2_MODULE=$(dpkg -L libsofthsm2 | grep -m1 'libsofthsm2\.so$')
+          CGO_ENABLED=1 SOFTHSM2_MODULE="$SOFTHSM2_MODULE" \
+            go test -tags token ./tests/signing/token/ -count=1 -v
+
+      - name: Build the PKCS#11 binary
+        run: CGO_ENABLED=1 go build -trimpath -tags token -o bin/firma-it-token ./src/entrypoint/main
 
       - name: Build the static CLI
         run: CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o bin/firma-it ./src/entrypoint/main
