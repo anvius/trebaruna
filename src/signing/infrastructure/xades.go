@@ -74,17 +74,11 @@ func (s *XadesSigner) SignXades(ctx context.Context, request application.XadesRe
 	}
 
 	// Accepting LTA and emitting B-T would report a level the file does not have.
-	// An archive timestamp is a different structure from the signature one: it
-	// covers the whole document, references the existing unsigned properties and
-	// has to survive later additions, so it cannot be approximated.
-	if request.Level.Archival() {
+	// The archive timestamp covers a different input from the signature one and
+	// is built by its own function below.
+	if request.Level.Archival() && request.TimestampURL == "" {
 		return nil, fmt.Errorf(
-			"%s for XAdES needs xades:ArchiveTimeStamp, which is not implemented.\n"+
-				"  options:\n"+
-				"    --level t    XAdES-T: a timestamp over the signature value\n"+
-				"    --level bes  XAdES-BES",
-			request.Level,
-		)
+			"%s for XAdES needs a timestamp authority: pass --tsa <url>", request.Level)
 	}
 
 	keyPair, err := LoadKeyPair(request.Signer)
@@ -184,6 +178,15 @@ func (s *XadesSigner) SignXades(ctx context.Context, request application.XadesRe
 	// signature exists at all.
 	if request.Level.NeedsTimestamp() {
 		if err := s.attachSignatureTimeStamp(ctx, tree, signatureElement, signatureValue, request); err != nil {
+			return nil, err
+		}
+	}
+
+	// XAdES-A: the archive timestamp covers every object of the signature,
+	// including the unsigned properties just written. It is the outermost layer,
+	// so nothing may be added to the signature afterwards.
+	if request.Level.Archival() {
+		if err := s.attachArchiveTimeStamp(ctx, tree, signatureElement, request); err != nil {
 			return nil, err
 		}
 	}
@@ -555,3 +558,262 @@ const (
 	unsignedPropertiesID = "firma-it-unsigned-properties"
 	signatureTimeStampID = "firma-it-signature-timestamp"
 )
+
+// archiveNamespace is the XAdES 1.4.1 namespace that defines ArchiveTimeStamp.
+const archiveNamespace = "http://uri.etsi.org/01903/v1.4.1#"
+
+// attachArchiveTimeStamp adds xades141:ArchiveTimeStamp, making the signature
+// XAdES-A (ETSI EN 319 132-1 §5.5.2).
+//
+// The token does not cover the document. It covers every object the signature
+// already has: each ds:Reference target, then ds:SignedInfo, ds:SignatureValue,
+// ds:KeyInfo, then each unsigned qualifying property in order, and finally the
+// other ds:Object elements. That is what makes the archival level survive the
+// expiry of the certificates it protects: the proof of their state at signing
+// time is inside the sealed bytes.
+func (s *XadesSigner) attachArchiveTimeStamp(
+	ctx context.Context,
+	tree *etree.Document,
+	signatureElement *etree.Element,
+	request application.XadesRequest,
+) error {
+	timestamper := s.timestamps
+	if timestamper == nil {
+		return fmt.Errorf("XAdES-A needs a timestamp authority: pass --tsa <url>")
+	}
+
+	covered, err := archiveTimestampInput(tree, signatureElement)
+	if err != nil {
+		return err
+	}
+
+	digest := sha256.Sum256(covered)
+	response, err := timestamper.Token(ctx, digest[:], request.TimestampURL, request.TimestampUser, request.TimestampSecret)
+	if err != nil {
+		return fmt.Errorf("request the XAdES archive timestamp: %w", err)
+	}
+
+	tokenDER, err := cms.ExtractToken(response)
+	if err != nil {
+		return fmt.Errorf("extract the archive timestamp token: %w", err)
+	}
+
+	unsigned := findUnsignedSignatureProperties(signatureElement)
+	if unsigned == nil {
+		return fmt.Errorf("the signature has no xades:UnsignedSignatureProperties to extend")
+	}
+
+	fragment, err := parseFragment(buildArchiveTimeStamp(base64.StdEncoding.EncodeToString(tokenDER)))
+	if err != nil {
+		return fmt.Errorf("build xades141:ArchiveTimeStamp: %w", err)
+	}
+	unsigned.AddChild(fragment)
+	return nil
+}
+
+// archiveTimestampInput builds the octet stream the archive token must cover.
+//
+// Steps follow §5.5.2.2 literally: the reference targets in document order, the
+// three core signature elements, the unsigned qualifying properties, and the
+// remaining ds:Object elements excluding the one that holds the signature
+// properties. Anything added later changes this stream and breaks the token,
+// which is the guarantee the level provides.
+func archiveTimestampInput(tree *etree.Document, signature *etree.Element) ([]byte, error) {
+	var input bytes.Buffer
+
+	// 1-3: every ds:Reference target, resolved and canonicalised as its
+	// transforms require. For the references this signer emits, that is the
+	// enveloped document and the SignedProperties element.
+	references, err := referenceTargets(tree, signature)
+	if err != nil {
+		return nil, err
+	}
+	for _, target := range references {
+		canonical, err := canonicalise(target)
+		if err != nil {
+			return nil, err
+		}
+		input.Write(canonical)
+	}
+
+	// 4: SignedInfo, SignatureValue and KeyInfo, in that order.
+	for _, name := range []string{"SignedInfo", "SignatureValue", "KeyInfo"} {
+		element := signature.SelectElement(name)
+		if element == nil {
+			continue
+		}
+		canonical, err := canonicalise(element)
+		if err != nil {
+			return nil, err
+		}
+		input.Write(canonical)
+	}
+
+	// 5: the unsigned qualifying properties, in document order. This includes
+	// the SignatureTimeStamp written a moment ago, which is why A implies T.
+	if unsigned := findUnsignedSignatureProperties(signature); unsigned != nil {
+		for _, property := range unsigned.ChildElements() {
+			canonical, err := canonicalise(property)
+			if err != nil {
+				return nil, err
+			}
+			input.Write(canonical)
+		}
+	}
+
+	// 6: the ds:Object elements that do not hold QualifyingProperties.
+	for _, object := range signature.SelectElements("Object") {
+		if containsQualifyingProperties(object) {
+			continue
+		}
+		canonical, err := canonicalise(object)
+		if err != nil {
+			return nil, err
+		}
+		input.Write(canonical)
+	}
+
+	return input.Bytes(), nil
+}
+
+// referenceTargets resolves each ds:Reference URI to the element it names.
+//
+// The enveloped transform is not undone here: the archive timestamp covers what
+// the reference covers, which for the document reference is the document without
+// the signature. Returning the root and letting the canonicaliser walk it would
+// include the signature itself and produce a digest nobody can reproduce.
+func referenceTargets(tree *etree.Document, signature *etree.Element) ([]*etree.Element, error) {
+	var targets []*etree.Element
+
+	signedInfo := signature.SelectElement("SignedInfo")
+	if signedInfo == nil {
+		return nil, fmt.Errorf("the signature has no SignedInfo")
+	}
+
+	for _, reference := range signedInfo.SelectElements("Reference") {
+		uri := reference.SelectAttrValue("URI", "")
+		if uri == "" {
+			continue
+		}
+		if !strings.HasPrefix(uri, "#") {
+			// A detached external reference cannot be covered by this stream.
+			continue
+		}
+		identifier := uri[1:]
+
+		// The enveloped transform means "the document without this signature".
+		if enveloped := reference.SelectElement("Transforms"); enveloped != nil &&
+			strings.Contains(xmlText(enveloped), algorithmEnveloped) {
+			targets = append(targets, documentWithoutSignature(tree, signature))
+			continue
+		}
+
+		if found := findByID(tree.Root(), identifier); found != nil {
+			targets = append(targets, found)
+		}
+	}
+	return targets, nil
+}
+
+// documentWithoutSignature returns a copy of the root with the signature removed,
+// which is what the enveloped transform produces.
+func documentWithoutSignature(tree *etree.Document, signature *etree.Element) *etree.Element {
+	root := tree.Root().Copy()
+
+	removed := false
+	walkElement(root, func(element *etree.Element) {
+		if removed || element.Tag != "Signature" || element.NamespaceURI() != namespaceDS {
+			return
+		}
+		if element.SelectAttrValue("Id", "") == signature.SelectAttrValue("Id", "") {
+			if parent := parentOf(root, element); parent != nil {
+				parent.RemoveChild(element)
+				removed = true
+			}
+		}
+	})
+	return root
+}
+
+// parentOf finds the parent of an element within a tree.
+func parentOf(root, target *etree.Element) *etree.Element {
+	var found *etree.Element
+	walkElement(root, func(element *etree.Element) {
+		if found != nil {
+			return
+		}
+		for _, child := range element.ChildElements() {
+			if child == target {
+				found = element
+				return
+			}
+		}
+	})
+	return found
+}
+
+// walkElement visits an element and its descendants.
+func walkElement(element *etree.Element, visit func(*etree.Element)) {
+	if element == nil {
+		return
+	}
+	visit(element)
+	for _, child := range element.ChildElements() {
+		walkElement(child, visit)
+	}
+}
+
+// containsQualifyingProperties reports whether an ds:Object holds them.
+func containsQualifyingProperties(object *etree.Element) bool {
+	found := false
+	walkElement(object, func(element *etree.Element) {
+		if element.Tag == "QualifyingProperties" {
+			found = true
+		}
+	})
+	return found
+}
+
+// findUnsignedSignatureProperties locates the container for unsigned properties.
+func findUnsignedSignatureProperties(signature *etree.Element) *etree.Element {
+	var found *etree.Element
+	walkElement(signature, func(element *etree.Element) {
+		if found == nil && element.Tag == "UnsignedSignatureProperties" {
+			found = element
+		}
+	})
+	return found
+}
+
+// canonicalise returns the inclusive c14n form of an element.
+func canonicalise(element *etree.Element) ([]byte, error) {
+	canonicalizer := dsig.MakeC14N10RecCanonicalizer()
+	canonical, err := canonicalizer.Canonicalize(element)
+	if err != nil {
+		return nil, fmt.Errorf("canonicalise for the archive timestamp: %w", err)
+	}
+	return canonical, nil
+}
+
+// xmlText concatenates the character data of an element and its children.
+func xmlText(element *etree.Element) string {
+	var builder strings.Builder
+	walkElement(element, func(node *etree.Element) {
+		builder.WriteString(node.Text())
+		if attribute := node.SelectAttrValue("Algorithm", ""); attribute != "" {
+			builder.WriteString(attribute)
+		}
+	})
+	return builder.String()
+}
+
+// buildArchiveTimeStamp emits the qualifying property in the 1.4.1 namespace.
+func buildArchiveTimeStamp(token string) string {
+	return `<xades141:ArchiveTimeStamp xmlns:xades141="` + archiveNamespace + `" Id="` + archiveTimeStampID + `">` +
+		`<ds:CanonicalizationMethod xmlns:ds="` + namespaceDS + `" Algorithm="` + algorithmC14N + `"/>` +
+		`<xades:EncapsulatedTimeStamp xmlns:xades="` + namespaceXades + `">` + token + `</xades:EncapsulatedTimeStamp>` +
+		`</xades141:ArchiveTimeStamp>`
+}
+
+// archiveTimeStampID names the archive property.
+const archiveTimeStampID = "firma-it-archive-timestamp"

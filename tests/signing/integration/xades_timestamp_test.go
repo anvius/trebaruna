@@ -454,25 +454,114 @@ func TestVerifierRejectsATokenFromAnotherSignature(t *testing.T) {
 	t.Errorf("a token lifted from another signature must be rejected; findings: %+v", got.Findings)
 }
 
-// TestXadesLtaIsRefusedNotDowngraded: accepting LTA and emitting B-T would report
-// a level the file does not have, which is the one thing a verification tool must
-// never do. The refusal names the levels that do work.
-func TestXadesLtaIsRefusedNotDowngraded(t *testing.T) {
+// TestXadesLtaReplacesTheRefusal keeps the regression visible: LTA used to be
+// accepted and produced a B-T file while the CLI printed "level lta". The level
+// must now be the one the file actually carries, and it must need a TSA.
+func TestXadesLtaReplacesTheRefusal(t *testing.T) {
+	signer := xadesTestSigner(t)
+
+	// Without an authority there is no archive timestamp to add.
+	request := buildXadesRequest(signer, []byte(`<a>1</a>`), false)
+	request.Level = domain.LTA
+
+	_, err := infrastructure.NewXadesSigner(nil).SignXades(context.Background(), request)
+	if err == nil {
+		t.Fatal("XAdES-A without a timestamp authority must be refused")
+	}
+	if !strings.Contains(err.Error(), "--tsa") {
+		t.Errorf("the error must name --tsa, got: %v", err)
+	}
+
+	// With one, the file must really carry the archive property.
+	tsa := newLocalTSA(t)
+	request.TimestampURL = "http://tsa.example.invalid"
+
+	signed, err := infrastructure.NewXadesSigner(tsa).SignXades(context.Background(), request)
+	if err != nil {
+		t.Fatalf("sign: %v", err)
+	}
+	if !strings.Contains(string(signed), "ArchiveTimeStamp") {
+		t.Error("the produced file must carry the archive timestamp, not merely claim the level")
+	}
+}
+
+// TestXadesLtaEmitsArchiveTimeStamp pins the structure XAdES-A requires.
+//
+// The archive timestamp does not cover the document: it covers every object the
+// signature already has, which is why it must be the outermost layer and why it
+// lives in the 1.4.1 namespace rather than the 1.3.2 one.
+func TestXadesLtaEmitsArchiveTimeStamp(t *testing.T) {
 	tsa := newLocalTSA(t)
 	signer := xadesTestSigner(t)
 
-	request := buildXadesRequest(signer, []byte(`<a>1</a>`), false)
+	request := buildXadesRequest(signer, []byte(`<fattura><n>3</n></fattura>`), false)
 	request.Level = domain.LTA
 	request.TimestampURL = "http://tsa.example.invalid"
 
-	_, err := infrastructure.NewXadesSigner(tsa).SignXades(context.Background(), request)
-	if err == nil {
-		t.Fatal("XAdES LTA must be refused, not silently produced as B-T")
+	signed, err := infrastructure.NewXadesSigner(tsa).SignXades(context.Background(), request)
+	if err != nil {
+		t.Fatalf("sign: %v", err)
 	}
-	if !strings.Contains(err.Error(), "ArchiveTimeStamp") {
-		t.Errorf("the error must name what is missing, got: %v", err)
+	document := string(signed)
+
+	if !strings.Contains(document, "ArchiveTimeStamp") {
+		t.Fatal("XAdES-A must carry xades141:ArchiveTimeStamp")
 	}
-	if tsa.requests != 0 {
-		t.Error("a refused level must not contact the timestamp authority")
+	if !strings.Contains(document, "http://uri.etsi.org/01903/v1.4.1#") {
+		t.Error("the archive property belongs to the 1.4.1 namespace")
+	}
+	if tsa.requests != 2 {
+		t.Errorf("the TSA was called %d times, want 2 (signature and archive timestamps)", tsa.requests)
+	}
+
+	// The archive timestamp must come after the signature timestamp, because it
+	// covers it: writing it first would leave the signature timestamp unsealed.
+	signatureIndex := strings.Index(document, "SignatureTimeStamp")
+	archiveIndex := strings.Index(document, "ArchiveTimeStamp")
+	if signatureIndex < 0 || archiveIndex < signatureIndex {
+		t.Error("the archive timestamp must be written after the signature timestamp it covers")
+	}
+}
+
+// TestVerifierReadsArchiveTimeStamp is the round trip for the archival level.
+func TestVerifierReadsArchiveTimeStamp(t *testing.T) {
+	tsa := newLocalTSA(t)
+	signer := xadesTestSigner(t)
+
+	request := buildXadesRequest(signer, []byte(`<atto><n>4</n></atto>`), false)
+	request.Level = domain.LTA
+	request.TimestampURL = "http://tsa.example.invalid"
+
+	signed, err := infrastructure.NewXadesSigner(tsa).SignXades(context.Background(), request)
+	if err != nil {
+		t.Fatalf("sign: %v", err)
+	}
+
+	path := filepath.Join(t.TempDir(), "lta.xml")
+	if err := os.WriteFile(path, signed, 0o644); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	reports, err := verificationinfra.NewXadesVerifier().Extract(path)
+	if err != nil {
+		t.Fatalf("verify: %v", err)
+	}
+
+	got := reports[0]
+	if got.Integrity != "good" {
+		t.Errorf("integrity = %s, the signature must still verify with the archive layer present", got.Integrity)
+	}
+
+	found := false
+	for _, finding := range got.Findings {
+		if finding.Code == "timestamp.archival" && finding.Status == "good" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("the archive timestamp must be reported; findings: %+v", got.Findings)
+	}
+	if !got.Timestamped {
+		t.Error("XAdES-A implies XAdES-T, so the signature timestamp must be present too")
 	}
 }
