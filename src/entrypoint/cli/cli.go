@@ -50,6 +50,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runAsic(args[1:], stdout, stderr)
 	case "serve":
 		return runServe(args[1:], stdout, stderr)
+	case "handler":
+		return runHandler(args[1:], stdout, stderr)
 	case "version", "--version", "-v":
 		fmt.Fprintln(stdout, Version)
 		return exitOK

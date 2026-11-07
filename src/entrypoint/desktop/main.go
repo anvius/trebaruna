@@ -10,6 +10,7 @@ import (
 
 	"codeberg.org/simplicer/firma-it/src/desktop/infrastructure"
 	"codeberg.org/simplicer/firma-it/src/desktop/messaging"
+	"codeberg.org/simplicer/firma-it/src/entrypoint/serve"
 )
 
 func main() {
@@ -26,11 +27,16 @@ func main() {
 	infrastructure.InstallTranslations(language)
 
 	// A file manager launches the app with the chosen document as the first
-	// argument (the desktop entry uses %f). Dropping it would mean "Open with
+	// argument (the desktop entry uses %U). Dropping it would mean "Open with
 	// firma-it" appears to do nothing, so the path travels into the window.
+	//
+	// The same slot receives fire-it:// URIs from web pages, which are not paths:
+	// they carry a document plus parameters, and treating one as a filename would
+	// put a URL in the file field. The URI is parsed here and only its document
+	// reaches the window; approval of what follows is a separate, deliberate step.
 	documentPath := ""
 	if len(os.Args) > 1 {
-		documentPath = os.Args[1]
+		documentPath = serve.DocumentFromArgument(os.Args[1])
 	}
 
 	infrastructure.NewWindow(infrastructure.Options{

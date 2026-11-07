@@ -55,6 +55,7 @@ firma-it sign contratto.pdf --p12 key.p12 --pass secret \
 | **Seal** | Drawn from the certificate, positioned in a free gap, never truncated |
 | **Keys** | PKCS#12, PEM, PKCS#11 smartcard |
 | **Machine output** | `--json` everywhere, stable shapes, documented exit codes |
+| **Web pages** | `firma-it://` URI handler with mandatory human approval |
 
 Everything above is exercised by 234 tests and, where it matters, by an
 independent implementation: `openssl cms -verify`, `openssl ts -verify`,
@@ -445,53 +446,68 @@ toolchain and OpenGL/X11 headers; `make deps-gui` documents what to install.
 
 ## Protocol handlers and AutoFirma
 
-Can `firma-it` register as the handler a web page invokes when it asks the
-browser to open a signature request?
+Can a web page ask `firma-it` to sign, the way Spanish administrations invoke
+AutoFirma through an `autofirma://` URI?
 
-**Not yet, and deliberately so.** Here is the honest state and what it would
-take.
+**The request half is implemented. The automatic-approval half is not, on
+purpose.**
 
-Spanish public administrations commonly invoke a custom URI scheme
-(`autofirma://...`) that the operating system dispatches to AutoFirma, which then
-signs and posts the result back. Implementing that means three things:
+```bash
+firma-it handler "firma-it://sign?document=/home/user/atto.pdf&format=pdf&origin=https://sede.example.gob.es"
+```
 
-1. **A registered URI handler.** On Linux, a `.desktop` entry declaring
-   `MimeType=x-scheme-handler/...` and `%u`; on macOS, `CFBundleURLTypes`; on
-   Windows, a registry key. The packaging in this repository does not declare a
-   scheme handler today — check `packaging/firma-it.desktop` and
-   `packaging/macos/Info.plist`: they register file associations only.
-2. **The protocol semantics.** The payload encodes the document, the signing
-   format and a callback URL. Each issuer defines its own dialect, and they are
-   not interchangeable.
-3. **Posting the result back**, usually a form post to the administration's
-   endpoint, which the calling page then reads.
+```
+request  8f8f6d7525135721329686bf956652bd
+verdict  advanced
+secret   dd8e185e11d506de65bffa7be5773a6a54e4f592430c71f626d437fc4e9026a8
+the desktop app must now approve this request
+the request expires in 30 seconds
+```
 
-The security problem is the third step, and it is the reason this is not rushed.
-A scheme handler is reachable by *any* page the user has open. Without a
-challenge-response — the server sending a nonce that the client must sign, so a
-drive-by request cannot be answered — a handler becomes a way for an arbitrary
-site to obtain the user's signature on a document of the attacker's choosing.
-That is not hypothetical: it is the flaw that made existing local signing agents
-exploitable.
+### How it works
 
-What exists today that a future implementation would build on:
+A page cannot spawn a process, so it asks the operating system to open a URI.
+The app receives it, and then:
 
-- `firma-it sign` is fully non-interactive when every parameter is supplied, so
-  it can be driven by a handler without a UI.
-- `firma-it serve` already implements the loopback server half, with a
-  single-use token and an `Origin` check.
-- The verification side already reports what was signed and by whom, which is
-  what a handler must show before asking the user to approve anything.
+1. **resolves the document** against the allowed roots, refusing anything
+   outside them;
+2. **verifies it immediately**, so nobody is invited to sign a file whose
+   content has not been examined — the verdict is shown before the decision;
+3. **generates a secret** that the page never sees, and prints it to the
+   terminal, where the person sitting at the machine can read it;
+4. **waits for an explicit approval** through the desktop window or the local
+   API;
+5. **expires in 30 seconds** and is **single use**.
 
-What is missing is the protocol dialect, a challenge-response design, and the
-browser-facing callback — none of which can be validated without a real
-integration to test against. Until that exists, this tool will not claim to be a
-drop-in replacement for AutoFirma's web flow.
+The scheme is registered in `packaging/firma-it.desktop`
+(`x-scheme-handler/firma-it`) and `packaging/macos/Info.plist`
+(`CFBundleURLTypes`).
 
-If you need it, the honest path is: implement `firma-it serve` as the signing
-backend, add a per-issuer adapter, and require a challenge for every request.
+### Why approval is not automatic
 
----
+The obvious implementation — sign whatever the URI names and post the result
+back — is the reason existing local signing agents have been exploitable: any
+page the user has open can trigger a scheme handler, and without a step only the
+human can complete, the page obtains a signature on a document of the attacker's
+choosing. The secret is that step. The page cannot read it, cannot guess it
+(32 random bytes), cannot replay it (single use), and cannot wait it out (30
+seconds).
+
+### What is still missing
+
+- **Per-issuer request formats.** Spanish administrations each define their own
+  payload dialect. This implementation understands one explicit shape
+  (`document`, `format`, `territory`, `origin`, `callback`) rather than guessing
+  at a dozen undocumented ones.
+- **The callback post.** The original is delivered by the caller after approval;
+  a full replacement must post a form to the administration's endpoint. That
+  needs a real integration to test against, and none is available here.
+- **Approval UI in the window.** The API and CLI expose the decision; the desktop
+  window shows the pending request but the approve/reject controls are not wired
+  to the Fyne layout yet.
+
+Until those exist, this is not a drop-in replacement for AutoFirma's web flow,
+and saying otherwise would be the kind of claim this project refuses to make.
 
 ## Contributing
 

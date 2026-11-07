@@ -145,3 +145,136 @@ func tokenLocation() (string, error) {
 	}
 	return filepath.Join(base, "firma-it"), nil
 }
+
+// runHandler receives a firma-it:// URI from the operating system.
+//
+// It starts the local API in the background, registers the request, and waits for
+// the window to decide. It prints nothing about the document beyond what the user
+// needs: the URI comes from a web page, and echoing its contents back to a
+// terminal the page cannot read is not a risk, but leaking the approval secret
+// through a log would be.
+func runHandler(args []string, stdout, stderr io.Writer) int {
+	flags := flag.NewFlagSet("handler", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+
+	// The URI arrives as the first positional argument, and flag.Parse stops at
+	// the first non-flag, so the URI and the flags are separated before parsing.
+	var (
+		root       string
+		uri        string
+		positional []string
+	)
+	for index := 0; index < len(args); index++ {
+		switch args[index] {
+		case "-root", "--root":
+			if index+1 < len(args) {
+				root = args[index+1]
+				index++
+			}
+		default:
+			positional = append(positional, args[index])
+		}
+	}
+	if len(positional) == 0 {
+		fmt.Fprintln(stderr, "usage: firma-it handler firma-it://sign?... [--root <dir>]")
+		return exitUsage
+	}
+	uri = positional[0]
+
+	screen, parameters, err := serve.ParseHandlerURI(uri)
+	if err != nil {
+		fmt.Fprintf(stderr, "%v\n", err)
+		return exitUsage
+	}
+
+	roots := []string{}
+	if root != "" {
+		roots = append(roots, root)
+	}
+	if len(roots) == 0 {
+		workingDirectory, err := os.Getwd()
+		if err != nil {
+			fmt.Fprintf(stderr, "cannot determine the working directory: %v\n", err)
+			return exitUsage
+		}
+		roots = append(roots, workingDirectory)
+	}
+
+	token, err := serve.NewToken()
+	if err != nil {
+		fmt.Fprintf(stderr, "%v\n", err)
+		return exitUsage
+	}
+
+	tokenDirectory, err := tokenLocation()
+	if err != nil {
+		fmt.Fprintf(stderr, "%v\n", err)
+		return exitUsage
+	}
+	tokenPath, err := serve.WriteToken(tokenDirectory, token)
+	if err != nil {
+		fmt.Fprintf(stderr, "%v\n", err)
+		return exitUsage
+	}
+	defer func() { _ = os.Remove(tokenPath) }()
+
+	timestamper := infrastructure.NewRfc3161Timestamper()
+	service := &serve.Service{
+		Signer: application.NewSignDocument(
+			infrastructure.DiskStore{},
+			application.SystemClock{},
+			infrastructure.CertificateInspector{},
+			infrastructure.NewCadesSigner(timestamper),
+			infrastructure.NewPadesSigner(timestamper),
+			infrastructure.NewXadesSigner(timestamper),
+		),
+		Verifier: verificationapp.NewVerifyDocument(
+			verificationinfra.NewPDFVerifier(),
+			verificationinfra.NewCadesVerifier(),
+			verificationinfra.NewCachedTrustProvider(),
+			systemClock{},
+		).WithXades(verificationinfra.NewXadesVerifier()),
+		Files:   serve.RootedFiles{Roots: roots},
+		Token:   token,
+		Version: Version,
+	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	address, err := service.Listen(ctx, "127.0.0.1:0")
+	if err != nil {
+		fmt.Fprintf(stderr, "%v\n", err)
+		return exitUsage
+	}
+
+	// One path creates a pending signature for both callers. It is called
+	// directly rather than over HTTP because the secret must stay in this
+	// process: the API deliberately never returns it.
+	pending, err := service.RegisterRequest(serve.RequestBody{
+		Document:  parameters["document"],
+		Format:    parameters["format"],
+		Territory: parameters["territory"],
+		Origin:    screen.Origin,
+		Callback:  screen.Callback,
+	})
+	if err != nil {
+		fmt.Fprintf(stderr, "%v\n", err)
+		return exitInvalid
+	}
+	_ = address
+
+	// The secret is printed to the terminal and nowhere else: it is what the
+	// desktop window needs to approve, and what a page cannot obtain.
+	fmt.Fprintf(stdout, "request  %s\n", pending.ID)
+	fmt.Fprintf(stdout, "verdict  %s\n", pending.Report.Verdict())
+	fmt.Fprintf(stdout, "secret   %s\n", pending.Secret)
+	fmt.Fprintf(stdout, "the desktop app must now approve this request; so does:\n")
+	fmt.Fprintf(stdout, "  curl -X POST http://%s/v1/requests/%s/decision \\\n", address, pending.ID)
+	fmt.Fprintf(stdout, "       -H 'X-Firma-Token: %s' \\\n", tokenPath)
+	fmt.Fprintf(stdout, "       -d '{\"secret\":\"%s\",\"approved\":true}'\n", pending.Secret)
+	fmt.Fprintln(stdout, "the request expires in 30 seconds")
+
+	<-ctx.Done()
+	return exitOK
+}

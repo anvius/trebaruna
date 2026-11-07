@@ -24,6 +24,21 @@
   <true/>
   <key>LSApplicationCategoryType</key>
   <string>public.app-category.productivity</string>
+  <!-- The scheme a web page invokes. The desktop app receives the URI, shows what
+       it is about, and cannot approve it by itself. -->
+  <key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleURLName</key>
+      <string>codeberg.simplicer.firma-it.handler</string>
+      <key>CFBundleURLSchemes</key>
+      <array>
+        <string>firma-it</string>
+      </array>
+      <key>CFBundleTypeRole</key>
+      <string>Viewer</string>
+    </dict>
+  </array>
   <key>CFBundleDocumentTypes</key>
   <array>
     <dict>

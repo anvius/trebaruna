@@ -63,6 +63,9 @@ type Service struct {
 	// poll a job the same way it polls a signature.
 	mu        sync.Mutex
 	documents map[string]verification.DocumentReport
+
+	// Pending holds protocol-handler requests awaiting a human decision.
+	Pending *PendingRequests
 }
 
 // SigningUseCase is the signing capability the server needs.
@@ -130,6 +133,9 @@ func (s *Service) Handler() http.Handler {
 	if s.documents == nil {
 		s.documents = map[string]verification.DocumentReport{}
 	}
+	if s.Pending == nil {
+		s.Pending = NewPendingRequests()
+	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /status", s.handleStatus)
@@ -139,6 +145,12 @@ func (s *Service) Handler() http.Handler {
 	mux.HandleFunc("GET /v1/signatures/{id}", s.handleGetSignature)
 	mux.HandleFunc("PUT /v1/verifications/{id}", s.handleCreateVerification)
 	mux.HandleFunc("GET /v1/verifications/{id}", s.handleGetVerification)
+
+	// Protocol handler: a web page asks, a person decides, nothing signs itself.
+	mux.HandleFunc("POST /v1/requests", s.handleCreateRequest)
+	mux.HandleFunc("GET /v1/requests", s.handleListRequests)
+	mux.HandleFunc("GET /v1/requests/{id}", s.handleGetRequest)
+	mux.HandleFunc("POST /v1/requests/{id}/decision", s.handleDecideRequest)
 
 	return s.guard(mux)
 }
@@ -567,4 +579,147 @@ func (s *Service) Listen(ctx context.Context, address string) (net.Addr, error) 
 
 	go func() { _ = server.Serve(listener) }()
 	return listener.Addr(), nil
+}
+
+// RequestBody is the payload a page (or the URI handler) sends.
+type RequestBody struct {
+	Document  string `json:"document"`
+	Format    string `json:"format,omitempty"`
+	Territory string `json:"territory,omitempty"`
+	Origin    string `json:"origin,omitempty"`
+	Callback  string `json:"callback,omitempty"`
+}
+
+// handleCreateRequest registers a signing request and verifies the document.
+//
+// It never returns the approval secret: that is shown in the desktop window, and
+// a page able to read it here could approve its own request.
+func (s *Service) handleCreateRequest(writer http.ResponseWriter, request *http.Request) {
+	var payload RequestBody
+	if err := decodeJSON(request, &payload); err != nil {
+		writeProblem(writer, http.StatusBadRequest, "invalid-body", err.Error())
+		return
+	}
+
+	pending, err := s.RegisterRequest(payload)
+	if err != nil {
+		status := http.StatusUnprocessableEntity
+		code := "request-failed"
+		switch {
+		case errors.Is(err, ErrPathRejected):
+			status, code = http.StatusForbidden, "path-rejected"
+		case errors.Is(err, ErrInvalidOrigin):
+			status, code = http.StatusBadRequest, "invalid-origin"
+		case errors.Is(err, ErrInvalidCallback):
+			status, code = http.StatusBadRequest, "invalid-callback"
+		case errors.Is(err, ErrVerificationFailed):
+			status, code = http.StatusUnprocessableEntity, "verification-failed"
+		}
+		writeProblem(writer, status, code, err.Error())
+		return
+	}
+
+	writeJSON(writer, http.StatusAccepted, map[string]any{
+		"id":         pending.ID,
+		"expires_at": pending.ExpiresAt.UTC().Format(time.RFC3339),
+		"verdict":    string(pending.Report.Verdict()),
+		"note":       "the desktop app must approve this request; it cannot approve itself",
+	})
+}
+
+// handleListRequests reports what is waiting for a decision.
+func (s *Service) handleListRequests(writer http.ResponseWriter, _ *http.Request) {
+	writeJSON(writer, http.StatusOK, map[string]any{"data": s.Pending.List()})
+}
+
+// handleGetRequest reports one pending request.
+func (s *Service) handleGetRequest(writer http.ResponseWriter, request *http.Request) {
+	pending, found := s.Pending.Get(request.PathValue("id"))
+	if !found {
+		writeProblem(writer, http.StatusNotFound, "unknown-request",
+			"no pending request with that identifier")
+		return
+	}
+	writeJSON(writer, http.StatusOK, pending)
+}
+
+// decisionBody is the user's answer.
+type decisionBody struct {
+	Secret   string `json:"secret"`
+	Approved bool   `json:"approved"`
+}
+
+// handleDecideRequest records the decision.
+//
+// This route exists for the desktop app, which holds the secret. A page cannot
+// call it successfully because it never learns the secret.
+func (s *Service) handleDecideRequest(writer http.ResponseWriter, request *http.Request) {
+	var payload decisionBody
+	if err := decodeJSON(request, &payload); err != nil {
+		writeProblem(writer, http.StatusBadRequest, "invalid-body", err.Error())
+		return
+	}
+
+	if err := s.Pending.Decide(request.PathValue("id"), payload.Secret, payload.Approved); err != nil {
+		writeProblem(writer, http.StatusForbidden, "decision-rejected", err.Error())
+		return
+	}
+	writeJSON(writer, http.StatusOK, map[string]any{
+		"id":       request.PathValue("id"),
+		"approved": payload.Approved,
+	})
+}
+
+// Errors RegisterRequest reports, so both callers can classify them.
+var (
+	// ErrPathRejected means the document is outside the allowed roots.
+	ErrPathRejected = errors.New("path rejected")
+	// ErrInvalidOrigin means the declared screen origin is malformed.
+	ErrInvalidOrigin = errors.New("invalid origin")
+	// ErrInvalidCallback means the callback escapes the declared origin.
+	ErrInvalidCallback = errors.New("invalid callback")
+	// ErrVerificationFailed means the document could not be examined.
+	ErrVerificationFailed = errors.New("verification failed")
+)
+
+// RegisterRequest validates a request and verifies its document.
+//
+// It is the single path that creates a pending signature, used by the HTTP route
+// and by the URI handler. The returned request carries the approval secret, which
+// the caller must show to a person and never to the page that asked.
+func (s *Service) RegisterRequest(payload RequestBody) (PendingRequest, error) {
+	resolved, err := s.Files.Allowed(payload.Document)
+	if err != nil {
+		return PendingRequest{}, fmt.Errorf("%w: %v", ErrPathRejected, err)
+	}
+
+	if payload.Origin != "" {
+		if err := validateOrigin(payload.Origin); err != nil {
+			return PendingRequest{}, fmt.Errorf("%w: %v", ErrInvalidOrigin, err)
+		}
+	}
+	if payload.Callback != "" {
+		if err := validateCallback(payload.Callback, payload.Origin); err != nil {
+			return PendingRequest{}, fmt.Errorf("%w: %v", ErrInvalidCallback, err)
+		}
+	}
+
+	// Verify before asking. The user must never be invited to sign a file whose
+	// content nobody has examined.
+	report, err := s.Verifier.Execute(verificationapp.Request{
+		Path:      resolved,
+		Format:    payload.Format,
+		Territory: payload.Territory,
+	})
+	if err != nil {
+		return PendingRequest{}, fmt.Errorf("%w: %v", ErrVerificationFailed, err)
+	}
+
+	return s.Pending.Create(PendingRequest{
+		Path:      resolved,
+		Format:    payload.Format,
+		Territory: payload.Territory,
+		Screen:    Screen{Origin: payload.Origin, Callback: payload.Callback},
+		Report:    report,
+	})
 }

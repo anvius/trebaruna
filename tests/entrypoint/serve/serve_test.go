@@ -505,3 +505,25 @@ func (f fixture) material(t *testing.T) ([]byte, []byte) {
 
 // unusedSigner keeps the signingdomain import meaningful if the tests change.
 var _ = signingdomain.BES
+
+// writeFile puts content in the allowed root and returns its path.
+func (f fixture) writeFile(t *testing.T, name string, content []byte) string {
+	t.Helper()
+
+	path := filepath.Join(f.root, name)
+	if err := os.WriteFile(path, content, 0o600); err != nil {
+		t.Fatalf("write %s: %v", name, err)
+	}
+	return path
+}
+
+// readAllString reads a response body as a string.
+func readAllString(t *testing.T, response *http.Response) string {
+	t.Helper()
+
+	content, err := io.ReadAll(response.Body)
+	if err != nil {
+		t.Fatalf("read body: %v", err)
+	}
+	return string(content)
+}
