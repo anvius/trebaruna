@@ -345,7 +345,7 @@ func TestSelfSignedIsReported(t *testing.T) {
 func TestTrustedCertificateIsNotFlagged(t *testing.T) {
 	store := newFakeStore(map[string][]byte{"/tmp/a.xml": []byte("xml")})
 	resolver := fakeIdentity{identity: application.Identity{
-		Subject: "CN=Mario Rossi", Issuer: "CN=ArubaPEC CA", SelfSigned: false,
+		Subject: "CN=Maria Rossi", Issuer: "CN=Example TSP CA", SelfSigned: false,
 	}}
 	useCase := application.NewSignDocument(store, fakeClock{time.Unix(0, 0)},
 		resolver, &fakeCades{}, &fakePades{}, &fakeXades{})

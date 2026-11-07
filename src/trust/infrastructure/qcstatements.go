@@ -58,7 +58,7 @@ type QualifiedStatements struct {
 	// a certificate that omits it says nothing about what it is for. Treating
 	// silence as "seal" would refuse to qualify perfectly valid European
 	// signature certificates, a false negative measured on real documents
-	// (UANATACA, C=ES, qcStatements = compliance + retention + PDS, no QcType).
+	// (measured on a Spanish qualified certificate: compliance + retention + PDS, no QcType).
 	TypeDeclared bool
 	// SignatureCertificate reports a QcType entry for electronic signatures.
 	SignatureCertificate bool

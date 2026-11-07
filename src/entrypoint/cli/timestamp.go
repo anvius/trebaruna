@@ -2,8 +2,8 @@ package cli
 
 // Independent timestamping: `firma-it timestamp` and `firma-it verify-tsr`.
 //
-// Two kinds of timestamp: over a document's hash and
-// over a bare hash. Both are useful without signing
+// Two timestamp operations are useful (a timestamp over a document hash, and
+// TSR_TIMESTAMP (a timestamp over a bare hash). Both are useful without signing
 // anything: proving a document existed at a moment is a separate legal act from
 // signing it, and asking a client to sign in order to obtain that proof is a
 // workaround, not a feature.

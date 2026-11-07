@@ -2,7 +2,7 @@ package cli
 
 // ASiC containers: a ZIP holding the document plus its signature.
 //
-// ASiC-S and ASiC-E containers exist because some
+// Two container flavours exist (ASiC-S and ASiC-E) because some
 // public administrations in Italy accept only that wrapper, and because a
 // container keeps the signed file and its signature together, which avoids the
 // classic "I sent the PDF but forgot the .p7m".

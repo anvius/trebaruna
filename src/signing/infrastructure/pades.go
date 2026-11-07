@@ -39,7 +39,7 @@ func NewPadesSigner(timestamps Timestamper) *PadesSigner {
 //
 // Levels that embed revocation are produced in two steps: pdfsign signs, then
 // this adapter appends a /DSS dictionary in an incremental update. The library
-// has no /DSS writer (its only revocation path is the Adobe attribute that ETSI
+// has no /DSS writer (its only revocation path is a vendor attribute that ETSI
 // EN 319 142-1 forbids for PAdES), but it does not need one: the store lives
 // outside the signature.
 func (s *PadesSigner) SignPades(ctx context.Context, request application.PadesRequest) ([]byte, error) {

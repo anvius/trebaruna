@@ -13,7 +13,7 @@ import (
 
 // TrustService is one qualified service listed in a national TSL.
 type TrustService struct {
-	// ProviderName is the trust service provider, e.g. "ArubaPEC S.p.A.".
+	// ProviderName is the trust service provider, e.g. "ExampleTSP S.p.A.".
 	ProviderName string
 	// ServiceName is the specific service.
 	ServiceName string

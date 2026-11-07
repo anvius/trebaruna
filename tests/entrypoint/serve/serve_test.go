@@ -1,10 +1,9 @@
 package serve_test
 
-// The local HTTP API is a known attack surface: it is the flaw that made
-// earlier local signing agents exploitable by any page the user happened to open. The
-// tests below are therefore weighted towards the defences, not the features: a
-// server that signs correctly but accepts a cross-origin request is worse than no
-// server at all.
+// The local HTTP API is a known attack surface: local signing agents have been
+// made exploitable by any page the user happened to open. The tests below are
+// therefore weighted towards the defences, not the features: a server that signs
+// correctly but accepts a cross-origin request is worse than no server at all.
 
 import (
 	"bytes"

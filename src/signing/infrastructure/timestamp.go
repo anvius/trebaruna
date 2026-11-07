@@ -68,7 +68,7 @@ func (t *Rfc3161Timestamper) Token(ctx context.Context, digest []byte, url, user
 	if response.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf(
 			"TSA %s answered %d: %s\n"+
-				"  if this is Aruba's endpoint, it needs an account (401 means no credentials).\n"+
+				"  401 usually means the authority needs credentials; many public ones do.\n"+
 				"  list free qualified authorities with: firma-it tsa list --territory IT",
 			url, response.StatusCode, truncate(string(body), 200),
 		)

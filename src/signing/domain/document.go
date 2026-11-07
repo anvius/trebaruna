@@ -39,7 +39,7 @@ func (d Document) Extension() string {
 }
 
 // SignedName computes the output file name following the convention shared
-// by AutoFirma and Italian practice:
+// by the tools this replaces:
 //
 //   - CAdES appends the .p7m suffix to the whole original name,
 //     so contratto.docx becomes contratto.docx.p7m.

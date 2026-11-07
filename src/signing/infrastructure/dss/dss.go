@@ -7,7 +7,7 @@
 // is exactly what keeps the existing signatures valid.
 //
 // Why hand-written: pdfsign v1.0.0 has no /DSS writer. Its only revocation path
-// is the Adobe 1.2.840.113583.1.1.8 attribute, which EN 319 142-1 forbids in
+// is a vendor-specific attribute (1.2.840.113583.1.1.8), which EN 319 142-1 forbids in
 // PAdES, and its cross-reference writer is unexported. The structure below is
 // small enough to write exactly, and it is checked against pdfsig and qpdf.
 package dss

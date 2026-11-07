@@ -5,8 +5,8 @@
 // surfaces cannot disagree about what a signature is.
 //
 // Security model, from ADR-0004. The local HTTP surface is a known attack vector:
-// it is exactly the flaw that made earlier local signing agents exploitable by any web
-// page the user happened to open. Four mitigations are structural here, not
+// it is the flaw that makes naive local signing agents exploitable by any web
+// page the user happens to open. Four mitigations are structural here, not
 // optional:
 //
 //	bind loopback only      a request from another host is never accepted

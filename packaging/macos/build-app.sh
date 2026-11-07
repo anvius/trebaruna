@@ -43,7 +43,8 @@ iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/firma-it.icns"
 rm -rf "$ICONSET"
 
 # Ad-hoc signature: enough to run locally without a developer account.
-# Distribution to other people needs a Developer ID, see doc/HANDOFF.md.
+# Distributing this to other people needs an Apple Developer ID: without it the
+# bundle is ad-hoc signed and Gatekeeper will warn.
 codesign --force --sign - "$APP/Contents/MacOS/firma-it"
 codesign --force --sign - "$APP/Contents/MacOS/firma-it-desktop"
 codesign --force --sign - "$APP"

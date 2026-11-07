@@ -29,13 +29,13 @@ const sampleList = `<?xml version="1.0" encoding="UTF-8"?>
   <TrustServiceProviderList>
     <TrustServiceProvider>
       <TSPInformation>
-        <TSPName><Name xml:lang="en">ArubaPEC S.p.A.</Name></TSPName>
+        <TSPName><Name xml:lang="en">ExampleTSP S.p.A.</Name></TSPName>
       </TSPInformation>
       <TSPServices>
         <TSPService>
           <ServiceInformation>
             <ServiceTypeIdentifier>http://uri.etsi.org/TrstSvc/Svctype/CA/QC</ServiceTypeIdentifier>
-            <ServiceName><Name xml:lang="en">Aruba Qualified CA</Name></ServiceName>
+            <ServiceName><Name xml:lang="en">Example Qualified CA</Name></ServiceName>
             <ServiceStatus>http://uri.etsi.org/TrstSvc/TrustedList/Svcstatus/granted</ServiceStatus>
             <ServiceDigitalIdentity>
               <DigitalId><X509Certificate>CERTIFICATE_ONE</X509Certificate></DigitalId>
@@ -45,7 +45,7 @@ const sampleList = `<?xml version="1.0" encoding="UTF-8"?>
         <TSPService>
           <ServiceInformation>
             <ServiceTypeIdentifier>http://uri.etsi.org/TrstSvc/Svctype/TSA/QTST</ServiceTypeIdentifier>
-            <ServiceName><Name xml:lang="en">Aruba Qualified TSA</Name></ServiceName>
+            <ServiceName><Name xml:lang="en">Example Qualified TSA</Name></ServiceName>
             <ServiceStatus>http://uri.etsi.org/TrstSvc/TrustedList/Svcstatus/granted</ServiceStatus>
           </ServiceInformation>
         </TSPService>
@@ -137,7 +137,7 @@ func TestParserReadsProviderName(t *testing.T) {
 		t.Fatalf("Parse: %v", err)
 	}
 
-	if list.Services[0].ProviderName != "ArubaPEC S.p.A." {
+	if list.Services[0].ProviderName != "ExampleTSP S.p.A." {
 		t.Errorf("provider = %q", list.Services[0].ProviderName)
 	}
 }

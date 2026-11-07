@@ -22,7 +22,7 @@ const (
 )
 
 // Extension is the file suffix the format produces, following the
-// convention observed in AutoFirma and Italian practice.
+// convention observed in existing signing tools.
 func (f Format) Extension() string {
 	switch f {
 	case Cades:

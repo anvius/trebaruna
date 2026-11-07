@@ -2,7 +2,7 @@ package cli
 
 // `firma-it certificate` — inspect a certificate on its own.
 //
-// You can ask about a certificate
+// Asking about a certificate is useful on its own: you can ask about a certificate
 // without a document. That matters in daily use: "does my card expire before the
 // contract does?", "is this the right certificate?", "why does my signature fail
 // on the other machine?". Without it the user must sign a throwaway file to find

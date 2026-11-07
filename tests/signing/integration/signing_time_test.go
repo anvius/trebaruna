@@ -28,7 +28,7 @@ import (
 // ByteRange, so rewriting it afterwards would invalidate the signature. What is
 // asserted here is the contract that actually holds: a signature made now carries
 // a time that is now, not a stale or invented one. Recorded as a gap in
-// doc/HANDOFF.md §7.1.
+// README.md, Known limits.
 func TestSignedPdfRecordsTheSigningMoment(t *testing.T) {
 	fixture := newFixture(t)
 	document := writeBlankPDF(t, fixture.directory)

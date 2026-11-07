@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `PAGE:x1,y1,x2,y2`, and every mark shares a single cryptographic signature.
   `seal_count` is reported in the JSON output.
 - Chained signatures verified: signing an already-signed PDF adds a valid
-  incremental signature, so a document can carry five valid signatures.
+  incremental signature. Checked with up to five chained signatures.
 - Free-space detection: the renderer rasterises the page with poppler, measures
   ink through a summed-area table, and proposes the emptiest conventional gap.
 - Draggable seal overlay in the desktop app, clamped to the page.
@@ -66,7 +66,7 @@ First working slice. Not a stable release: major version 0 by policy.
 - Self-signed certificates are accepted and flagged instead of rejected.
 - `--json` output and stable exit codes (0 signed, 1 signing failure, 2 usage)
   for script and AI callers.
-- File naming convention shared with AutoFirma and Italian practice.
+- File naming convention follows the practice of established signing tools.
 
 - Native desktop app (`-tags gui`) built on Fyne: one form, file pickers,
   explicit seal box, off-UI-thread signing, opens the result on request.

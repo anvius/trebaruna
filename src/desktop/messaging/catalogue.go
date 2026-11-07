@@ -1,6 +1,6 @@
 // Package messaging holds every user-visible string, in the user's language.
 //
-// Two hard rules:
+// Two hard rules, both learned from watching people use signing tools:
 //   - no string is hardcoded in a window or a command;
 //   - a missing translation is a compile error, not a silent English fallback.
 package messaging
