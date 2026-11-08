@@ -106,7 +106,7 @@ func runServe(args []string, stdout, stderr io.Writer) int {
 		).WithXades(verificationinfra.NewXadesVerifier()),
 		Files:   serve.RootedFiles{Roots: roots},
 		Token:   token,
-		Version: Version,
+		Version: version,
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -250,7 +250,7 @@ func runHandler(args []string, stdout, stderr io.Writer) int {
 		).WithXades(verificationinfra.NewXadesVerifier()),
 		Files:   serve.RootedFiles{Roots: roots},
 		Token:   token,
-		Version: Version,
+		Version: version,
 	}
 
 	keySource, err := buildSigner(signerOptions{

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -59,7 +60,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	case "decide":
 		return runDecide(args[1:], stdout, stderr)
 	case "version", "--version", "-v":
-		fmt.Fprintln(stdout, Version)
+		fmt.Fprintln(stdout, version)
 		return exitOK
 	case "help", "--help", "-h":
 		printUsage(stdout)
@@ -452,8 +453,32 @@ examples:
 `)
 }
 
-// Version is injected at build time via -ldflags.
-var Version = "0.1.0-unstable"
+// version is the effective version string, resolved once.
+//
+// The Makefile injects the real value with -ldflags, which covers every binary
+// this repository ships. A binary installed with `go install pkg@version` is
+// built by the user's own toolchain, which applies no project flags — so when
+// nothing was injected, the version the user asked for is read from the build
+// information the toolchain records. Only when even that is absent, which
+// happens in tests, does the fallback stand.
+var version = resolveVersion()
+
+// injectedVersion is set by -ldflags. The empty string is the sentinel: a
+// linker injection of "" and no injection at all are the same thing.
+var injectedVersion = ""
+
+// resolveVersion reports the version this binary should claim.
+func resolveVersion() string {
+	if injectedVersion != "" {
+		return injectedVersion
+	}
+	if info, ok := debug.ReadBuildInfo(); ok {
+		if v := info.Main.Version; v != "" && v != "(devel)" {
+			return v
+		}
+	}
+	return "0.0.0-dev"
+}
 
 // defaultPKCS11Module points at the OpenSC module on Linux.
 var defaultPKCS11Module = "/usr/lib/x86_64-linux-gnu/opensc-pkcs11.so"

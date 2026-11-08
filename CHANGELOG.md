@@ -93,6 +93,18 @@ First working slice. Not a stable release: major version 0 by policy.
 - PKCS#11 requires cgo, so the token build is a separate binary.
 - Messages are English only; localisation pending.
 
+## [0.3.1-unstable] - 2026-11-08
+
+### Fixed
+
+- A binary installed with `go install` reported `0.1.0-unstable`, because the
+  version was only set by the Makefile's linker flags and a user's own build
+  applies none. The version now falls back to the one the toolchain records in
+  the build information, which is the version the user asked for. Binaries
+  built by this repository's Makefile are unaffected.
+- The mirror workflow carried the branch but not the tags, so a mirror user
+  asking for a version was told it did not exist.
+
 ## [0.3.0-unstable] - 2026-11-08
 
 ### Changed

@@ -6,7 +6,7 @@ MAIN    := ./src/entrypoint/main
 VERSION := $(shell cat VERSION 2>/dev/null || echo 0.1.0-unstable)
 PREFIX  ?= /usr/local
 DESTDIR ?= 
-LDFLAGS := -s -w -X codeberg.org/simplicer/trebaruna/src/entrypoint/cli.Version=$(VERSION)
+LDFLAGS := -s -w -X codeberg.org/simplicer/trebaruna/src/entrypoint/cli.injectedVersion=$(VERSION)
 
 .PHONY: help build build-token build-gui deps-gui test test-verbose check cross install install-desktop clean version
 
