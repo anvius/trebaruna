@@ -75,9 +75,10 @@ prospective CA:
 | 17 | A qualified trust service requires **supervision** by a supervisory body |
 | 19 | Security requirements and incident notification |
 | 20 | **Supervision and audits**: at least every 24 months, at your cost |
-| 21 | Start of operation: notify the supervisory body **before** starting |
-| 22 | **Conformity assessment** by an accredited body before starting, and every 24 months |
-| 24 | Publication in the national **trusted list** |
+| 21 | Start of operation: notify the supervisory body **before** starting, with the conformity assessment report |
+| 22 | National **trusted lists**: each Member State publishes and signs them |
+| 23 | The **"EU Trusted"** label, once the qualification is listed |
+| 24 | Identity verification when issuing qualified certificates |
 
 Article 24 is the one that matters for this tool: a certificate is recognised
 across the EU because it appears in the list, and the list appears in the EU LOTL.
@@ -231,6 +232,61 @@ pignus trust show ES --match "your company name"
 - **Termination plan**: what happens to your certificates if you close. The
   policy must state it, and the auditor checks it, because a CA that vanishes
   takes every signature it issued with it.
+
+
+---
+
+## If you already have a company
+
+This section is for the case where the entity exists and is trading. It changes
+the starting point, but not the destination.
+
+**What you already have.**
+
+| Asset | Why it matters |
+|---|---|
+| A legal entity in Spain | The single largest barrier. eIDAS art. 21 authorises a *provider*, not a tool. Without an entity there is nothing to authorise. |
+| Trading history | The auditor asks how long you have operated, how you handled incidents, whether you can fund the compliance function for years rather than months. |
+| Existing staff | The roles EN 319 401 names — security officer, system administrator, system auditor, registration authority — can be existing people with additional duties, provided segregation of duties holds. |
+| Turnover | Evidence of financial capacity, and the basis for sizing the insurance. |
+
+**What turnover does and does not buy.** There is no turnover threshold in eIDAS
+for becoming a qualified provider. A large revenue is not an entry requirement;
+it is evidence that you can sustain a supervised operation. What it does not do
+is reduce the obligations: the audit, the HSM, the key ceremony, the CP/CPS and
+the liability all apply at the same size regardless of the income.
+
+The number that matters more than revenue is the one in your policy. You declare a
+**liability cap** for your qualified certificates, and the auditor will ask how
+you would pay a claim at that cap. The cap has to be backed by capital or
+insurance. A turnover figure that does not translate into a credible cap does not
+help.
+
+**What is missing regardless of the company.** Everything in step 3 of the
+process above is missing unless you have already built it: a certified HSM, a
+key ceremony on record, an offline root, a revocation service, a tested
+disaster recovery. A trading company does not have these, because no trading
+company has them. This is the part that cannot be shortcut by having a good year.
+
+**The realistic first move.** Do not open with QES certificates. Open with
+**qualified timestamping**, for three reasons: it needs no subscriber identity
+proofing, it has one protocol and one audit scope, and it produces a qualified
+trust service that raises the value of every signature you already issue —
+including the ones this tool makes today.
+
+Before spending anything, send the ministry's trust services unit four questions:
+
+1. Does my entity qualify as a provider under the current national scheme, or is
+   there a specific form of application?
+2. Which conformity assessment bodies are accredited for the service type I
+   intend to start with?
+3. What is the current administrative unit and procedure for notification?
+4. Are there national requirements on top of eIDAS and the ETSI standards that
+   the published scheme imposes?
+
+Question 4 is the one that costs money if you skip it. The EU framework is the
+floor, not the ceiling, and the Spanish scheme adds requirements that the
+regulation does not mention.
 
 ---
 
