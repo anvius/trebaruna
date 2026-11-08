@@ -32,14 +32,13 @@ import (
 // a driver is free to refuse.
 func TestTokenInspectorListsTheCard(t *testing.T) {
 	token := startSoftHSM(t)
-	id := identifier(t)
-	token.keyPair(t, id, "signing-key")
+	token.keyPair(t, "01", "signing-key")
 
-	certificatePEM := issueCertificateForToken(t, token, id)
+	certificatePEM := issueCertificateForToken(t, token, "01")
 	if certificatePEM == nil {
 		t.Skip("openssl is not available to issue a certificate")
 	}
-	importCertificate(t, token, id, "signing-key", certificatePEM)
+	importCertificate(t, token, "01", "signing-key", certificatePEM)
 
 	inspector := infrastructure.TokenInspector{Module: token.module}
 	slots, err := inspector.Inspect()

@@ -11,17 +11,17 @@ package infrastructure_test
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
 	"crypto/x509"
-	"encoding/hex"
 	"encoding/pem"
 	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 
 	"codeberg.org/simplicer/trebaruna/src/signing/application"
@@ -37,23 +37,36 @@ type softHSM struct {
 	directory string
 }
 
-// sharedToken is the token every test in this package uses.
+// tokenEnvironment is the one thing SoftHSM sets up per process.
 //
-// It is created once because SoftHSM keeps its state in the process, not in the
-// configuration file: a second token directory in the same process is ignored,
-// the module keeps serving the first one, and the second test looks at a token
-// that does not exist. That is a property of the driver, not of the tool, and
-// the fixture has to live with it.
+// The configuration is read when the module is loaded, and the module is
+// loaded once per process: a second configuration file in the same process is
+// ignored, the module keeps serving the first token directory. That is a
+// property of the driver, not of the tool, so the directory is created once
+// and every test gets its own token inside it.
 //
-// The token is therefore shared, and each test uses its own identifier for the
-// key material it stores, so the tests do not interfere with one another.
+// One token per test, not one identifier per test on a shared token. A shared
+// token made the tests order-dependent without looking like it: whichever test
+// imported a certificate first decided whether a later test saw a token with
+// "no certificate", and whichever certificate the card returned first decided
+// which CA a later test had to verify against. Both failures appeared only in
+// CI, because only there did the file order put the inspector tests first.
 var (
-	sharedToken    softHSM
-	sharedTokenErr error
-	sharedOnce     sync.Once
+	environmentOnce sync.Once
+	environmentErr  error
+	environment     softHSMEnvironment
+	nextSlot        atomic.Uint32
 )
 
-// startSoftHSM locates a module, initialises a token and returns it.
+// softHSMEnvironment is the shared token directory and its configuration.
+type softHSMEnvironment struct {
+	module    string
+	pin       string
+	soPin     string
+	directory string
+}
+
+// startSoftHSM gives the test a token of its own.
 //
 // It searches the usual locations and SOFTHSM2_MODULE, so the test works both on
 // a machine where SoftHSM is installed system-wide and one where it was unpacked
@@ -61,22 +74,43 @@ var (
 func startSoftHSM(t *testing.T) softHSM {
 	t.Helper()
 
-	sharedOnce.Do(func() { sharedToken, sharedTokenErr = buildSoftHSM() })
-	if sharedTokenErr != nil {
-		if sharedTokenErr == errSoftHSMMissing {
+	environmentOnce.Do(func() { environment, environmentErr = buildSoftHSMEnvironment() })
+	if environmentErr != nil {
+		if errors.Is(environmentErr, errSoftHSMMissing) {
 			t.Skip("SoftHSM is not installed; set SOFTHSM2_MODULE to run these tests")
 		}
-		t.Skipf("SoftHSM cannot be started: %v", sharedTokenErr)
+		t.Skipf("SoftHSM cannot be started: %v", environmentErr)
 	}
 
-	return softTokenFor(t)
+	// Slot numbers are handed out in order. Each slot holds one token, so two
+	// tests never see each other's objects no matter which order they run in.
+	slot := nextSlot.Add(1) - 1
+	label := fmt.Sprintf("trebaruna-%d", slot)
+
+	utility, err := exec.LookPath("softhsm2-util")
+	if err != nil {
+		t.Skip("softhsm2-util is not available")
+	}
+	command := exec.Command(utility, "--module", environment.module, "--init-token",
+		"--slot", strconv.FormatUint(uint64(slot), 10), "--label", label,
+		"--pin", environment.pin, "--so-pin", environment.soPin)
+	if output, err := command.CombinedOutput(); err != nil {
+		t.Fatalf("initialise token: %v\n%s", err, output)
+	}
+
+	return softHSM{
+		module:    environment.module,
+		label:     label,
+		pin:       environment.pin,
+		directory: t.TempDir(),
+	}
 }
 
 // errSoftHSMMissing marks a machine without SoftHSM.
 var errSoftHSMMissing = errors.New("softhsm is not installed")
 
-// buildSoftHSM creates the module configuration and the token.
-func buildSoftHSM() (softHSM, error) {
+// buildSoftHSMEnvironment creates the token directory and the configuration.
+func buildSoftHSMEnvironment() (softHSMEnvironment, error) {
 	module := os.Getenv("SOFTHSM2_MODULE")
 	if module == "" {
 		candidates := []string{
@@ -92,50 +126,31 @@ func buildSoftHSM() (softHSM, error) {
 		}
 	}
 	if module == "" {
-		return softHSM{}, errSoftHSMMissing
+		return softHSMEnvironment{}, errSoftHSMMissing
 	}
 
-	utility, err := exec.LookPath("softhsm2-util")
-	if err != nil {
-		return softHSM{}, errSoftHSMMissing
+	if _, err := exec.LookPath("softhsm2-util"); err != nil {
+		return softHSMEnvironment{}, errSoftHSMMissing
 	}
 
 	directory, err := os.MkdirTemp("", "trebaruna-softhsm")
 	if err != nil {
-		return softHSM{}, err
+		return softHSMEnvironment{}, err
 	}
 	tokenDirectory := filepath.Join(directory, "tokens")
 	if err := os.MkdirAll(tokenDirectory, 0o700); err != nil {
-		return softHSM{}, err
+		return softHSMEnvironment{}, err
 	}
 
 	configuration := filepath.Join(directory, "softhsm2.conf")
 	content := "directories.tokendir = " + tokenDirectory + "\n" +
 		"objectstore.backend = file\nlog.level = ERROR\n"
 	if err := os.WriteFile(configuration, []byte(content), 0o600); err != nil {
-		return softHSM{}, err
+		return softHSMEnvironment{}, err
 	}
 	os.Setenv("SOFTHSM2_CONF", configuration)
 
-	label := "trebaruna-test"
-	command := exec.Command(utility, "--module", module, "--init-token",
-		"--slot", "0", "--label", label, "--pin", "1234", "--so-pin", "123456")
-	if output, err := command.CombinedOutput(); err != nil {
-		return softHSM{}, fmt.Errorf("initialise token: %w\n%s", err, output)
-	}
-
-	return softHSM{module: module, label: label, pin: "1234", directory: directory}, nil
-}
-
-// softTokenFor returns the shared token with a per-test working directory.
-//
-// The key material is stored under a per-test identifier, so two tests that run
-// in the same package do not overwrite each other's objects on the card.
-func softTokenFor(t *testing.T) softHSM {
-	t.Helper()
-	token := sharedToken
-	token.directory = t.TempDir()
-	return token
+	return softHSMEnvironment{module: module, pin: "1234", soPin: "123456", directory: directory}, nil
 }
 
 // keyPair generates a key inside the token.
@@ -147,7 +162,8 @@ func (h softHSM) keyPair(t *testing.T, identifier, label string) {
 		t.Skip("pkcs11-tool is not available")
 	}
 
-	command := exec.Command(tool, "--module", h.module, "--login", "--pin", h.pin,
+	command := exec.Command(tool, "--module", h.module, "--token-label", h.label,
+		"--login", "--pin", h.pin,
 		"--keypairgen", "--key-type", "rsa:2048", "--id", identifier, "--label", label)
 	if output, err := command.CombinedOutput(); err != nil {
 		t.Fatalf("generate key pair: %v\n%s", err, output)
@@ -159,7 +175,7 @@ func (h softHSM) keyPair(t *testing.T, identifier, label string) {
 // before the signer was used.
 func TestTokenSessionSurvivesUntilTheSignature(t *testing.T) {
 	token := startSoftHSM(t)
-	token.keyPair(t, identifier(t), "signing-key")
+	token.keyPair(t, "01", "signing-key")
 
 	// Without a certificate the token has no pairs, and the error must say so
 	// rather than "context is closed" from the driver.
@@ -188,17 +204,16 @@ func TestTokenSessionSurvivesUntilTheSignature(t *testing.T) {
 // produced by a key that lives inside the token.
 func TestTokenSignsWhenTheSessionStaysOpen(t *testing.T) {
 	token := startSoftHSM(t)
-	id := identifier(t)
-	token.keyPair(t, id, "signing-key")
+	token.keyPair(t, "01", "signing-key")
 
 	// Issue a certificate for the token's public key, the way a CA would.
-	certificatePEM := issueCertificateForToken(t, token, id)
+	certificatePEM := issueCertificateForToken(t, token, "01")
 	if certificatePEM == nil {
 		t.Skip("openssl is not available to issue a certificate")
 	}
 
 	// Import the certificate back so the token pairs it with its key.
-	importCertificate(t, token, id, "signing-key", certificatePEM)
+	importCertificate(t, token, "01", "signing-key", certificatePEM)
 
 	signer, err := domain.NewSigner("Token", domain.FromToken,
 		domain.WithToken(token.module, token.label, token.pin))
@@ -242,7 +257,7 @@ func issueCertificateForToken(t *testing.T, token softHSM, identifier string) []
 
 	// The public key, as DER and PEM.
 	publicPath := filepath.Join(token.directory, "public.der")
-	command := exec.Command(tool, "--module", token.module, "--login", "--pin", token.pin,
+	command := exec.Command(tool, "--module", token.module, "--token-label", token.label, "--login", "--pin", token.pin,
 		"--id", identifier, "--read-object", "--type", "pubkey", "--output-file", publicPath)
 	if output, err := command.CombinedOutput(); err != nil {
 		t.Fatalf("read public key: %v\n%s", err, output)
@@ -273,7 +288,7 @@ func issueCertificateForToken(t *testing.T, token softHSM, identifier string) []
 	buildCertificationRequest(t, token, identifier, request)
 
 	signature := filepath.Join(token.directory, "request.sig")
-	sign := exec.Command(tool, "--module", token.module, "--login", "--pin", token.pin,
+	sign := exec.Command(tool, "--module", token.module, "--token-label", token.label, "--login", "--pin", token.pin,
 		"--id", identifier, "--sign", "--mechanism", "SHA256-RSA-PKCS",
 		"--input-file", request, "--output-file", signature)
 	if output, err := sign.CombinedOutput(); err != nil {
@@ -354,7 +369,7 @@ func importCertificate(t *testing.T, token softHSM, identifier, label string, ce
 		t.Fatalf("write certificate: %v", err)
 	}
 
-	command := exec.Command(tool, "--module", token.module, "--login", "--pin", token.pin,
+	command := exec.Command(tool, "--module", token.module, "--token-label", token.label, "--login", "--pin", token.pin,
 		"--id", identifier, "--write-object", path, "--type", "cert", "--label", label)
 	if output, err := command.CombinedOutput(); err != nil {
 		t.Fatalf("import certificate: %v\n%s", err, output)
@@ -457,15 +472,3 @@ func derOID(value string) []byte {
 
 // unused keeps the x509 import honest if a future revision drops it.
 var _ = x509.Certificate{}
-
-// identifier gives the test its own object identifier on the shared card.
-//
-// The card is shared by the package because SoftHSM keeps its state in the
-// process. Two tests storing under the same identifier would overwrite one
-// another's key material, and the failure would look like a bug in the tool.
-func identifier(t *testing.T) string {
-	t.Helper()
-	name := t.Name()
-	sum := sha256.Sum256([]byte(name))
-	return hex.EncodeToString(sum[:4])
-}
