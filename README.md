@@ -36,6 +36,7 @@ Full manual, in English, in [`docs/`](docs/README.md):
 | [Local API](docs/local-api.md) | HTTP surface for scripts and agents |
 | [Smartcards](docs/smartcards.md) | PKCS#11, PINs, what is tested |
 | [Troubleshooting](docs/troubleshooting.md) | The errors you will actually hit |
+| [Becoming a CA](docs/becoming-a-ca.md) | Issuing qualified certificates: the Spanish process, honestly |
 
 This README is the summary. The manual is the reference.
 
