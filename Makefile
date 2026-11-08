@@ -1,12 +1,12 @@
 GO      := go
-BIN     := bin/firma-it
-BIN_TOKEN := bin/firma-it-token
-BIN_GUI   := bin/firma-it-desktop
+BIN     := bin/pignus
+BIN_TOKEN := bin/pignus-token
+BIN_GUI   := bin/pignus-desktop
 MAIN    := ./src/entrypoint/main
 VERSION := $(shell cat VERSION 2>/dev/null || echo 0.1.0-unstable)
 PREFIX  ?= /usr/local
 DESTDIR ?= 
-LDFLAGS := -s -w -X codeberg.org/simplicer/firma-it/src/entrypoint/cli.Version=$(VERSION)
+LDFLAGS := -s -w -X codeberg.org/anvius/pignus/src/entrypoint/cli.Version=$(VERSION)
 
 .PHONY: help build build-token build-gui deps-gui test test-verbose check cross install install-desktop clean version
 
@@ -51,26 +51,26 @@ check: test
 
 cross:
 	@mkdir -p bin
-	GOOS=linux   GOARCH=amd64 CGO_ENABLED=0 $(GO) build -trimpath -ldflags="$(LDFLAGS)" -o bin/firma-it-linux-amd64   $(MAIN)
-	GOOS=linux   GOARCH=arm64 CGO_ENABLED=0 $(GO) build -trimpath -ldflags="$(LDFLAGS)" -o bin/firma-it-linux-arm64   $(MAIN)
-	GOOS=darwin  GOARCH=amd64 CGO_ENABLED=0 $(GO) build -trimpath -ldflags="$(LDFLAGS)" -o bin/firma-it-darwin-amd64  $(MAIN)
-	GOOS=darwin  GOARCH=arm64 CGO_ENABLED=0 $(GO) build -trimpath -ldflags="$(LDFLAGS)" -o bin/firma-it-darwin-arm64  $(MAIN)
-	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 $(GO) build -trimpath -ldflags="$(LDFLAGS)" -o bin/firma-it-windows-amd64.exe $(MAIN)
+	GOOS=linux   GOARCH=amd64 CGO_ENABLED=0 $(GO) build -trimpath -ldflags="$(LDFLAGS)" -o bin/pignus-linux-amd64   $(MAIN)
+	GOOS=linux   GOARCH=arm64 CGO_ENABLED=0 $(GO) build -trimpath -ldflags="$(LDFLAGS)" -o bin/pignus-linux-arm64   $(MAIN)
+	GOOS=darwin  GOARCH=amd64 CGO_ENABLED=0 $(GO) build -trimpath -ldflags="$(LDFLAGS)" -o bin/pignus-darwin-amd64  $(MAIN)
+	GOOS=darwin  GOARCH=arm64 CGO_ENABLED=0 $(GO) build -trimpath -ldflags="$(LDFLAGS)" -o bin/pignus-darwin-arm64  $(MAIN)
+	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 $(GO) build -trimpath -ldflags="$(LDFLAGS)" -o bin/pignus-windows-amd64.exe $(MAIN)
 	@ls -lh bin/ | awk '{print $$9, $$5}'
 
 install: build
-	install -Dm755 $(BIN) $(HOME)/.local/bin/firma-it
-	@echo "instalado en ~/.local/bin/firma-it"
+	install -Dm755 $(BIN) $(HOME)/.local/bin/pignus
+	@echo "instalado en ~/.local/bin/pignus"
 
-# Desktop integration: icon, launcher and the firma-it:// URI scheme, so a
+# Desktop integration: icon, launcher and the pignus:// URI scheme, so a
 # website can hand a document to the app the way afirma:// does.
 install-desktop: build build-gui
-	install -Dm755 $(BIN) $(DESTDIR)$(PREFIX)/bin/firma-it
-	install -Dm755 $(BIN_GUI) $(DESTDIR)$(PREFIX)/bin/firma-it-desktop
-	install -Dm644 assets/icons/firma-it-256.png $(DESTDIR)$(PREFIX)/share/icons/hicolor/256x256/apps/firma-it.png
-	install -Dm644 assets/icons/firma-it-128.png $(DESTDIR)$(PREFIX)/share/icons/hicolor/128x128/apps/firma-it.png
-	install -Dm644 assets/icons/firma-it-64.png  $(DESTDIR)$(PREFIX)/share/icons/hicolor/64x64/apps/firma-it.png
-	install -Dm644 packaging/firma-it.desktop $(DESTDIR)$(PREFIX)/share/applications/firma-it.desktop
+	install -Dm755 $(BIN) $(DESTDIR)$(PREFIX)/bin/pignus
+	install -Dm755 $(BIN_GUI) $(DESTDIR)$(PREFIX)/bin/pignus-desktop
+	install -Dm644 assets/icons/pignus-256.png $(DESTDIR)$(PREFIX)/share/icons/hicolor/256x256/apps/pignus.png
+	install -Dm644 assets/icons/pignus-128.png $(DESTDIR)$(PREFIX)/share/icons/hicolor/128x128/apps/pignus.png
+	install -Dm644 assets/icons/pignus-64.png  $(DESTDIR)$(PREFIX)/share/icons/hicolor/64x64/apps/pignus.png
+	install -Dm644 packaging/pignus.desktop $(DESTDIR)$(PREFIX)/share/applications/pignus.desktop
 	@echo "instalado en $(DESTDIR)$(PREFIX); ejecuta: update-desktop-database"
 
 version:

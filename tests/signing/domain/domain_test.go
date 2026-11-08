@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"codeberg.org/simplicer/firma-it/src/signing/domain"
+	"codeberg.org/anvius/pignus/src/signing/domain"
 )
 
 func TestSignedNameFollowsEstablishedConvention(t *testing.T) {

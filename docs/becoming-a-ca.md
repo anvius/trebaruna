@@ -5,12 +5,20 @@ qualified certificates, from someone who has read the standards and the Spanish
 scheme rather than done it. Read the disclaimer first.
 
 > **This is not legal advice, and it is not a shortcut.** The requirements below
-> come from Regulation (EU) No 910/2014 (eIDAS), its implementing acts, and the
-> Spanish trust list scheme published by the Ministry. They have been checked
-> against the published sources, but the authority that grants the status is
-> **Secretaría de Estado de Digitalización e Inteligencia Artificial**, through
-> the body it designates, and its criteria are the ones that apply. Everything
-> here should be verified with them and with a lawyer before spending money.
+> come from Regulation (EU) No 910/2014 (eIDAS) and from the Spanish trust list
+> scheme, whose operator the list itself names:
+>
+> ```
+> SchemeOperatorName  MINISTERIO DE ASUSTOS ECONOMICOS Y TRANSFORMACION DIGITAL
+> SchemeTerritory     ES
+> ```
+>
+> The unit that handles trust service supervision inside that ministry is the
+> one to approach, and **its name and procedure have changed more than once**.
+> Ask the ministry itself which unit currently does this, and confirm every step
+> below with them and with a lawyer before spending money. What is stated here is
+> what the regulation and the published scheme say; the administrative detail is
+> theirs to confirm.
 
 ---
 
@@ -73,12 +81,12 @@ prospective CA:
 
 Article 24 is the one that matters for this tool: a certificate is recognised
 across the EU because it appears in the list, and the list appears in the EU LOTL.
-That is exactly the chain `firma-it trust sync` verifies.
+That is exactly the chain `pignus trust sync` verifies.
 
 ### The Spanish scheme
 
-The Spanish trusted list is published by the **Ministerio para la Transformación
-Digital y la Función Pública** at:
+The Spanish trusted list is published by the **Ministerio de Asuntos Económicos y
+Transformación Digital** at:
 
 ```
 https://tsl.digital.gob.es/TSL.xml
@@ -96,8 +104,8 @@ SchemeRules            .../schemerules/ES  +  .../schemerules/EUcommon
 You can read it with this tool:
 
 ```bash
-firma-it trust sync --territory ES
-firma-it trust show ES --type CA/QC | head -20
+pignus trust sync --territory ES
+pignus trust show ES --type CA/QC | head -20
 ```
 
 Those are your competitors, and their entries are the format yours will take.
@@ -201,10 +209,9 @@ rounds.
 
 ### 6. Notify the supervisory body and get listed
 
-With the audit report, you notify the **Secretaría de Estado de Digitalización e
-Inteligencia Artificial** before starting to operate (eIDAS art. 21). Once
-accepted, your services are added to the Spanish trusted list — and, after the EU
-process catches up, to the LOTL.
+With the audit report, you notify the ministry's trust services unit before
+starting to operate (eIDAS art. 21). Once accepted, your services are added to
+the Spanish trusted list — and, after the EU process catches up, to the LOTL.
 
 **Only then** does a certificate you issue produce the verdict `qualified` in this
 tool, because that verdict is defined by the list, not by the certificate.
@@ -212,8 +219,8 @@ tool, because that verdict is defined by the list, not by the certificate.
 You can watch it happen:
 
 ```bash
-firma-it trust sync --territory ES
-firma-it trust show ES --match "your company name"
+pignus trust sync --territory ES
+pignus trust show ES --match "your company name"
 ```
 
 ### 7. Operate, and keep being audited
@@ -285,12 +292,12 @@ Honest scope:
 | Identity proofing | — |
 | **Issue certificates** | Your CA issues them; the tool signs with the resulting keys |
 | **Produce signatures people can verify** | ✅ CAdES, PAdES, XAdES up to `lta`, each verified by independent tools |
-| **Prove your certificates chain to a qualified issuer** | ✅ `firma-it certificate --territory ES` |
-| **Confirm your services appear in the Spanish list** | ✅ `firma-it trust show ES --match "…"` |
+| **Prove your certificates chain to a qualified issuer** | ✅ `pignus certificate --territory ES` |
+| **Confirm your services appear in the Spanish list** | ✅ `pignus trust show ES --match "…"` |
 | **Check your OCSP responses before you rely on them** | ✅ four explicit revocation states |
 | **Test your TSA end to end** | ✅ RFC 3161 issue and verify |
 
-A concrete use: once you are listed, run `firma-it trust sync` and `firma-it trust
+A concrete use: once you are listed, run `pignus trust sync` and `pignus trust
 show ES` to confirm the entry you wrote is the one validators read, and sign a
 sample document with `--level lta` to prove your whole chain — certificate,
 timestamp, OCSP, archive — verifies by tools that are not yours.
@@ -306,13 +313,14 @@ Primary, and worth reading before talking to anyone:
 - **ETSI EN 319 401, 411-1, 411-2, 412-x, 421** — published free of charge
   by ETSI.
 - **Spanish trusted list**: `https://tsl.digital.gob.es/TSL.xml`, readable with
-  `firma-it trust show ES`.
+  `pignus trust show ES`.
 - **EU LOTL**: `https://ec.europa.eu/tools/lotl/eu-lotl.xml`.
 - **EN 319 403** — how your audit will be conducted.
 
-Ask the **Secretaría de Estado de Digitalización e Inteligencia Artificial** which
-unit handles TSP supervision today before drafting anything; the name and the
-procedure have changed more than once.
+Ask the **Ministry of Economic Affairs and Digital Transformation** which unit
+handles trust service supervision today before drafting anything; the name and the
+procedure have changed more than once. The list's own `SchemeOperatorName` is the
+place to start, and it is the authority for the rest.
 
 ---
 

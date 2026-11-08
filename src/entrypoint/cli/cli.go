@@ -14,9 +14,9 @@ import (
 	"strings"
 	"time"
 
-	"codeberg.org/simplicer/firma-it/src/signing/application"
-	"codeberg.org/simplicer/firma-it/src/signing/domain"
-	"codeberg.org/simplicer/firma-it/src/signing/infrastructure"
+	"codeberg.org/anvius/pignus/src/signing/application"
+	"codeberg.org/anvius/pignus/src/signing/domain"
+	"codeberg.org/anvius/pignus/src/signing/infrastructure"
 )
 
 // Exit codes. They are part of the contract with scripts and AI callers.
@@ -69,7 +69,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	return exitUsage
 }
 
-// runSign implements `firma-it sign`.
+// runSign implements `pignus sign`.
 func runSign(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("sign", flag.ContinueOnError)
 	flags.SetOutput(stderr)
@@ -103,12 +103,12 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 	flags.Var(&boxes, "box", "seal box x1,y1,x2,y2 in PDF points (repeatable; PAGE:x1,y1,x2,y2 to pick the page)")
 
 	flags.Usage = func() {
-		fmt.Fprintln(stderr, "usage: firma-it sign <document> [flags]")
+		fmt.Fprintln(stderr, "usage: pignus sign <document> [flags]")
 		flags.PrintDefaults()
 	}
 
 	// Go's flag package stops at the first non-flag argument, but every CLI
-	// convention (and every AI caller) writes `firma-it sign FILE --flag`.
+	// convention (and every AI caller) writes `pignus sign FILE --flag`.
 	// The document is therefore extracted first and the flags are parsed from
 	// what remains, keeping both orders working.
 	documentPath, remaining, err := extractDocument(args)
@@ -413,17 +413,17 @@ func printArtefact(writer io.Writer, artefact application.Artefact) {
 }
 
 func printUsage(writer io.Writer) {
-	fmt.Fprint(writer, `firma-it — AdES signatures without proprietary code
+	fmt.Fprint(writer, `pignus — AdES signatures without proprietary code
 
 usage:
-  firma-it sign <document> [flags]
-  firma-it verify <document> [flags]
-  firma-it trust  sync|list [flags]
-  firma-it timestamp <file> --tsa <url>      (or --hash <hex>)
-  firma-it verify-tsr <token.tsr> [file]
-  firma-it certificate <file.p12|.pem|.crt>   (or: cert)
-  firma-it asic <document> <signature>        (ASiC-S / ASiC-E container)
-  firma-it serve --root <dir> --listen 127.0.0.1:0   (local HTTP API)
+  pignus sign <document> [flags]
+  pignus verify <document> [flags]
+  pignus trust  sync|list [flags]
+  pignus timestamp <file> --tsa <url>      (or --hash <hex>)
+  pignus verify-tsr <token.tsr> [file]
+  pignus certificate <file.p12|.pem|.crt>   (or: cert)
+  pignus asic <document> <signature>        (ASiC-S / ASiC-E container)
+  pignus serve --root <dir> --listen 127.0.0.1:0   (local HTTP API)
 
 flags:
   --format   cades (.p7m) | pades (.pdf) | xades (.xml)   default: pades
@@ -442,10 +442,10 @@ flags:
   --out      output path
 
 examples:
-  firma-it sign contratto.pdf --p12 mario.p12 --pass secret --reason Contratto
-  firma-it sign fattura.xml --format cades --p12 mario.p12 --level t --tsa https://tsa.example/
-  firma-it sign atto.pdf --token "Carta de Ejemplo" --pin 000000 --box 300,60,540,140
-  firma-it sign doc.pdf --p12 self.p12 --json
+  pignus sign contratto.pdf --p12 mario.p12 --pass secret --reason Contratto
+  pignus sign fattura.xml --format cades --p12 mario.p12 --level t --tsa https://tsa.example/
+  pignus sign atto.pdf --token "Carta de Ejemplo" --pin 000000 --box 300,60,540,140
+  pignus sign doc.pdf --p12 self.p12 --json
 `)
 }
 

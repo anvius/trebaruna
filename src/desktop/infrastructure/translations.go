@@ -9,7 +9,7 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/lang"
 
-	"codeberg.org/simplicer/firma-it/src/desktop/messaging"
+	"codeberg.org/anvius/pignus/src/desktop/messaging"
 )
 
 // InstallTranslations installs the strings Fyne's own widgets use.

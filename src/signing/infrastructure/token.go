@@ -5,7 +5,7 @@ import (
 	"crypto/x509"
 	"fmt"
 
-	"codeberg.org/simplicer/firma-it/src/signing/domain"
+	"codeberg.org/anvius/pignus/src/signing/domain"
 )
 
 // tokenPair is a certificate together with its signing key, as the token

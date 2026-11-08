@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"codeberg.org/simplicer/firma-it/src/desktop/domain"
+	"codeberg.org/anvius/pignus/src/desktop/domain"
 )
 
 // blankPage builds an empty A4-ish map at a fixed raster size.

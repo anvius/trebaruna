@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"codeberg.org/simplicer/firma-it/src/trust/domain"
+	"codeberg.org/anvius/pignus/src/trust/domain"
 )
 
 // TSLParser reads an ETSI TS 119 612 trust list.

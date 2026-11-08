@@ -50,7 +50,7 @@ The level decides:
 | `lta` | The entire document, including the validation material |
 
 ```bash
-firma-it sign atto.pdf --p12 k.p12 --pass x --level t --tsa https://freetsa.org/tsr
+pignus sign atto.pdf --p12 k.p12 --pass x --level t --tsa https://freetsa.org/tsr
 ```
 
 The authority is contacted during signing. Without `--tsa`, a level that needs a
@@ -75,14 +75,14 @@ hashing the wrong serialisation produces a token nobody can verify.
 For a document you have already signed, or for any file you want to prove existed:
 
 ```bash
-firma-it timestamp atto.pdf --tsa https://freetsa.org/tsr
+pignus timestamp atto.pdf --tsa https://freetsa.org/tsr
 # → atto.pdf.tsr
 ```
 
 Over a digest, when you do not want to send the file:
 
 ```bash
-firma-it timestamp --hash 3a7bd3e2f1c0... --tsa https://freetsa.org/tsr --out proof.tsr
+pignus timestamp --hash 3a7bd3e2f1c0... --tsa https://freetsa.org/tsr --out proof.tsr
 ```
 
 | Flag | Meaning |
@@ -100,9 +100,9 @@ The `.tsr` file is a standard `TimeStampResp`, readable by any RFC 3161 tool.
 ## Verifying a token
 
 ```bash
-firma-it verify-tsr atto.pdf.tsr            # the token on its own
-firma-it verify-tsr atto.pdf.tsr atto.pdf   # also check it matches this file
-firma-it verify-tsr --hash <hex> proof.tsr  # against a digest
+pignus verify-tsr atto.pdf.tsr            # the token on its own
+pignus verify-tsr atto.pdf.tsr atto.pdf   # also check it matches this file
+pignus verify-tsr --hash <hex> proof.tsr  # against a digest
 ```
 
 Exit `0` when the token's signature verifies and, if a document was given, its
@@ -133,8 +133,8 @@ Free, qualified where it matters:
 To list the **qualified** authorities your national list publishes:
 
 ```bash
-firma-it trust sync
-firma-it trust show IT | grep -i QTST
+pignus trust sync
+pignus trust show IT | grep -i QTST
 ```
 
 A timestamp from a free authority is cryptographically valid and proves the time.
@@ -188,7 +188,7 @@ unproven while looking implemented.
 validation material added by `lt`:
 
 ```bash
-firma-it sign mutuo.pdf --p12 k.p12 --pass x \
+pignus sign mutuo.pdf --p12 k.p12 --pass x \
     --level lta --tsa https://freetsa.org/tsr --online-revocation
 ```
 
@@ -233,7 +233,7 @@ documents, this is the expected and correct refusal.
 
 The token is fine and bound; its authority is simply not in the lists. If it is a
 free authority, that is expected. If it is a qualified one, run
-`firma-it trust sync` — the list may be missing or stale.
+`pignus trust sync` — the list may be missing or stale.
 
 ---
 

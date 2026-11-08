@@ -12,7 +12,7 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
-	"codeberg.org/simplicer/firma-it/src/desktop/messaging"
+	"codeberg.org/anvius/pignus/src/desktop/messaging"
 )
 
 // WelcomeScreen is the first thing the user sees.

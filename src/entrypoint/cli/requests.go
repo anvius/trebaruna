@@ -96,7 +96,7 @@ func runDecide(args []string, stdout, stderr io.Writer) int {
 		return exitUsage
 	}
 	if flags.NArg() == 0 {
-		fmt.Fprintln(stderr, "usage: firma-it decide <id> --secret <secret> --approved")
+		fmt.Fprintln(stderr, "usage: pignus decide <id> --secret <secret> --approved")
 		return exitUsage
 	}
 	if *secret == "" {
@@ -143,7 +143,7 @@ func runDecide(args []string, stdout, stderr io.Writer) int {
 
 // readToken reads the local token written by the running server.
 func readToken() (string, error) {
-	if explicit := os.Getenv("FIRMA_IT_TOKEN"); explicit != "" {
+	if explicit := os.Getenv("PIGNUS_TOKEN"); explicit != "" {
 		return explicit, nil
 	}
 
@@ -153,7 +153,7 @@ func readToken() (string, error) {
 	}
 	content, err := os.ReadFile(path + string(os.PathSeparator) + "token")
 	if err != nil {
-		return "", fmt.Errorf("no running firma-it server (looked for %s/token): %w", path, err)
+		return "", fmt.Errorf("no running pignus server (looked for %s/token): %w", path, err)
 	}
 	return string(content), nil
 }

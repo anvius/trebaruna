@@ -19,10 +19,10 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/simplicer/firma-it/src/signing/application"
-	"codeberg.org/simplicer/firma-it/src/signing/domain"
-	"codeberg.org/simplicer/firma-it/src/signing/infrastructure"
-	verificationinfra "codeberg.org/simplicer/firma-it/src/verification/infrastructure"
+	"codeberg.org/anvius/pignus/src/signing/application"
+	"codeberg.org/anvius/pignus/src/signing/domain"
+	"codeberg.org/anvius/pignus/src/signing/infrastructure"
+	verificationinfra "codeberg.org/anvius/pignus/src/verification/infrastructure"
 )
 
 // TestTimestampNotBoundIsRejected swaps the signature value after the token was

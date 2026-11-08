@@ -20,19 +20,19 @@ deliberately static:
 
 ```bash
 make deps-gui        # system packages: OpenGL, X11, poppler
-make build-gui       # ./bin/firma-it-desktop
+make build-gui       # ./bin/pignus-desktop
 make install-desktop # binary + .desktop entry + icon
 ```
 
-From a release: `firma-it-desktop` (Linux only, ~33 MB).
+From a release: `pignus-desktop` (Linux only, ~33 MB).
 
 ### Finding the CLI
 
-The window drives `firma-it` rather than reimplementing signing, so it must find
+The window drives `pignus` rather than reimplementing signing, so it must find
 the binary. It looks next to itself, then on `PATH`. Override:
 
 ```bash
-export FIRMA_IT_BIN=/opt/firma-it/firma-it
+export PIGNUS_BIN=/opt/pignus/pignus
 ```
 
 If it cannot find one, the window says so instead of failing silently.
@@ -97,7 +97,7 @@ The tab shows:
 - on selection: the full path, the format, and the countdown;
 - **Approve** and **Reject** buttons.
 
-Pressing either asks for the **approval secret**, which `firma-it handler` printed
+Pressing either asks for the **approval secret**, which `pignus handler` printed
 in a terminal. The window does not hold it, so a window that lists requests still
 cannot approve one on its own.
 
@@ -107,10 +107,10 @@ See [Web pages](web-pages.md) for the full flow.
 
 ## Languages
 
-Spanish, Italian and English, chosen from `FIRMA_IT_LANG` or `$LANG`:
+Spanish, Italian and English, chosen from `PIGNUS_LANG` or `$LANG`:
 
 ```bash
-FIRMA_IT_LANG=it firma-it-desktop
+PIGNUS_LANG=it pignus-desktop
 ```
 
 The catalogue is compile-checked: a missing translation is a build error and a
@@ -147,7 +147,7 @@ by construction.
 The cost is one extra process per operation, a few milliseconds, which is
 irrelevant next to a smartcard or a TSA round trip.
 
-The visible consequence: if `firma-it` is not on `PATH` and `FIRMA_IT_BIN` is not
+The visible consequence: if `pignus` is not on `PATH` and `PIGNUS_BIN` is not
 set, the window cannot sign. That is why it checks at start and tells you.
 
 ---

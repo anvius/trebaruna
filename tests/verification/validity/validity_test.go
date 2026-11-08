@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/simplicer/firma-it/src/verification/domain"
+	"codeberg.org/anvius/pignus/src/verification/domain"
 )
 
 // reference builds a Validity for a certificate valid through 2027, evaluated

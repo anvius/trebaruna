@@ -16,8 +16,8 @@ import (
 	"strconv"
 	"strings"
 
-	"codeberg.org/simplicer/firma-it/src/desktop/application"
-	"codeberg.org/simplicer/firma-it/src/desktop/domain"
+	"codeberg.org/anvius/pignus/src/desktop/application"
+	"codeberg.org/anvius/pignus/src/desktop/domain"
 )
 
 // ErrRendererMissing reports that poppler is not installed.
@@ -124,7 +124,7 @@ func readPageInfo(ctx context.Context, documentPath string) (pageCount int, widt
 
 // rasterise calls pdftoppm for a single page and returns the PNG bytes.
 func rasterise(ctx context.Context, binary, documentPath string, page, resolution int) ([]byte, error) {
-	directory, err := os.MkdirTemp("", "firma-it-preview-")
+	directory, err := os.MkdirTemp("", "pignus-preview-")
 	if err != nil {
 		return nil, fmt.Errorf("create preview directory: %w", err)
 	}

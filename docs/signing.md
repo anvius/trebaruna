@@ -24,14 +24,14 @@ The format is decided by what the document *is*, not by preference:
 | XML (invoice, form, contract) | **XAdES** | The signature is an XML element, so XML tooling can process it |
 | Anything else (zip, docx, jpg, csv) | **CAdES** | A CMS container wraps the file; nothing about the file is assumed |
 
-`firma-it` infers this from the suffix. `sign fattura.xml` produces XAdES
+`pignus` infers this from the suffix. `sign fattura.xml` produces XAdES
 without being told. Override with `--format` when the suffix lies — a PDF named
 `.bin`, for instance.
 
 Asking for a format that cannot hold the document is refused:
 
 ```
-$ firma-it sign doc.xml --format pades
+$ pignus sign doc.xml --format pades
 signing failed: signature format not applicable to this document:
 .xml cannot hold a pades signature
 ```
@@ -147,8 +147,8 @@ Signing an already-signed PDF adds an **incremental update**: the earlier bytes
 are untouched, so the earlier signatures stay valid.
 
 ```bash
-firma-it sign atto.pdf       --p12 k1.p12 --pass a    # → atto_signed.pdf
-firma-it sign atto_signed.pdf --p12 k2.p12 --pass b   # → atto_signed_signed.pdf
+pignus sign atto.pdf       --p12 k1.p12 --pass a    # → atto_signed.pdf
+pignus sign atto_signed.pdf --p12 k2.p12 --pass b   # → atto_signed_signed.pdf
 ```
 
 Verified with up to five chained signatures. Each is reported separately by
@@ -224,20 +224,20 @@ trusting our own encoder.
 ### A contract, signed once, with a visible seal
 
 ```bash
-firma-it sign contratto.pdf --p12 k.p12 --pass x \
+pignus sign contratto.pdf --p12 k.p12 --pass x \
     --reason "Accettazione" --box 60,60,300,170
 ```
 
 ### An invoice to an Italian public administration
 
 ```bash
-firma-it sign fattura.xml --pem k.pem --level t --tsa https://freetsa.org/tsr
+pignus sign fattura.xml --pem k.pem --level t --tsa https://freetsa.org/tsr
 ```
 
 ### A document that must stay verifiable for 20 years
 
 ```bash
-firma-it sign mutuo.pdf --p12 k.p12 --pass x \
+pignus sign mutuo.pdf --p12 k.p12 --pass x \
     --level lta --tsa https://freetsa.org/tsr --online-revocation \
     --tsa-user me --tsa-pass secret
 ```
@@ -246,7 +246,7 @@ firma-it sign mutuo.pdf --p12 k.p12 --pass x \
 
 ```bash
 for f in *.pdf; do
-    firma-it sign "$f" --p12 k.p12 --pass x --json || echo "FAILED: $f" >&2
+    pignus sign "$f" --p12 k.p12 --pass x --json || echo "FAILED: $f" >&2
 done
 ```
 
@@ -255,8 +255,8 @@ Each run is independent, so one failure does not stop the rest.
 ### Sign and check in one go
 
 ```bash
-firma-it sign doc.pdf --p12 k.p12 --pass x >/dev/null &&
-firma-it verify doc_signed.pdf
+pignus sign doc.pdf --p12 k.p12 --pass x >/dev/null &&
+pignus verify doc_signed.pdf
 ```
 
 Verifying your own output is worth doing once per key: it is how you find out that

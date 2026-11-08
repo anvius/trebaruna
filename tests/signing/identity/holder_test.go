@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/simplicer/firma-it/src/signing/domain/identity"
+	"codeberg.org/anvius/pignus/src/signing/domain/identity"
 )
 
 // buildCertificate creates a certificate with the given subject attributes.

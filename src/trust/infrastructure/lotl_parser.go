@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	"codeberg.org/simplicer/firma-it/src/trust/domain"
+	"codeberg.org/anvius/pignus/src/trust/domain"
 )
 
 // LOTLParser reads the EU list of trusted lists.

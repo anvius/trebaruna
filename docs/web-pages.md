@@ -1,6 +1,6 @@
 # Web pages
 
-Making a browser ask `firma-it` to sign, without letting any open tab do it on
+Making a browser ask `pignus` to sign, without letting any open tab do it on
 its own.
 
 - [The problem](#the-problem)
@@ -32,9 +32,9 @@ So the handler here asks first.
 ## The flow
 
 ```
-page                         firma-it                      person
+page                         pignus                      person
  │                              │                            │
- │  firma-it://sign?...         │                            │
+ │  pignus://sign?...         │                            │
  ├─────────────────────────────►│                            │
  │                              │ verify the document        │
  │                              │ print the verdict          │
@@ -61,7 +61,7 @@ Three properties follow from the secret:
 ## The URI format
 
 ```
-firma-it://sign?document=<path>&format=<pdf|cades|xades>
+pignus://sign?document=<path>&format=<pdf|cades|xades>
                 &territory=<ISO>&origin=<url>&callback=<url>
 ```
 
@@ -85,13 +85,13 @@ firma-it://sign?document=<path>&format=<pdf|cades|xades>
 Example:
 
 ```
-firma-it://sign?document=/tmp/atto.pdf&format=pdf&origin=https://sede.example.gob.es&callback=https://sede.example.gob.es/result
+pignus://sign?document=/tmp/atto.pdf&format=pdf&origin=https://sede.example.gob.es&callback=https://sede.example.gob.es/result
 ```
 
 Percent-encode anything unusual:
 
 ```
-firma-it://sign?document=%2Ftmp%2Fatto%20firmato.pdf
+pignus://sign?document=%2Ftmp%2Fatto%20firmato.pdf
 ```
 
 ---
@@ -99,7 +99,7 @@ firma-it://sign?document=%2Ftmp%2Fatto%20firmato.pdf
 ## Approving
 
 ```bash
-firma-it handler "firma-it://sign?document=/tmp/atto.pdf&format=pdf" \
+pignus handler "pignus://sign?document=/tmp/atto.pdf&format=pdf" \
     --root /tmp --p12 key.p12 --pass secret
 ```
 
@@ -109,7 +109,7 @@ verdict  unknown
 secret   dd8e185e11d506de65bffa7be5773a6a54e4f592430c71f626d437fc4e9026a8
 the desktop app must now approve this request; so does:
   curl -X POST http://127.0.0.1:37489/v1/requests/8f8f.../decision \
-       -H 'X-Firma-Token: /run/user/1000/firma-it/token' \
+       -H 'X-Firma-Token: /run/user/1000/pignus/token' \
        -d '{"secret":"dd8e...","approved":true}'
 
 sign /tmp/atto.pdf ?  [y/N] y
@@ -162,30 +162,30 @@ megabytes through a form post serves nobody.
 
 ### Linux
 
-`packaging/firma-it.desktop` declares it:
+`packaging/pignus.desktop` declares it:
 
 ```ini
-Exec=firma-it-desktop %U
-MimeType=application/pdf;text/xml;application/xml;x-scheme-handler/firma-it;
+Exec=pignus-desktop %U
+MimeType=application/pdf;text/xml;application/xml;x-scheme-handler/pignus;
 ```
 
 Install the entry and register it:
 
 ```bash
 make install-desktop
-xdg-mime default firma-it.desktop x-scheme-handler/firma-it
+xdg-mime default pignus.desktop x-scheme-handler/pignus
 ```
 
 ### macOS
 
-`packaging/macos/Info.plist` declares `CFBundleURLTypes` with the `firma-it`
+`packaging/macos/Info.plist` declares `CFBundleURLTypes` with the `pignus`
 scheme. The bundle picks the URI up when the system dispatches it.
 
 ### Windows
 
 A registry entry under
-`HKEY_CLASSES_ROOT\firma-it\shell\open\command` pointing at the binary with `%1`.
-Not packaged by this project; use `firma-it handler "%1"` as the command.
+`HKEY_CLASSES_ROOT\pignus\shell\open\command` pointing at the binary with `%1`.
+Not packaged by this project; use `pignus handler "%1"` as the command.
 
 ### Using the CLI instead of the window
 
@@ -193,7 +193,7 @@ The desktop entry launches the window. For a server or a terminal session, call
 the CLI directly and wire your own browser handler:
 
 ```bash
-firma-it handler "%1" --root ~/Documents --p12 ~/Documents/key.p12 --pass secret
+pignus handler "%1" --root ~/Documents --p12 ~/Documents/key.p12 --pass secret
 ```
 
 ---

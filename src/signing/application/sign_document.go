@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"codeberg.org/simplicer/firma-it/src/signing/domain"
+	"codeberg.org/anvius/pignus/src/signing/domain"
 )
 
 // SignDocument is the single use case of the signing slice.

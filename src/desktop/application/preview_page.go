@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"codeberg.org/simplicer/firma-it/src/desktop/domain"
+	"codeberg.org/anvius/pignus/src/desktop/domain"
 )
 
 // PreviewPage produces a preview and suggests where the seal should go.

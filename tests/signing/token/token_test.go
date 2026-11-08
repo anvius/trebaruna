@@ -19,9 +19,9 @@ import (
 	"strings"
 	"testing"
 
-	"codeberg.org/simplicer/firma-it/src/signing/application"
-	"codeberg.org/simplicer/firma-it/src/signing/domain"
-	"codeberg.org/simplicer/firma-it/src/signing/infrastructure"
+	"codeberg.org/anvius/pignus/src/signing/application"
+	"codeberg.org/anvius/pignus/src/signing/domain"
+	"codeberg.org/anvius/pignus/src/signing/infrastructure"
 )
 
 // softHSM is a running, initialised token.
@@ -77,7 +77,7 @@ func startSoftHSM(t *testing.T) softHSM {
 	}
 	t.Setenv("SOFTHSM2_CONF", configuration)
 
-	label := "firma-it-test"
+	label := "pignus-test"
 	command := exec.Command(utility, "--module", module, "--init-token",
 		"--slot", "0", "--label", label, "--pin", "1234", "--so-pin", "123456")
 	if output, err := command.CombinedOutput(); err != nil {

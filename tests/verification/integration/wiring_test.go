@@ -9,8 +9,8 @@ import (
 	"crypto/x509"
 	"testing"
 
-	"codeberg.org/simplicer/firma-it/src/verification/application"
-	verificationinfra "codeberg.org/simplicer/firma-it/src/verification/infrastructure"
+	"codeberg.org/anvius/pignus/src/verification/application"
+	verificationinfra "codeberg.org/anvius/pignus/src/verification/infrastructure"
 )
 
 func TestExtractorsAcceptTrustAnchors(t *testing.T) {

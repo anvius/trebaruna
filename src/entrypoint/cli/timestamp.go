@@ -1,6 +1,6 @@
 package cli
 
-// Independent timestamping: `firma-it timestamp` and `firma-it verify-tsr`.
+// Independent timestamping: `pignus timestamp` and `pignus verify-tsr`.
 //
 // Two timestamp operations are useful (a timestamp over a document hash, and
 // TSR_TIMESTAMP (a timestamp over a bare hash). Both are useful without signing
@@ -23,11 +23,11 @@ import (
 	"strings"
 	"time"
 
-	"codeberg.org/simplicer/firma-it/src/signing/infrastructure"
+	"codeberg.org/anvius/pignus/src/signing/infrastructure"
 	"github.com/digitorus/timestamp"
 )
 
-// runTimestamp implements `firma-it timestamp`.
+// runTimestamp implements `pignus timestamp`.
 func runTimestamp(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("timestamp", flag.ContinueOnError)
 	flags.SetOutput(stderr)
@@ -42,8 +42,8 @@ func runTimestamp(args []string, stdout, stderr io.Writer) int {
 	)
 
 	flags.Usage = func() {
-		fmt.Fprintln(stderr, "usage: firma-it timestamp <file> --tsa <url> [flags]")
-		fmt.Fprintln(stderr, "       firma-it timestamp --hash <hex> --tsa <url> [flags]")
+		fmt.Fprintln(stderr, "usage: pignus timestamp <file> --tsa <url> [flags]")
+		fmt.Fprintln(stderr, "       pignus timestamp --hash <hex> --tsa <url> [flags]")
 		flags.PrintDefaults()
 	}
 
@@ -158,7 +158,7 @@ func runVerifyTimestamp(args []string, stdout, stderr io.Writer) int {
 	)
 
 	flags.Usage = func() {
-		fmt.Fprintln(stderr, "usage: firma-it verify-tsr <token.tsr> [file] [--hash <hex>] [--json]")
+		fmt.Fprintln(stderr, "usage: pignus verify-tsr <token.tsr> [file] [--hash <hex>] [--json]")
 		flags.PrintDefaults()
 	}
 

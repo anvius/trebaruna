@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"strings"
 
-	"codeberg.org/simplicer/firma-it/src/signing/domain"
+	"codeberg.org/anvius/pignus/src/signing/domain"
 	"software.sslmate.com/src/go-pkcs12"
 )
 

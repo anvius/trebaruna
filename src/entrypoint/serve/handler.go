@@ -29,7 +29,7 @@ import (
 	"sync"
 	"time"
 
-	verification "codeberg.org/simplicer/firma-it/src/verification/domain"
+	verification "codeberg.org/anvius/pignus/src/verification/domain"
 )
 
 // HandlerScheme is the URI scheme the desktop app registers.
@@ -37,7 +37,7 @@ import (
 // It is deliberately not the scheme used by any other product: two applications
 // claiming the same scheme means the operating system picks one and the other
 // silently never runs.
-const HandlerScheme = "firma-it"
+const HandlerScheme = "pignus"
 
 // ApprovalWindow is how long a request waits for a decision.
 //
@@ -231,12 +231,12 @@ func (p *PendingRequests) now() time.Time {
 	return p.Now()
 }
 
-// ParseHandlerURI reads a firma-it:// URI into a request.
+// ParseHandlerURI reads a pignus:// URI into a request.
 //
 // The shape is deliberately explicit rather than a positional blob, because these
 // URIs arrive from untrusted pages:
 //
-//	firma-it://sign?document=<path>&format=<pdf|cades|xades>&territory=<ISO>&origin=<url>&callback=<url>
+//	pignus://sign?document=<path>&format=<pdf|cades|xades>&territory=<ISO>&origin=<url>&callback=<url>
 //
 // Anything not understood is refused instead of ignored: a parameter silently
 // dropped is a parameter the user thinks was applied.

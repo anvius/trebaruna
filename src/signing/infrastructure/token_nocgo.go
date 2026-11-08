@@ -5,7 +5,7 @@ package infrastructure
 import (
 	"fmt"
 
-	"codeberg.org/simplicer/firma-it/src/signing/domain"
+	"codeberg.org/anvius/pignus/src/signing/domain"
 )
 
 // openToken fails cleanly in builds without CGO.

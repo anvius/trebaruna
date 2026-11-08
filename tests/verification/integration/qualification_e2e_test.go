@@ -22,13 +22,13 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/simplicer/firma-it/src/signing/application"
-	signingdomain "codeberg.org/simplicer/firma-it/src/signing/domain"
-	"codeberg.org/simplicer/firma-it/src/signing/infrastructure"
-	trustdomain "codeberg.org/simplicer/firma-it/src/trust/domain"
-	verificationapp "codeberg.org/simplicer/firma-it/src/verification/application"
-	verification "codeberg.org/simplicer/firma-it/src/verification/domain"
-	verificationinfra "codeberg.org/simplicer/firma-it/src/verification/infrastructure"
+	"codeberg.org/anvius/pignus/src/signing/application"
+	signingdomain "codeberg.org/anvius/pignus/src/signing/domain"
+	"codeberg.org/anvius/pignus/src/signing/infrastructure"
+	trustdomain "codeberg.org/anvius/pignus/src/trust/domain"
+	verificationapp "codeberg.org/anvius/pignus/src/verification/application"
+	verification "codeberg.org/anvius/pignus/src/verification/domain"
+	verificationinfra "codeberg.org/anvius/pignus/src/verification/infrastructure"
 )
 
 // qualifiedIssuer is a CA plus the leaf it issued, with the QC statements.

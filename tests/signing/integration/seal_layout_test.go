@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/simplicer/firma-it/src/signing/domain/identity"
-	"codeberg.org/simplicer/firma-it/src/signing/infrastructure"
+	"codeberg.org/anvius/pignus/src/signing/domain/identity"
+	"codeberg.org/anvius/pignus/src/signing/infrastructure"
 )
 
 // TestSealKeepsTheWholeNameInTwoLines checks that a long name wraps instead of

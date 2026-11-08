@@ -8,8 +8,8 @@ import (
 	"os"
 	"time"
 
-	"codeberg.org/simplicer/firma-it/src/verification/application"
-	"codeberg.org/simplicer/firma-it/src/verification/domain"
+	"codeberg.org/anvius/pignus/src/verification/application"
+	"codeberg.org/anvius/pignus/src/verification/domain"
 	"github.com/beevik/etree"
 	"github.com/digitorus/timestamp"
 	dsig "github.com/russellhaering/goxmldsig"

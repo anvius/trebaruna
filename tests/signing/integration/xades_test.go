@@ -14,9 +14,9 @@ import (
 	"strings"
 	"testing"
 
-	"codeberg.org/simplicer/firma-it/src/signing/application"
-	"codeberg.org/simplicer/firma-it/src/signing/domain"
-	"codeberg.org/simplicer/firma-it/src/signing/infrastructure"
+	"codeberg.org/anvius/pignus/src/signing/application"
+	"codeberg.org/anvius/pignus/src/signing/domain"
+	"codeberg.org/anvius/pignus/src/signing/infrastructure"
 )
 
 // TestXadesIsWellFormedXML is the guard for the double-declaration bug.
@@ -93,10 +93,10 @@ func TestXadesDocumentDigestMatchesTheEmittedDocument(t *testing.T) {
 func TestXadesEnvelopingReferencesItsOwnPayload(t *testing.T) {
 	output := signXades(t, `<fattura><numero>1</numero></fattura>`, true)
 
-	if !strings.Contains(output, `Id="firma-it-payload"`) {
+	if !strings.Contains(output, `Id="pignus-payload"`) {
 		t.Error("an enveloping signature must carry an Object with its payload id")
 	}
-	if !strings.Contains(output, `URI="#firma-it-payload"`) {
+	if !strings.Contains(output, `URI="#pignus-payload"`) {
 		t.Error("an enveloping signature must reference its payload by id")
 	}
 	if strings.Contains(output, "enveloped-signature") {

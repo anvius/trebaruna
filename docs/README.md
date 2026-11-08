@@ -1,4 +1,4 @@
-# firma-it documentation
+# pignus documentation
 
 Everything about using this tool, in the order you are likely to need it.
 
@@ -12,7 +12,7 @@ Everything about using this tool, in the order you are likely to need it.
 | [Timestamps](timestamps.md) | RFC 3161 tokens: obtaining, using and verifying them |
 | [Trust lists](trust-lists.md) | Where "trusted issuer" comes from, and why a downloaded list is not enough |
 | [Desktop app](desktop.md) | The window: signing, verifying, pending requests |
-| [Web pages](web-pages.md) | Making a browser ask `firma-it` to sign, safely |
+| [Web pages](web-pages.md) | Making a browser ask `pignus` to sign, safely |
 | [Local API](local-api.md) | The HTTP surface for agents and scripts |
 | [Smartcards](smartcards.md) | PKCS#11 tokens: setup, PINs, what is tested |
 | [Troubleshooting](troubleshooting.md) | The errors you will actually hit, and what each one means |
@@ -25,7 +25,7 @@ New here? Read [Installation](installation.md), then
 
 ## In one page
 
-`firma-it` produces and checks **AdES** electronic signatures: the European
+`pignus` produces and checks **AdES** electronic signatures: the European
 standard family that Italian and Spanish administrations, and most of the EU,
 accept.
 

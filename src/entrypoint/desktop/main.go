@@ -1,6 +1,6 @@
 //go:build gui
 
-// Command firma-it-desktop is the native desktop application.
+// Command pignus-desktop is the native desktop application.
 package main
 
 import (
@@ -8,14 +8,14 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"codeberg.org/simplicer/firma-it/src/desktop/infrastructure"
-	"codeberg.org/simplicer/firma-it/src/desktop/messaging"
-	"codeberg.org/simplicer/firma-it/src/entrypoint/serve"
+	"codeberg.org/anvius/pignus/src/desktop/infrastructure"
+	"codeberg.org/anvius/pignus/src/desktop/messaging"
+	"codeberg.org/anvius/pignus/src/entrypoint/serve"
 )
 
 func main() {
 	language := messaging.Spanish
-	if fromEnvironment, ok := os.LookupEnv("FIRMA_IT_LANG"); ok {
+	if fromEnvironment, ok := os.LookupEnv("PIGNUS_LANG"); ok {
 		language = messaging.ParseLanguage(fromEnvironment)
 	} else if fromLocale, ok := os.LookupEnv("LANG"); ok {
 		language = messaging.ParseLanguage(fromLocale)
@@ -28,7 +28,7 @@ func main() {
 
 	// A file manager launches the app with the chosen document as the first
 	// argument (the desktop entry uses %U). Dropping it would mean "Open with
-	// firma-it" appears to do nothing, so the path travels into the window.
+	// pignus" appears to do nothing, so the path travels into the window.
 	//
 	// The same slot receives fire-it:// URIs from web pages, which are not paths:
 	// they carry a document plus parameters, and treating one as a filename would
@@ -49,15 +49,15 @@ func main() {
 // resolveBinary finds the CLI the window will drive.
 //
 // The GUI is a frontend, not a second implementation: it shells out to the same
-// firma-it binary, so both surfaces cannot drift apart.
+// pignus binary, so both surfaces cannot drift apart.
 func resolveBinary() string {
-	if explicit := os.Getenv("FIRMA_IT_BIN"); explicit != "" {
+	if explicit := os.Getenv("PIGNUS_BIN"); explicit != "" {
 		return explicit
 	}
-	if found, err := exec.LookPath("firma-it"); err == nil {
+	if found, err := exec.LookPath("pignus"); err == nil {
 		return found
 	}
-	for _, candidate := range []string{"/usr/local/bin/firma-it", "/usr/bin/firma-it"} {
+	for _, candidate := range []string{"/usr/local/bin/pignus", "/usr/bin/pignus"} {
 		if _, err := os.Stat(candidate); err == nil {
 			return candidate
 		}
@@ -65,13 +65,13 @@ func resolveBinary() string {
 	if executable, err := os.Executable(); err == nil {
 		directory := filepath.Dir(executable)
 		// Inside a macOS bundle the layout is
-		//   Firma-it.app/Contents/MacOS/firma-it-desktop
-		//   Firma-it.app/Contents/MacOS/firma-it
+		//   Firma-it.app/Contents/MacOS/pignus-desktop
+		//   Firma-it.app/Contents/MacOS/pignus
 		// so the sibling lookup is right, but Contents/Resources is also checked
 		// because that is where a packager may put the CLI.
 		candidates := []string{
-			filepath.Join(directory, "firma-it"),
-			filepath.Join(directory, "..", "Resources", "firma-it"),
+			filepath.Join(directory, "pignus"),
+			filepath.Join(directory, "..", "Resources", "pignus"),
 		}
 		for _, candidate := range candidates {
 			if _, statErr := os.Stat(candidate); statErr == nil {
@@ -83,5 +83,5 @@ func resolveBinary() string {
 			}
 		}
 	}
-	return "firma-it"
+	return "pignus"
 }

@@ -1,10 +1,10 @@
-// Command firma-it is the console entry point.
+// Command pignus is the console entry point.
 package main
 
 import (
 	"os"
 
-	"codeberg.org/simplicer/firma-it/src/entrypoint/cli"
+	"codeberg.org/anvius/pignus/src/entrypoint/cli"
 )
 
 func main() {

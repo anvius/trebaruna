@@ -29,7 +29,7 @@ import (
 	"fmt"
 	"time"
 
-	"codeberg.org/simplicer/firma-it/src/signing/domain/identity"
+	"codeberg.org/anvius/pignus/src/signing/domain/identity"
 	"github.com/digitorus/pdfsign"
 )
 

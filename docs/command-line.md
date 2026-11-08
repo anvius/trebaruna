@@ -22,11 +22,11 @@ Every command, every flag, and what the exit codes mean.
 ## Shape of the tool
 
 ```
-firma-it <command> [arguments] [flags]
+pignus <command> [arguments] [flags]
 ```
 
 Flags may appear before or after the positional argument:
-`firma-it sign doc.pdf --p12 k.p12` and `firma-it sign --p12 k.p12 doc.pdf` are
+`pignus sign doc.pdf --p12 k.p12` and `pignus sign --p12 k.p12 doc.pdf` are
 the same. This matters because Go's flag parser normally stops at the first
 non-flag argument, and every CLI convention (and every script) writes the file
 first.
@@ -49,7 +49,7 @@ wrong**; `3` means **we cannot tell**. A script that treats them the same will
 reject legitimate documents when a trust list is stale.
 
 ```bash
-if firma-it verify "$f" --json >/dev/null; then
+if pignus verify "$f" --json >/dev/null; then
     echo "verified"
 else
     case $? in
@@ -64,7 +64,7 @@ fi
 ## `sign`
 
 ```
-firma-it sign <document> [flags]
+pignus sign <document> [flags]
 ```
 
 ### Flags
@@ -75,7 +75,7 @@ firma-it sign <document> [flags]
 | `--level` | `bes` | `bes`, `t`, `lt` or `lta` — see [Signing](signing.md) |
 | `--p12` | — | PKCS#12 file with the certificate and key |
 | `--pem` | — | PEM bundle containing certificate and key |
-| `--token` | — | PKCS#11 token label (needs `firma-it-token`) |
+| `--token` | — | PKCS#11 token label (needs `pignus-token`) |
 | `--module` | system | PKCS#11 module path |
 | `--pin` | — | Smartcard PIN |
 | `--pass` | — | Passphrase for the P12 or PEM |
@@ -106,19 +106,19 @@ Override with `--out`.
 The common case — a PDF, the simplest signature:
 
 ```bash
-firma-it sign contratto.pdf --p12 mia-chiave.p12 --pass segreto
+pignus sign contratto.pdf --p12 mia-chiave.p12 --pass segreto
 ```
 
 An XML invoice with a timestamp:
 
 ```bash
-firma-it sign fattura.xml --pem bundle.pem --level t --tsa https://freetsa.org/tsr
+pignus sign fattura.xml --pem bundle.pem --level t --tsa https://freetsa.org/tsr
 ```
 
 A PDF with a visible seal in the bottom-left corner, long-term valid:
 
 ```bash
-firma-it sign atto.pdf --p12 k.p12 --pass x \
+pignus sign atto.pdf --p12 k.p12 --pass x \
     --level lt --tsa https://freetsa.org/tsr --online-revocation \
     --box 60,60,280,160 --reason "Contratto di fornitura"
 ```
@@ -126,20 +126,20 @@ firma-it sign atto.pdf --p12 k.p12 --pass x \
 Two seals on different pages, one signature:
 
 ```bash
-firma-it sign atto.pdf --p12 k.p12 --pass x \
+pignus sign atto.pdf --p12 k.p12 --pass x \
     --box 1:60,60,280,160 --box 3:60,60,280,160
 ```
 
 Any file wrapped in CMS:
 
 ```bash
-firma-it sign backup.zip --format cades --pem bundle.pem
+pignus sign backup.zip --format cades --pem bundle.pem
 ```
 
 Sign from a smartcard:
 
 ```bash
-firma-it-token sign atto.pdf --token "Carta Nazionale" --pin 123456 \
+pignus-token sign atto.pdf --token "Carta Nazionale" --pin 123456 \
     --module /usr/lib/x86_64-linux-gnu/opensc-pkcs11.so
 ```
 
@@ -159,7 +159,7 @@ firma-it-token sign atto.pdf --token "Carta Nazionale" --pin 123456 \
 ## `verify`
 
 ```
-firma-it verify <document> [flags]
+pignus verify <document> [flags]
 ```
 
 ### Flags
@@ -181,10 +181,10 @@ Anything else needs `--format`.
 ### Examples
 
 ```bash
-firma-it verify contratto_signed.pdf
-firma-it verify atto.pdf.p7m --territory IT
-firma-it verify doc.xml --json | jq '.verdict, .signers[].trust'
-firma-it verify atto.pdf --offline=false --json
+pignus verify contratto_signed.pdf
+pignus verify atto.pdf.p7m --territory IT
+pignus verify doc.xml --json | jq '.verdict, .signers[].trust'
+pignus verify atto.pdf --offline=false --json
 ```
 
 ### Reading the output
@@ -209,8 +209,8 @@ The `!` lines are findings, and each has a code in the JSON form. See
 ## `timestamp`
 
 ```
-firma-it timestamp <file> --tsa <url>
-firma-it timestamp --hash <hex> --tsa <url>
+pignus timestamp <file> --tsa <url>
+pignus timestamp --hash <hex> --tsa <url>
 ```
 
 Obtains an RFC 3161 token proving a document existed at a moment.
@@ -224,8 +224,8 @@ Obtains an RFC 3161 token proving a document existed at a moment.
 | `--json` | Machine-readable result |
 
 ```bash
-firma-it timestamp atto.pdf --tsa https://freetsa.org/tsr
-firma-it timestamp --hash 3a7bd3e2... --tsa https://freetsa.org/tsr --out proof.tsr
+pignus timestamp atto.pdf --tsa https://freetsa.org/tsr
+pignus timestamp --hash 3a7bd3e2... --tsa https://freetsa.org/tsr --out proof.tsr
 ```
 
 See [Timestamps](timestamps.md).
@@ -235,15 +235,15 @@ See [Timestamps](timestamps.md).
 ## `verify-tsr`
 
 ```
-firma-it verify-tsr <token.tsr> [document]
+pignus verify-tsr <token.tsr> [document]
 ```
 
 Checks a token on its own, or that it matches a document.
 
 ```bash
-firma-it verify-tsr atto.pdf.tsr
-firma-it verify-tsr atto.pdf.tsr atto.pdf     # also check the imprint
-firma-it verify-tsr --hash <hex> proof.tsr
+pignus verify-tsr atto.pdf.tsr
+pignus verify-tsr atto.pdf.tsr atto.pdf     # also check the imprint
+pignus verify-tsr --hash <hex> proof.tsr
 ```
 
 | Flag | Meaning |
@@ -259,15 +259,15 @@ token is invalid, `2` if it cannot be read at all.
 ## `certificate`
 
 ```
-firma-it certificate <file> [flags]
+pignus certificate <file> [flags]
 ```
 
 Reads a certificate without signing anything.
 
 ```bash
-firma-it certificate mia-chiave.p12 --pass segreto
-firma-it certificate bundle.pem --json
-firma-it certificate certificate.cer --territory IT
+pignus certificate mia-chiave.p12 --pass segreto
+pignus certificate bundle.pem --json
+pignus certificate certificate.cer --territory IT
 ```
 
 | Flag | Meaning |
@@ -284,18 +284,18 @@ Accepts `.p12`, `.pfx`, `.pem`, `.crt`, `.cer`. See
 ## `trust`
 
 ```
-firma-it trust sync  [--territory XX]
-firma-it trust list
-firma-it trust show <territory>
+pignus trust sync  [--territory XX]
+pignus trust list
+pignus trust show <territory>
 ```
 
 Downloads and **authenticates** the EU trust lists.
 
 ```bash
-firma-it trust sync               # all territories
-firma-it trust sync --territory IT
-firma-it trust list               # what is cached, and how old
-firma-it trust show IT            # services of one territory
+pignus trust sync               # all territories
+pignus trust sync --territory IT
+pignus trust list               # what is cached, and how old
+pignus trust show IT            # services of one territory
 ```
 
 `sync` verifies each national list against the certificates the EU list
@@ -307,7 +307,7 @@ publishes. A list that fails goes to quarantine, never to the cache. See
 ## `asic`
 
 ```
-firma-it asic [flags] <document> <signature>...
+pignus asic [flags] <document> <signature>...
 ```
 
 Packs a document and its signature into an ASiC container (ETSI EN 319 162).
@@ -319,9 +319,9 @@ Packs a document and its signature into an ASiC container (ETSI EN 319 162).
 | `--extract` | Unpack an existing container to this directory |
 
 ```bash
-firma-it asic atto.pdf atto.pdf.p7m
-firma-it asic --type e doc.pdf sig1.p7m sig2.p7m --out bundle.asice
-firma-it asic --extract ./out bundle.asics
+pignus asic atto.pdf atto.pdf.p7m
+pignus asic --type e doc.pdf sig1.p7m sig2.p7m --out bundle.asice
+pignus asic --extract ./out bundle.asics
 ```
 
 ---
@@ -329,7 +329,7 @@ firma-it asic --extract ./out bundle.asics
 ## `serve`
 
 ```
-firma-it serve --root <dir> [--listen addr]
+pignus serve --root <dir> [--listen addr]
 ```
 
 Starts the local HTTP API. Blocks until interrupted.
@@ -346,13 +346,13 @@ Binds loopback only — anything else is refused. See [Local API](local-api.md).
 ## `handler`
 
 ```
-firma-it handler "firma-it://sign?..." [--root <dir>] [--p12 f] [--pem f] [--pass s]
+pignus handler "pignus://sign?..." [--root <dir>] [--p12 f] [--pem f] [--pass s]
 ```
 
 Receives a URI from a web page, verifies the document, and asks for approval.
 
 ```bash
-firma-it handler "firma-it://sign?document=/tmp/atto.pdf&format=pdf" \
+pignus handler "pignus://sign?document=/tmp/atto.pdf&format=pdf" \
     --root /tmp --p12 key.p12 --pass secret
 ```
 
@@ -370,8 +370,8 @@ See [Web pages](web-pages.md).
 Two commands the desktop window uses, also usable by hand:
 
 ```bash
-firma-it requests --api 127.0.0.1:8080            # list pending requests
-firma-it decide <id> --secret <secret> --approved  # answer one
+pignus requests --api 127.0.0.1:8080            # list pending requests
+pignus decide <id> --secret <secret> --approved  # answer one
 ```
 
 | Flag | Meaning |
@@ -380,15 +380,15 @@ firma-it decide <id> --secret <secret> --approved  # answer one
 | `--secret` | The approval secret printed by `handler` |
 | `--approved` | Approve; omit for reject |
 
-They read the server token from `FIRMA_IT_TOKEN`, or from
-`$XDG_RUNTIME_DIR/firma-it/token`.
+They read the server token from `PIGNUS_TOKEN`, or from
+`$XDG_RUNTIME_DIR/pignus/token`.
 
 ---
 
 ## `version`
 
 ```bash
-firma-it version        # or --version, -v
+pignus version        # or --version, -v
 ```
 
 Prints the version and exits `0`. The same string appears in `GET /version` and
@@ -421,16 +421,16 @@ The one exception is `handler`, which must ask: that is its purpose.
 
 ### Cache location
 
-Trust lists: `~/.cache/firma-it/`. Nothing else is cached.
+Trust lists: `~/.cache/pignus/`. Nothing else is cached.
 
 ### Environment variables
 
 | Variable | Used by | Meaning |
 |---|---|---|
 | `LANG`, `LC_ALL` | `verify`, desktop | Default language and territory |
-| `FIRMA_IT_BIN` | desktop | Path to the CLI binary |
-| `FIRMA_IT_LANG` | desktop | Force the window language |
-| `FIRMA_IT_TOKEN` | `requests`, `decide` | Server token, instead of the file |
-| `FIRMA_IT_TOKEN_DIR` | `serve`, `handler` | Where to write the token |
+| `PIGNUS_BIN` | desktop | Path to the CLI binary |
+| `PIGNUS_LANG` | desktop | Force the window language |
+| `PIGNUS_TOKEN` | `requests`, `decide` | Server token, instead of the file |
+| `PIGNUS_TOKEN_DIR` | `serve`, `handler` | Where to write the token |
 | `XDG_RUNTIME_DIR` | `serve`, `handler` | Default token directory |
 | `SOFTHSM2_MODULE` | tests only | PKCS#11 module for the test suite |

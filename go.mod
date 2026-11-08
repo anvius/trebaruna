@@ -1,4 +1,4 @@
-module codeberg.org/simplicer/firma-it
+module codeberg.org/anvius/pignus
 
 go 1.27.0
 

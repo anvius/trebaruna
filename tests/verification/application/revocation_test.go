@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	trustdomain "codeberg.org/simplicer/firma-it/src/trust/domain"
-	"codeberg.org/simplicer/firma-it/src/verification/application"
-	"codeberg.org/simplicer/firma-it/src/verification/domain"
+	trustdomain "codeberg.org/anvius/pignus/src/trust/domain"
+	"codeberg.org/anvius/pignus/src/verification/application"
+	"codeberg.org/anvius/pignus/src/verification/domain"
 )
 
 // fakeRevocation answers with a prepared verdict and records the call.

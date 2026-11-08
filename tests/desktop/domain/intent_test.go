@@ -3,7 +3,7 @@ package domain_test
 import (
 	"testing"
 
-	"codeberg.org/simplicer/firma-it/src/desktop/domain"
+	"codeberg.org/anvius/pignus/src/desktop/domain"
 )
 
 func validIntent() domain.SigningIntent {

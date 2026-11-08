@@ -3,11 +3,11 @@
 <plist version="1.0">
 <dict>
   <key>CFBundleName</key>
-  <string>firma-it</string>
+  <string>pignus</string>
   <key>CFBundleDisplayName</key>
-  <string>firma-it</string>
+  <string>pignus</string>
   <key>CFBundleIdentifier</key>
-  <string>codeberg.simplicer.firma-it</string>
+  <string>codeberg.anvius.pignus</string>
   <key>CFBundleVersion</key>
   <string>__VERSION__</string>
   <key>CFBundleShortVersionString</key>
@@ -15,9 +15,9 @@
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleExecutable</key>
-  <string>firma-it-desktop</string>
+  <string>pignus-desktop</string>
   <key>CFBundleIconFile</key>
-  <string>firma-it.icns</string>
+  <string>pignus.icns</string>
   <key>LSMinimumSystemVersion</key>
   <string>11.0</string>
   <key>NSHighResolutionCapable</key>
@@ -30,10 +30,10 @@
   <array>
     <dict>
       <key>CFBundleURLName</key>
-      <string>codeberg.simplicer.firma-it.handler</string>
+      <string>codeberg.anvius.pignus.handler</string>
       <key>CFBundleURLSchemes</key>
       <array>
-        <string>firma-it</string>
+        <string>pignus</string>
       </array>
       <key>CFBundleTypeRole</key>
       <string>Viewer</string>

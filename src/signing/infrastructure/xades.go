@@ -12,11 +12,11 @@ import (
 	"strings"
 	"time"
 
-	"codeberg.org/simplicer/firma-it/src/signing/application"
-	"codeberg.org/simplicer/firma-it/src/signing/domain"
-	"codeberg.org/simplicer/firma-it/src/signing/infrastructure/cms"
-	verificationdomain "codeberg.org/simplicer/firma-it/src/verification/domain"
-	verificationinfra "codeberg.org/simplicer/firma-it/src/verification/infrastructure"
+	"codeberg.org/anvius/pignus/src/signing/application"
+	"codeberg.org/anvius/pignus/src/signing/domain"
+	"codeberg.org/anvius/pignus/src/signing/infrastructure/cms"
+	verificationdomain "codeberg.org/anvius/pignus/src/verification/domain"
+	verificationinfra "codeberg.org/anvius/pignus/src/verification/infrastructure"
 	"github.com/beevik/etree"
 	dsig "github.com/russellhaering/goxmldsig"
 )
@@ -52,10 +52,10 @@ const (
 	algorithmECDSASHA256 = "http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha256"
 	typeSignedProperties = "http://uri.etsi.org/01903#SignedProperties"
 
-	signedPropertiesID  = "firma-it-signed-properties"
-	signatureID         = "firma-it-signature"
-	documentReferenceID = "firma-it-reference"
-	payloadObjectID     = "firma-it-payload"
+	signedPropertiesID  = "pignus-signed-properties"
+	signatureID         = "pignus-signature"
+	documentReferenceID = "pignus-reference"
+	payloadObjectID     = "pignus-payload"
 )
 
 // SignXades signs the document in place (enveloped) or as a payload (enveloping).
@@ -571,8 +571,8 @@ func buildUnsignedProperties(token string) string {
 
 // Identifiers used by the timestamp extension.
 const (
-	unsignedPropertiesID = "firma-it-unsigned-properties"
-	signatureTimeStampID = "firma-it-signature-timestamp"
+	unsignedPropertiesID = "pignus-unsigned-properties"
+	signatureTimeStampID = "pignus-signature-timestamp"
 )
 
 // archiveNamespace is the XAdES 1.4.1 namespace that defines ArchiveTimeStamp.
@@ -832,7 +832,7 @@ func buildArchiveTimeStamp(token string) string {
 }
 
 // archiveTimeStampID names the archive property.
-const archiveTimeStampID = "firma-it-archive-timestamp"
+const archiveTimeStampID = "pignus-archive-timestamp"
 
 // attachRevocationValues adds xades:RevocationValues (ETSI EN 319 132-1 §5.4.2).
 //

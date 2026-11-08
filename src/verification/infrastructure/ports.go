@@ -13,9 +13,9 @@ import (
 	"fmt"
 	"os"
 
-	"codeberg.org/simplicer/firma-it/src/signing/domain/identity"
-	"codeberg.org/simplicer/firma-it/src/trust/infrastructure"
-	"codeberg.org/simplicer/firma-it/src/verification/domain"
+	"codeberg.org/anvius/pignus/src/signing/domain/identity"
+	"codeberg.org/anvius/pignus/src/trust/infrastructure"
+	"codeberg.org/anvius/pignus/src/verification/domain"
 )
 
 // ReadQualifiedStatements is re-exported so callers keep the dependency on the

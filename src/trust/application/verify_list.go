@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"codeberg.org/simplicer/firma-it/src/trust/domain"
-	trustinfrastructure "codeberg.org/simplicer/firma-it/src/trust/infrastructure"
+	"codeberg.org/anvius/pignus/src/trust/domain"
+	trustinfrastructure "codeberg.org/anvius/pignus/src/trust/infrastructure"
 )
 
 // LOTLSource fetches the EU list of the lists.

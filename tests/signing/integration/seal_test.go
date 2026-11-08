@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/simplicer/firma-it/src/signing/domain/identity"
-	"codeberg.org/simplicer/firma-it/src/signing/infrastructure"
+	"codeberg.org/anvius/pignus/src/signing/domain/identity"
+	"codeberg.org/anvius/pignus/src/signing/infrastructure"
 	"github.com/digitorus/pdfsign"
 )
 

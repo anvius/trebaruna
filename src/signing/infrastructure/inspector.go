@@ -3,8 +3,8 @@ package infrastructure
 import (
 	"fmt"
 
-	"codeberg.org/simplicer/firma-it/src/signing/application"
-	"codeberg.org/simplicer/firma-it/src/signing/domain"
+	"codeberg.org/anvius/pignus/src/signing/application"
+	"codeberg.org/anvius/pignus/src/signing/domain"
 )
 
 // CertificateInspector reports who will sign and whether the certificate is

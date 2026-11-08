@@ -3,7 +3,7 @@
 package infrastructure
 
 // The verification tab renders the same report the CLI prints, so a user can
-// check a signed file without leaving the app. It shells out to `firma-it
+// check a signed file without leaving the app. It shells out to `pignus
 // verify --json` for the same reason the signing tab shells out to `sign`: one
 // implementation, one set of findings, nothing to keep in sync.
 
@@ -21,12 +21,12 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
-	"codeberg.org/simplicer/firma-it/src/desktop/messaging"
-	"codeberg.org/simplicer/firma-it/src/verification/domain"
-	reportmessaging "codeberg.org/simplicer/firma-it/src/verification/messaging"
+	"codeberg.org/anvius/pignus/src/desktop/messaging"
+	"codeberg.org/anvius/pignus/src/verification/domain"
+	reportmessaging "codeberg.org/anvius/pignus/src/verification/messaging"
 )
 
-// verifyReport mirrors the JSON emitted by `firma-it verify --json`.
+// verifyReport mirrors the JSON emitted by `pignus verify --json`.
 type verifyReport struct {
 	Path    string `json:"path"`
 	Format  string `json:"format"`

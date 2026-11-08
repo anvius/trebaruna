@@ -6,7 +6,7 @@ import (
 	"context"
 	"time"
 
-	"codeberg.org/simplicer/firma-it/src/signing/domain"
+	"codeberg.org/anvius/pignus/src/signing/domain"
 )
 
 // Artefact is the result of a successful signature.

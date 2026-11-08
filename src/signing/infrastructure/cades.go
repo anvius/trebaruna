@@ -5,11 +5,11 @@ import (
 	"crypto"
 	"fmt"
 
-	"codeberg.org/simplicer/firma-it/src/signing/application"
-	"codeberg.org/simplicer/firma-it/src/signing/domain"
-	"codeberg.org/simplicer/firma-it/src/signing/infrastructure/cms"
-	verificationdomain "codeberg.org/simplicer/firma-it/src/verification/domain"
-	verificationinfra "codeberg.org/simplicer/firma-it/src/verification/infrastructure"
+	"codeberg.org/anvius/pignus/src/signing/application"
+	"codeberg.org/anvius/pignus/src/signing/domain"
+	"codeberg.org/anvius/pignus/src/signing/infrastructure/cms"
+	verificationdomain "codeberg.org/anvius/pignus/src/verification/domain"
+	verificationinfra "codeberg.org/anvius/pignus/src/verification/infrastructure"
 	"strings"
 	"time"
 )

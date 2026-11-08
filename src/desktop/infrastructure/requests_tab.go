@@ -22,7 +22,7 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
 
-	"codeberg.org/simplicer/firma-it/src/desktop/messaging"
+	"codeberg.org/anvius/pignus/src/desktop/messaging"
 )
 
 // pendingRequest is one request as the window reads it.

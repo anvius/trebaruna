@@ -47,13 +47,13 @@ jobs:
             go test -tags token ./tests/signing/token/ -count=1 -v
 
       - name: Build the PKCS#11 binary
-        run: CGO_ENABLED=1 go build -trimpath -tags token -o bin/firma-it-token ./src/entrypoint/main
+        run: CGO_ENABLED=1 go build -trimpath -tags token -o bin/pignus-token ./src/entrypoint/main
 
       - name: Build the static CLI
-        run: CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o bin/firma-it ./src/entrypoint/main
+        run: CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o bin/pignus ./src/entrypoint/main
 
       - name: Smoke test
-        run: ./bin/firma-it version
+        run: ./bin/pignus version
 
   cross:
     name: Cross-compile
@@ -76,7 +76,7 @@ jobs:
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-        run: CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /tmp/firma-it ./src/entrypoint/main
+        run: CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /tmp/pignus ./src/entrypoint/main
 
   macos:
     name: macOS app bundle
@@ -92,17 +92,17 @@ jobs:
       - name: Build and package
         run: VERSION="$(cat VERSION)" ./packaging/macos/build-app.sh
       - name: Smoke test the CLI inside the bundle
-        run: ./dist/firma-it.app/Contents/MacOS/firma-it version
+        run: ./dist/pignus.app/Contents/MacOS/pignus version
       - name: Verify the bundle layout
         run: |
-          test -f dist/firma-it.app/Contents/Info.plist
-          test -f dist/firma-it.app/Contents/MacOS/firma-it
-          test -f dist/firma-it.app/Contents/MacOS/firma-it-desktop
-          plutil -lint dist/firma-it.app/Contents/Info.plist
+          test -f dist/pignus.app/Contents/Info.plist
+          test -f dist/pignus.app/Contents/MacOS/pignus
+          test -f dist/pignus.app/Contents/MacOS/pignus-desktop
+          plutil -lint dist/pignus.app/Contents/Info.plist
       - uses: actions/upload-artifact@v4
         with:
-          name: firma-it-macos-${{ runner.arch }}
-          path: dist/firma-it.app
+          name: pignus-macos-${{ runner.arch }}
+          path: dist/pignus.app
 
   gui:
     name: Build the desktop app
@@ -121,8 +121,8 @@ jobs:
           sudo apt-get install -y gcc pkg-config libgl1-mesa-dev xorg-dev \
             libxkbcommon-dev libwayland-dev libegl1-mesa-dev
       - name: Build
-        run: CGO_ENABLED=1 go build -tags gui -trimpath -o bin/firma-it-desktop ./src/entrypoint/desktop
+        run: CGO_ENABLED=1 go build -tags gui -trimpath -o bin/pignus-desktop ./src/entrypoint/desktop
       - uses: actions/upload-artifact@v4
         with:
-          name: firma-it-desktop-linux-amd64
-          path: bin/firma-it-desktop
+          name: pignus-desktop-linux-amd64
+          path: bin/pignus-desktop

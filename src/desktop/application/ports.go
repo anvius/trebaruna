@@ -3,7 +3,7 @@ package application
 import (
 	"context"
 
-	"codeberg.org/simplicer/firma-it/src/desktop/domain"
+	"codeberg.org/anvius/pignus/src/desktop/domain"
 )
 
 // PagePreview is a rendered page plus the ink measurement of that render.

@@ -1,18 +1,18 @@
 [Desktop Entry]
 Type=Application
 Version=1.0
-Name=firma-it
+Name=pignus
 GenericName=Electronic signature
 GenericName[es]=Firma electrónica
 GenericName[it]=Firma elettronica
 Comment=Sign PDF, XML and any file with CAdES, PAdES or XAdES
 Comment[es]=Firma PDF, XML y cualquier fichero con CAdES, PAdES o XAdES
 Comment[it]=Firma PDF, XML e qualsiasi file con CAdES, PAdES o XAdES
-# %U passes both file arguments and firma-it:// URIs; the app decides which it received.
-Exec=firma-it-desktop %U
-Icon=firma-it
+# %U passes both file arguments and pignus:// URIs; the app decides which it received.
+Exec=pignus-desktop %U
+Icon=pignus
 Terminal=false
 Categories=Office;Graphics;
-MimeType=application/pdf;text/xml;application/xml;x-scheme-handler/firma-it;
+MimeType=application/pdf;text/xml;application/xml;x-scheme-handler/pignus;
 Keywords=sign;signature;firma;firma digitale;pades;cades;xades;pdf;
 StartupNotify=true

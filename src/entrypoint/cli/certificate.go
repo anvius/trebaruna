@@ -1,6 +1,6 @@
 package cli
 
-// `firma-it certificate` — inspect a certificate on its own.
+// `pignus certificate` — inspect a certificate on its own.
 //
 // Asking about a certificate is useful on its own: you can ask about a certificate
 // without a document. That matters in daily use: "does my card expire before the
@@ -18,14 +18,14 @@ import (
 	"strings"
 	"time"
 
-	"codeberg.org/simplicer/firma-it/src/signing/domain"
-	"codeberg.org/simplicer/firma-it/src/signing/domain/identity"
-	"codeberg.org/simplicer/firma-it/src/signing/infrastructure"
-	trustdomain "codeberg.org/simplicer/firma-it/src/trust/domain"
-	verificationinfra "codeberg.org/simplicer/firma-it/src/verification/infrastructure"
+	"codeberg.org/anvius/pignus/src/signing/domain"
+	"codeberg.org/anvius/pignus/src/signing/domain/identity"
+	"codeberg.org/anvius/pignus/src/signing/infrastructure"
+	trustdomain "codeberg.org/anvius/pignus/src/trust/domain"
+	verificationinfra "codeberg.org/anvius/pignus/src/verification/infrastructure"
 )
 
-// runCertificate implements `firma-it certificate <file>`.
+// runCertificate implements `pignus certificate <file>`.
 func runCertificate(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("certificate", flag.ContinueOnError)
 	flags.SetOutput(stderr)
@@ -37,7 +37,7 @@ func runCertificate(args []string, stdout, stderr io.Writer) int {
 	)
 
 	flags.Usage = func() {
-		fmt.Fprintln(stderr, "usage: firma-it certificate <file.p12|file.pem|file.crt> [flags]")
+		fmt.Fprintln(stderr, "usage: pignus certificate <file.p12|file.pem|file.crt> [flags]")
 		flags.PrintDefaults()
 	}
 

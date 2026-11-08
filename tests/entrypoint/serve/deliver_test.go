@@ -17,9 +17,9 @@ import (
 	"sync"
 	"testing"
 
-	"codeberg.org/simplicer/firma-it/src/entrypoint/serve"
-	"codeberg.org/simplicer/firma-it/src/signing/application"
-	signingdomain "codeberg.org/simplicer/firma-it/src/signing/domain"
+	"codeberg.org/anvius/pignus/src/entrypoint/serve"
+	"codeberg.org/anvius/pignus/src/signing/application"
+	signingdomain "codeberg.org/anvius/pignus/src/signing/domain"
 )
 
 // receiver is a callback endpoint that records what it was sent.

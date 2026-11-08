@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"io"
 
-	"codeberg.org/simplicer/firma-it/src/trust/domain"
+	"codeberg.org/anvius/pignus/src/trust/domain"
 	"github.com/beevik/etree"
 	dsig "github.com/russellhaering/goxmldsig"
 )

@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	"codeberg.org/simplicer/firma-it/src/verification/domain"
+	"codeberg.org/anvius/pignus/src/verification/domain"
 	"golang.org/x/crypto/ocsp"
 )
 

@@ -38,10 +38,10 @@ import (
 	"sync"
 	"time"
 
-	"codeberg.org/simplicer/firma-it/src/signing/application"
-	signingdomain "codeberg.org/simplicer/firma-it/src/signing/domain"
-	verificationapp "codeberg.org/simplicer/firma-it/src/verification/application"
-	verification "codeberg.org/simplicer/firma-it/src/verification/domain"
+	"codeberg.org/anvius/pignus/src/signing/application"
+	signingdomain "codeberg.org/anvius/pignus/src/signing/domain"
+	verificationapp "codeberg.org/anvius/pignus/src/verification/application"
+	verification "codeberg.org/anvius/pignus/src/verification/domain"
 )
 
 // Service is the HTTP adapter over the use cases.
@@ -501,7 +501,7 @@ func writeProblem(writer http.ResponseWriter, status int, code, detail string) {
 	writer.Header().Set("Content-Type", "application/problem+json")
 	writer.WriteHeader(status)
 	_ = json.NewEncoder(writer).Encode(problem{
-		Type:   "https://codeberg.org/simplicer/firma-it/problems/" + code,
+		Type:   "https://codeberg.org/anvius/pignus/problems/" + code,
 		Title:  code,
 		Status: status,
 		Detail: detail,

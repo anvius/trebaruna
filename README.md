@@ -1,4 +1,8 @@
-# firma-it
+# pignus
+
+> *pignus* (Latin): **pledge, security, guarantee, proof** — a token given as
+> collateral. In Italian law, *pegno*. A signature is exactly that: something
+> given as assurance that the document will not change.
 
 AdES electronic signatures in a single static binary. Signs and verifies PDF,
 XML and arbitrary files as **CAdES**, **PAdES** and **XAdES**, from the baseline
@@ -9,7 +13,7 @@ No proprietary code, no browser engine, no JVM. The whole CLI is ~9 MB and needs
 nothing installed.
 
 ```bash
-firma-it sign contratto.pdf --p12 key.p12 --pass secret \
+pignus sign contratto.pdf --p12 key.p12 --pass secret \
     --reason "Fornitura" --box 100,600,300,700
 # → contratto_signed.pdf, PAdES-B, ETSI EN 319 142-1
 ```
@@ -32,7 +36,7 @@ Full manual, in English, in [`docs/`](docs/README.md):
 | [Timestamps](docs/timestamps.md) | RFC 3161: obtaining, using, verifying |
 | [Trust lists](docs/trust-lists.md) | Where "trusted" comes from |
 | [Desktop app](docs/desktop.md) | The window |
-| [Web pages](docs/web-pages.md) | `firma-it://` and why approval is required |
+| [Web pages](docs/web-pages.md) | `pignus://` and why approval is required |
 | [Local API](docs/local-api.md) | HTTP surface for scripts and agents |
 | [Smartcards](docs/smartcards.md) | PKCS#11, PINs, what is tested |
 | [Troubleshooting](docs/troubleshooting.md) | The errors you will actually hit |
@@ -56,7 +60,7 @@ This README is the summary. The manual is the reference.
 | **Seal** | Drawn from the certificate, positioned in a free gap, never truncated |
 | **Keys** | PKCS#12, PEM, PKCS#11 smartcard |
 | **Machine output** | `--json` everywhere, stable shapes, documented exit codes |
-| **Web pages** | `firma-it://` URI handler with mandatory human approval |
+| **Web pages** | `pignus://` URI handler with mandatory human approval |
 
 Everything above is exercised by 234 tests and, where it matters, by an
 independent implementation: `openssl cms -verify`, `openssl ts -verify`,
@@ -98,15 +102,15 @@ Prebuilt static binaries for Linux (amd64, arm64), macOS (amd64, arm64) and
 Windows (amd64) are attached to each release.
 
 ```bash
-chmod +x firma-it-linux-amd64
-mv firma-it-linux-amd64 ~/.local/bin/firma-it
+chmod +x pignus-linux-amd64
+mv pignus-linux-amd64 ~/.local/bin/pignus
 ```
 
 Or build it, which takes about ten seconds and needs only a Go toolchain:
 
 ```bash
-git clone https://codeberg.org/simplicer/firma-it
-cd firma-it
+git clone https://codeberg.org/anvius/pignus
+cd pignus
 make build          # static CLI
 make install        # ~/.local/bin
 ```
@@ -124,15 +128,15 @@ make build-gui      # desktop app (needs make deps-gui first)
 ## Signing
 
 ```bash
-firma-it sign <document> [flags]
+pignus sign <document> [flags]
 ```
 
 The format is inferred from the suffix, or set with `--format`:
 
 ```bash
-firma-it sign atto.pdf                      # PAdES
-firma-it sign fattura.xml                   # XAdES
-firma-it sign contratto.pdf --format cades  # CAdES, .p7m
+pignus sign atto.pdf                      # PAdES
+pignus sign fattura.xml                   # XAdES
+pignus sign contratto.pdf --format cades  # CAdES, .p7m
 ```
 
 Output follows the conventions Italian and Spanish signers expect, so the result
@@ -157,7 +161,7 @@ opens in the tools people already use:
 need to be authorised:
 
 ```bash
-firma-it sign doc.pdf --p12 key.p12 --level lt \
+pignus sign doc.pdf --p12 key.p12 --level lt \
     --tsa https://freetsa.org/tsr --online-revocation
 ```
 
@@ -194,13 +198,13 @@ plainly that no third party vouches for it.
 ## Verification
 
 ```bash
-firma-it verify <document> [flags]
+pignus verify <document> [flags]
 ```
 
 ```bash
-firma-it verify contratto_signed.pdf
-firma-it verify atto.pdf.p7m --territory IT --json
-firma-it verify doc.xml --offline=false     # also ask OCSP
+pignus verify contratto_signed.pdf
+pignus verify atto.pdf.p7m --territory IT --json
+pignus verify doc.xml --offline=false     # also ask OCSP
 ```
 
 Exit codes are part of the contract:
@@ -259,9 +263,9 @@ signature verifies against them. A list that fails goes to quarantine, never to
 the cache.
 
 ```bash
-firma-it trust sync            # download and authenticate every list
-firma-it trust list            # what is cached, with counts and next update
-firma-it trust show IT         # services of one territory
+pignus trust sync            # download and authenticate every list
+pignus trust list            # what is cached, with counts and next update
+pignus trust show IT         # services of one territory
 ```
 
 Measured on the Italian list: 562 services, 142 granted qualified CAs, 137 root
@@ -273,9 +277,9 @@ stay inventory — that is stated, not hidden.
 ## Timestamps
 
 ```bash
-firma-it timestamp document.pdf --tsa https://freetsa.org/tsr   # → .tsr
-firma-it timestamp --hash <hex> --tsa <url>                     # over a digest
-firma-it verify-tsr token.tsr document.pdf                      # check a token
+pignus timestamp document.pdf --tsa https://freetsa.org/tsr   # → .tsr
+pignus timestamp --hash <hex> --tsa <url>                     # over a digest
+pignus verify-tsr token.tsr document.pdf                      # check a token
 ```
 
 A token is only reported as *accredited* when three independent facts hold: its
@@ -287,8 +291,8 @@ usage, and a granted qualified authority in an authenticated list can issue it.
 ## Certificates
 
 ```bash
-firma-it certificate key.p12 --pass secret
-firma-it certificate bundle.pem --json
+pignus certificate key.p12 --pass secret
+pignus certificate bundle.pem --json
 ```
 
 Reports subject, issuer, validity window, key size, qualified statements and
@@ -301,8 +305,8 @@ PIN.
 ## ASiC containers
 
 ```bash
-firma-it asic document.pdf signature.p7m     # ASiC-S
-firma-it asic --extended document.pdf sig1.p7m sig2.p7m   # ASiC-E
+pignus asic document.pdf signature.p7m     # ASiC-S
+pignus asic --extended document.pdf sig1.p7m sig2.p7m   # ASiC-E
 ```
 
 ---
@@ -324,14 +328,14 @@ promise.
 For agents and tools that cannot spawn a process:
 
 ```bash
-firma-it serve --root ~/Documents        # binds 127.0.0.1, picks a free port
+pignus serve --root ~/Documents        # binds 127.0.0.1, picks a free port
 ```
 
-The token is written to `$XDG_RUNTIME_DIR/firma-it/token` with mode `0600`,
+The token is written to `$XDG_RUNTIME_DIR/pignus/token` with mode `0600`,
 printed as a path (never as the secret), and removed on exit.
 
 ```bash
-TOKEN=$(cat "$XDG_RUNTIME_DIR/firma-it/token")
+TOKEN=$(cat "$XDG_RUNTIME_DIR/pignus/token")
 
 curl -s http://127.0.0.1:PORT/version
 curl -s -X PUT http://127.0.0.1:PORT/v1/signatures/job-1 \
@@ -362,7 +366,7 @@ require.
 
 ```bash
 make build-token     # needs cgo and libdl
-firma-it-token sign doc.pdf --token "My Card" --pin 1234 \
+pignus-token sign doc.pdf --token "My Card" --pin 1234 \
     --module /usr/lib/x86_64-linux-gnu/opensc-pkcs11.so
 ```
 
@@ -447,14 +451,14 @@ toolchain and OpenGL/X11 headers; `make deps-gui` documents what to install.
 
 ## Protocol handlers and AutoFirma
 
-Can a web page ask `firma-it` to sign, the way Spanish administrations invoke
+Can a web page ask `pignus` to sign, the way Spanish administrations invoke
 AutoFirma through an `autofirma://` URI?
 
 **The request half is implemented. The automatic-approval half is not, on
 purpose.**
 
 ```bash
-firma-it handler "firma-it://sign?document=/home/user/atto.pdf&format=pdf&origin=https://sede.example.gob.es"
+pignus handler "pignus://sign?document=/home/user/atto.pdf&format=pdf&origin=https://sede.example.gob.es"
 ```
 
 ```
@@ -480,8 +484,8 @@ The app receives it, and then:
    API;
 5. **expires in 30 seconds** and is **single use**.
 
-The scheme is registered in `packaging/firma-it.desktop`
-(`x-scheme-handler/firma-it`) and `packaging/macos/Info.plist`
+The scheme is registered in `packaging/pignus.desktop`
+(`x-scheme-handler/pignus`) and `packaging/macos/Info.plist`
 (`CFBundleURLTypes`).
 
 ### Why approval is not automatic
@@ -499,7 +503,7 @@ seconds).
 After approval the signature is produced and posted to the declared callback:
 
 ```bash
-firma-it handler "firma-it://sign?document=/tmp/atto.xml&format=pdf&origin=https://sede.example.gob.es&callback=https://sede.example.gob.es/result" --root /tmp --p12 key.p12 --pass secret
+pignus handler "pignus://sign?document=/tmp/atto.xml&format=pdf&origin=https://sede.example.gob.es&callback=https://sede.example.gob.es/result" --root /tmp --p12 key.p12 --pass secret
 ```
 
 ```
@@ -546,5 +550,5 @@ Issues and patches are welcome on Codeberg. Conventions used here:
 AGPL-3.0-or-later. See [LICENSE](LICENSE).
 
 The AGPL was chosen over the GPL because this tool is meant to be usable as a
-network service: if someone runs a modified `firma-it serve` for others, those
+network service: if someone runs a modified `pignus serve` for others, those
 users are entitled to the source of what is signing their documents.

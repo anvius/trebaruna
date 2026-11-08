@@ -49,7 +49,7 @@ certificate the EU list publishes for it**. A file that merely downloaded is not
 an anchor: an attacker who can intercept your network could otherwise hand you a
 list naming their own CA as qualified.
 
-Concretely, `firma-it trust sync`:
+Concretely, `pignus trust sync`:
 
 1. Downloads the LOTL from `https://ec.europa.eu/tools/lotl/eu-lotl.xml`.
 2. For each territory, extracts the list URL **and the certificates authorised to
@@ -68,7 +68,7 @@ it as unavailable rather than use it.
 ### Download
 
 ```bash
-firma-it trust sync
+pignus trust sync
 ```
 
 ```
@@ -80,7 +80,7 @@ DE  ...                                signature verification failed → quarant
 ### Inspect what is cached
 
 ```bash
-firma-it trust list
+pignus trust list
 ```
 
 Shows each territory, its service count, when it was downloaded, and when it says
@@ -89,10 +89,10 @@ it should be refreshed.
 ### Look at one territory
 
 ```bash
-firma-it trust show IT
-firma-it trust show ES --match fnmt          # is my issuer in there?
-firma-it trust show IT --type TSA/QTST       # only timestamp authorities
-firma-it trust show ES --match fnmt --json
+pignus trust show IT
+pignus trust show ES --match fnmt          # is my issuer in there?
+pignus trust show IT --type TSA/QTST       # only timestamp authorities
+pignus trust show ES --match fnmt --json
 ```
 
 Lists the services: provider, service name, type, status, and validity. `--match`
@@ -104,23 +104,23 @@ run it before you sign.
 ### Refresh a single territory
 
 ```bash
-firma-it trust sync --territory IT
+pignus trust sync --territory IT
 ```
 
 ### Point at a different LOTL
 
 ```bash
-firma-it trust sync --lotl https://example.org/eu-lotl.xml
+pignus trust sync --lotl https://example.org/eu-lotl.xml
 ```
 
 ### Cache location
 
-`$XDG_CACHE_HOME/firma-it/tsl`, normally `~/.cache/firma-it/tsl`.
+`$XDG_CACHE_HOME/pignus/tsl`, normally `~/.cache/pignus/tsl`.
 
-Override with `FIRMA_IT_CACHE`:
+Override with `PIGNUS_CACHE`:
 
 ```bash
-FIRMA_IT_CACHE=/srv/firma-it firma-it trust sync
+PIGNUS_CACHE=/srv/pignus pignus trust sync
 ```
 
 ---
@@ -197,16 +197,16 @@ Work through these in order:
 **1. Are the lists downloaded?**
 
 ```bash
-firma-it trust list
+pignus trust list
 ```
 
-Empty? Run `firma-it trust sync`.
+Empty? Run `pignus trust sync`.
 
 **2. Is the right territory selected?**
 
 ```bash
-firma-it verify atto.pdf --territory IT
-firma-it verify atto.pdf --territory EU
+pignus verify atto.pdf --territory IT
+pignus verify atto.pdf --territory EU
 ```
 
 The default comes from `$LANG`. A Belgian certificate checked with the Italian
@@ -219,13 +219,13 @@ not supervised under eIDAS. For internal use that is expected and fine.
 
 **4. Is it self-signed?**
 
-`firma-it certificate k.p12 --pass x` will say so. Self-signed means no third
+`pignus certificate k.p12 --pass x` will say so. Self-signed means no third
 party vouches for the identity, and no list will ever change that.
 
 **5. Is the list stale?**
 
 ```bash
-firma-it trust sync
+pignus trust sync
 ```
 
 A CA granted last month will not appear in a list from last year.
@@ -241,7 +241,7 @@ Refresh periodically:
 
 ```bash
 # weekly
-0 6 * * 1 firma-it trust sync >/dev/null 2>&1
+0 6 * * 1 pignus trust sync >/dev/null 2>&1
 ```
 
 The tool does not phone home or refresh on its own. That is deliberate: a

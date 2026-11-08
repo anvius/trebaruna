@@ -19,7 +19,7 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/simplicer/firma-it/src/verification/infrastructure"
+	"codeberg.org/anvius/pignus/src/verification/infrastructure"
 )
 
 // documentCertificate builds a leaf with the given extended key usages, signed by

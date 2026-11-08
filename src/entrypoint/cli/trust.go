@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	trustapplication "codeberg.org/simplicer/firma-it/src/trust/application"
-	trustdomain "codeberg.org/simplicer/firma-it/src/trust/domain"
-	trustinfra "codeberg.org/simplicer/firma-it/src/trust/infrastructure"
-	verificationinfra "codeberg.org/simplicer/firma-it/src/verification/infrastructure"
+	trustapplication "codeberg.org/anvius/pignus/src/trust/application"
+	trustdomain "codeberg.org/anvius/pignus/src/trust/domain"
+	trustinfra "codeberg.org/anvius/pignus/src/trust/infrastructure"
+	verificationinfra "codeberg.org/anvius/pignus/src/verification/infrastructure"
 )
 
 // trustSource is where a national list lives.
@@ -46,10 +46,10 @@ var knownSources = []trustSource{
 	{"PT", "https://www.gns.gov.pt/media/TSLPT.xml"},
 }
 
-// runTrust implements `firma-it trust` with `sync` and `list`.
+// runTrust implements `pignus trust` with `sync` and `list`.
 func runTrust(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
-		fmt.Fprintln(stderr, "usage: firma-it trust sync|list|show [--territory XX]")
+		fmt.Fprintln(stderr, "usage: pignus trust sync|list|show [--territory XX]")
 		return exitUsage
 	}
 
@@ -180,7 +180,7 @@ func runTrustList(args []string, stdout, stderr io.Writer) int {
 	entries, err := os.ReadDir(cache)
 	if err != nil || len(entries) == 0 {
 		fmt.Fprintf(stdout, "no trust lists cached in %s\n", cache)
-		fmt.Fprintln(stdout, "run: firma-it trust sync")
+		fmt.Fprintln(stdout, "run: pignus trust sync")
 		return exitVerified
 	}
 
@@ -246,7 +246,7 @@ func runTrustShow(args []string, stdout, stderr io.Writer) int {
 
 	code := *territory
 	if code == "" {
-		fmt.Fprintln(stderr, "usage: firma-it trust show <territory> [--match text]")
+		fmt.Fprintln(stderr, "usage: pignus trust show <territory> [--match text]")
 		return exitUsage
 	}
 
@@ -259,7 +259,7 @@ func runTrustShow(args []string, stdout, stderr io.Writer) int {
 	list, err := provider.Load(code)
 	if err != nil {
 		fmt.Fprintf(stderr, "cannot read the cached list for %s: %v\n", code, err)
-		fmt.Fprintf(stderr, "  download it with: firma-it trust sync --territory %s\n", code)
+		fmt.Fprintf(stderr, "  download it with: pignus trust sync --territory %s\n", code)
 		return exitUnverified
 	}
 	if !list.Authenticated {

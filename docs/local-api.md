@@ -29,14 +29,14 @@ files under directories you name.
 ## Starting the server
 
 ```bash
-firma-it serve --root ~/Documents
+pignus serve --root ~/Documents
 ```
 
 ```
 listening on http://127.0.0.1:41283
-token       /run/user/1000/firma-it/token (0600, removed on exit)
+token       /run/user/1000/pignus/token (0600, removed on exit)
 roots       [/home/user/Documents]
-send it as  X-Firma-Token: $(cat /run/user/1000/firma-it/token)
+send it as  X-Firma-Token: $(cat /run/user/1000/pignus/token)
 stop with   Ctrl-C
 ```
 
@@ -45,7 +45,7 @@ stop with   Ctrl-C
 | `--listen` | `127.0.0.1:0` | Loopback address; port `0` picks a free one |
 | `--root` | working directory | A directory a client may read from; repeatable |
 
-The token is written to `$XDG_RUNTIME_DIR/firma-it/token` with mode `0600`,
+The token is written to `$XDG_RUNTIME_DIR/pignus/token` with mode `0600`,
 printed as a path (never as the secret, which would end up in shell history), and
 removed on exit.
 
@@ -138,7 +138,7 @@ characters. Path separators are refused.
 ## Signing over HTTP
 
 ```bash
-TOKEN=$(cat "$XDG_RUNTIME_DIR/firma-it/token")
+TOKEN=$(cat "$XDG_RUNTIME_DIR/pignus/token")
 
 curl -s -X PUT http://127.0.0.1:41283/v1/signatures/job-1 \
   -H "X-Firma-Token: $TOKEN" \
@@ -239,7 +239,7 @@ curl -s -X POST http://127.0.0.1:41283/v1/requests \
 #    "note":"the desktop app must approve this request; it cannot approve itself"}
 ```
 
-The **approval secret is never returned here**. It is shown by `firma-it handler`
+The **approval secret is never returned here**. It is shown by `pignus handler`
 in a terminal, or in the desktop window. That is the whole point: the process that
 created the request cannot approve it.
 
@@ -268,7 +268,7 @@ Every error is `application/problem+json` (RFC 9457):
 
 ```json
 {
-  "type":   "https://codeberg.org/simplicer/firma-it/problems/path-rejected",
+  "type":   "https://codeberg.org/anvius/pignus/problems/path-rejected",
   "title":  "path-rejected",
   "status": 403,
   "detail": "\"/etc/passwd\" is outside every allowed directory"
@@ -294,7 +294,7 @@ Every error is `application/problem+json` (RFC 9457):
 ### Shell with `jq`
 
 ```bash
-TOKEN=$(cat "$XDG_RUNTIME_DIR/firma-it/token")
+TOKEN=$(cat "$XDG_RUNTIME_DIR/pignus/token")
 API=http://127.0.0.1:41283
 
 curl -s -X PUT "$API/v1/signatures/$(uuidgen)" \
@@ -308,7 +308,7 @@ curl -s -X PUT "$API/v1/signatures/$(uuidgen)" \
 ```python
 import json, pathlib, urllib.request
 
-token = pathlib.Path("/run/user/1000/firma-it/token").read_text()
+token = pathlib.Path("/run/user/1000/pignus/token").read_text()
 api = "http://127.0.0.1:41283"
 
 def post(path, payload):
@@ -329,7 +329,7 @@ print(post("/v1/requests", {"document": "/home/user/atto.pdf", "format": "pdf"})
 ```javascript
 import { readFileSync } from "node:fs";
 
-const token = readFileSync(`${process.env.XDG_RUNTIME_DIR}/firma-it/token`, "utf8");
+const token = readFileSync(`${process.env.XDG_RUNTIME_DIR}/pignus/token`, "utf8");
 const api = "http://127.0.0.1:41283";
 
 const response = await fetch(`${api}/v1/verifications/check-1`, {

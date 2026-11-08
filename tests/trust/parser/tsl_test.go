@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/simplicer/firma-it/src/trust/infrastructure"
+	"codeberg.org/anvius/pignus/src/trust/infrastructure"
 )
 
 const sampleList = `<?xml version="1.0" encoding="UTF-8"?>

@@ -15,7 +15,7 @@ import (
 	"strings"
 	"testing"
 
-	"codeberg.org/simplicer/firma-it/src/entrypoint/cli"
+	"codeberg.org/anvius/pignus/src/entrypoint/cli"
 )
 
 // run executes the CLI and returns stdout, stderr and the exit code.
@@ -33,9 +33,9 @@ func TestUsageListsEveryCommand(t *testing.T) {
 	}
 
 	for _, command := range []string{
-		"firma-it sign", "firma-it verify", "firma-it trust",
-		"firma-it timestamp", "firma-it verify-tsr",
-		"firma-it certificate", "firma-it asic",
+		"pignus sign", "pignus verify", "pignus trust",
+		"pignus timestamp", "pignus verify-tsr",
+		"pignus certificate", "pignus asic",
 	} {
 		if !strings.Contains(stdout, command) {
 			t.Errorf("the help does not mention %q", command)
