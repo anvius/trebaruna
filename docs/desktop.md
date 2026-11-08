@@ -20,19 +20,19 @@ deliberately static:
 
 ```bash
 make deps-gui        # system packages: OpenGL, X11, poppler
-make build-gui       # ./bin/pignus-desktop
+make build-gui       # ./bin/trebaruna-desktop
 make install-desktop # binary + .desktop entry + icon
 ```
 
-From a release: `pignus-desktop` (Linux only, ~33 MB).
+From a release: `trebaruna-desktop` (Linux only, ~33 MB).
 
 ### Finding the CLI
 
-The window drives `pignus` rather than reimplementing signing, so it must find
+The window drives `trebaruna` rather than reimplementing signing, so it must find
 the binary. It looks next to itself, then on `PATH`. Override:
 
 ```bash
-export PIGNUS_BIN=/opt/pignus/pignus
+export TREBARUNA_BIN=/opt/trebaruna/trebaruna
 ```
 
 If it cannot find one, the window says so instead of failing silently.
@@ -97,7 +97,7 @@ The tab shows:
 - on selection: the full path, the format, and the countdown;
 - **Approve** and **Reject** buttons.
 
-Pressing either asks for the **approval secret**, which `pignus handler` printed
+Pressing either asks for the **approval secret**, which `trebaruna handler` printed
 in a terminal. The window does not hold it, so a window that lists requests still
 cannot approve one on its own.
 
@@ -107,10 +107,10 @@ See [Web pages](web-pages.md) for the full flow.
 
 ## Languages
 
-Spanish, Italian and English, chosen from `PIGNUS_LANG` or `$LANG`:
+Spanish, Italian and English, chosen from `TREBARUNA_LANG` or `$LANG`:
 
 ```bash
-PIGNUS_LANG=it pignus-desktop
+TREBARUNA_LANG=it trebaruna-desktop
 ```
 
 The catalogue is compile-checked: a missing translation is a build error and a
@@ -147,7 +147,7 @@ by construction.
 The cost is one extra process per operation, a few milliseconds, which is
 irrelevant next to a smartcard or a TSA round trip.
 
-The visible consequence: if `pignus` is not on `PATH` and `PIGNUS_BIN` is not
+The visible consequence: if `trebaruna` is not on `PATH` and `TREBARUNA_BIN` is not
 set, the window cannot sign. That is why it checks at start and tells you.
 
 ---

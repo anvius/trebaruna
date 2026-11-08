@@ -6,7 +6,7 @@ import (
 	"context"
 	"time"
 
-	"codeberg.org/anvius/pignus/src/signing/domain"
+	"codeberg.org/anvius/trebaruna/src/signing/domain"
 )
 
 // Artefact is the result of a successful signature.

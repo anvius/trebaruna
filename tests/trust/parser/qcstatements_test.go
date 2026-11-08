@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/anvius/pignus/src/trust/infrastructure"
+	"codeberg.org/anvius/trebaruna/src/trust/infrastructure"
 )
 
 // qcExtensionDER builds the extension value the way a real CA does.

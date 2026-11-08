@@ -3,8 +3,8 @@ package infrastructure
 import (
 	"fmt"
 
-	"codeberg.org/anvius/pignus/src/signing/application"
-	"codeberg.org/anvius/pignus/src/signing/domain"
+	"codeberg.org/anvius/trebaruna/src/signing/application"
+	"codeberg.org/anvius/trebaruna/src/signing/domain"
 )
 
 // CertificateInspector reports who will sign and whether the certificate is

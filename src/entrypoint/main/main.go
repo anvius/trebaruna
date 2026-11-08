@@ -1,10 +1,10 @@
-// Command pignus is the console entry point.
+// Command trebaruna is the console entry point.
 package main
 
 import (
 	"os"
 
-	"codeberg.org/anvius/pignus/src/entrypoint/cli"
+	"codeberg.org/anvius/trebaruna/src/entrypoint/cli"
 )
 
 func main() {

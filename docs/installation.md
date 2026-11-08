@@ -1,6 +1,6 @@
 # Installation
 
-`pignus` is a single static binary. There is no installer, no runtime and no
+`trebaruna` is a single static binary. There is no installer, no runtime and no
 dependency to resolve on the target machine.
 
 - [Quick install](#quick-install)
@@ -20,10 +20,10 @@ dependency to resolve on the target machine.
 If you already have a binary:
 
 ```bash
-chmod +x pignus-linux-amd64
+chmod +x trebaruna-linux-amd64
 mkdir -p ~/.local/bin
-mv pignus-linux-amd64 ~/.local/bin/pignus
-pignus version
+mv trebaruna-linux-amd64 ~/.local/bin/trebaruna
+trebaruna version
 ```
 
 That is the whole installation. `~/.local/bin` is on `PATH` in most modern Linux
@@ -39,19 +39,19 @@ echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
 
 | File | Size | Needs | Use it for |
 |---|---|---|---|
-| `pignus-linux-amd64` | ~9 MB | nothing | Linux on a normal PC or server |
-| `pignus-linux-arm64` | ~9 MB | nothing | Raspberry Pi, ARM servers, Apple silicon VMs |
-| `pignus-darwin-amd64` | ~9 MB | nothing | macOS on Intel |
-| `pignus-darwin-arm64` | ~9 MB | nothing | macOS on Apple silicon |
-| `pignus-windows-amd64.exe` | ~10 MB | nothing | Windows |
-| `pignus-token` | ~9 MB | glibc | Smartcards (PKCS#11) on Linux |
-| `pignus-desktop` | ~33 MB | OpenGL, poppler | The graphical window on Linux |
+| `trebaruna-linux-amd64` | ~9 MB | nothing | Linux on a normal PC or server |
+| `trebaruna-linux-arm64` | ~9 MB | nothing | Raspberry Pi, ARM servers, Apple silicon VMs |
+| `trebaruna-darwin-amd64` | ~9 MB | nothing | macOS on Intel |
+| `trebaruna-darwin-arm64` | ~9 MB | nothing | macOS on Apple silicon |
+| `trebaruna-windows-amd64.exe` | ~10 MB | nothing | Windows |
+| `trebaruna-token` | ~9 MB | glibc | Smartcards (PKCS#11) on Linux |
+| `trebaruna-desktop` | ~33 MB | OpenGL, poppler | The graphical window on Linux |
 
 The plain binaries are **fully static**: they run on an old distribution, in a
-minimal container, or from a USB stick. `pignus-token` is not static because
+minimal container, or from a USB stick. `trebaruna-token` is not static because
 loading a PKCS#11 driver at runtime requires the C library.
 
-You need `pignus-token` instead of `pignus` only if you sign with a physical
+You need `trebaruna-token` instead of `trebaruna` only if you sign with a physical
 smartcard. Everything else — including smartcards via a `.p12` file exported from
 one — works in the static binary.
 
@@ -62,9 +62,9 @@ one — works in the static binary.
 ### From a release binary
 
 ```bash
-chmod +x pignus-linux-amd64
-sudo install -m755 pignus-linux-amd64 /usr/local/bin/pignus
-pignus version
+chmod +x trebaruna-linux-amd64
+sudo install -m755 trebaruna-linux-amd64 /usr/local/bin/trebaruna
+trebaruna version
 ```
 
 ### From source
@@ -72,10 +72,10 @@ pignus version
 Needs Go 1.24 or newer:
 
 ```bash
-git clone https://codeberg.org/anvius/pignus
-cd pignus
-make build          # static binary in ./bin/pignus
-make install        # copies it to ~/.local/bin/pignus
+git clone https://codeberg.org/anvius/trebaruna
+cd trebaruna
+make build          # static binary in ./bin/trebaruna
+make install        # copies it to ~/.local/bin/trebaruna
 ```
 
 `make build` takes about ten seconds on a laptop.
@@ -113,8 +113,8 @@ you do not want this; the CLI does everything the window does.
 ### From a release binary
 
 ```bash
-chmod +x pignus-darwin-arm64       # or darwin-amd64 on an Intel Mac
-sudo mv pignus-darwin-arm64 /usr/local/bin/pignus
+chmod +x trebaruna-darwin-arm64       # or darwin-amd64 on an Intel Mac
+sudo mv trebaruna-darwin-arm64 /usr/local/bin/trebaruna
 ```
 
 macOS will refuse to run an unsigned binary downloaded from the internet. Either
@@ -122,7 +122,7 @@ allow it once in **System Settings → Privacy & Security**, or remove the
 quarantine flag:
 
 ```bash
-xattr -d com.apple.quarantine /usr/local/bin/pignus
+xattr -d com.apple.quarantine /usr/local/bin/trebaruna
 ```
 
 ### From source
@@ -144,23 +144,23 @@ Needs the Xcode command line tools (`xcode-select --install`) and Go 1.24+.
 Rename the file and put it somewhere on `PATH`:
 
 ```powershell
-move pignus-windows-amd64.exe pignus.exe
-mkdir "$env:LOCALAPPDATA\pignus"
-move pignus.exe "$env:LOCALAPPDATA\pignus\"
+move trebaruna-windows-amd64.exe trebaruna.exe
+mkdir "$env:LOCALAPPDATA\trebaruna"
+move trebaruna.exe "$env:LOCALAPPDATA\trebaruna\"
 [Environment]::SetEnvironmentVariable(
-  "Path", "$env:Path;$env:LOCALAPPDATA\pignus", "User")
+  "Path", "$env:Path;$env:LOCALAPPDATA\trebaruna", "User")
 ```
 
 Open a new terminal and check:
 
 ```powershell
-pignus version
+trebaruna version
 ```
 
 Paths with spaces and accents work; quote them:
 
 ```powershell
-pignus verify "C:\Users\María\Documenti\atto firmato.pdf"
+trebaruna verify "C:\Users\María\Documenti\atto firmato.pdf"
 ```
 
 ---
@@ -188,16 +188,16 @@ the main CLI is deliberately static:
 
 ```bash
 make deps-gui
-make build-gui          # ./bin/pignus-desktop
+make build-gui          # ./bin/trebaruna-desktop
 make install-desktop    # installs the binary and the .desktop entry
 ```
 
 The window drives the CLI binary rather than reimplementing signing, so it must be
-able to find `pignus`. It looks next to itself and then on `PATH`; you can point
+able to find `trebaruna`. It looks next to itself and then on `PATH`; you can point
 it anywhere with:
 
 ```bash
-export PIGNUS_BIN=/opt/pignus/pignus
+export TREBARUNA_BIN=/opt/trebaruna/trebaruna
 ```
 
 See [Desktop app](desktop.md).
@@ -209,11 +209,11 @@ See [Desktop app](desktop.md).
 Every release binary is reproducible from the tagged source:
 
 ```bash
-git clone https://codeberg.org/anvius/pignus
-cd pignus
+git clone https://codeberg.org/anvius/trebaruna
+cd trebaruna
 git checkout v0.2.0
 make cross
-sha256sum bin/pignus-linux-amd64
+sha256sum bin/trebaruna-linux-amd64
 ```
 
 Compare with the published checksum. If they differ, the download is not what the
@@ -224,9 +224,9 @@ source produces and you should not run it.
 ## Uninstalling
 
 ```bash
-rm ~/.local/bin/pignus        # or /usr/local/bin/pignus
-rm -rf ~/.cache/pignus        # cached trust lists
-rm ~/.local/share/applications/pignus.desktop   # desktop entry, if installed
+rm ~/.local/bin/trebaruna        # or /usr/local/bin/trebaruna
+rm -rf ~/.cache/trebaruna        # cached trust lists
+rm ~/.local/share/applications/trebaruna.desktop   # desktop entry, if installed
 ```
 
 Nothing else is written outside those paths. The tool keeps no configuration file

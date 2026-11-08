@@ -134,7 +134,7 @@ signature. One made in 2022 with a certificate that expired in 2020 is not.
 ## Reading the JSON
 
 ```bash
-pignus verify atto.pdf --json
+trebaruna verify atto.pdf --json
 ```
 
 ```json
@@ -229,7 +229,7 @@ document certificate actually has. Measured on a real Spanish notarial signature
 Revocation is **opt-in**:
 
 ```bash
-pignus verify atto.pdf --offline=false
+trebaruna verify atto.pdf --offline=false
 ```
 
 The default is offline for a reason: a verification that silently contacts a third
@@ -285,7 +285,7 @@ Veredicto: emisor no reconocido
 
 The cryptography is fine; the CA is not in the lists. Usually one of:
 
-1. The trust lists are not downloaded yet: `pignus trust sync`.
+1. The trust lists are not downloaded yet: `trebaruna trust sync`.
 2. The certificate is from a private CA, common in enterprise deployments.
 3. The certificate is self-signed, which is fine for testing and means nothing
    for third parties.

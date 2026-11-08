@@ -29,7 +29,7 @@ const (
 	asicEMimeType = "application/vnd.etsi.asic-e+zip"
 )
 
-// runAsic implements `pignus asic <document> <signature>`.
+// runAsic implements `trebaruna asic <document> <signature>`.
 func runAsic(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("asic", flag.ContinueOnError)
 	flags.SetOutput(stderr)
@@ -41,8 +41,8 @@ func runAsic(args []string, stdout, stderr io.Writer) int {
 	)
 
 	flags.Usage = func() {
-		fmt.Fprintln(stderr, "usage: pignus asic <document> <signature> [-out file.asice]")
-		fmt.Fprintln(stderr, "       pignus asic -extract container.asice -out directory")
+		fmt.Fprintln(stderr, "usage: trebaruna asic <document> <signature> [-out file.asice]")
+		fmt.Fprintln(stderr, "       trebaruna asic -extract container.asice -out directory")
 		flags.PrintDefaults()
 	}
 

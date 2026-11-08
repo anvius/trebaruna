@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"codeberg.org/anvius/pignus/src/signing/application"
+	"codeberg.org/anvius/trebaruna/src/signing/application"
 )
 
 // DiskStore reads and writes documents on the local filesystem.
@@ -34,7 +34,7 @@ func (DiskStore) Write(path string, content []byte) error {
 
 	// Write to a temporary file in the same directory, then rename: a crash
 	// mid-write must not leave a truncated signature behind.
-	temporary, err := os.CreateTemp(directory, ".pignus-*")
+	temporary, err := os.CreateTemp(directory, ".trebaruna-*")
 	if err != nil {
 		return fmt.Errorf("create temporary file in %s: %w", directory, err)
 	}

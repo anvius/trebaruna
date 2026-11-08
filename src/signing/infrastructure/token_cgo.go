@@ -6,7 +6,7 @@ import (
 	"crypto"
 	"fmt"
 
-	"codeberg.org/anvius/pignus/src/signing/domain"
+	"codeberg.org/anvius/trebaruna/src/signing/domain"
 	"github.com/eclipse-keypont/crypto11"
 )
 

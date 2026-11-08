@@ -40,7 +40,7 @@ The format every authority hands out: `.p12` or `.pfx`, certificate plus private
 key in one container, protected by a passphrase.
 
 ```bash
-pignus sign atto.pdf --p12 mia-chiave.p12 --pass "la mia passphrase"
+trebaruna sign atto.pdf --p12 mia-chiave.p12 --pass "la mia passphrase"
 ```
 
 Both extension names work; the tool reads the container, not the name.
@@ -67,7 +67,7 @@ generate keys yourself or export from a server.
 
 ```bash
 cat certificate.pem key.pem > bundle.pem
-pignus sign atto.pdf --pem bundle.pem
+trebaruna sign atto.pdf --pem bundle.pem
 ```
 
 Order does not matter: the tool reads every block and pairs them. The bundle may
@@ -113,7 +113,7 @@ contexts it cannot see — but `verify` will report the problem.
 Accepted, and flagged:
 
 ```bash
-pignus sign atto.pdf --pem selfsigned.pem
+trebaruna sign atto.pdf --pem selfsigned.pem
 ```
 
 ```
@@ -140,7 +140,7 @@ the certificate by other means.
 ## Inspecting a certificate
 
 ```bash
-pignus certificate mia-chiave.p12 --pass segreto
+trebaruna certificate mia-chiave.p12 --pass segreto
 ```
 
 ```
@@ -156,13 +156,13 @@ pignus certificate mia-chiave.p12 --pass segreto
 Machine-readable:
 
 ```bash
-pignus certificate k.p12 --pass x --json
+trebaruna certificate k.p12 --pass x --json
 ```
 
 To see where the issuer sits in the trust lists:
 
 ```bash
-pignus certificate k.p12 --pass x --territory IT
+trebaruna certificate k.p12 --pass x --territory IT
 ```
 
 Useful **before** signing: if your issuer is not listed, your counterparty will
@@ -179,8 +179,8 @@ EU member state. The lists this tool downloads are exactly the register of those
 providers:
 
 ```bash
-pignus trust sync
-pignus trust show IT | grep -i "CA/QC" | head
+trebaruna trust sync
+trebaruna trust show IT | grep -i "CA/QC" | head
 ```
 
 Typical routes:

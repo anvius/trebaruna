@@ -15,7 +15,7 @@ import (
 	"strings"
 	"testing"
 
-	"codeberg.org/anvius/pignus/src/entrypoint/cli"
+	"codeberg.org/anvius/trebaruna/src/entrypoint/cli"
 )
 
 // run executes the CLI and returns stdout, stderr and the exit code.
@@ -33,9 +33,9 @@ func TestUsageListsEveryCommand(t *testing.T) {
 	}
 
 	for _, command := range []string{
-		"pignus sign", "pignus verify", "pignus trust",
-		"pignus timestamp", "pignus verify-tsr",
-		"pignus certificate", "pignus asic",
+		"trebaruna sign", "trebaruna verify", "trebaruna trust",
+		"trebaruna timestamp", "trebaruna verify-tsr",
+		"trebaruna certificate", "trebaruna asic",
 	} {
 		if !strings.Contains(stdout, command) {
 			t.Errorf("the help does not mention %q", command)

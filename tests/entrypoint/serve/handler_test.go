@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/anvius/pignus/src/entrypoint/serve"
+	"codeberg.org/anvius/trebaruna/src/entrypoint/serve"
 )
 
 // TestURIRequiresTheScheme keeps other schemes out.
@@ -19,7 +19,7 @@ func TestURIRequiresTheScheme(t *testing.T) {
 	for _, raw := range []string{
 		"https://example.org/sign?document=/tmp/a.pdf",
 		"autofirma://sign?document=/tmp/a.pdf",
-		"pignus:sign?document=/tmp/a.pdf",
+		"trebaruna:sign?document=/tmp/a.pdf",
 	} {
 		if _, _, err := serve.ParseHandlerURI(raw); err == nil {
 			t.Errorf("%q was accepted", raw)
@@ -30,7 +30,7 @@ func TestURIRequiresTheScheme(t *testing.T) {
 // TestURIRejectsUnknownParameters: a parameter silently dropped is a parameter
 // the caller believes was applied.
 func TestURIRejectsUnknownParameters(t *testing.T) {
-	_, _, err := serve.ParseHandlerURI("pignus://sign?document=/tmp/a.pdf&autoapprove=1")
+	_, _, err := serve.ParseHandlerURI("trebaruna://sign?document=/tmp/a.pdf&autoapprove=1")
 	if err == nil {
 		t.Fatal("an unknown parameter was accepted")
 	}
@@ -41,14 +41,14 @@ func TestURIRejectsUnknownParameters(t *testing.T) {
 
 // TestURIRejectsUnknownActions: only signing exists, and guessing is not allowed.
 func TestURIRejectsUnknownActions(t *testing.T) {
-	if _, _, err := serve.ParseHandlerURI("pignus://delete?document=/tmp/a.pdf"); err == nil {
+	if _, _, err := serve.ParseHandlerURI("trebaruna://delete?document=/tmp/a.pdf"); err == nil {
 		t.Fatal("an unknown action was accepted")
 	}
 }
 
 // TestURIRequiresADocument covers the empty case.
 func TestURIRequiresADocument(t *testing.T) {
-	if _, _, err := serve.ParseHandlerURI("pignus://sign?format=pdf"); err == nil {
+	if _, _, err := serve.ParseHandlerURI("trebaruna://sign?format=pdf"); err == nil {
 		t.Fatal("a request without a document was accepted")
 	}
 }
@@ -56,7 +56,7 @@ func TestURIRequiresADocument(t *testing.T) {
 // TestURIDecodesPercentEscapes: real paths contain spaces and accents.
 func TestURIDecodesPercentEscapes(t *testing.T) {
 	_, parameters, err := serve.ParseHandlerURI(
-		"pignus://sign?document=%2Ftmp%2Ffirma%20elettronica.pdf&format=pdf")
+		"trebaruna://sign?document=%2Ftmp%2Ffirma%20elettronica.pdf&format=pdf")
 	if err != nil {
 		t.Fatalf("ParseHandlerURI: %v", err)
 	}
@@ -70,14 +70,14 @@ func TestURIDecodesPercentEscapes(t *testing.T) {
 func TestCallbackMustStayInsideTheOrigin(t *testing.T) {
 	// Same origin: accepted.
 	if _, _, err := serve.ParseHandlerURI(
-		"pignus://sign?document=/tmp/a.pdf&origin=https://sede.example.gob.es&" +
+		"trebaruna://sign?document=/tmp/a.pdf&origin=https://sede.example.gob.es&" +
 			"callback=https://sede.example.gob.es/recibir"); err != nil {
 		t.Errorf("a callback inside the origin was refused: %v", err)
 	}
 
 	// Different host: refused.
 	_, _, err := serve.ParseHandlerURI(
-		"pignus://sign?document=/tmp/a.pdf&origin=https://sede.example.gob.es&" +
+		"trebaruna://sign?document=/tmp/a.pdf&origin=https://sede.example.gob.es&" +
 			"callback=https://evil.example/collect")
 	if err == nil {
 		t.Fatal("a callback outside the origin was accepted")
@@ -85,7 +85,7 @@ func TestCallbackMustStayInsideTheOrigin(t *testing.T) {
 
 	// No origin declared, callback to a third party: still an absolute URL.
 	if _, _, err := serve.ParseHandlerURI(
-		"pignus://sign?document=/tmp/a.pdf&callback=javascript:alert(1)"); err == nil {
+		"trebaruna://sign?document=/tmp/a.pdf&callback=javascript:alert(1)"); err == nil {
 		t.Fatal("a non-http callback was accepted")
 	}
 }
@@ -93,7 +93,7 @@ func TestCallbackMustStayInsideTheOrigin(t *testing.T) {
 // TestOriginMustBeABareOrigin: an origin with a path is not an origin.
 func TestOriginMustBeABareOrigin(t *testing.T) {
 	for _, origin := range []string{"https://example.org/path", "example.org", "ftp://example.org"} {
-		_, _, err := serve.ParseHandlerURI("pignus://sign?document=/tmp/a.pdf&origin=" +
+		_, _, err := serve.ParseHandlerURI("trebaruna://sign?document=/tmp/a.pdf&origin=" +
 			strings.ReplaceAll(origin, ":", "%3A"))
 		if err == nil && origin != "ftp://example.org" {
 			t.Errorf("origin %q was accepted", origin)
@@ -318,11 +318,11 @@ func TestRequestRouteDoesNotReturnTheSecret(t *testing.T) {
 // entry hands to the app in the same slot.
 func TestDocumentFromArgument(t *testing.T) {
 	cases := map[string]string{
-		"/home/user/documento.pdf":                         "/home/user/documento.pdf",
-		"pignus://sign?document=%2Fhome%2Fuser%2Fatto.pdf": "/home/user/atto.pdf",
-		"pignus://sign?document=/tmp/a.xml&format=xades":   "/tmp/a.xml",
-		"pignus://unknown?document=/tmp/a.xml":             "",
-		"pignus://sign?autoapprove=1":                      "",
+		"/home/user/documento.pdf":                            "/home/user/documento.pdf",
+		"trebaruna://sign?document=%2Fhome%2Fuser%2Fatto.pdf": "/home/user/atto.pdf",
+		"trebaruna://sign?document=/tmp/a.xml&format=xades":   "/tmp/a.xml",
+		"trebaruna://unknown?document=/tmp/a.xml":             "",
+		"trebaruna://sign?autoapprove=1":                      "",
 	}
 
 	for argument, want := range cases {

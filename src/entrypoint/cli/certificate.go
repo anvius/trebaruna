@@ -1,6 +1,6 @@
 package cli
 
-// `pignus certificate` — inspect a certificate on its own.
+// `trebaruna certificate` — inspect a certificate on its own.
 //
 // Asking about a certificate is useful on its own: you can ask about a certificate
 // without a document. That matters in daily use: "does my card expire before the
@@ -18,14 +18,14 @@ import (
 	"strings"
 	"time"
 
-	"codeberg.org/anvius/pignus/src/signing/domain"
-	"codeberg.org/anvius/pignus/src/signing/domain/identity"
-	"codeberg.org/anvius/pignus/src/signing/infrastructure"
-	trustdomain "codeberg.org/anvius/pignus/src/trust/domain"
-	verificationinfra "codeberg.org/anvius/pignus/src/verification/infrastructure"
+	"codeberg.org/anvius/trebaruna/src/signing/domain"
+	"codeberg.org/anvius/trebaruna/src/signing/domain/identity"
+	"codeberg.org/anvius/trebaruna/src/signing/infrastructure"
+	trustdomain "codeberg.org/anvius/trebaruna/src/trust/domain"
+	verificationinfra "codeberg.org/anvius/trebaruna/src/verification/infrastructure"
 )
 
-// runCertificate implements `pignus certificate <file>`.
+// runCertificate implements `trebaruna certificate <file>`.
 func runCertificate(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("certificate", flag.ContinueOnError)
 	flags.SetOutput(stderr)
@@ -37,7 +37,7 @@ func runCertificate(args []string, stdout, stderr io.Writer) int {
 	)
 
 	flags.Usage = func() {
-		fmt.Fprintln(stderr, "usage: pignus certificate <file.p12|file.pem|file.crt> [flags]")
+		fmt.Fprintln(stderr, "usage: trebaruna certificate <file.p12|file.pem|file.crt> [flags]")
 		flags.PrintDefaults()
 	}
 

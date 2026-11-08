@@ -22,11 +22,11 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/anvius/pignus/src/signing/infrastructure/cms"
-	trustdomain "codeberg.org/anvius/pignus/src/trust/domain"
-	verificationapp "codeberg.org/anvius/pignus/src/verification/application"
-	verification "codeberg.org/anvius/pignus/src/verification/domain"
-	verificationinfra "codeberg.org/anvius/pignus/src/verification/infrastructure"
+	"codeberg.org/anvius/trebaruna/src/signing/infrastructure/cms"
+	trustdomain "codeberg.org/anvius/trebaruna/src/trust/domain"
+	verificationapp "codeberg.org/anvius/trebaruna/src/verification/application"
+	verification "codeberg.org/anvius/trebaruna/src/verification/domain"
+	verificationinfra "codeberg.org/anvius/trebaruna/src/verification/infrastructure"
 )
 
 // oidTSTInfo is the content type a timestamp token declares.

@@ -13,9 +13,9 @@ import (
 	"testing"
 	"time"
 
-	trustdomain "codeberg.org/anvius/pignus/src/trust/domain"
-	"codeberg.org/anvius/pignus/src/verification/application"
-	"codeberg.org/anvius/pignus/src/verification/domain"
+	trustdomain "codeberg.org/anvius/trebaruna/src/trust/domain"
+	"codeberg.org/anvius/trebaruna/src/verification/application"
+	"codeberg.org/anvius/trebaruna/src/verification/domain"
 )
 
 // fakeExtractor returns prepared signers.

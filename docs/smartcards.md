@@ -26,7 +26,7 @@ identity cards.
 |---|---|
 | Bank or authority gave you a `.p12` | `--p12`, static binary |
 | Card exports a `.p12` | `--p12`, static binary |
-| Key is inside the card and cannot be exported | `--token`, `pignus-token` |
+| Key is inside the card and cannot be exported | `--token`, `trebaruna-token` |
 
 ---
 
@@ -36,7 +36,7 @@ PKCS#11 loads a driver at runtime, which requires cgo. The static binary
 deliberately excludes it, so smartcard support is a separate build:
 
 ```bash
-make build-token        # → bin/pignus-token
+make build-token        # → bin/trebaruna-token
 ```
 
 It needs a C compiler and `libdl`:
@@ -46,7 +46,7 @@ sudo apt install build-essential          # Debian / Ubuntu
 sudo dnf install gcc                      # Fedora
 ```
 
-Same commands as `pignus`, same flags, plus `--token`, `--pin` and `--module`.
+Same commands as `trebaruna`, same flags, plus `--token`, `--pin` and `--module`.
 
 ---
 
@@ -122,14 +122,14 @@ fail with "no certificate paired with a private key".
 ## Signing
 
 ```bash
-pignus-token sign atto.pdf --format pades \
+trebaruna-token sign atto.pdf --format pades \
     --token "Carta Nazionale" --pin 123456
 ```
 
 With an explicit module:
 
 ```bash
-pignus-token sign atto.pdf \
+trebaruna-token sign atto.pdf \
     --token "Carta Nazionale" --pin 123456 \
     --module /usr/lib/x86_64-linux-gnu/opensc-pkcs11.so
 ```
@@ -144,7 +144,7 @@ belong to the key that produced it.
 ### Verify your own output
 
 ```bash
-pignus verify atto_signed.pdf
+trebaruna verify atto_signed.pdf
 ```
 
 Worth doing once per card: it is how you find out that the card's certificate is

@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"codeberg.org/anvius/pignus/src/trust/domain"
-	trustinfra "codeberg.org/anvius/pignus/src/trust/infrastructure"
+	"codeberg.org/anvius/trebaruna/src/trust/domain"
+	trustinfra "codeberg.org/anvius/trebaruna/src/trust/infrastructure"
 )
 
 // CachedTrustProvider reads trust lists from the local cache.
@@ -34,18 +34,18 @@ func NewCachedTrustProvider() CachedTrustProvider {
 
 // DefaultCacheDirectory follows the XDG base directory specification.
 func DefaultCacheDirectory() string {
-	if explicit := os.Getenv("PIGNUS_CACHE"); explicit != "" {
+	if explicit := os.Getenv("TREBARUNA_CACHE"); explicit != "" {
 		return filepath.Join(explicit, "tsl")
 	}
 	base := os.Getenv("XDG_CACHE_HOME")
 	if base == "" {
 		home, err := os.UserHomeDir()
 		if err != nil {
-			return filepath.Join(os.TempDir(), "pignus", "tsl")
+			return filepath.Join(os.TempDir(), "trebaruna", "tsl")
 		}
 		base = filepath.Join(home, ".cache")
 	}
-	return filepath.Join(base, "pignus", "tsl")
+	return filepath.Join(base, "trebaruna", "tsl")
 }
 
 // Load reads the list for a territory, falling back when it is absent.

@@ -8,8 +8,8 @@ import (
 	"os"
 	"time"
 
-	"codeberg.org/anvius/pignus/src/verification/application"
-	"codeberg.org/anvius/pignus/src/verification/domain"
+	"codeberg.org/anvius/trebaruna/src/verification/application"
+	"codeberg.org/anvius/trebaruna/src/verification/domain"
 	"github.com/beevik/etree"
 	"github.com/digitorus/timestamp"
 	dsig "github.com/russellhaering/goxmldsig"
@@ -28,6 +28,15 @@ type XadesVerifier struct {
 	// unknown rather than guessed.
 	Roots         *x509.CertPool
 	Intermediates *x509.CertPool
+	// Anchors are the raw certificates the trust list published.
+	//
+	// The pool alone is not enough. A trust list publishes the issuing
+	// authority of a qualified certificate as an anchor in its own right, and
+	// x509.CertPool cannot be enumerated: the certificates inside it cannot be
+	// read back out to be added anywhere else. Keeping the raw certificates is
+	// what lets a subordinate authority be added to the roots, the way the PDF
+	// adapter does.
+	Anchors []*x509.Certificate
 }
 
 // NewXadesVerifier builds the adapter.
@@ -45,6 +54,21 @@ func (v *XadesVerifier) WithAnchors(roots, intermediates *x509.CertPool) applica
 	clone.Roots = roots
 	clone.Intermediates = intermediates
 	return &clone
+}
+
+// WithAnchorCertificates also keeps the raw certificates of the trust list.
+//
+// This is what makes a document that chains to a published authority verify.
+// The trust list names the authority that issues qualified certificates, and
+// that authority is usually an intermediate, not a root; adding it to the roots
+// pool is the only way to reach it, because the certificate it signed is not
+// in the document.
+//
+// The raw certificates are needed because x509.CertPool cannot be enumerated.
+func (v *XadesVerifier) WithAnchorCertificates(roots, intermediates *x509.CertPool, anchors []*x509.Certificate) application.DocumentExtractor {
+	clone := v.WithAnchors(roots, intermediates).(*XadesVerifier)
+	clone.Anchors = anchors
+	return clone
 }
 
 // archiveNamespace is the XAdES 1.4.1 namespace that defines ArchiveTimeStamp.
@@ -83,6 +107,11 @@ func (v *XadesVerifier) Extract(path string) ([]domain.SignerReport, error) {
 	// to check the signature at all.
 	certificate := extractCertificate(signature)
 	describeCertificate(certificate, &report)
+
+	// The intermediates that travel with the document are part of the evidence:
+	// without them the path to the anchor cannot be built, and a signature made
+	// with a properly issued certificate would read as untrusted.
+	embedded := extractCertificates(signature)
 
 	if err := validate(document, certificate); err != nil {
 		report.Integrity = domain.StatusBad
@@ -129,7 +158,7 @@ func (v *XadesVerifier) Extract(path string) ([]domain.SignerReport, error) {
 		// The XML signature verifies against the embedded certificate, which says
 		// nothing about who issued it. The chain decides that, and only an
 		// authenticated trust list can answer it.
-		if v.chainTrusted(certificate) {
+		if v.chainTrusted(certificate, embedded) {
 			report.CertificateStatus = domain.StatusGood
 			report.Findings = append(report.Findings, domain.Finding{
 				Code:    "certificate.trusted",
@@ -155,14 +184,38 @@ func (v *XadesVerifier) Extract(path string) ([]domain.SignerReport, error) {
 //
 // With no anchors the answer is "no": assuming the operating system store would
 // accept qualified CAs it does not contain, and assuming trust would be worse.
-func (v *XadesVerifier) chainTrusted(certificate *x509.Certificate) bool {
+//
+// The intermediates embedded in the document are used to build the path, because
+// a certificate that travels without its chain cannot be verified against
+// anything. They are evidence, not authority: only the anchors decide trust.
+func (v *XadesVerifier) chainTrusted(certificate *x509.Certificate, embedded []*x509.Certificate) bool {
 	if certificate == nil || v.Roots == nil {
 		return false
 	}
 
+	// The intermediates that travel inside the document are what build the path
+	// to the anchor. A document that carries only its leaf cannot be chained at
+	// all, and most producers do exactly that.
+	//
+	// The pool from the trust list cannot be reused here: x509.CertPool cannot
+	// be enumerated, so the certificates already in it cannot be copied into a
+	// new one, and the two sets have to be merged by hand.
+	intermediates := x509.NewCertPool()
+	for _, candidate := range embedded {
+		if candidate.Equal(certificate) {
+			continue
+		}
+		intermediates.AddCert(candidate)
+	}
+
+	roots := v.rootsWithAnchors()
+	if roots == nil {
+		return false
+	}
+
 	options := x509.VerifyOptions{
-		Roots:         v.Roots,
-		Intermediates: v.Intermediates,
+		Roots:         roots,
+		Intermediates: intermediates,
 		// Signing certificates carry the document-signing or email EKU, never
 		// server auth, so the strict default would reject every one of them.
 		KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
@@ -173,6 +226,35 @@ func (v *XadesVerifier) chainTrusted(certificate *x509.Certificate) bool {
 
 	_, err := certificate.Verify(options)
 	return err == nil
+}
+
+// rootsWithAnchors returns the pool the chain is verified against.
+//
+// Every trust-list certificate is added as a root. A qualified trust list
+// publishes the authority that issues qualified certificates, and that authority
+// is normally an intermediate rather than a root; treating it as a root is
+// trusting the list's own statement about who it vouches for.
+//
+// The raw certificates are needed for this because x509.CertPool cannot be
+// enumerated.
+func (v *XadesVerifier) rootsWithAnchors() *x509.CertPool {
+	if len(v.Anchors) == 0 {
+		return v.Roots
+	}
+
+	pool := x509.NewCertPool()
+	for _, certificate := range v.Anchors {
+		pool.AddCert(certificate)
+	}
+	if v.Roots != nil {
+		// The system roots stay available so a document from a public authority
+		// that is not in the national list still verifies.
+		for _, certificate := range v.Anchors {
+			v.Roots.AddCert(certificate)
+		}
+		return v.Roots
+	}
+	return pool
 }
 
 // findSignature walks the tree looking for a ds:Signature element.
@@ -203,18 +285,49 @@ func localName(element *etree.Element) string {
 // SelectElements("//X509Certificate") returns nothing for the namespaced tree
 // our signer emits, and a silent empty result would report every XAdES file as
 // having no certificate.
+// extractCertificate returns the signing certificate.
+//
+// The signing certificate is the one the signature was actually made with: it is
+// the first X509Certificate in KeyInfo, and the one whose public key validates
+// the signature value. When a document embeds a full chain, the first entry is
+// still the leaf, because that is the order every XAdES producer uses.
 func extractCertificate(signature *etree.Element) *x509.Certificate {
-	var found *x509.Certificate
+	certificates := extractCertificates(signature)
+	if len(certificates) == 0 {
+		return nil
+	}
+	return certificates[0]
+}
+
+// extractCertificates returns every certificate embedded in the KeyInfo.
+//
+// A document that chains to a real authority embeds the whole chain: leaf first,
+// then the intermediates. Reading only the leaf is enough to check the
+// signature, but not enough to build the path to the anchor — and a verifier
+// that cannot build the path will call every foreign certificate untrusted no
+// matter how well signed it is.
+func extractCertificates(signature *etree.Element) []*x509.Certificate {
+	var certificates []*x509.Certificate
 
 	walk(signature, func(element *etree.Element) {
-		if found != nil || element.Tag != "X509Certificate" || element.NamespaceURI() != "http://www.w3.org/2000/09/xmldsig#" {
+		if element.Tag != "X509Certificate" || element.NamespaceURI() != "http://www.w3.org/2000/09/xmldsig#" {
 			return
 		}
-		if certificate, err := x509.ParseCertificate(decodeBase64Element(element.Text())); err == nil {
-			found = certificate
+		certificate, err := x509.ParseCertificate(decodeBase64Element(element.Text()))
+		if err != nil {
+			return
 		}
+		// The same certificate can appear twice when a document carries several
+		// signatures over the same key material.
+		for _, existing := range certificates {
+			if existing.Equal(certificate) {
+				return
+			}
+		}
+		certificates = append(certificates, certificate)
 	})
-	return found
+
+	return certificates
 }
 
 // walk visits every descendant depth-first.

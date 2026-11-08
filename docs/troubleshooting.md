@@ -21,9 +21,9 @@ The errors you will actually hit, what each one means, and what to do.
 Three questions resolve most problems:
 
 ```bash
-pignus version                 # what am I running?
-pignus certificate key.p12 --pass x   # what is my certificate?
-pignus verify out.pdf          # what did I actually produce?
+trebaruna version                 # what am I running?
+trebaruna certificate key.p12 --pass x   # what is my certificate?
+trebaruna verify out.pdf          # what did I actually produce?
 ```
 
 That last one is the most useful habit: **verify your own output** before sending
@@ -40,7 +40,7 @@ You asked for PAdES on a non-PDF. PAdES embeds the signature in the PDF
 structure; an XML file has none.
 
 ```bash
-pignus sign doc.xml --format xades     # or just omit --format
+trebaruna sign doc.xml --format xades     # or just omit --format
 ```
 
 ### "no key source: use --p12, --pem or --token"
@@ -48,7 +48,7 @@ pignus sign doc.xml --format xades     # or just omit --format
 No key was given. Exactly one is required:
 
 ```bash
-pignus sign doc.pdf --p12 k.p12 --pass secret
+trebaruna sign doc.pdf --p12 k.p12 --pass secret
 ```
 
 ### "ambiguous key source: use only one of --p12, --pem, --token"
@@ -60,7 +60,7 @@ Two were given. The tool refuses to guess which one you meant.
 The level you asked for includes a timestamp, and no authority was named:
 
 ```bash
-pignus sign doc.pdf --p12 k.p12 --pass x --level t --tsa https://freetsa.org/tsr
+trebaruna sign doc.pdf --p12 k.p12 --pass x --level t --tsa https://freetsa.org/tsr
 ```
 
 Or use `--level bes` if you do not need one.
@@ -70,7 +70,7 @@ Or use `--level bes` if you do not need one.
 `lt` and `lta` need to query OCSP, which is opt-in:
 
 ```bash
-pignus sign doc.pdf --p12 k.p12 --pass x --level lt \
+trebaruna sign doc.pdf --p12 k.p12 --pass x --level lt \
     --tsa https://freetsa.org/tsr --online-revocation
 ```
 
@@ -102,10 +102,10 @@ XAdES archival level requires a TSA. Add `--tsa`.
 The cryptography is fine; the issuer is not supervised in the lists you have.
 
 ```bash
-pignus trust sync
-pignus trust list                     # is anything cached?
-pignus verify doc.pdf --territory IT  # right country?
-pignus certificate k.p12 --pass x     # is it self-signed?
+trebaruna trust sync
+trebaruna trust list                     # is anything cached?
+trebaruna verify doc.pdf --territory IT  # right country?
+trebaruna certificate k.p12 --pass x     # is it self-signed?
 ```
 
 Most common causes, in order:
@@ -216,14 +216,14 @@ The token verifies and is bound; its authority is not a granted qualified servic
 in the lists. Expected for free authorities. If it should be qualified:
 
 ```bash
-pignus trust sync
+trebaruna trust sync
 ```
 
 ---
 
 ## Trust list errors
 
-### `pignus trust sync` fails for one territory
+### `trebaruna trust sync` fails for one territory
 
 The national list's XML signature did not verify against the certificate the EU
 list publishes. That list goes to **quarantine** and is not used. Causes: the
@@ -238,7 +238,7 @@ The cached list is past the `NextUpdate` it declares. It is still used, and the
 report says so. Refresh:
 
 ```bash
-pignus trust sync
+trebaruna trust sync
 ```
 
 ### A Spanish certificate is always `untrusted`
@@ -304,12 +304,12 @@ issuer.
 
 ## Desktop window
 
-### "The pignus binary was not found"
+### "The trebaruna binary was not found"
 
 The window calls the CLI. Make it findable:
 
 ```bash
-export PIGNUS_BIN=/path/to/pignus
+export TREBARUNA_BIN=/path/to/trebaruna
 ```
 
 ### The preview is blank
@@ -345,7 +345,7 @@ signing service reachable from the network is a security hole.
 The token is missing or wrong:
 
 ```bash
-TOKEN=$(cat "$XDG_RUNTIME_DIR/pignus/token")
+TOKEN=$(cat "$XDG_RUNTIME_DIR/trebaruna/token")
 curl -H "X-Firma-Token: $TOKEN" ...
 ```
 
@@ -361,7 +361,7 @@ correct one. Browsers always send it; `curl` does not.
 The path is outside every `--root`:
 
 ```bash
-pignus serve --root /home/user/Documents --root /tmp
+trebaruna serve --root /home/user/Documents --root /tmp
 ```
 
 Symlinks are resolved, so a link inside a root that points outside it is also
@@ -383,7 +383,7 @@ Signatures are returned by the `PUT` that creates them and are not stored. The
 
 If you report a problem, include:
 
-- `pignus version`
+- `trebaruna version`
 - the exact command
 - the `--json` output
 - the output of the independent tool you used

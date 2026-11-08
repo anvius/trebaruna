@@ -3,11 +3,11 @@
 <plist version="1.0">
 <dict>
   <key>CFBundleName</key>
-  <string>pignus</string>
+  <string>trebaruna</string>
   <key>CFBundleDisplayName</key>
-  <string>pignus</string>
+  <string>trebaruna</string>
   <key>CFBundleIdentifier</key>
-  <string>codeberg.anvius.pignus</string>
+  <string>codeberg.anvius.trebaruna</string>
   <key>CFBundleVersion</key>
   <string>__VERSION__</string>
   <key>CFBundleShortVersionString</key>
@@ -15,9 +15,9 @@
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleExecutable</key>
-  <string>pignus-desktop</string>
+  <string>trebaruna-desktop</string>
   <key>CFBundleIconFile</key>
-  <string>pignus.icns</string>
+  <string>trebaruna.icns</string>
   <key>LSMinimumSystemVersion</key>
   <string>11.0</string>
   <key>NSHighResolutionCapable</key>
@@ -30,10 +30,10 @@
   <array>
     <dict>
       <key>CFBundleURLName</key>
-      <string>codeberg.anvius.pignus.handler</string>
+      <string>codeberg.anvius.trebaruna.handler</string>
       <key>CFBundleURLSchemes</key>
       <array>
-        <string>pignus</string>
+        <string>trebaruna</string>
       </array>
       <key>CFBundleTypeRole</key>
       <string>Viewer</string>

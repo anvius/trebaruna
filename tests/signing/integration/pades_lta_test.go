@@ -34,9 +34,9 @@ import (
 	"fmt"
 	"math/big"
 
-	"codeberg.org/anvius/pignus/src/signing/application"
-	"codeberg.org/anvius/pignus/src/signing/domain"
-	"codeberg.org/anvius/pignus/src/signing/infrastructure"
+	"codeberg.org/anvius/trebaruna/src/signing/application"
+	"codeberg.org/anvius/trebaruna/src/signing/domain"
+	"codeberg.org/anvius/trebaruna/src/signing/infrastructure"
 	"golang.org/x/crypto/ocsp"
 )
 

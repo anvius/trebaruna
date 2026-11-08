@@ -1,16 +1,16 @@
 # Assets
 
-`icons/pignus-{64,128,256,512}.png` are the application icon at the sizes
+`icons/trebaruna-{64,128,256,512}.png` are the application icon at the sizes
 packagers expect: `64` and `128` for desktop entries, `256` for the window
 manager, `512` for stores and installers.
 
-`src/desktop/infrastructure/assets/icons/pignus-256.png` is a copy used by
+`src/desktop/infrastructure/assets/icons/trebaruna-256.png` is a copy used by
 `//go:embed`. Go's embed directive does not accept `..` paths, so the file has
 to live inside the package directory. The copy is byte-identical to the one
 here; if you regenerate the icon, copy it over:
 
 ```bash
-cp assets/icons/pignus-256.png src/desktop/infrastructure/assets/icons/
+cp assets/icons/trebaruna-256.png src/desktop/infrastructure/assets/icons/
 ```
 
 The icon is generated, not hand-drawn: a rounded slate tile, a white page with

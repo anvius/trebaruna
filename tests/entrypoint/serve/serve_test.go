@@ -24,13 +24,13 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/anvius/pignus/src/entrypoint/serve"
-	"codeberg.org/anvius/pignus/src/signing/application"
-	signingdomain "codeberg.org/anvius/pignus/src/signing/domain"
-	"codeberg.org/anvius/pignus/src/signing/infrastructure"
-	verificationapp "codeberg.org/anvius/pignus/src/verification/application"
-	verification "codeberg.org/anvius/pignus/src/verification/domain"
-	verificationinfra "codeberg.org/anvius/pignus/src/verification/infrastructure"
+	"codeberg.org/anvius/trebaruna/src/entrypoint/serve"
+	"codeberg.org/anvius/trebaruna/src/signing/application"
+	signingdomain "codeberg.org/anvius/trebaruna/src/signing/domain"
+	"codeberg.org/anvius/trebaruna/src/signing/infrastructure"
+	verificationapp "codeberg.org/anvius/trebaruna/src/verification/application"
+	verification "codeberg.org/anvius/trebaruna/src/verification/domain"
+	verificationinfra "codeberg.org/anvius/trebaruna/src/verification/infrastructure"
 )
 
 // fixture is a running service with a token and an allowed directory.

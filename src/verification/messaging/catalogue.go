@@ -8,7 +8,7 @@ package messaging
 import (
 	"fmt"
 
-	"codeberg.org/anvius/pignus/src/verification/domain"
+	"codeberg.org/anvius/trebaruna/src/verification/domain"
 )
 
 // Catalogue holds every user-visible string of the verification report.
@@ -94,7 +94,7 @@ var Spanish = Catalogue{
 		"timestamp.untrusted_authority":          "el sello cubre la firma, pero su autoridad no está acreditada",
 		"timestamp.not_timestamping_certificate": "el certificado del sello no tiene el uso «sellado de tiempo»",
 		"trustlist.unavailable":                  "sin lista de confianza: los emisores solo se comprueban contra las raíces del sistema",
-		"trustlist.stale":                        "la lista de confianza está caducada: ejecuta «pignus trust sync»",
+		"trustlist.stale":                        "la lista de confianza está caducada: ejecuta «trebaruna trust sync»",
 		"format.unsupported":                     "no hay verificador para este formato",
 		"verification.warning":                   "aviso del verificador",
 		"signature.qualified":                    "firma cualificada: certificado cualificado, dispositivo cualificado y emisor cualificado vigente",
@@ -149,7 +149,7 @@ var Italian = Catalogue{
 		"timestamp.untrusted_authority":          "la marca copre la firma, ma la sua autorità non è accreditata",
 		"timestamp.not_timestamping_certificate": "il certificato della marca non ha l'uso «marcatura temporale»",
 		"trustlist.unavailable":                  "nessun elenco di fiducia: gli emittenti sono confrontati solo con le radici di sistema",
-		"trustlist.stale":                        "l'elenco di fiducia è scaduto: esegui «pignus trust sync»",
+		"trustlist.stale":                        "l'elenco di fiducia è scaduto: esegui «trebaruna trust sync»",
 		"format.unsupported":                     "nessun verificatore per questo formato",
 		"verification.warning":                   "avviso del verificatore",
 		"signature.qualified":                    "firma qualificata: certificato qualificato, dispositivo qualificato ed emittente qualificato vigente",
@@ -204,7 +204,7 @@ var English = Catalogue{
 		"timestamp.untrusted_authority":          "the timestamp covers the signature, but its authority is not accredited",
 		"timestamp.not_timestamping_certificate": "the timestamp certificate lacks the time-stamping key usage",
 		"trustlist.unavailable":                  "no trust list: issuers are checked against the system roots only",
-		"trustlist.stale":                        "the trust list is out of date: run 'pignus trust sync'",
+		"trustlist.stale":                        "the trust list is out of date: run 'trebaruna trust sync'",
 		"format.unsupported":                     "no verifier is available for this format",
 		"verification.warning":                   "verifier warning",
 		"signature.qualified":                    "qualified signature: qualified certificate, qualified device and a currently granted qualified issuer",

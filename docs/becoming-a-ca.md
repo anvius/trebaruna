@@ -82,7 +82,7 @@ prospective CA:
 
 Article 24 is the one that matters for this tool: a certificate is recognised
 across the EU because it appears in the list, and the list appears in the EU LOTL.
-That is exactly the chain `pignus trust sync` verifies.
+That is exactly the chain `trebaruna trust sync` verifies.
 
 ### The Spanish scheme
 
@@ -105,8 +105,8 @@ SchemeRules            .../schemerules/ES  +  .../schemerules/EUcommon
 You can read it with this tool:
 
 ```bash
-pignus trust sync --territory ES
-pignus trust show ES --type CA/QC | head -20
+trebaruna trust sync --territory ES
+trebaruna trust show ES --type CA/QC | head -20
 ```
 
 Those are your competitors, and their entries are the format yours will take.
@@ -220,8 +220,8 @@ tool, because that verdict is defined by the list, not by the certificate.
 You can watch it happen:
 
 ```bash
-pignus trust sync --territory ES
-pignus trust show ES --match "your company name"
+trebaruna trust sync --territory ES
+trebaruna trust show ES --match "your company name"
 ```
 
 ### 7. Operate, and keep being audited
@@ -348,12 +348,12 @@ Honest scope:
 | Identity proofing | — |
 | **Issue certificates** | Your CA issues them; the tool signs with the resulting keys |
 | **Produce signatures people can verify** | ✅ CAdES, PAdES, XAdES up to `lta`, each verified by independent tools |
-| **Prove your certificates chain to a qualified issuer** | ✅ `pignus certificate --territory ES` |
-| **Confirm your services appear in the Spanish list** | ✅ `pignus trust show ES --match "…"` |
+| **Prove your certificates chain to a qualified issuer** | ✅ `trebaruna certificate --territory ES` |
+| **Confirm your services appear in the Spanish list** | ✅ `trebaruna trust show ES --match "…"` |
 | **Check your OCSP responses before you rely on them** | ✅ four explicit revocation states |
 | **Test your TSA end to end** | ✅ RFC 3161 issue and verify |
 
-A concrete use: once you are listed, run `pignus trust sync` and `pignus trust
+A concrete use: once you are listed, run `trebaruna trust sync` and `trebaruna trust
 show ES` to confirm the entry you wrote is the one validators read, and sign a
 sample document with `--level lta` to prove your whole chain — certificate,
 timestamp, OCSP, archive — verifies by tools that are not yours.
@@ -369,7 +369,7 @@ Primary, and worth reading before talking to anyone:
 - **ETSI EN 319 401, 411-1, 411-2, 412-x, 421** — published free of charge
   by ETSI.
 - **Spanish trusted list**: `https://tsl.digital.gob.es/TSL.xml`, readable with
-  `pignus trust show ES`.
+  `trebaruna trust show ES`.
 - **EU LOTL**: `https://ec.europa.eu/tools/lotl/eu-lotl.xml`.
 - **EN 319 403** — how your audit will be conducted.
 

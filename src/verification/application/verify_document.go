@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	trustdomain "codeberg.org/anvius/pignus/src/trust/domain"
-	verification "codeberg.org/anvius/pignus/src/verification/domain"
+	trustdomain "codeberg.org/anvius/trebaruna/src/trust/domain"
+	verification "codeberg.org/anvius/trebaruna/src/verification/domain"
 )
 
 // DocumentExtractor reads the signatures of one document.
@@ -57,7 +57,7 @@ type RevocationChecker interface {
 	Check(ctx context.Context, certificate, issuer *x509.Certificate) verification.Revocation
 }
 
-// VerifyDocument is the use case behind `pignus verify`.
+// VerifyDocument is the use case behind `trebaruna verify`.
 type VerifyDocument struct {
 	pdf   DocumentExtractor
 	cades DocumentExtractor
@@ -211,7 +211,7 @@ func (u *VerifyDocument) loadTrust(territory string, now time.Time) (trustdomain
 		return list, &verification.Finding{
 			Code:    "trustlist.stale",
 			Status:  verification.StatusWarn,
-			Message: "the trust list is past its nextUpdate: run 'pignus trust sync'",
+			Message: "the trust list is past its nextUpdate: run 'trebaruna trust sync'",
 			Detail:  list.NextUpdate.UTC().Format(time.RFC3339),
 		}
 	}

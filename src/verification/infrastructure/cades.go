@@ -7,8 +7,8 @@ import (
 	"os"
 	"time"
 
-	"codeberg.org/anvius/pignus/src/verification/application"
-	"codeberg.org/anvius/pignus/src/verification/domain"
+	"codeberg.org/anvius/trebaruna/src/verification/application"
+	"codeberg.org/anvius/trebaruna/src/verification/domain"
 	"github.com/digitorus/pkcs7"
 	"github.com/digitorus/timestamp"
 )
@@ -25,6 +25,17 @@ type CadesVerifier struct {
 	Roots *x509.CertPool
 	// Now is the evaluation instant, injected for tests.
 	Now time.Time
+	// Anchors are the raw certificates the trust list published.
+	//
+	// The pool alone is not enough. A qualified trust list publishes the
+	// authority that issues qualified certificates, and that authority is
+	// usually an intermediate rather than a root. Adding it to the roots pool
+	// is the only way to reach it, because the certificate it signed may not be
+	// in the container.
+	//
+	// The raw certificates are needed because x509.CertPool cannot be
+	// enumerated.
+	Anchors []*x509.Certificate
 }
 
 // NewCadesVerifier builds the adapter.
@@ -45,6 +56,39 @@ func (v *CadesVerifier) WithAnchors(roots, intermediates *x509.CertPool) applica
 	// listing publishes them too.
 	_ = intermediates
 	return &clone
+}
+
+// WithAnchorCertificates also keeps the raw certificates of the trust list.
+//
+// This is what makes a container that chains to a published authority verify.
+// The raw certificates are needed because x509.CertPool cannot be enumerated.
+func (v *CadesVerifier) WithAnchorCertificates(roots, intermediates *x509.CertPool, anchors []*x509.Certificate) application.DocumentExtractor {
+	clone := v.WithAnchors(roots, intermediates).(*CadesVerifier)
+	clone.Anchors = anchors
+	return clone
+}
+
+// rootsWithAnchors returns the pool the chain is verified against.
+//
+// Every trust-list certificate is added as a root. A qualified trust list
+// publishes the authority that issues qualified certificates, and that authority
+// is normally an intermediate rather than a root; treating it as a root is
+// trusting the list's own statement about who it vouches for.
+func (v *CadesVerifier) rootsWithAnchors() *x509.CertPool {
+	if len(v.Anchors) == 0 {
+		return v.Roots
+	}
+	if v.Roots != nil {
+		for _, certificate := range v.Anchors {
+			v.Roots.AddCert(certificate)
+		}
+		return v.Roots
+	}
+	pool := x509.NewCertPool()
+	for _, certificate := range v.Anchors {
+		pool.AddCert(certificate)
+	}
+	return pool
 }
 
 // Extract verifies a CMS container and returns one report.
@@ -111,7 +155,7 @@ func (v *CadesVerifier) Extract(path string) ([]domain.SignerReport, error) {
 				Status:  domain.StatusWarn,
 				Message: "the certificate is self-signed: valid cryptography, no third-party trust",
 			})
-		case verifyCMSChain(parsed, v.Roots, chainInstant(&report, v.Now)) == nil:
+		case verifyCMSChain(parsed, v.rootsWithAnchors(), chainInstant(&report, v.Now)) == nil:
 			report.CertificateStatus = domain.StatusGood
 			report.Findings = append(report.Findings, domain.Finding{
 				Code:    "certificate.trusted",

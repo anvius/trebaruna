@@ -21,8 +21,8 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/anvius/pignus/src/verification/domain"
-	"codeberg.org/anvius/pignus/src/verification/infrastructure"
+	"codeberg.org/anvius/trebaruna/src/verification/domain"
+	"codeberg.org/anvius/trebaruna/src/verification/infrastructure"
 	"golang.org/x/crypto/ocsp"
 )
 

@@ -10,7 +10,7 @@ import (
 	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/widget"
 
-	"codeberg.org/anvius/pignus/src/desktop/domain"
+	"codeberg.org/anvius/trebaruna/src/desktop/domain"
 )
 
 // SealOverlay is the draggable rectangle that sits on top of the page preview.

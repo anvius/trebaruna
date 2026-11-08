@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"codeberg.org/anvius/pignus/src/trust/domain"
-	"codeberg.org/anvius/pignus/src/trust/infrastructure"
+	"codeberg.org/anvius/trebaruna/src/trust/domain"
+	"codeberg.org/anvius/trebaruna/src/trust/infrastructure"
 )
 
 // listWithHistory reproduces the real shape: the current entry comes first, then

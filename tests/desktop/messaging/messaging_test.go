@@ -3,7 +3,7 @@ package messaging_test
 import (
 	"testing"
 
-	"codeberg.org/anvius/pignus/src/desktop/messaging"
+	"codeberg.org/anvius/trebaruna/src/desktop/messaging"
 )
 
 func TestParseLanguageAcceptsLocaleStrings(t *testing.T) {

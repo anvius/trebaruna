@@ -25,8 +25,8 @@ import (
 	"net/url"
 	"time"
 
-	"codeberg.org/anvius/pignus/src/signing/application"
-	signingdomain "codeberg.org/anvius/pignus/src/signing/domain"
+	"codeberg.org/anvius/trebaruna/src/signing/application"
+	signingdomain "codeberg.org/anvius/trebaruna/src/signing/domain"
 )
 
 // DeliveryTimeout bounds the post back to the caller.

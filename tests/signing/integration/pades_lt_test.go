@@ -19,10 +19,10 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/anvius/pignus/src/signing/application"
-	"codeberg.org/anvius/pignus/src/signing/domain"
-	"codeberg.org/anvius/pignus/src/signing/infrastructure"
-	"codeberg.org/anvius/pignus/src/signing/infrastructure/dss"
+	"codeberg.org/anvius/trebaruna/src/signing/application"
+	"codeberg.org/anvius/trebaruna/src/signing/domain"
+	"codeberg.org/anvius/trebaruna/src/signing/infrastructure"
+	"codeberg.org/anvius/trebaruna/src/signing/infrastructure/dss"
 	"github.com/digitorus/pdf"
 )
 

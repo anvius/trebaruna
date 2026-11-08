@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	trustdomain "codeberg.org/anvius/pignus/src/trust/domain"
-	trustinfra "codeberg.org/anvius/pignus/src/trust/infrastructure"
+	trustdomain "codeberg.org/anvius/trebaruna/src/trust/domain"
+	trustinfra "codeberg.org/anvius/trebaruna/src/trust/infrastructure"
 )
 
 const sampleLOTL = `<?xml version="1.0" encoding="UTF-8"?>

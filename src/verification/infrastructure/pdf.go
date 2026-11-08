@@ -7,8 +7,8 @@ import (
 	"os"
 	"time"
 
-	"codeberg.org/anvius/pignus/src/verification/application"
-	"codeberg.org/anvius/pignus/src/verification/domain"
+	"codeberg.org/anvius/trebaruna/src/verification/application"
+	"codeberg.org/anvius/trebaruna/src/verification/domain"
 	"github.com/digitorus/pdfsign/verify"
 )
 

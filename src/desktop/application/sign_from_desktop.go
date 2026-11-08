@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"codeberg.org/anvius/pignus/src/desktop/domain"
+	"codeberg.org/anvius/trebaruna/src/desktop/domain"
 )
 
 // Signer runs the signature command.
@@ -68,7 +68,7 @@ func firstMeaningfulLine(output string, fallback error) string {
 	return fallback.Error()
 }
 
-// CommandRunner executes the pignus binary.
+// CommandRunner executes the trebaruna binary.
 type CommandRunner struct {
 	BinaryPath string
 }

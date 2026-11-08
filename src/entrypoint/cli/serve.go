@@ -11,11 +11,11 @@ import (
 	"strings"
 	"syscall"
 
-	"codeberg.org/anvius/pignus/src/entrypoint/serve"
-	"codeberg.org/anvius/pignus/src/signing/application"
-	"codeberg.org/anvius/pignus/src/signing/infrastructure"
-	verificationapp "codeberg.org/anvius/pignus/src/verification/application"
-	verificationinfra "codeberg.org/anvius/pignus/src/verification/infrastructure"
+	"codeberg.org/anvius/trebaruna/src/entrypoint/serve"
+	"codeberg.org/anvius/trebaruna/src/signing/application"
+	"codeberg.org/anvius/trebaruna/src/signing/infrastructure"
+	verificationapp "codeberg.org/anvius/trebaruna/src/verification/application"
+	verificationinfra "codeberg.org/anvius/trebaruna/src/verification/infrastructure"
 )
 
 // runServe starts the local HTTP API.
@@ -35,7 +35,7 @@ func runServe(args []string, stdout, stderr io.Writer) int {
 	)
 
 	flags.Usage = func() {
-		fmt.Fprintln(stderr, "usage: pignus serve [flags]")
+		fmt.Fprintln(stderr, "usage: trebaruna serve [flags]")
 		flags.PrintDefaults()
 	}
 
@@ -133,21 +133,21 @@ func runServe(args []string, stdout, stderr io.Writer) int {
 // It follows the XDG runtime directory when available, which is per-user and
 // usually tmpfs, so the secret never touches persistent storage.
 func tokenLocation() (string, error) {
-	if explicit := os.Getenv("PIGNUS_TOKEN_DIR"); explicit != "" {
+	if explicit := os.Getenv("TREBARUNA_TOKEN_DIR"); explicit != "" {
 		return explicit, nil
 	}
 	if runtime := os.Getenv("XDG_RUNTIME_DIR"); runtime != "" {
-		return filepath.Join(runtime, "pignus"), nil
+		return filepath.Join(runtime, "trebaruna"), nil
 	}
 
 	base, err := os.UserCacheDir()
 	if err != nil {
 		return "", fmt.Errorf("cannot determine where to keep the token: %w", err)
 	}
-	return filepath.Join(base, "pignus"), nil
+	return filepath.Join(base, "trebaruna"), nil
 }
 
-// runHandler receives a pignus:// URI from the operating system.
+// runHandler receives a trebaruna:// URI from the operating system.
 //
 // It starts the local API in the background, registers the request, and waits for
 // the window to decide. It prints nothing about the document beyond what the user
@@ -190,7 +190,7 @@ func runHandler(args []string, stdout, stderr io.Writer) int {
 		}
 	}
 	if len(positional) == 0 {
-		fmt.Fprintln(stderr, "usage: pignus handler pignus://sign?... [--root <dir>]")
+		fmt.Fprintln(stderr, "usage: trebaruna handler trebaruna://sign?... [--root <dir>]")
 		return exitUsage
 	}
 	uri = positional[0]

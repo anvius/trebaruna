@@ -1,12 +1,12 @@
 GO      := go
-BIN     := bin/pignus
-BIN_TOKEN := bin/pignus-token
-BIN_GUI   := bin/pignus-desktop
+BIN     := bin/trebaruna
+BIN_TOKEN := bin/trebaruna-token
+BIN_GUI   := bin/trebaruna-desktop
 MAIN    := ./src/entrypoint/main
 VERSION := $(shell cat VERSION 2>/dev/null || echo 0.1.0-unstable)
 PREFIX  ?= /usr/local
 DESTDIR ?= 
-LDFLAGS := -s -w -X codeberg.org/anvius/pignus/src/entrypoint/cli.Version=$(VERSION)
+LDFLAGS := -s -w -X codeberg.org/anvius/trebaruna/src/entrypoint/cli.Version=$(VERSION)
 
 .PHONY: help build build-token build-gui deps-gui test test-verbose check cross install install-desktop clean version
 
@@ -51,26 +51,26 @@ check: test
 
 cross:
 	@mkdir -p bin
-	GOOS=linux   GOARCH=amd64 CGO_ENABLED=0 $(GO) build -trimpath -ldflags="$(LDFLAGS)" -o bin/pignus-linux-amd64   $(MAIN)
-	GOOS=linux   GOARCH=arm64 CGO_ENABLED=0 $(GO) build -trimpath -ldflags="$(LDFLAGS)" -o bin/pignus-linux-arm64   $(MAIN)
-	GOOS=darwin  GOARCH=amd64 CGO_ENABLED=0 $(GO) build -trimpath -ldflags="$(LDFLAGS)" -o bin/pignus-darwin-amd64  $(MAIN)
-	GOOS=darwin  GOARCH=arm64 CGO_ENABLED=0 $(GO) build -trimpath -ldflags="$(LDFLAGS)" -o bin/pignus-darwin-arm64  $(MAIN)
-	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 $(GO) build -trimpath -ldflags="$(LDFLAGS)" -o bin/pignus-windows-amd64.exe $(MAIN)
+	GOOS=linux   GOARCH=amd64 CGO_ENABLED=0 $(GO) build -trimpath -ldflags="$(LDFLAGS)" -o bin/trebaruna-linux-amd64   $(MAIN)
+	GOOS=linux   GOARCH=arm64 CGO_ENABLED=0 $(GO) build -trimpath -ldflags="$(LDFLAGS)" -o bin/trebaruna-linux-arm64   $(MAIN)
+	GOOS=darwin  GOARCH=amd64 CGO_ENABLED=0 $(GO) build -trimpath -ldflags="$(LDFLAGS)" -o bin/trebaruna-darwin-amd64  $(MAIN)
+	GOOS=darwin  GOARCH=arm64 CGO_ENABLED=0 $(GO) build -trimpath -ldflags="$(LDFLAGS)" -o bin/trebaruna-darwin-arm64  $(MAIN)
+	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 $(GO) build -trimpath -ldflags="$(LDFLAGS)" -o bin/trebaruna-windows-amd64.exe $(MAIN)
 	@ls -lh bin/ | awk '{print $$9, $$5}'
 
 install: build
-	install -Dm755 $(BIN) $(HOME)/.local/bin/pignus
-	@echo "instalado en ~/.local/bin/pignus"
+	install -Dm755 $(BIN) $(HOME)/.local/bin/trebaruna
+	@echo "instalado en ~/.local/bin/trebaruna"
 
-# Desktop integration: icon, launcher and the pignus:// URI scheme, so a
+# Desktop integration: icon, launcher and the trebaruna:// URI scheme, so a
 # website can hand a document to the app the way afirma:// does.
 install-desktop: build build-gui
-	install -Dm755 $(BIN) $(DESTDIR)$(PREFIX)/bin/pignus
-	install -Dm755 $(BIN_GUI) $(DESTDIR)$(PREFIX)/bin/pignus-desktop
-	install -Dm644 assets/icons/pignus-256.png $(DESTDIR)$(PREFIX)/share/icons/hicolor/256x256/apps/pignus.png
-	install -Dm644 assets/icons/pignus-128.png $(DESTDIR)$(PREFIX)/share/icons/hicolor/128x128/apps/pignus.png
-	install -Dm644 assets/icons/pignus-64.png  $(DESTDIR)$(PREFIX)/share/icons/hicolor/64x64/apps/pignus.png
-	install -Dm644 packaging/pignus.desktop $(DESTDIR)$(PREFIX)/share/applications/pignus.desktop
+	install -Dm755 $(BIN) $(DESTDIR)$(PREFIX)/bin/trebaruna
+	install -Dm755 $(BIN_GUI) $(DESTDIR)$(PREFIX)/bin/trebaruna-desktop
+	install -Dm644 assets/icons/trebaruna-256.png $(DESTDIR)$(PREFIX)/share/icons/hicolor/256x256/apps/trebaruna.png
+	install -Dm644 assets/icons/trebaruna-128.png $(DESTDIR)$(PREFIX)/share/icons/hicolor/128x128/apps/trebaruna.png
+	install -Dm644 assets/icons/trebaruna-64.png  $(DESTDIR)$(PREFIX)/share/icons/hicolor/64x64/apps/trebaruna.png
+	install -Dm644 packaging/trebaruna.desktop $(DESTDIR)$(PREFIX)/share/applications/trebaruna.desktop
 	@echo "instalado en $(DESTDIR)$(PREFIX); ejecuta: update-desktop-database"
 
 version:

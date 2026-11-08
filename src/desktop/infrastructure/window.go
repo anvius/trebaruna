@@ -23,13 +23,13 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
-	"codeberg.org/anvius/pignus/src/desktop/application"
-	"codeberg.org/anvius/pignus/src/desktop/domain"
-	"codeberg.org/anvius/pignus/src/desktop/messaging"
-	reportmessaging "codeberg.org/anvius/pignus/src/verification/messaging"
+	"codeberg.org/anvius/trebaruna/src/desktop/application"
+	"codeberg.org/anvius/trebaruna/src/desktop/domain"
+	"codeberg.org/anvius/trebaruna/src/desktop/messaging"
+	reportmessaging "codeberg.org/anvius/trebaruna/src/verification/messaging"
 )
 
-//go:embed assets/icons/pignus-256.png
+//go:embed assets/icons/trebaruna-256.png
 var appIconPNG []byte
 
 // Window is the Fyne implementation of the desktop window.
@@ -68,7 +68,7 @@ type Options struct {
 func NewWindow(options Options) *Window {
 	fyneApp := app.NewWithID("it.firma.desktop")
 	fyneApp.Settings().SetTheme(NewAppTheme(DefaultPalette()))
-	fyneApp.SetIcon(fyne.NewStaticResource("pignus.png", appIconPNG))
+	fyneApp.SetIcon(fyne.NewStaticResource("trebaruna.png", appIconPNG))
 
 	catalogue := messaging.For(options.Language)
 
@@ -88,10 +88,10 @@ func NewWindow(options Options) *Window {
 		currentPage: 1,
 	}
 
-	// PIGNUS_SKIP_WELCOME opens the form directly, for the diagnostic runs and
+	// TREBARUNA_SKIP_WELCOME opens the form directly, for the diagnostic runs and
 	// for users who sign several documents a day and find the cover an obstacle.
 	// Opening a document skips the cover: the user already made a choice.
-	if os.Getenv("PIGNUS_SKIP_WELCOME") != "" || options.DocumentPath != "" {
+	if os.Getenv("TREBARUNA_SKIP_WELCOME") != "" || options.DocumentPath != "" {
 		window.SetContent(desktop.withTabs(desktop.buildContent(options.DocumentPath)))
 		return desktop
 	}

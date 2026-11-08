@@ -11,12 +11,12 @@ import (
 	"strings"
 	"time"
 
-	"codeberg.org/anvius/pignus/src/signing/application"
-	"codeberg.org/anvius/pignus/src/signing/domain"
-	"codeberg.org/anvius/pignus/src/signing/domain/identity"
-	"codeberg.org/anvius/pignus/src/signing/infrastructure/dss"
-	verificationdomain "codeberg.org/anvius/pignus/src/verification/domain"
-	verificationinfra "codeberg.org/anvius/pignus/src/verification/infrastructure"
+	"codeberg.org/anvius/trebaruna/src/signing/application"
+	"codeberg.org/anvius/trebaruna/src/signing/domain"
+	"codeberg.org/anvius/trebaruna/src/signing/domain/identity"
+	"codeberg.org/anvius/trebaruna/src/signing/infrastructure/dss"
+	verificationdomain "codeberg.org/anvius/trebaruna/src/verification/domain"
+	verificationinfra "codeberg.org/anvius/trebaruna/src/verification/infrastructure"
 	"github.com/digitorus/pdf"
 	"github.com/digitorus/pdfsign"
 )

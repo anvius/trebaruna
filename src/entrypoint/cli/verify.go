@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"codeberg.org/anvius/pignus/src/verification/application"
-	verification "codeberg.org/anvius/pignus/src/verification/domain"
-	verificationinfra "codeberg.org/anvius/pignus/src/verification/infrastructure"
-	"codeberg.org/anvius/pignus/src/verification/messaging"
+	"codeberg.org/anvius/trebaruna/src/verification/application"
+	verification "codeberg.org/anvius/trebaruna/src/verification/domain"
+	verificationinfra "codeberg.org/anvius/trebaruna/src/verification/infrastructure"
+	"codeberg.org/anvius/trebaruna/src/verification/messaging"
 )
 
 // Verification exit codes. They are distinct on purpose: a script must be able
@@ -24,7 +24,7 @@ const (
 	exitUnverified  = 3
 )
 
-// runVerify implements `pignus verify`.
+// runVerify implements `trebaruna verify`.
 func runVerify(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("verify", flag.ContinueOnError)
 	flags.SetOutput(stderr)
@@ -38,7 +38,7 @@ func runVerify(args []string, stdout, stderr io.Writer) int {
 	)
 
 	flags.Usage = func() {
-		fmt.Fprintln(stderr, "usage: pignus verify <document> [flags]")
+		fmt.Fprintln(stderr, "usage: trebaruna verify <document> [flags]")
 		flags.PrintDefaults()
 	}
 

@@ -50,7 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 First slice: CLI signing CAdES, PAdES and XAdES.
 
-## [0.3.0-unstable] - 2026-11-02
+## [0.2.0-unstable] - 2026-11-02
 
 First working slice. Not a stable release: major version 0 by policy.
 
@@ -97,12 +97,27 @@ First working slice. Not a stable release: major version 0 by policy.
 
 ### Changed
 
-- The project is now called **pignus** (Latin: pledge, security, guarantee). Module
-  path, binaries, environment variables (`PIGNUS_*`), URI scheme, cache directory
+- The project is now called **trebaruna** (Latin: pledge, security, guarantee). Module
+  path, binaries, environment variables (`TREBARUNA_*`), URI scheme, cache directory
   and documentation all follow.
 
 ### Fixed
 
+- `verify` reported "altered" for a signature made with a certificate that had
+  expired or was revoked before signing, in the same report that said the
+  integrity was correct. The document was intact; the signer simply was not
+  entitled to sign. That is now the `invalid` verdict, with its own exit code 4,
+  distinct from the exit code 1 that means the bytes changed.
+- An XAdES document could never chain to an authority. The verifier read only the
+  first certificate in `KeyInfo`, so the intermediate that signed the leaf was
+  ignored and the path to the anchor could not be built. Every foreign XML
+  signature read as untrusted. The whole chain is now read, and the embedded
+  intermediates build the path.
+- The XML and CMS verifiers compared against a pool of roots only, and a pool
+  cannot be enumerated. A trust list publishes the authority that issues
+  qualified certificates, and that authority is normally an intermediate, so
+  neither could reach it. Both now take the raw certificates of the list and
+  treat them as anchors, which is what the PDF adapter already did.
 - Spain was rejected as "publishes only a PDF" and every Spanish qualified
   signature read as untrusted. The EU list carries two pointers for Spain and the
   first match — the PDF — won. Now the XML pointer is preferred. ES: 442 services,
@@ -122,5 +137,5 @@ First working slice. Not a stable release: major version 0 by policy.
 
 - CAdES-LT, CAdES-LTA and XAdES-LT are implemented. All twelve
   format/level combinations now exist.
-- `pignus://` handler with mandatory human approval, signing and delivery.
+- `trebaruna://` handler with mandatory human approval, signing and delivery.
 - Full English manual in `docs/`, twelve documents.

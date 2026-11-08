@@ -1,4 +1,4 @@
-module codeberg.org/anvius/pignus
+module codeberg.org/anvius/trebaruna
 
 go 1.27.0
 

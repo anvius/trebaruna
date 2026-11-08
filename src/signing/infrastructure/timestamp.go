@@ -69,7 +69,7 @@ func (t *Rfc3161Timestamper) Token(ctx context.Context, digest []byte, url, user
 		return nil, fmt.Errorf(
 			"TSA %s answered %d: %s\n"+
 				"  401 usually means the authority needs credentials; many public ones do.\n"+
-				"  list free qualified authorities with: pignus tsa list --territory IT",
+				"  list free qualified authorities with: trebaruna tsa list --territory IT",
 			url, response.StatusCode, truncate(string(body), 200),
 		)
 	}

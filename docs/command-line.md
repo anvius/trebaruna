@@ -22,11 +22,11 @@ Every command, every flag, and what the exit codes mean.
 ## Shape of the tool
 
 ```
-pignus <command> [arguments] [flags]
+trebaruna <command> [arguments] [flags]
 ```
 
 Flags may appear before or after the positional argument:
-`pignus sign doc.pdf --p12 k.p12` and `pignus sign --p12 k.p12 doc.pdf` are
+`trebaruna sign doc.pdf --p12 k.p12` and `trebaruna sign --p12 k.p12 doc.pdf` are
 the same. This matters because Go's flag parser normally stops at the first
 non-flag argument, and every CLI convention (and every script) writes the file
 first.
@@ -61,7 +61,7 @@ knows pass/fail is already correct; the finer routing is there for the ones that
 want to act differently on each.
 
 ```bash
-if pignus verify "$f" --json >/dev/null; then
+if trebaruna verify "$f" --json >/dev/null; then
     echo "verified"
 else
     case $? in
@@ -77,7 +77,7 @@ fi
 ## `sign`
 
 ```
-pignus sign <document> [flags]
+trebaruna sign <document> [flags]
 ```
 
 ### Flags
@@ -88,7 +88,7 @@ pignus sign <document> [flags]
 | `--level` | `bes` | `bes`, `t`, `lt` or `lta` — see [Signing](signing.md) |
 | `--p12` | — | PKCS#12 file with the certificate and key |
 | `--pem` | — | PEM bundle containing certificate and key |
-| `--token` | — | PKCS#11 token label (needs `pignus-token`) |
+| `--token` | — | PKCS#11 token label (needs `trebaruna-token`) |
 | `--module` | system | PKCS#11 module path |
 | `--pin` | — | Smartcard PIN |
 | `--pass` | — | Passphrase for the P12 or PEM |
@@ -119,19 +119,19 @@ Override with `--out`.
 The common case — a PDF, the simplest signature:
 
 ```bash
-pignus sign contratto.pdf --p12 mia-chiave.p12 --pass segreto
+trebaruna sign contratto.pdf --p12 mia-chiave.p12 --pass segreto
 ```
 
 An XML invoice with a timestamp:
 
 ```bash
-pignus sign fattura.xml --pem bundle.pem --level t --tsa https://freetsa.org/tsr
+trebaruna sign fattura.xml --pem bundle.pem --level t --tsa https://freetsa.org/tsr
 ```
 
 A PDF with a visible seal in the bottom-left corner, long-term valid:
 
 ```bash
-pignus sign atto.pdf --p12 k.p12 --pass x \
+trebaruna sign atto.pdf --p12 k.p12 --pass x \
     --level lt --tsa https://freetsa.org/tsr --online-revocation \
     --box 60,60,280,160 --reason "Contratto di fornitura"
 ```
@@ -139,20 +139,20 @@ pignus sign atto.pdf --p12 k.p12 --pass x \
 Two seals on different pages, one signature:
 
 ```bash
-pignus sign atto.pdf --p12 k.p12 --pass x \
+trebaruna sign atto.pdf --p12 k.p12 --pass x \
     --box 1:60,60,280,160 --box 3:60,60,280,160
 ```
 
 Any file wrapped in CMS:
 
 ```bash
-pignus sign backup.zip --format cades --pem bundle.pem
+trebaruna sign backup.zip --format cades --pem bundle.pem
 ```
 
 Sign from a smartcard:
 
 ```bash
-pignus-token sign atto.pdf --token "Carta Nazionale" --pin 123456 \
+trebaruna-token sign atto.pdf --token "Carta Nazionale" --pin 123456 \
     --module /usr/lib/x86_64-linux-gnu/opensc-pkcs11.so
 ```
 
@@ -172,7 +172,7 @@ pignus-token sign atto.pdf --token "Carta Nazionale" --pin 123456 \
 ## `verify`
 
 ```
-pignus verify <document> [flags]
+trebaruna verify <document> [flags]
 ```
 
 ### Flags
@@ -194,10 +194,10 @@ Anything else needs `--format`.
 ### Examples
 
 ```bash
-pignus verify contratto_signed.pdf
-pignus verify atto.pdf.p7m --territory IT
-pignus verify doc.xml --json | jq '.verdict, .signers[].trust'
-pignus verify atto.pdf --offline=false --json
+trebaruna verify contratto_signed.pdf
+trebaruna verify atto.pdf.p7m --territory IT
+trebaruna verify doc.xml --json | jq '.verdict, .signers[].trust'
+trebaruna verify atto.pdf --offline=false --json
 ```
 
 ### Reading the output
@@ -222,8 +222,8 @@ The `!` lines are findings, and each has a code in the JSON form. See
 ## `timestamp`
 
 ```
-pignus timestamp <file> --tsa <url>
-pignus timestamp --hash <hex> --tsa <url>
+trebaruna timestamp <file> --tsa <url>
+trebaruna timestamp --hash <hex> --tsa <url>
 ```
 
 Obtains an RFC 3161 token proving a document existed at a moment.
@@ -237,8 +237,8 @@ Obtains an RFC 3161 token proving a document existed at a moment.
 | `--json` | Machine-readable result |
 
 ```bash
-pignus timestamp atto.pdf --tsa https://freetsa.org/tsr
-pignus timestamp --hash 3a7bd3e2... --tsa https://freetsa.org/tsr --out proof.tsr
+trebaruna timestamp atto.pdf --tsa https://freetsa.org/tsr
+trebaruna timestamp --hash 3a7bd3e2... --tsa https://freetsa.org/tsr --out proof.tsr
 ```
 
 See [Timestamps](timestamps.md).
@@ -248,15 +248,15 @@ See [Timestamps](timestamps.md).
 ## `verify-tsr`
 
 ```
-pignus verify-tsr <token.tsr> [document]
+trebaruna verify-tsr <token.tsr> [document]
 ```
 
 Checks a token on its own, or that it matches a document.
 
 ```bash
-pignus verify-tsr atto.pdf.tsr
-pignus verify-tsr atto.pdf.tsr atto.pdf     # also check the imprint
-pignus verify-tsr --hash <hex> proof.tsr
+trebaruna verify-tsr atto.pdf.tsr
+trebaruna verify-tsr atto.pdf.tsr atto.pdf     # also check the imprint
+trebaruna verify-tsr --hash <hex> proof.tsr
 ```
 
 | Flag | Meaning |
@@ -272,15 +272,15 @@ token is invalid, `2` if it cannot be read at all.
 ## `certificate`
 
 ```
-pignus certificate <file> [flags]
+trebaruna certificate <file> [flags]
 ```
 
 Reads a certificate without signing anything.
 
 ```bash
-pignus certificate mia-chiave.p12 --pass segreto
-pignus certificate bundle.pem --json
-pignus certificate certificate.cer --territory IT
+trebaruna certificate mia-chiave.p12 --pass segreto
+trebaruna certificate bundle.pem --json
+trebaruna certificate certificate.cer --territory IT
 ```
 
 | Flag | Meaning |
@@ -297,18 +297,18 @@ Accepts `.p12`, `.pfx`, `.pem`, `.crt`, `.cer`. See
 ## `trust`
 
 ```
-pignus trust sync  [--territory XX]
-pignus trust list
-pignus trust show <territory>
+trebaruna trust sync  [--territory XX]
+trebaruna trust list
+trebaruna trust show <territory>
 ```
 
 Downloads and **authenticates** the EU trust lists.
 
 ```bash
-pignus trust sync               # all territories
-pignus trust sync --territory IT
-pignus trust list               # what is cached, and how old
-pignus trust show IT            # services of one territory
+trebaruna trust sync               # all territories
+trebaruna trust sync --territory IT
+trebaruna trust list               # what is cached, and how old
+trebaruna trust show IT            # services of one territory
 ```
 
 `sync` verifies each national list against the certificates the EU list
@@ -320,7 +320,7 @@ publishes. A list that fails goes to quarantine, never to the cache. See
 ## `asic`
 
 ```
-pignus asic [flags] <document> <signature>...
+trebaruna asic [flags] <document> <signature>...
 ```
 
 Packs a document and its signature into an ASiC container (ETSI EN 319 162).
@@ -332,9 +332,9 @@ Packs a document and its signature into an ASiC container (ETSI EN 319 162).
 | `--extract` | Unpack an existing container to this directory |
 
 ```bash
-pignus asic atto.pdf atto.pdf.p7m
-pignus asic --type e doc.pdf sig1.p7m sig2.p7m --out bundle.asice
-pignus asic --extract ./out bundle.asics
+trebaruna asic atto.pdf atto.pdf.p7m
+trebaruna asic --type e doc.pdf sig1.p7m sig2.p7m --out bundle.asice
+trebaruna asic --extract ./out bundle.asics
 ```
 
 ---
@@ -342,7 +342,7 @@ pignus asic --extract ./out bundle.asics
 ## `serve`
 
 ```
-pignus serve --root <dir> [--listen addr]
+trebaruna serve --root <dir> [--listen addr]
 ```
 
 Starts the local HTTP API. Blocks until interrupted.
@@ -359,13 +359,13 @@ Binds loopback only — anything else is refused. See [Local API](local-api.md).
 ## `handler`
 
 ```
-pignus handler "pignus://sign?..." [--root <dir>] [--p12 f] [--pem f] [--pass s]
+trebaruna handler "trebaruna://sign?..." [--root <dir>] [--p12 f] [--pem f] [--pass s]
 ```
 
 Receives a URI from a web page, verifies the document, and asks for approval.
 
 ```bash
-pignus handler "pignus://sign?document=/tmp/atto.pdf&format=pdf" \
+trebaruna handler "trebaruna://sign?document=/tmp/atto.pdf&format=pdf" \
     --root /tmp --p12 key.p12 --pass secret
 ```
 
@@ -383,8 +383,8 @@ See [Web pages](web-pages.md).
 Two commands the desktop window uses, also usable by hand:
 
 ```bash
-pignus requests --api 127.0.0.1:8080            # list pending requests
-pignus decide <id> --secret <secret> --approved  # answer one
+trebaruna requests --api 127.0.0.1:8080            # list pending requests
+trebaruna decide <id> --secret <secret> --approved  # answer one
 ```
 
 | Flag | Meaning |
@@ -393,15 +393,15 @@ pignus decide <id> --secret <secret> --approved  # answer one
 | `--secret` | The approval secret printed by `handler` |
 | `--approved` | Approve; omit for reject |
 
-They read the server token from `PIGNUS_TOKEN`, or from
-`$XDG_RUNTIME_DIR/pignus/token`.
+They read the server token from `TREBARUNA_TOKEN`, or from
+`$XDG_RUNTIME_DIR/trebaruna/token`.
 
 ---
 
 ## `version`
 
 ```bash
-pignus version        # or --version, -v
+trebaruna version        # or --version, -v
 ```
 
 Prints the version and exits `0`. The same string appears in `GET /version` and
@@ -434,16 +434,16 @@ The one exception is `handler`, which must ask: that is its purpose.
 
 ### Cache location
 
-Trust lists: `~/.cache/pignus/`. Nothing else is cached.
+Trust lists: `~/.cache/trebaruna/`. Nothing else is cached.
 
 ### Environment variables
 
 | Variable | Used by | Meaning |
 |---|---|---|
 | `LANG`, `LC_ALL` | `verify`, desktop | Default language and territory |
-| `PIGNUS_BIN` | desktop | Path to the CLI binary |
-| `PIGNUS_LANG` | desktop | Force the window language |
-| `PIGNUS_TOKEN` | `requests`, `decide` | Server token, instead of the file |
-| `PIGNUS_TOKEN_DIR` | `serve`, `handler` | Where to write the token |
+| `TREBARUNA_BIN` | desktop | Path to the CLI binary |
+| `TREBARUNA_LANG` | desktop | Force the window language |
+| `TREBARUNA_TOKEN` | `requests`, `decide` | Server token, instead of the file |
+| `TREBARUNA_TOKEN_DIR` | `serve`, `handler` | Where to write the token |
 | `XDG_RUNTIME_DIR` | `serve`, `handler` | Default token directory |
 | `SOFTHSM2_MODULE` | tests only | PKCS#11 module for the test suite |

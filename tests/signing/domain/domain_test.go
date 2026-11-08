@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"codeberg.org/anvius/pignus/src/signing/domain"
+	"codeberg.org/anvius/trebaruna/src/signing/domain"
 )
 
 func TestSignedNameFollowsEstablishedConvention(t *testing.T) {

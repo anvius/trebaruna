@@ -29,7 +29,7 @@ import (
 	"fmt"
 	"time"
 
-	"codeberg.org/anvius/pignus/src/signing/domain/identity"
+	"codeberg.org/anvius/trebaruna/src/signing/domain/identity"
 	"github.com/digitorus/pdfsign"
 )
 
