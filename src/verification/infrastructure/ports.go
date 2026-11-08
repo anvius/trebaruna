@@ -13,9 +13,9 @@ import (
 	"fmt"
 	"os"
 
-	"codeberg.org/anvius/trebaruna/src/signing/domain/identity"
-	"codeberg.org/anvius/trebaruna/src/trust/infrastructure"
-	"codeberg.org/anvius/trebaruna/src/verification/domain"
+	"codeberg.org/simplicer/trebaruna/src/signing/domain/identity"
+	"codeberg.org/simplicer/trebaruna/src/trust/infrastructure"
+	"codeberg.org/simplicer/trebaruna/src/verification/domain"
 )
 
 // ReadQualifiedStatements is re-exported so callers keep the dependency on the

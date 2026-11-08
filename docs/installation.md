@@ -72,7 +72,7 @@ trebaruna version
 Needs Go 1.24 or newer:
 
 ```bash
-git clone https://codeberg.org/anvius/trebaruna
+git clone https://codeberg.org/simplicer/trebaruna
 cd trebaruna
 make build          # static binary in ./bin/trebaruna
 make install        # copies it to ~/.local/bin/trebaruna
@@ -242,7 +242,7 @@ See [Desktop app](desktop.md).
 Every release binary is reproducible from the tagged source:
 
 ```bash
-git clone https://codeberg.org/anvius/trebaruna
+git clone https://codeberg.org/simplicer/trebaruna
 cd trebaruna
 git checkout v0.2.0
 make cross

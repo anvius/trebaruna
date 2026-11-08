@@ -16,8 +16,8 @@ import (
 	"strconv"
 	"strings"
 
-	"codeberg.org/anvius/trebaruna/src/desktop/application"
-	"codeberg.org/anvius/trebaruna/src/desktop/domain"
+	"codeberg.org/simplicer/trebaruna/src/desktop/application"
+	"codeberg.org/simplicer/trebaruna/src/desktop/domain"
 )
 
 // ErrRendererMissing reports that poppler is not installed.

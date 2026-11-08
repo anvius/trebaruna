@@ -268,7 +268,7 @@ Every error is `application/problem+json` (RFC 9457):
 
 ```json
 {
-  "type":   "https://codeberg.org/anvius/trebaruna/problems/path-rejected",
+  "type":   "https://codeberg.org/simplicer/trebaruna/problems/path-rejected",
   "title":  "path-rejected",
   "status": 403,
   "detail": "\"/etc/passwd\" is outside every allowed directory"

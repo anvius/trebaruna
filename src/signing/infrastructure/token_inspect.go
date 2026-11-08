@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"codeberg.org/anvius/trebaruna/src/signing/domain"
+	"codeberg.org/simplicer/trebaruna/src/signing/domain"
 )
 
 // TokenSlot describes one slot the PKCS#11 module exposes.

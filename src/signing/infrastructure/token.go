@@ -5,7 +5,7 @@ import (
 	"crypto/x509"
 	"fmt"
 
-	"codeberg.org/anvius/trebaruna/src/signing/domain"
+	"codeberg.org/simplicer/trebaruna/src/signing/domain"
 )
 
 // tokenPair is a certificate together with its signing key, as the token

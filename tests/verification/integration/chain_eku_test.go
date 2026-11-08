@@ -19,7 +19,7 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/anvius/trebaruna/src/verification/infrastructure"
+	"codeberg.org/simplicer/trebaruna/src/verification/infrastructure"
 )
 
 // documentCertificate builds a leaf with the given extended key usages, signed by

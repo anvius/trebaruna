@@ -30,10 +30,10 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/anvius/trebaruna/src/signing/domain"
-	"codeberg.org/anvius/trebaruna/src/signing/infrastructure"
-	"codeberg.org/anvius/trebaruna/src/signing/infrastructure/cms"
-	verificationinfra "codeberg.org/anvius/trebaruna/src/verification/infrastructure"
+	"codeberg.org/simplicer/trebaruna/src/signing/domain"
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure"
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/cms"
+	verificationinfra "codeberg.org/simplicer/trebaruna/src/verification/infrastructure"
 )
 
 // oidTSTInfoXades is the content type a timestamp token declares.

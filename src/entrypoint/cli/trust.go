@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	trustapplication "codeberg.org/anvius/trebaruna/src/trust/application"
-	trustdomain "codeberg.org/anvius/trebaruna/src/trust/domain"
-	trustinfra "codeberg.org/anvius/trebaruna/src/trust/infrastructure"
-	verificationinfra "codeberg.org/anvius/trebaruna/src/verification/infrastructure"
+	trustapplication "codeberg.org/simplicer/trebaruna/src/trust/application"
+	trustdomain "codeberg.org/simplicer/trebaruna/src/trust/domain"
+	trustinfra "codeberg.org/simplicer/trebaruna/src/trust/infrastructure"
+	verificationinfra "codeberg.org/simplicer/trebaruna/src/verification/infrastructure"
 )
 
 // trustSource is where a national list lives.

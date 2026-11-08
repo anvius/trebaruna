@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	"codeberg.org/anvius/trebaruna/src/signing/infrastructure"
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure"
 	"github.com/digitorus/timestamp"
 )
 

@@ -23,7 +23,7 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/anvius/trebaruna/src/signing/infrastructure/dss"
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/dss"
 	"github.com/digitorus/pdf"
 )
 

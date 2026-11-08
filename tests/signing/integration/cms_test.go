@@ -18,7 +18,7 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/anvius/trebaruna/src/signing/infrastructure/cms"
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/cms"
 )
 
 // fixture holds a throwaway key pair on disk.

@@ -38,10 +38,10 @@ import (
 	"sync"
 	"time"
 
-	"codeberg.org/anvius/trebaruna/src/signing/application"
-	signingdomain "codeberg.org/anvius/trebaruna/src/signing/domain"
-	verificationapp "codeberg.org/anvius/trebaruna/src/verification/application"
-	verification "codeberg.org/anvius/trebaruna/src/verification/domain"
+	"codeberg.org/simplicer/trebaruna/src/signing/application"
+	signingdomain "codeberg.org/simplicer/trebaruna/src/signing/domain"
+	verificationapp "codeberg.org/simplicer/trebaruna/src/verification/application"
+	verification "codeberg.org/simplicer/trebaruna/src/verification/domain"
 )
 
 // Service is the HTTP adapter over the use cases.
@@ -501,7 +501,7 @@ func writeProblem(writer http.ResponseWriter, status int, code, detail string) {
 	writer.Header().Set("Content-Type", "application/problem+json")
 	writer.WriteHeader(status)
 	_ = json.NewEncoder(writer).Encode(problem{
-		Type:   "https://codeberg.org/anvius/trebaruna/problems/" + code,
+		Type:   "https://codeberg.org/simplicer/trebaruna/problems/" + code,
 		Title:  code,
 		Status: status,
 		Detail: detail,

@@ -5,7 +5,7 @@ package infrastructure
 import (
 	"fmt"
 
-	"codeberg.org/anvius/trebaruna/src/signing/domain"
+	"codeberg.org/simplicer/trebaruna/src/signing/domain"
 )
 
 // openToken fails cleanly in builds without CGO.

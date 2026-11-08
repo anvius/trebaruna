@@ -6,7 +6,7 @@ import (
 	"io"
 	"strings"
 
-	"codeberg.org/anvius/trebaruna/src/signing/infrastructure"
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure"
 )
 
 // runToken implements `trebaruna token`.

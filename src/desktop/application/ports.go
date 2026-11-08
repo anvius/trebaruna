@@ -3,7 +3,7 @@ package application
 import (
 	"context"
 
-	"codeberg.org/anvius/trebaruna/src/desktop/domain"
+	"codeberg.org/simplicer/trebaruna/src/desktop/domain"
 )
 
 // PagePreview is a rendered page plus the ink measurement of that render.

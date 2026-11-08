@@ -4,7 +4,7 @@ package main
 import (
 	"os"
 
-	"codeberg.org/anvius/trebaruna/src/entrypoint/cli"
+	"codeberg.org/simplicer/trebaruna/src/entrypoint/cli"
 )
 
 func main() {

@@ -18,12 +18,12 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
 # The CLI: static, no cgo, so it works on any Mac architecture.
 CGO_ENABLED=0 go build -trimpath \
-  -ldflags "-s -w -X codeberg.org/anvius/trebaruna/src/entrypoint/cli.Version=$VERSION" \
+  -ldflags "-s -w -X codeberg.org/simplicer/trebaruna/src/entrypoint/cli.Version=$VERSION" \
   -o "$APP/Contents/MacOS/trebaruna" "$ROOT/src/entrypoint/main"
 
 # The window: cgo + Cocoa.
 CGO_ENABLED=1 go build -tags gui -trimpath \
-  -ldflags "-s -w -X codeberg.org/anvius/trebaruna/src/entrypoint/cli.Version=$VERSION" \
+  -ldflags "-s -w -X codeberg.org/simplicer/trebaruna/src/entrypoint/cli.Version=$VERSION" \
   -o "$APP/Contents/MacOS/trebaruna-desktop" "$ROOT/src/entrypoint/desktop"
 
 sed "s/__VERSION__/${VERSION%%-*}/g" "$ROOT/packaging/macos/Info.plist" \

@@ -114,7 +114,7 @@ mv trebaruna-linux-amd64 ~/.local/bin/trebaruna
 Or build it, which takes about ten seconds and needs only a Go toolchain:
 
 ```bash
-git clone https://codeberg.org/anvius/trebaruna
+git clone https://codeberg.org/simplicer/trebaruna
 cd trebaruna
 make build          # static CLI
 make install        # ~/.local/bin

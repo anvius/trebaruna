@@ -23,10 +23,10 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
-	"codeberg.org/anvius/trebaruna/src/desktop/application"
-	"codeberg.org/anvius/trebaruna/src/desktop/domain"
-	"codeberg.org/anvius/trebaruna/src/desktop/messaging"
-	reportmessaging "codeberg.org/anvius/trebaruna/src/verification/messaging"
+	"codeberg.org/simplicer/trebaruna/src/desktop/application"
+	"codeberg.org/simplicer/trebaruna/src/desktop/domain"
+	"codeberg.org/simplicer/trebaruna/src/desktop/messaging"
+	reportmessaging "codeberg.org/simplicer/trebaruna/src/verification/messaging"
 )
 
 //go:embed assets/icons/trebaruna-256.png

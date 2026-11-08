@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/anvius/trebaruna/src/signing/domain/identity"
-	"codeberg.org/anvius/trebaruna/src/signing/infrastructure"
+	"codeberg.org/simplicer/trebaruna/src/signing/domain/identity"
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure"
 )
 
 // TestSealKeepsTheWholeNameInTwoLines checks that a long name wraps instead of

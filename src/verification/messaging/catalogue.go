@@ -8,7 +8,7 @@ package messaging
 import (
 	"fmt"
 
-	"codeberg.org/anvius/trebaruna/src/verification/domain"
+	"codeberg.org/simplicer/trebaruna/src/verification/domain"
 )
 
 // Catalogue holds every user-visible string of the verification report.

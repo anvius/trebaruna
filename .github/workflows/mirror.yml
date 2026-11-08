@@ -1,0 +1,71 @@
+name: Mirror from Codeberg
+
+# Codeberg is where development happens. This repository is a read-only mirror,
+# updated automatically so that people who only look at GitHub see the same code.
+#
+# The direction is deliberate and one-way: github reads from codeberg. The deploy
+# key used here is read-only on the Codeberg side, so this job cannot write to
+# the canonical repository even if this workflow file were changed to try.
+#
+# The host key is pinned rather than accepted on first use: an automated fetch
+# that trusts whatever key it sees first can be pointed at a copy of the
+# repository by anyone who can intercept the connection, and would then mirror
+# that copy here without complaint.
+
+on:
+  schedule:
+    # Every 30 minutes. The mirror does not need to be instant; it needs to be
+    # right, and a slower cadence costs nothing to anyone reading it.
+    - cron: '17,47 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mirror
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Pull main from Codeberg
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure the pinned host key
+        run: |
+          mkdir -p ~/.ssh
+          cat > ~/.ssh/known_hosts <<'EOF'
+          codeberg.org ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIVIC02vnjFyL+I4RHfvIGNtOgJMe769VTF1VR4EB3ZB
+          EOF
+
+      - name: Configure the read-only mirror key
+        env:
+          KEY: ${{ secrets.CODEBERG_MIRROR_KEY }}
+        run: |
+          install -m 600 /dev/stdin ~/.ssh/mirror_key <<<"$KEY"
+          cat > ~/.ssh/config <<'EOF'
+          Host codeberg-mirror
+            HostName codeberg.org
+            User git
+            IdentityFile ~/.ssh/mirror_key
+            IdentitiesOnly yes
+          EOF
+
+      - name: Check out the mirror
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch from Codeberg and update this mirror
+        run: |
+          git remote add upstream codeberg-mirror:simplicer/trebaruna.git
+          git fetch upstream '+refs/heads/*:refs/remotes/upstream/*' '+refs/tags/*:refs/tags/*'
+
+          # A plain push is fast-forward only: if the histories ever diverge,
+          # the mirror stops and says so, rather than force-pushing over this
+          # repository and hiding the difference.
+          git push origin refs/remotes/upstream/main:refs/heads/main
+
+      - name: Report what was mirrored
+        run: |
+          echo "mirror at $(git rev-parse refs/remotes/upstream/main | cut -c1-7)"

@@ -14,9 +14,9 @@ import (
 	"strings"
 	"testing"
 
-	"codeberg.org/anvius/trebaruna/src/signing/application"
-	signingdomain "codeberg.org/anvius/trebaruna/src/signing/domain"
-	"codeberg.org/anvius/trebaruna/src/signing/infrastructure"
+	"codeberg.org/simplicer/trebaruna/src/signing/application"
+	signingdomain "codeberg.org/simplicer/trebaruna/src/signing/domain"
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure"
 )
 
 // cadesFixture returns a document and a signer whose certificate publishes an OCSP

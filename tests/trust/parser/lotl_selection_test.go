@@ -11,7 +11,7 @@ package parser_test
 import (
 	"testing"
 
-	"codeberg.org/anvius/trebaruna/src/trust/domain"
+	"codeberg.org/simplicer/trebaruna/src/trust/domain"
 )
 
 // TestFindPrefersTheXMLPointer is the regression guard.

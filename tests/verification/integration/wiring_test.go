@@ -9,8 +9,8 @@ import (
 	"crypto/x509"
 	"testing"
 
-	"codeberg.org/anvius/trebaruna/src/verification/application"
-	verificationinfra "codeberg.org/anvius/trebaruna/src/verification/infrastructure"
+	"codeberg.org/simplicer/trebaruna/src/verification/application"
+	verificationinfra "codeberg.org/simplicer/trebaruna/src/verification/infrastructure"
 )
 
 func TestExtractorsAcceptTrustAnchors(t *testing.T) {

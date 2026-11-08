@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"codeberg.org/anvius/trebaruna/src/verification/application"
-	verification "codeberg.org/anvius/trebaruna/src/verification/domain"
-	verificationinfra "codeberg.org/anvius/trebaruna/src/verification/infrastructure"
-	"codeberg.org/anvius/trebaruna/src/verification/messaging"
+	"codeberg.org/simplicer/trebaruna/src/verification/application"
+	verification "codeberg.org/simplicer/trebaruna/src/verification/domain"
+	verificationinfra "codeberg.org/simplicer/trebaruna/src/verification/infrastructure"
+	"codeberg.org/simplicer/trebaruna/src/verification/messaging"
 )
 
 // Verification exit codes. They are distinct on purpose: a script must be able

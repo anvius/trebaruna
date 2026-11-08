@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"codeberg.org/anvius/trebaruna/src/desktop/domain"
+	"codeberg.org/simplicer/trebaruna/src/desktop/domain"
 )
 
 // Signer runs the signature command.

@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	"codeberg.org/anvius/trebaruna/src/verification/domain"
+	"codeberg.org/simplicer/trebaruna/src/verification/domain"
 	"golang.org/x/crypto/ocsp"
 )
 

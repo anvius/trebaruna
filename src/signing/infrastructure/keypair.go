@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"strings"
 
-	"codeberg.org/anvius/trebaruna/src/signing/domain"
+	"codeberg.org/simplicer/trebaruna/src/signing/domain"
 	"software.sslmate.com/src/go-pkcs12"
 )
 

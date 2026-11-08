@@ -11,11 +11,11 @@ import (
 	"strings"
 	"syscall"
 
-	"codeberg.org/anvius/trebaruna/src/entrypoint/serve"
-	"codeberg.org/anvius/trebaruna/src/signing/application"
-	"codeberg.org/anvius/trebaruna/src/signing/infrastructure"
-	verificationapp "codeberg.org/anvius/trebaruna/src/verification/application"
-	verificationinfra "codeberg.org/anvius/trebaruna/src/verification/infrastructure"
+	"codeberg.org/simplicer/trebaruna/src/entrypoint/serve"
+	"codeberg.org/simplicer/trebaruna/src/signing/application"
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure"
+	verificationapp "codeberg.org/simplicer/trebaruna/src/verification/application"
+	verificationinfra "codeberg.org/simplicer/trebaruna/src/verification/infrastructure"
 )
 
 // runServe starts the local HTTP API.

@@ -8,9 +8,9 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"codeberg.org/anvius/trebaruna/src/desktop/infrastructure"
-	"codeberg.org/anvius/trebaruna/src/desktop/messaging"
-	"codeberg.org/anvius/trebaruna/src/entrypoint/serve"
+	"codeberg.org/simplicer/trebaruna/src/desktop/infrastructure"
+	"codeberg.org/simplicer/trebaruna/src/desktop/messaging"
+	"codeberg.org/simplicer/trebaruna/src/entrypoint/serve"
 )
 
 func main() {

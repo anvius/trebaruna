@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/anvius/trebaruna/src/verification/domain"
+	"codeberg.org/simplicer/trebaruna/src/verification/domain"
 )
 
 // reference builds a Validity for a certificate valid through 2027, evaluated

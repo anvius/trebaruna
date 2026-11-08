@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	trustdomain "codeberg.org/anvius/trebaruna/src/trust/domain"
-	verification "codeberg.org/anvius/trebaruna/src/verification/domain"
+	trustdomain "codeberg.org/simplicer/trebaruna/src/trust/domain"
+	verification "codeberg.org/simplicer/trebaruna/src/verification/domain"
 )
 
 // DocumentExtractor reads the signatures of one document.

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"codeberg.org/anvius/trebaruna/src/desktop/domain"
+	"codeberg.org/simplicer/trebaruna/src/desktop/domain"
 )
 
 // PreviewPage produces a preview and suggests where the seal should go.

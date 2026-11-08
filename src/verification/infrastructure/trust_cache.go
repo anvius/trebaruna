@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"codeberg.org/anvius/trebaruna/src/trust/domain"
-	trustinfra "codeberg.org/anvius/trebaruna/src/trust/infrastructure"
+	"codeberg.org/simplicer/trebaruna/src/trust/domain"
+	trustinfra "codeberg.org/simplicer/trebaruna/src/trust/infrastructure"
 )
 
 // CachedTrustProvider reads trust lists from the local cache.

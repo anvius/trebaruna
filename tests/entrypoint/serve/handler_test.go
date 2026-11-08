@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/anvius/trebaruna/src/entrypoint/serve"
+	"codeberg.org/simplicer/trebaruna/src/entrypoint/serve"
 )
 
 // TestURIRequiresTheScheme keeps other schemes out.

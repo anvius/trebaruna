@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"codeberg.org/anvius/trebaruna/src/signing/application"
+	"codeberg.org/simplicer/trebaruna/src/signing/application"
 )
 
 // DiskStore reads and writes documents on the local filesystem.

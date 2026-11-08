@@ -29,7 +29,7 @@ import (
 	"sync"
 	"time"
 
-	verification "codeberg.org/anvius/trebaruna/src/verification/domain"
+	verification "codeberg.org/simplicer/trebaruna/src/verification/domain"
 )
 
 // HandlerScheme is the URI scheme the desktop app registers.

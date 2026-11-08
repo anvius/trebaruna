@@ -7,8 +7,8 @@ import (
 	"os"
 	"time"
 
-	"codeberg.org/anvius/trebaruna/src/verification/application"
-	"codeberg.org/anvius/trebaruna/src/verification/domain"
+	"codeberg.org/simplicer/trebaruna/src/verification/application"
+	"codeberg.org/simplicer/trebaruna/src/verification/domain"
 	"github.com/digitorus/pkcs7"
 	"github.com/digitorus/timestamp"
 )

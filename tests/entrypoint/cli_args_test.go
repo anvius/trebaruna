@@ -15,7 +15,7 @@ import (
 	"strings"
 	"testing"
 
-	"codeberg.org/anvius/trebaruna/src/entrypoint/cli"
+	"codeberg.org/simplicer/trebaruna/src/entrypoint/cli"
 )
 
 // run executes the CLI and returns stdout, stderr and the exit code.

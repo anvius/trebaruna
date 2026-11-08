@@ -17,9 +17,9 @@ import (
 	"sync"
 	"testing"
 
-	"codeberg.org/anvius/trebaruna/src/entrypoint/serve"
-	"codeberg.org/anvius/trebaruna/src/signing/application"
-	signingdomain "codeberg.org/anvius/trebaruna/src/signing/domain"
+	"codeberg.org/simplicer/trebaruna/src/entrypoint/serve"
+	"codeberg.org/simplicer/trebaruna/src/signing/application"
+	signingdomain "codeberg.org/simplicer/trebaruna/src/signing/domain"
 )
 
 // receiver is a callback endpoint that records what it was sent.

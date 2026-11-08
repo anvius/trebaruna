@@ -14,11 +14,11 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/anvius/trebaruna/src/signing/application"
-	signingdomain "codeberg.org/anvius/trebaruna/src/signing/domain"
-	signinginfra "codeberg.org/anvius/trebaruna/src/signing/infrastructure"
-	verificationdomain "codeberg.org/anvius/trebaruna/src/verification/domain"
-	verificationinfra "codeberg.org/anvius/trebaruna/src/verification/infrastructure"
+	"codeberg.org/simplicer/trebaruna/src/signing/application"
+	signingdomain "codeberg.org/simplicer/trebaruna/src/signing/domain"
+	signinginfra "codeberg.org/simplicer/trebaruna/src/signing/infrastructure"
+	verificationdomain "codeberg.org/simplicer/trebaruna/src/verification/domain"
+	verificationinfra "codeberg.org/simplicer/trebaruna/src/verification/infrastructure"
 )
 
 // TestXadesChainsToAnExternalRoot is the test this project was missing.

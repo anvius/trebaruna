@@ -10,7 +10,7 @@ import (
 	"encoding/asn1"
 	"testing"
 
-	"codeberg.org/anvius/trebaruna/src/signing/infrastructure"
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure"
 )
 
 // TestTimestampRequestCarriesTheDigestUnchanged is the regression guard: the

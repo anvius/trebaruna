@@ -21,9 +21,9 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
-	"codeberg.org/anvius/trebaruna/src/desktop/messaging"
-	"codeberg.org/anvius/trebaruna/src/verification/domain"
-	reportmessaging "codeberg.org/anvius/trebaruna/src/verification/messaging"
+	"codeberg.org/simplicer/trebaruna/src/desktop/messaging"
+	"codeberg.org/simplicer/trebaruna/src/verification/domain"
+	reportmessaging "codeberg.org/simplicer/trebaruna/src/verification/messaging"
 )
 
 // verifyReport mirrors the JSON emitted by `trebaruna verify --json`.

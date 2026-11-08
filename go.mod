@@ -1,4 +1,4 @@
-module codeberg.org/anvius/trebaruna
+module codeberg.org/simplicer/trebaruna
 
 go 1.27.0
 

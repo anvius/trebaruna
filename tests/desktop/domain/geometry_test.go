@@ -3,7 +3,7 @@ package domain_test
 import (
 	"testing"
 
-	"codeberg.org/anvius/trebaruna/src/desktop/domain"
+	"codeberg.org/simplicer/trebaruna/src/desktop/domain"
 )
 
 func geometry(t *testing.T) domain.PageGeometry {

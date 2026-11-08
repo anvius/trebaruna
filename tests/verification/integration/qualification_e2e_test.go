@@ -22,13 +22,13 @@ import (
 	"testing"
 	"time"
 
-	"codeberg.org/anvius/trebaruna/src/signing/application"
-	signingdomain "codeberg.org/anvius/trebaruna/src/signing/domain"
-	"codeberg.org/anvius/trebaruna/src/signing/infrastructure"
-	trustdomain "codeberg.org/anvius/trebaruna/src/trust/domain"
-	verificationapp "codeberg.org/anvius/trebaruna/src/verification/application"
-	verification "codeberg.org/anvius/trebaruna/src/verification/domain"
-	verificationinfra "codeberg.org/anvius/trebaruna/src/verification/infrastructure"
+	"codeberg.org/simplicer/trebaruna/src/signing/application"
+	signingdomain "codeberg.org/simplicer/trebaruna/src/signing/domain"
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure"
+	trustdomain "codeberg.org/simplicer/trebaruna/src/trust/domain"
+	verificationapp "codeberg.org/simplicer/trebaruna/src/verification/application"
+	verification "codeberg.org/simplicer/trebaruna/src/verification/domain"
+	verificationinfra "codeberg.org/simplicer/trebaruna/src/verification/infrastructure"
 )
 
 // qualifiedIssuer is a CA plus the leaf it issued, with the QC statements.
