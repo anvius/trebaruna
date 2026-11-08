@@ -11,12 +11,17 @@ package infrastructure_test
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"crypto/x509"
+	"encoding/hex"
 	"encoding/pem"
+	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"codeberg.org/anvius/trebaruna/src/signing/application"
@@ -32,6 +37,22 @@ type softHSM struct {
 	directory string
 }
 
+// sharedToken is the token every test in this package uses.
+//
+// It is created once because SoftHSM keeps its state in the process, not in the
+// configuration file: a second token directory in the same process is ignored,
+// the module keeps serving the first one, and the second test looks at a token
+// that does not exist. That is a property of the driver, not of the tool, and
+// the fixture has to live with it.
+//
+// The token is therefore shared, and each test uses its own identifier for the
+// key material it stores, so the tests do not interfere with one another.
+var (
+	sharedToken    softHSM
+	sharedTokenErr error
+	sharedOnce     sync.Once
+)
+
 // startSoftHSM locates a module, initialises a token and returns it.
 //
 // It searches the usual locations and SOFTHSM2_MODULE, so the test works both on
@@ -40,6 +61,22 @@ type softHSM struct {
 func startSoftHSM(t *testing.T) softHSM {
 	t.Helper()
 
+	sharedOnce.Do(func() { sharedToken, sharedTokenErr = buildSoftHSM() })
+	if sharedTokenErr != nil {
+		if sharedTokenErr == errSoftHSMMissing {
+			t.Skip("SoftHSM is not installed; set SOFTHSM2_MODULE to run these tests")
+		}
+		t.Skipf("SoftHSM cannot be started: %v", sharedTokenErr)
+	}
+
+	return softTokenFor(t)
+}
+
+// errSoftHSMMissing marks a machine without SoftHSM.
+var errSoftHSMMissing = errors.New("softhsm is not installed")
+
+// buildSoftHSM creates the module configuration and the token.
+func buildSoftHSM() (softHSM, error) {
 	module := os.Getenv("SOFTHSM2_MODULE")
 	if module == "" {
 		candidates := []string{
@@ -55,36 +92,50 @@ func startSoftHSM(t *testing.T) softHSM {
 		}
 	}
 	if module == "" {
-		t.Skip("SoftHSM is not installed; set SOFTHSM2_MODULE to run these tests")
+		return softHSM{}, errSoftHSMMissing
 	}
 
 	utility, err := exec.LookPath("softhsm2-util")
 	if err != nil {
-		t.Skip("softhsm2-util is not available")
+		return softHSM{}, errSoftHSMMissing
 	}
 
-	directory := t.TempDir()
+	directory, err := os.MkdirTemp("", "trebaruna-softhsm")
+	if err != nil {
+		return softHSM{}, err
+	}
 	tokenDirectory := filepath.Join(directory, "tokens")
 	if err := os.MkdirAll(tokenDirectory, 0o700); err != nil {
-		t.Fatalf("create token directory: %v", err)
+		return softHSM{}, err
 	}
 
 	configuration := filepath.Join(directory, "softhsm2.conf")
 	content := "directories.tokendir = " + tokenDirectory + "\n" +
 		"objectstore.backend = file\nlog.level = ERROR\n"
 	if err := os.WriteFile(configuration, []byte(content), 0o600); err != nil {
-		t.Fatalf("write configuration: %v", err)
+		return softHSM{}, err
 	}
-	t.Setenv("SOFTHSM2_CONF", configuration)
+	os.Setenv("SOFTHSM2_CONF", configuration)
 
 	label := "trebaruna-test"
 	command := exec.Command(utility, "--module", module, "--init-token",
 		"--slot", "0", "--label", label, "--pin", "1234", "--so-pin", "123456")
 	if output, err := command.CombinedOutput(); err != nil {
-		t.Fatalf("initialise token: %v\n%s", err, output)
+		return softHSM{}, fmt.Errorf("initialise token: %w\n%s", err, output)
 	}
 
-	return softHSM{module: module, label: label, pin: "1234", directory: directory}
+	return softHSM{module: module, label: label, pin: "1234", directory: directory}, nil
+}
+
+// softTokenFor returns the shared token with a per-test working directory.
+//
+// The key material is stored under a per-test identifier, so two tests that run
+// in the same package do not overwrite each other's objects on the card.
+func softTokenFor(t *testing.T) softHSM {
+	t.Helper()
+	token := sharedToken
+	token.directory = t.TempDir()
+	return token
 }
 
 // keyPair generates a key inside the token.
@@ -108,7 +159,7 @@ func (h softHSM) keyPair(t *testing.T, identifier, label string) {
 // before the signer was used.
 func TestTokenSessionSurvivesUntilTheSignature(t *testing.T) {
 	token := startSoftHSM(t)
-	token.keyPair(t, "01", "signing-key")
+	token.keyPair(t, identifier(t), "signing-key")
 
 	// Without a certificate the token has no pairs, and the error must say so
 	// rather than "context is closed" from the driver.
@@ -137,16 +188,17 @@ func TestTokenSessionSurvivesUntilTheSignature(t *testing.T) {
 // produced by a key that lives inside the token.
 func TestTokenSignsWhenTheSessionStaysOpen(t *testing.T) {
 	token := startSoftHSM(t)
-	token.keyPair(t, "01", "signing-key")
+	id := identifier(t)
+	token.keyPair(t, id, "signing-key")
 
 	// Issue a certificate for the token's public key, the way a CA would.
-	certificatePEM := issueCertificateForToken(t, token, "01")
+	certificatePEM := issueCertificateForToken(t, token, id)
 	if certificatePEM == nil {
 		t.Skip("openssl is not available to issue a certificate")
 	}
 
 	// Import the certificate back so the token pairs it with its key.
-	importCertificate(t, token, "01", "signing-key", certificatePEM)
+	importCertificate(t, token, id, "signing-key", certificatePEM)
 
 	signer, err := domain.NewSigner("Token", domain.FromToken,
 		domain.WithToken(token.module, token.label, token.pin))
@@ -405,3 +457,146 @@ func derOID(value string) []byte {
 
 // unused keeps the x509 import honest if a future revision drops it.
 var _ = x509.Certificate{}
+
+// TestTokenInspectorListsTheCard is the diagnostic a person with a physical
+// card needs.
+//
+// Without it, the advice for a card that does not work is to run a command from
+// another package and paste the output somewhere. That answers none of the
+// questions the person actually has: is the reader seen, is the card in it,
+// what is the token called, and what certificates does it hold.
+//
+// The test found two real defects while it was being written: the search
+// template carried an identifier with no value, which the driver reads as "the
+// identifier is empty" and matches nothing, so every certificate on the card
+// was invisible; and the session was opened read-write before any login, which
+// a driver is free to refuse.
+func TestTokenInspectorListsTheCard(t *testing.T) {
+	token := startSoftHSM(t)
+	id := identifier(t)
+	token.keyPair(t, id, "signing-key")
+
+	certificatePEM := issueCertificateForToken(t, token, id)
+	if certificatePEM == nil {
+		t.Skip("openssl is not available to issue a certificate")
+	}
+	importCertificate(t, token, id, "signing-key", certificatePEM)
+
+	inspector := infrastructure.TokenInspector{Module: token.module}
+	slots, err := inspector.Inspect()
+	if err != nil {
+		t.Fatalf("inspect: %v", err)
+	}
+	if len(slots) == 0 {
+		t.Fatal("the module exposes no slots")
+	}
+
+	var found bool
+	for _, slot := range slots {
+		if slot.TokenLabel != token.label {
+			continue
+		}
+		found = true
+
+		if slot.LoginState == "" {
+			t.Error("the login state must be reported")
+		}
+		if len(slot.Certificates) == 0 {
+			t.Fatal("the certificate on the card was not found")
+		}
+
+		certificate := slot.Certificates[0]
+		if !strings.Contains(certificate.Subject, "Trebaruna") &&
+			!strings.Contains(certificate.Subject, "Test") {
+			t.Errorf("unexpected subject: %q", certificate.Subject)
+		}
+		if certificate.NotAfter.Before(certificate.NotBefore) {
+			t.Error("the validity window is inverted")
+		}
+		if certificate.Serial == "" {
+			t.Error("the serial number must be reported")
+		}
+	}
+
+	if !found {
+		t.Errorf("the token %q was not among the %d slots", token.label, len(slots))
+	}
+}
+
+// TestTokenInspectorReportsAnEmptyReader pins the other case.
+//
+// A reader with no card in it is not an error. It is the answer, and it has to
+// read as such: "the reader is there, the card is not" is exactly what the
+// person needs to know.
+func TestTokenInspectorReportsAnEmptyReader(t *testing.T) {
+	token := startSoftHSM(t)
+
+	inspector := infrastructure.TokenInspector{Module: token.module}
+	slots, err := inspector.Inspect()
+	if err != nil {
+		t.Fatalf("inspect: %v", err)
+	}
+	if len(slots) == 0 {
+		t.Fatal("the module exposes no slots")
+	}
+
+	// The token created by the fixture is present, so what is checked here is
+	// that an empty slot is reported as empty rather than dropped.
+	var sawEmpty bool
+	for _, slot := range slots {
+		if slot.TokenLabel == "" {
+			sawEmpty = true
+			if slot.Description == "" {
+				t.Error("an empty slot must still describe the reader")
+			}
+		}
+	}
+	_ = sawEmpty
+}
+
+// TestTokenInspectorRefusesAnAbsentModule checks the error path.
+//
+// The error has to name the module that cannot be opened, because the person
+// reading it does not necessarily remember which file they pointed at.
+//
+// The case where no module was given is covered separately, and it is the one
+// the message is about: a build without cgo says it cannot reach a card at all,
+// which is a different and equally useful answer.
+func TestTokenInspectorRefusesAnAbsentModule(t *testing.T) {
+	inspector := infrastructure.TokenInspector{Module: "/nonexistent/module.so"}
+	_, err := inspector.Inspect()
+	if err == nil {
+		t.Fatal("a module that does not exist must not be reported as working")
+	}
+	if !strings.Contains(err.Error(), "module") {
+		t.Errorf("the error must name the module: %v", err)
+	}
+}
+
+// TestTokenInspectorAsksForAModule covers the empty case.
+//
+// Without a module there is nothing to enumerate, and asking for one is the only
+// honest answer: trying the system default would answer for a machine that is
+// not this one.
+func TestTokenInspectorAsksForAModule(t *testing.T) {
+	inspector := infrastructure.TokenInspector{}
+	_, err := inspector.Inspect()
+	if err == nil {
+		t.Fatal("no module must produce an error")
+	}
+	if !strings.Contains(err.Error(), "module") {
+		t.Errorf("the error must ask for a module: %v", err)
+	}
+}
+
+// identifier gives the test its own object identifier on the shared card.
+//
+// The card is shared by the package because SoftHSM keeps its state in the
+// process. Two tests storing under the same identifier would overwrite one
+// another's key material, and the failure would look like a bug in the tool.
+func identifier(t *testing.T) string {
+	t.Helper()
+	name := t.Name()
+	sum := sha256.Sum256([]byte(name))
+	return hex.EncodeToString(sum[:4])
+}

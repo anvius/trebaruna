@@ -113,6 +113,17 @@ First working slice. Not a stable release: major version 0 by policy.
   ignored and the path to the anchor could not be built. Every foreign XML
   signature read as untrusted. The whole chain is now read, and the embedded
   intermediates build the path.
+- `trebaruna token` returned no certificates on a card that held one: the object
+  search template carried an identifier with no value, which the driver reads as
+  "the identifier is empty" and matches nothing. Only the class is now searched.
+- The token diagnostic opened a session read-write before logging in, which a
+  driver is free to refuse, and reported `CKR_CRYPTOKI_ALREADY_INITIALIZED` as a
+  failure. Both are driver behaviour a diagnostic has to survive, because the
+  situation it exists for is a program that already talks to the card.
+- The macOS bundle script copied the license in *after* the signature, which
+  invalidates it: `codesign --verify` then fails for a reason that has nothing to
+  do with the binary. The resource is signed first, then the bundle, which is the
+  order macOS verifies in.
 - The XML and CMS verifiers compared against a pool of roots only, and a pool
   cannot be enumerated. A trust list publishes the authority that issues
   qualified certificates, and that authority is normally an intermediate, so

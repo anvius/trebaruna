@@ -46,6 +46,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runVerifyTimestamp(args[1:], stdout, stderr)
 	case "certificate", "cert":
 		return runCertificate(args[1:], stdout, stderr)
+	case "token":
+		return runToken(args[1:], stdout, stderr)
 	case "asic":
 		return runAsic(args[1:], stdout, stderr)
 	case "serve":
@@ -422,6 +424,7 @@ usage:
   trebaruna timestamp <file> --tsa <url>      (or --hash <hex>)
   trebaruna verify-tsr <token.tsr> [file]
   trebaruna certificate <file.p12|.pem|.crt>   (or: cert)
+  trebaruna token --module <pkcs11.so>       (list cards and their certificates)
   trebaruna asic <document> <signature>        (ASiC-S / ASiC-E container)
   trebaruna serve --root <dir> --listen 127.0.0.1:0   (local HTTP API)
 

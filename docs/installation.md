@@ -137,6 +137,39 @@ Needs the Xcode command line tools (`xcode-select --install`) and Go 1.24+.
 - The `.app` bundle is ad-hoc signed. Gatekeeper will warn on other machines; that
   is stated in the README as a limitation, not a bug to report.
 
+### The .app bundle cannot be built on Linux
+
+The window is Fyne, and Fyne links against Cocoa through Objective-C source.
+Building it needs the Apple SDK, which macOS ships and no other system does.
+That is a property of the toolkit, and there is no workaround that produces a
+real `.app`.
+
+What follows is the state of the alternatives, checked against the source:
+
+| Option | Why it does not produce an .app |
+|---|---|
+| Cross-compile with `GOOS=darwin` | Go compiles, and the linker then needs the Objective-C runtime and the Cocoa frameworks. The `.m` files in `internal/driver/glfw` are the evidence. |
+| Codeberg's Woodpecker CI | The shared instance builds `linux/amd64` only. |
+| Codeberg's Forgejo Actions, hosted | Offered "in limited fashion" and the documentation points at Woodpecker instead. |
+| Your own Forgejo Actions runner on a Mac | This works, and is the one way. Register it in **Settings → Actions** and the CI job builds the bundle the same way. |
+
+So there are two ways to get a `.app`: run `packaging/macos/build-app.sh` on a Mac,
+or register a Mac as a self-hosted runner and let CI do it. The CI job is written
+and the script is written; neither has run in this environment, because neither
+can.
+
+**What the CLI gives you in the meantime.** Every signature the desktop window can
+produce, the static binary can produce as well, with the same flags. The bundle
+adds a window and a preview; it does not add a signature type that the CLI lacks.
+What the desktop window adds that the CLI cannot:
+
+- the preview of the seal before the document is signed;
+- the request approval pane, for a page that calls `trebaruna://`.
+
+Both can be replaced: the seal position by opening the signed file and checking,
+and the approval by reading what the CLI prints about the request before running
+`trebaruna decide`.
+
 ---
 
 ## Windows

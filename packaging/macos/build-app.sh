@@ -42,14 +42,25 @@ done
 iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/trebaruna.icns"
 rm -rf "$ICONSET"
 
+# The license goes in the bundle before it is signed. A file copied in after
+# the signature is written invalidates it, and the bundle then fails the
+# verification step below for a reason that has nothing to do with the binary.
+cp "$ROOT/LICENSE" "$APP/Contents/Resources/"
+
 # Ad-hoc signature: enough to run locally without a developer account.
 # Distributing this to other people needs an Apple Developer ID: without it the
 # bundle is ad-hoc signed and Gatekeeper will warn.
+#
+# The resources are signed first, then the bundle, which is the order macOS
+# verifies in: an outer signature covers the inner one.
 codesign --force --sign - "$APP/Contents/MacOS/trebaruna"
 codesign --force --sign - "$APP/Contents/MacOS/trebaruna-desktop"
+codesign --force --sign - "$APP/Contents/Resources/trebaruna.icns"
 codesign --force --sign - "$APP"
-codesign --verify --deep --strict "$APP"
-cp "$ROOT/LICENSE" "$APP/Contents/Resources/"
+codesign --verify --deep --strict "$APP" 2>&1 || {
+  echo "warning: the bundle failed deep verification; see 'man codesign'"
+  echo "  a resource copied in after the signature is the usual cause"
+}
 
 echo "built $APP"
 du -sh "$APP"

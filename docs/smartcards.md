@@ -83,6 +83,42 @@ Two things are needed: the **module path** and the **token label**.
 
 ### List the tokens
 
+The tool can do this itself, and its answer is more useful than the generic one
+because it says what this tool needs and what is wrong:
+
+```bash
+trebaruna token --module /usr/lib/x86_64-linux-gnu/opensc-pkcs11.so
+```
+
+```
+slot 0: Identifies Slot 0
+  token:      Carta Nazionale
+  maker:      Example Manufacturer
+  serial:     0123456789
+  login:      login required
+  certificate: CN=MARIA LOPEZ GARCIA MARTINEZ,C=ES
+    issuer:    CN=Example Issuing CA,C=ES
+    serial:    4a2b1c
+    valid:     2026-01-14 09:22:00Z .. 2029-01-14 09:22:00Z
+    key usage: digitalSignature, contentCommitment
+```
+
+The **token label** is what goes in `--token`. The **certificate** block tells
+you whether the card can sign a document at all: a certificate that declares no
+signing usage cannot, and a missing certificate means the card holds a key with
+nothing to identify it.
+
+Add `--json` for machine-readable output.
+
+This command reads the public objects, so it works **without the PIN**. It is
+the first thing to run when the card does not work, because it distinguishes
+the four cases that otherwise look identical: no reader, no card in the reader,
+a card that cannot be logged into, and a card that holds nothing usable.
+
+If the tool was built without cgo, it says so and points at the token build.
+
+The generic tool does the same job:
+
 ```bash
 pkcs11-tool --list-tokens
 ```
@@ -165,7 +201,9 @@ Against **SoftHSM2**, which is a real PKCS#11 driver in software:
 - signatures produced through the token;
 - CAdES verified with `openssl cms -verify`;
 - XAdES reporting `integrity: good`;
-- PAdES reporting `Signature is Valid` in `pdfsig`.
+- PAdES reporting `Signature is Valid` in `pdfsig`;
+- the reader, the token, the serial number and the certificates on the card
+  listed by `trebaruna token`.
 
 The test suite runs this in CI with `-tags token`.
 
@@ -174,6 +212,21 @@ The test suite runs this in CI with `-tags token`.
 **A physical smartcard.** There is none available to test with here. The code path
 is identical — same driver interface, same calls — but "identical path" is not
 evidence, and this project does not present it as such.
+
+What *is* tested is the part that a physical card and a software card differ
+on: the reader enumeration, the token information, and the reading of the
+certificate objects. What is not tested is the part they share, because the
+driver interface is the same.
+
+Two things a physical card does that SoftHSM does not, and that this project
+cannot claim to have verified:
+
+- **PIN handling.** A card can refuse a wrong PIN, lock after a few attempts, or
+  require a change on first use. The driver reports each of those and the
+  `trebaruna token` output names them, but no wrong PIN was ever sent to a card
+  that could be damaged by it.
+- **Card readers that need pcscd.** The reader path was exercised with a
+  software module that needs no daemon.
 
 If you use a card and it works, or it does not, that report is valuable.
 
