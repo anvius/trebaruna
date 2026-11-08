@@ -340,7 +340,9 @@ func (v *PDFVerifier) trustLevel(signer *verify.Signer, report domain.SignerRepo
 		return domain.TrustBroken
 	}
 	if signer.RevokedCertificate {
-		return domain.TrustBroken
+		// Revoked before signing means the signer was not entitled to sign, not
+		// that the document was altered.
+		return domain.TrustInvalid
 	}
 	// A self-signed certificate proves nothing beyond "whoever holds this key
 	// made this signature". It is not advanced, because no third party vouches
