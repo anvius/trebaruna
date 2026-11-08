@@ -52,6 +52,17 @@ const (
 	// TrustUntrusted means the cryptography holds but the issuer is not known.
 	TrustUntrusted TrustLevel = "untrusted"
 
+	// TrustInvalid means the document itself is intact, but the signature was
+	// made by someone who was not entitled to sign at that moment: the
+	// certificate had expired, was not yet valid, or was already revoked. The
+	// cryptography holds; the signature still has no legal force.
+	//
+	// This is not TrustBroken. TrustBroken is a claim that the document or the
+	// signature was altered, which is a different and stronger accusation. Saying
+	// "altered" here would be false, and in a legal signature tool a false
+	// accusation of tampering is worse than no verdict at all.
+	TrustInvalid TrustLevel = "invalid"
+
 	// TrustBroken means the document or the signature was altered.
 	TrustBroken TrustLevel = "broken"
 
@@ -336,8 +347,10 @@ func trustRank(level TrustLevel) int {
 		return 2
 	case TrustUntrusted:
 		return 3
-	case TrustBroken:
+	case TrustInvalid:
 		return 4
+	case TrustBroken:
+		return 5
 	}
 	return 2
 }
@@ -356,7 +369,7 @@ func Worst(findings []Finding) Status {
 // IsFailure reports whether the report should make a caller refuse the file.
 func (r DocumentReport) IsFailure() bool {
 	switch r.Verdict() {
-	case TrustBroken, TrustUntrusted:
+	case TrustBroken, TrustInvalid, TrustUntrusted:
 		return true
 	}
 	return false

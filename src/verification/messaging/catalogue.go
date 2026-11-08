@@ -32,6 +32,7 @@ type Catalogue struct {
 	VerdictQualified string
 	VerdictAdvanced  string
 	VerdictUntrusted string
+	VerdictInvalid   string
 	VerdictBroken    string
 	VerdictUnknown   string
 
@@ -61,6 +62,7 @@ var Spanish = Catalogue{
 	VerdictQualified: "cualificada",
 	VerdictAdvanced:  "avanzada",
 	VerdictUntrusted: "emisor no reconocido",
+	VerdictInvalid:   "firmante sin derecho a firmar",
 	VerdictBroken:    "alterada",
 	VerdictUnknown:   "indeterminada",
 
@@ -115,6 +117,7 @@ var Italian = Catalogue{
 	VerdictQualified: "qualificata",
 	VerdictAdvanced:  "avanzata",
 	VerdictUntrusted: "emittente non riconosciuto",
+	VerdictInvalid:   "firmatario non autorizzato a firmare",
 	VerdictBroken:    "alterata",
 	VerdictUnknown:   "indeterminata",
 
@@ -169,6 +172,7 @@ var English = Catalogue{
 	VerdictQualified: "qualified",
 	VerdictAdvanced:  "advanced",
 	VerdictUntrusted: "untrusted issuer",
+	VerdictInvalid:   "signed without entitlement",
 	VerdictBroken:    "tampered",
 	VerdictUnknown:   "undetermined",
 
@@ -217,6 +221,8 @@ func (c Catalogue) VerdictName(level domain.TrustLevel) string {
 		return c.VerdictAdvanced
 	case domain.TrustUntrusted:
 		return c.VerdictUntrusted
+	case domain.TrustInvalid:
+		return c.VerdictInvalid
 	case domain.TrustBroken:
 		return c.VerdictBroken
 	}

@@ -306,8 +306,8 @@ func TestExpiredAtSigningNeverBecomesQualified(t *testing.T) {
 	signer.NotAfter = time.Date(2025, 6, 1, 0, 0, 0, 0, time.UTC)
 
 	got := verified(t, signer, qualifiedList(ca, time.Time{}))
-	if got.Trust != domain.TrustBroken {
-		t.Errorf("trust = %s, want broken: the certificate had expired at signing", got.Trust)
+	if got.Trust != domain.TrustInvalid {
+		t.Errorf("trust = %s, want invalid: the certificate had expired at signing", got.Trust)
 	}
 }
 

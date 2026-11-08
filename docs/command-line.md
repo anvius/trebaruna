@@ -40,20 +40,33 @@ Stable, and part of the contract with scripts:
 | Code | Meaning |
 |---|---|
 | `0` | Success. For `verify`: verified. |
-| `1` | For `verify`: the file was altered, revoked before signing, or expired when it signed. For other commands: the operation failed. |
+| `1` | For `verify`: the file was altered. For other commands: the operation failed. |
+| `4` | For `verify`: the signer was not entitled to sign when they did — the certificate had expired, had not started, or was already revoked. The document itself is intact. |
 | `2` | Usage error: unknown flag, missing argument, malformed value. |
 | `3` | For `verify`: could not verify. Unknown issuer, no trust list, unreadable file. Not the same as "bad". |
 
-The distinction between `1` and `3` is deliberate. `1` means **the document is
-wrong**; `3` means **we cannot tell**. A script that treats them the same will
-reject legitimate documents when a trust list is stale.
+The distinction between these codes is deliberate, and it is not cosmetic:
+
+| Code | What it is a claim about | The right response |
+|---|---|---|
+| `1` | **The document or the signature was altered.** Someone changed the bytes. | Reject the document outright. |
+| `4` | **The signer was not entitled to sign at that moment.** The bytes are untouched. | Ask for a fresh signature; do not accuse anyone of tampering. |
+| `3` | **We cannot tell.** | Retry, sync the trust list, or route to a human. |
+
+`1` and `3` differing matters because a script that treats them the same rejects
+legitimate documents when a trust list is stale. `1` and `4` differing matters
+more: conflating them makes the tool accuse a signer of tampering with a document
+that is byte-for-byte intact. Both return a non-zero exit, so a script that only
+knows pass/fail is already correct; the finer routing is there for the ones that
+want to act differently on each.
 
 ```bash
 if pignus verify "$f" --json >/dev/null; then
     echo "verified"
 else
     case $? in
-        1) echo "REJECTED: tampered or revoked" ;;
+        1) echo "REJECTED: the document or signature was altered" ;;
+        4) echo "NEEDS RESIGNING: the signer had no entitlement when they signed" ;;
         3) echo "UNKNOWN: could not verify (network, trust list, format)" ;;
     esac
 fi

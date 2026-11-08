@@ -239,10 +239,16 @@ func (u *VerifyDocument) evaluateSigner(
 	signer.ExpiredNow = validity.ExpiredNow()
 	signer.Findings = append(signer.Findings, findings...)
 
-	// A broken signature or an expired-at-signing certificate is fatal regardless
-	// of what else passed: one bad fact spoils the whole verdict.
-	if signer.Integrity == verification.StatusBad || validity.ExpiredAtSigning() {
+	// A signature made by someone who was not entitled to sign at that
+	// moment — the certificate had expired, was revoked, or had not started —
+	// is invalid, not tampered. Integrity can be perfect and the signature still
+	// carries no legal force, which is what TrustInvalid records.
+	if signer.Integrity == verification.StatusBad {
 		signer.Trust = verification.TrustBroken
+		return signer
+	}
+	if validity.ExpiredAtSigning() {
+		signer.Trust = verification.TrustInvalid
 		return signer
 	}
 
@@ -294,9 +300,9 @@ func (u *VerifyDocument) evaluateRevocation(signer *verification.SignerReport) {
 			Detail:  formatRevocationMoment(evidence.Status.RevokedAt),
 		})
 		signer.Revoked = true
-		// A revoked certificate is as fatal as a tampered document: the signer
-		// was not entitled to sign, so nothing above can restore the verdict.
-		signer.Trust = verification.TrustBroken
+		// The signer was not entitled to sign when they did. The document may be
+		// perfectly intact; the signature still has no force.
+		signer.Trust = verification.TrustInvalid
 	case signer.Revoked:
 		signer.Findings = append(signer.Findings, verification.Finding{
 			Code:    "certificate.revoked_after_signing",

@@ -18,9 +18,10 @@ import (
 // Verification exit codes. They are distinct on purpose: a script must be able
 // to tell "the file was altered" from "we do not know who signed it".
 const (
-	exitVerified   = 0
-	exitTampered   = 1
-	exitUnverified = 3
+	exitVerified    = 0
+	exitTampered    = 1
+	exitNotEntitled = 4
+	exitUnverified  = 3
 )
 
 // runVerify implements `pignus verify`.
@@ -91,6 +92,11 @@ func runVerify(args []string, stdout, stderr io.Writer) int {
 	switch report.Verdict() {
 	case verification.TrustBroken:
 		return exitTampered
+	case verification.TrustInvalid:
+		// Distinct from tampered on purpose. A caller routing on this exit code is
+		// making a business decision — reject the document, or ask for a new
+		// signature — and it cannot make the right one if the two are conflated.
+		return exitNotEntitled
 	case verification.TrustUntrusted, verification.TrustUnknown:
 		return exitUnverified
 	}

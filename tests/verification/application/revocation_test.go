@@ -137,8 +137,8 @@ func TestRevokedBeforeSigningIsFatal(t *testing.T) {
 	if !hasFinding(got.Findings, "certificate.revoked_before_signing") {
 		t.Error("revoked before signing spoils the signature")
 	}
-	if got.Trust != domain.TrustBroken {
-		t.Errorf("trust = %s, want broken", got.Trust)
+	if got.Trust != domain.TrustInvalid {
+		t.Errorf("trust = %s, want invalid", got.Trust)
 	}
 }
 

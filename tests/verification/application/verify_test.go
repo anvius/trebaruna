@@ -152,8 +152,43 @@ func TestVerifyDetectsExpiredAtSigning(t *testing.T) {
 	if !got.ExpiredAtSigning {
 		t.Error("signing after expiry must be flagged")
 	}
-	if got.Trust != domain.TrustBroken {
-		t.Errorf("trust = %s, want broken", got.Trust)
+	if got.Trust != domain.TrustInvalid {
+		t.Errorf("trust = %s, want invalid", got.Trust)
+	}
+}
+
+// TestExpiredAtSigningIsInvalidNotBroken pins the distinction that matters most in
+// a legal signature tool.
+//
+// An expired-at-signing certificate leaves the document intact: the bytes did not
+// change. Reporting "broken" would accuse someone of tampering with a document
+// that nobody touched, and a caller routing on that exit code would reject a
+// document it should simply ask to have signed again.
+func TestExpiredAtSigningIsInvalidNotBroken(t *testing.T) {
+	signer := scenario()
+	signer.NotAfter = time.Date(2025, 6, 1, 0, 0, 0, 0, time.UTC)
+	signer.SignedAt = time.Date(2026, 11, 2, 12, 0, 0, 0, time.UTC)
+	signer.Integrity = domain.StatusGood
+
+	useCase := newUseCase([]domain.SignerReport{signer}, trustdomain.TrustList{}, nil)
+
+	report, err := useCase.Execute(application.Request{Path: "/tmp/atto.pdf"})
+	if err != nil {
+		t.Fatalf("Execute: %v", err)
+	}
+
+	got := report.Signers[0]
+	if got.Trust != domain.TrustInvalid {
+		t.Errorf("trust = %s, want invalid", got.Trust)
+	}
+	if got.Trust == domain.TrustBroken {
+		t.Error("an expired-at-signing certificate is not tampering")
+	}
+	if !got.ExpiredAtSigning {
+		t.Error("the reason must still be reported, just more precisely")
+	}
+	if report.Verdict() != domain.TrustInvalid {
+		t.Errorf("verdict = %s, want invalid", report.Verdict())
 	}
 }
 

@@ -2,7 +2,7 @@
 
 What the report says, what each verdict means, and what is actually checked.
 
-- [The five verdicts](#the-five-verdicts)
+- [The six verdicts](#the-six-verdicts)
 - [The three questions](#the-three-questions)
 - [Finding codes](#finding-codes)
 - [Reading the JSON](#reading-the-json)
@@ -13,7 +13,7 @@ What the report says, what each verdict means, and what is actually checked.
 
 ---
 
-## The five verdicts
+## The six verdicts
 
 `verify` reports one verdict per signature, from best to worst:
 
