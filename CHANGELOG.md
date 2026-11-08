@@ -50,7 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 First slice: CLI signing CAdES, PAdES and XAdES.
 
-## [0.2.0-unstable] - 2026-11-02
+## [0.3.0-unstable] - 2026-11-02
 
 First working slice. Not a stable release: major version 0 by policy.
 
@@ -92,3 +92,35 @@ First working slice. Not a stable release: major version 0 by policy.
 - XAdES output not yet validated against `xmlsec1`.
 - PKCS#11 requires cgo, so the token build is a separate binary.
 - Messages are English only; localisation pending.
+
+## [0.3.0-unstable] - 2026-11-08
+
+### Changed
+
+- The project is now called **pignus** (Latin: pledge, security, guarantee). Module
+  path, binaries, environment variables (`PIGNUS_*`), URI scheme, cache directory
+  and documentation all follow.
+
+### Fixed
+
+- Spain was rejected as "publishes only a PDF" and every Spanish qualified
+  signature read as untrusted. The EU list carries two pointers for Spain and the
+  first match — the PDF — won. Now the XML pointer is preferred. ES: 442 services,
+  131 qualified.
+- A document carrying only its leaf certificate never chained. Most Spanish and
+  Italian signing tools embed just the signer, so the issuer now resolves from the
+  trust list itself.
+- Every chain failed with "certificate specifies an incompatible key usage" — Go's
+  default is ServerAuth and no document certificate carries it. The chain is now
+  re-checked with the purposes documents actually have.
+- `trust show`, which the manual documented and the binary did not have.
+- CAdES-LT wrote its revocation material under the certificateValues OID (`.23`)
+  instead of `revocationValues` (`.24`). A container that parsed and verified
+  while meaning something else.
+
+### Added
+
+- CAdES-LT, CAdES-LTA and XAdES-LT are implemented. All twelve
+  format/level combinations now exist.
+- `pignus://` handler with mandatory human approval, signing and delivery.
+- Full English manual in `docs/`, twelve documents.
