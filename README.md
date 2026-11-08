@@ -18,26 +18,26 @@ firma-it sign contratto.pdf --p12 key.p12 --pass secret \
 
 ---
 
-## Table of contents
+## Documentation
 
-- [What it does](#what-it-does)
-- [Why another signing tool](#why-another-signing-tool)
-- [Install](#install)
-- [Signing](#signing)
-- [Verification](#verification)
-- [Trust lists](#trust-lists)
-- [Timestamps](#timestamps)
-- [Certificates](#certificates)
-- [ASiC containers](#asic-containers)
-- [The desktop app](#the-desktop-app)
-- [The local HTTP API](#the-local-http-api)
-- [Smartcards](#smartcards)
-- [What is verified, and how](#what-is-verified-and-how)
-- [Known limits](#known-limits)
-- [Architecture](#architecture)
-- [Building from source](#building-from-source)
-- [Protocol handlers and AutoFirma](#protocol-handlers-and-autofirma)
-- [Contributing](#contributing)
+Full manual, in English, in [`docs/`](docs/README.md):
+
+| | |
+|---|---|
+| [Installation](docs/installation.md) | Linux, macOS, Windows; which binary you need |
+| [Command line](docs/command-line.md) | Every command and flag, exit codes, environment |
+| [Signing](docs/signing.md) | Formats, levels, seals, chained signatures |
+| [Verification](docs/verification.md) | Verdicts, finding codes, what is really checked |
+| [Certificates](docs/certificates.md) | Accepted key types, inspecting, self-signed |
+| [Timestamps](docs/timestamps.md) | RFC 3161: obtaining, using, verifying |
+| [Trust lists](docs/trust-lists.md) | Where "trusted" comes from |
+| [Desktop app](docs/desktop.md) | The window |
+| [Web pages](docs/web-pages.md) | `firma-it://` and why approval is required |
+| [Local API](docs/local-api.md) | HTTP surface for scripts and agents |
+| [Smartcards](docs/smartcards.md) | PKCS#11, PINs, what is tested |
+| [Troubleshooting](docs/troubleshooting.md) | The errors you will actually hit |
+
+This README is the summary. The manual is the reference.
 
 ---
 

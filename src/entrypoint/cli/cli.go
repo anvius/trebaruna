@@ -75,7 +75,7 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 	flags.SetOutput(stderr)
 
 	var (
-		format     = flags.String("format", "pades", "signature format: cades | pades | xades")
+		format     = flags.String("format", "", "signature format: cades | pades | xades (default: from the suffix)")
 		level      = flags.String("level", "bes", "signature level: bes | t | lt | lta")
 		output     = flags.String("out", "", "output path (default: derived from the input)")
 		p12Path    = flags.String("p12", "", "PKCS#12 file with the signing certificate")
@@ -127,10 +127,15 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 		return exitUsage
 	}
 
-	signatureFormat, err := domain.ParseFormat(*format)
-	if err != nil {
-		fmt.Fprintf(stderr, "%v\n", err)
-		return exitUsage
+	// An explicit --format wins; otherwise the suffix decides, so `sign doc.xml`
+	// produces XAdES instead of failing because the default was PAdES.
+	signatureFormat := document.InferFormat()
+	if *format != "" {
+		signatureFormat, err = domain.ParseFormat(*format)
+		if err != nil {
+			fmt.Fprintf(stderr, "%v\n", err)
+			return exitUsage
+		}
 	}
 	signatureLevel, err := domain.ParseLevel(*level)
 	if err != nil {

@@ -1,0 +1,254 @@
+# Web pages
+
+Making a browser ask `firma-it` to sign, without letting any open tab do it on
+its own.
+
+- [The problem](#the-problem)
+- [The flow](#the-flow)
+- [The URI format](#the-uri-format)
+- [Approving](#approving)
+- [Delivery](#delivery)
+- [Registering the scheme](#registering-the-scheme)
+- [What is missing](#what-is-missing)
+- [Why approval is not automatic](#why-approval-is-not-automatic)
+
+---
+
+## The problem
+
+A web page cannot start a program. When a public administration's form needs a
+signature, it asks the browser to open a custom URI — this is the mechanism
+AutoFirma and similar agents use — and the operating system hands that URI to
+whichever application registered the scheme.
+
+Implementing only that much is dangerous: **any page you have open can trigger the
+handler**. Without a step that only a human at the machine can complete, a page
+obtains a signature on a document of its choosing.
+
+So the handler here asks first.
+
+---
+
+## The flow
+
+```
+page                         firma-it                      person
+ │                              │                            │
+ │  firma-it://sign?...         │                            │
+ ├─────────────────────────────►│                            │
+ │                              │ verify the document        │
+ │                              │ print the verdict          │
+ │                              │ generate a secret          │
+ │◄─────────────────────────────┤ (id only, no secret)       │
+ │                              │                            │
+ │                              │   "sign atto.pdf ? [y/N]"  │
+ │                              ├───────────────────────────►│
+ │                              │◄───────────────────────────┤
+ │                              │         y                  │
+ │                              │ sign                       │
+ │◄─────────────────────────────┤ POST to the callback       │
+```
+
+Three properties follow from the secret:
+
+- The page **cannot approve**, because it never sees the secret.
+- The page **cannot guess** it: 32 random bytes.
+- The page **cannot replay** it: the approval is consumed by the first use.
+- The page **cannot wait it out**: the request expires in 30 seconds.
+
+---
+
+## The URI format
+
+```
+firma-it://sign?document=<path>&format=<pdf|cades|xades>
+                &territory=<ISO>&origin=<url>&callback=<url>
+```
+
+| Parameter | Required | Meaning |
+|---|---|---|
+| `document` | **yes** | Absolute path to the document |
+| `format` | — | `pdf`, `cades`, `xades`; inferred from the suffix when absent |
+| `territory` | — | Trust list to use, e.g. `IT` |
+| `origin` | — | The page's origin, e.g. `https://sede.example.gob.es` |
+| `callback` | — | Absolute URL that receives the result |
+
+### Rules
+
+- **Unknown parameters are refused**, not ignored. A silently dropped parameter is
+  one the caller believes was applied.
+- **`origin` must be a bare origin**: scheme and host, no path, no query.
+- **`callback` must stay inside `origin`.** A callback pointing elsewhere would
+  turn the handler into a way to post your signature to a third party.
+- **The document must be inside an allowed root** (`--root`).
+
+Example:
+
+```
+firma-it://sign?document=/tmp/atto.pdf&format=pdf&origin=https://sede.example.gob.es&callback=https://sede.example.gob.es/result
+```
+
+Percent-encode anything unusual:
+
+```
+firma-it://sign?document=%2Ftmp%2Fatto%20firmato.pdf
+```
+
+---
+
+## Approving
+
+```bash
+firma-it handler "firma-it://sign?document=/tmp/atto.pdf&format=pdf" \
+    --root /tmp --p12 key.p12 --pass secret
+```
+
+```
+request  8f8f6d7525135721329686bf956652bd
+verdict  unknown
+secret   dd8e185e11d506de65bffa7be5773a6a54e4f592430c71f626d437fc4e9026a8
+the desktop app must now approve this request; so does:
+  curl -X POST http://127.0.0.1:37489/v1/requests/8f8f.../decision \
+       -H 'X-Firma-Token: /run/user/1000/firma-it/token' \
+       -d '{"secret":"dd8e...","approved":true}'
+
+sign /tmp/atto.pdf ?  [y/N] y
+signed   /tmp/atto_signed.pdf
+delivered to https://sede.example.gob.es/result
+```
+
+What the person sees before deciding:
+
+- the **verdict** of the verification that ran before the request was queued;
+- the **path** being signed;
+- the **signer** and the **time left**.
+
+That is the minimum for an informed decision. Asking "approve this signature?"
+with no information is how users learn to click yes.
+
+---
+
+## Delivery
+
+After approval the result is posted to the callback as JSON:
+
+```json
+{
+  "request": "8f8f6d75...",
+  "path": "/tmp/atto_signed.pdf",
+  "format": "pades",
+  "level": "bes",
+  "size": 15234,
+  "signed_at": "2026-11-08T09:12:44Z",
+  "signer": "handler",
+  "verdict": "advanced",
+  "self_signed": false
+}
+```
+
+Not the file itself: the page can read it from the local API, and shipping
+megabytes through a form post serves nobody.
+
+- Timeout: **20 seconds**.
+- A non-2xx answer is reported as a **failed delivery**, not a success. The
+  signature exists, the delivery did not happen, and the caller can tell the
+  difference.
+- The document signed is the one from the **approved** request, never a parameter
+  sent later.
+
+---
+
+## Registering the scheme
+
+### Linux
+
+`packaging/firma-it.desktop` declares it:
+
+```ini
+Exec=firma-it-desktop %U
+MimeType=application/pdf;text/xml;application/xml;x-scheme-handler/firma-it;
+```
+
+Install the entry and register it:
+
+```bash
+make install-desktop
+xdg-mime default firma-it.desktop x-scheme-handler/firma-it
+```
+
+### macOS
+
+`packaging/macos/Info.plist` declares `CFBundleURLTypes` with the `firma-it`
+scheme. The bundle picks the URI up when the system dispatches it.
+
+### Windows
+
+A registry entry under
+`HKEY_CLASSES_ROOT\firma-it\shell\open\command` pointing at the binary with `%1`.
+Not packaged by this project; use `firma-it handler "%1"` as the command.
+
+### Using the CLI instead of the window
+
+The desktop entry launches the window. For a server or a terminal session, call
+the CLI directly and wire your own browser handler:
+
+```bash
+firma-it handler "%1" --root ~/Documents --p12 ~/Documents/key.p12 --pass secret
+```
+
+---
+
+## What is missing
+
+Being explicit, because "compatible with AutoFirma" is a claim this project will
+not make without evidence.
+
+### Per-issuer request formats
+
+Spanish administrations each define their own payload dialect. This implements
+**one explicit shape** — `document`, `format`, `territory`, `origin`, `callback`
+— rather than guessing at a dozen undocumented ones.
+
+Supporting a specific administration means writing an adapter that maps its URI
+onto those five parameters. The approval, signing and delivery steps are already
+generic:
+
+```
+administración URI ──► [adapter] ──► the five parameters ──► approval ──► sign ──► deliver
+```
+
+That adapter is a small, well-scoped piece of work, and the only part that needs
+knowledge of a particular site.
+
+### A tested integration against a real administration
+
+Everything above is exercised against a local receiver in the test suite. No
+public endpoint was available to test against, and claiming compatibility without
+one would be the kind of unverified claim the rest of this project avoids.
+
+If you have access to a staging environment for one of these flows, that is the
+single most useful thing to contribute.
+
+---
+
+## Why approval is not automatic
+
+Because automatic approval is what made previous local signing agents
+exploitable, and this tool exists to be trusted.
+
+The attack: a user has a page open. That page navigates to a URI handler with a
+document of the attacker's choosing. If the handler signs without asking, the
+attacker has a valid qualified signature from the user on a document the user
+never saw.
+
+The secret breaks that chain, and it breaks it structurally rather than by
+convention: the approving process is not the requesting process, and the
+requesting process has no way to learn the secret.
+
+---
+
+## Next
+
+- [Local API](local-api.md) — the routes behind all of this
+- [Desktop app](desktop.md) — approving in the window
+- [Verification](verification.md) — what the verdict shown to the user means

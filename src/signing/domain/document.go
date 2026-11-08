@@ -69,3 +69,24 @@ func (d Document) Supports(format Format) bool {
 	}
 	return false
 }
+
+// InferFormat picks the format the document's suffix implies.
+//
+// The default used to be PAdES regardless of the file, so `sign doc.xml` failed
+// with "cannot hold a pades signature" instead of doing the obvious thing. A
+// caller that passes --format still wins; this only decides what happens when
+// nobody said.
+//
+// The choice is by extension, not by content: the extension is what the user
+// chose when naming the file, and reading the bytes to guess would be a surprise
+// on a large or unusual document.
+func (d Document) InferFormat() Format {
+	switch d.Extension() {
+	case ".pdf":
+		return Pades
+	case ".xml", ".xsd", ".svg":
+		return Xades
+	}
+	// Anything else is signed as a CMS container, which works for any bytes.
+	return Cades
+}
