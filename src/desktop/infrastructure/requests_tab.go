@@ -37,8 +37,8 @@ type pendingRequest struct {
 // requestsTab renders what is waiting for a decision.
 type requestsTab struct {
 	window  fyne.Window
-	ui      messaging.Messages
-	palette palette
+	ui      messaging.Catalogue
+	palette Palette
 	binary  string
 
 	refresh  *widget.Button
@@ -52,7 +52,7 @@ type requestsTab struct {
 }
 
 // newRequestsTab builds the tab.
-func newRequestsTab(window fyne.Window, ui messaging.Messages, palette palette, binary string) *requestsTab {
+func newRequestsTab(window fyne.Window, ui messaging.Catalogue, palette Palette, binary string) *requestsTab {
 	tab := &requestsTab{
 		window:   window,
 		ui:       ui,
@@ -215,7 +215,7 @@ func (t *requestsTab) decide(approved bool) {
 				})
 				t.load()
 			}()
-		})
+		}, t.window)
 	dialog.Show()
 }
 
