@@ -15,6 +15,8 @@ import (
 	"codeberg.org/simplicer/firma-it/src/signing/application"
 	"codeberg.org/simplicer/firma-it/src/signing/domain"
 	"codeberg.org/simplicer/firma-it/src/signing/infrastructure/cms"
+	verificationdomain "codeberg.org/simplicer/firma-it/src/verification/domain"
+	verificationinfra "codeberg.org/simplicer/firma-it/src/verification/infrastructure"
 	"github.com/beevik/etree"
 	dsig "github.com/russellhaering/goxmldsig"
 )
@@ -178,6 +180,20 @@ func (s *XadesSigner) SignXades(ctx context.Context, request application.XadesRe
 	// signature exists at all.
 	if request.Level.NeedsTimestamp() {
 		if err := s.attachSignatureTimeStamp(ctx, tree, signatureElement, signatureValue, request); err != nil {
+			return nil, err
+		}
+	}
+
+	// XAdES-LT: the revocation material goes into UnsignedSignatureProperties
+	// before the archive timestamp, because the archive timestamp must cover it.
+	if request.Level.EmbedsRevocation() {
+		if !request.EmbedRevocation {
+			return nil, fmt.Errorf(
+				"%s for XAdES needs embedded revocation and a source for it:\n"+
+					"    --level %s --online-revocation   query OCSP and attach the answers",
+				request.Level, request.Level)
+		}
+		if err := s.attachRevocationValues(ctx, signatureElement, keyPair); err != nil {
 			return nil, err
 		}
 	}
@@ -817,3 +833,78 @@ func buildArchiveTimeStamp(token string) string {
 
 // archiveTimeStampID names the archive property.
 const archiveTimeStampID = "firma-it-archive-timestamp"
+
+// attachRevocationValues adds xades:RevocationValues (ETSI EN 319 132-1 §5.4.2).
+//
+// The element carries the OCSP responses and CRLs a validator needs to check the
+// signature after the responders disappear. It lives in
+// UnsignedSignatureProperties, so it is not covered by the signature value — which
+// is exactly why XAdES-LTA then covers it with an archive timestamp.
+func (s *XadesSigner) attachRevocationValues(
+	ctx context.Context,
+	signature *etree.Element,
+	keyPair KeyPair,
+) error {
+	checker := verificationinfra.NewOCSPChecker()
+
+	chain := keyPair.Certificates()
+	if len(chain) == 0 {
+		return fmt.Errorf("the signer carries no certificate chain to embed")
+	}
+
+	var responses [][]byte
+	var warnings []string
+	for index, certificate := range chain {
+		if index+1 >= len(chain) {
+			break
+		}
+		status := checker.Check(ctx, certificate, chain[index+1])
+		switch {
+		case status.IsRevoked():
+			return fmt.Errorf(
+				"refusing to sign: the certificate for %q is revoked since %s",
+				certificate.Subject.CommonName, status.RevokedAt.Format(time.RFC3339))
+		case status.Status == verificationdomain.RevocationGood && len(status.RawResponse) > 0:
+			responses = append(responses, status.RawResponse)
+		default:
+			warnings = append(warnings, fmt.Sprintf("%s: %s",
+				certificate.Subject.CommonName, status.Reason))
+		}
+	}
+
+	if len(responses) == 0 {
+		return fmt.Errorf(
+			"no revocation answer could be obtained, so XAdES-LT cannot carry a complete "+
+				"RevocationValues element:\n  %s", strings.Join(warnings, "\n  "))
+	}
+
+	unsigned := findUnsignedSignatureProperties(signature)
+	if unsigned == nil {
+		return fmt.Errorf("the signature has no xades:UnsignedSignatureProperties to extend")
+	}
+
+	fragment, err := parseFragment(buildRevocationValues(responses))
+	if err != nil {
+		return fmt.Errorf("build xades:RevocationValues: %w", err)
+	}
+	unsigned.AddChild(fragment)
+	return nil
+}
+
+// buildRevocationValues emits the xades:RevocationValues element.
+//
+// The OCSP responses travel base64-encoded inside xades:EncapsulatedOCSPValue, in
+// the namespace the schema requires, and in the order the responder produced them.
+func buildRevocationValues(ocspResponses [][]byte) string {
+	var builder strings.Builder
+	builder.WriteString(`<xades:RevocationValues xmlns:xades="` + namespaceXades + `">`)
+	builder.WriteString(`<xades:OCSPValues>`)
+	for _, response := range ocspResponses {
+		builder.WriteString(`<xades:EncapsulatedOCSPValue>`)
+		builder.WriteString(base64.StdEncoding.EncodeToString(response))
+		builder.WriteString(`</xades:EncapsulatedOCSPValue>`)
+	}
+	builder.WriteString(`</xades:OCSPValues>`)
+	builder.WriteString(`</xades:RevocationValues>`)
+	return builder.String()
+}

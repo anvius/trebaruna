@@ -46,6 +46,9 @@ type CadesRequest struct {
 	TimestampURL    string
 	TimestampUser   string
 	TimestampSecret string
+	// EmbedRevocation asks for CAdES-LT: revocation material attached beside the
+	// signature. It needs a live status source, so it is opt-in.
+	EmbedRevocation bool
 }
 
 // PadesSigner produces a signed PDF.
@@ -90,6 +93,9 @@ type XadesRequest struct {
 	TimestampURL    string
 	TimestampUser   string
 	TimestampSecret string
+	// EmbedRevocation asks for XAdES-LT: revocation material inside the
+	// signature. It needs a live status source, so it is opt-in.
+	EmbedRevocation bool
 }
 
 // FileStore writes the produced artefact.

@@ -154,3 +154,30 @@ func lessDER(left, right []byte) bool {
 	}
 	return false
 }
+
+// OIDRevocationValues is the CAdES unsigned attribute carrying revocation data.
+//
+// ETSI EN 319 122-1 defines it as an unsigned attribute of the SignerInfo, which
+// is what makes a signature CAdES-LT: the OCSP responses and CRLs needed to check
+// it travel with it, outside the signed bytes.
+//
+// 1.2.840.113549.1.9.16.2.24. The neighbouring .23 is id-aa-ets-certValues, a
+// different attribute; using it produced a container that OpenSSL parsed and
+// labelled "certValues" while carrying OCSP responses, which is worse than a
+// failure because it looks correct.
+var OIDRevocationValues = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 16, 2, 24}
+
+// OIDCertificateValues carries the certificates needed to validate a signature.
+//
+// Kept for completeness: a full CAdES-LT embeds both. Only the revocation half is
+// written today, because the signing certificate chain already travels inside the
+// SignedData.
+var OIDCertificateValues = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 16, 2, 23}
+
+// OIDArchiveTimeStampV3 is the CAdES archive timestamp attribute.
+//
+// ETSI EN 319 122-1: the token covers the encapContentInfo, the certificates
+// referenced by the signature, and every unsigned attribute added so far,
+// including the revocation material. It is what makes CAdES-LTA: the proof of the
+// validation data's state travels inside the same sealed bytes.
+var OIDArchiveTimeStampV3 = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 16, 2, 48}

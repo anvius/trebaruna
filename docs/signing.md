@@ -69,13 +69,15 @@ against the binary:
 
 | | `bes` | `t` | `lt` | `lta` |
 |---|---|---|---|---|
-| **CAdES** | ✅ | ✅ | ⛔ refused | ⛔ refused |
+| **CAdES** | ✅ | ✅ | ✅ `--online-revocation` | ✅ `--online-revocation` |
 | **PAdES** | ✅ | ✅ | ✅ `--online-revocation` | ✅ `--online-revocation` |
-| **XAdES** | ✅ | ✅ | ⛔ refused | ✅ (produces `xades141:ArchiveTimeStamp`) |
+| **XAdES** | ✅ | ✅ | ✅ `--online-revocation` | ✅ `--online-revocation` |
 
-Where a level is refused, the error says what is missing. Nothing silently
-produces a lower level than you asked for — that would be a false claim about the
-file, and it is the kind of thing this tool exists to avoid.
+All twelve combinations are implemented and each is verified with an independent
+tool. Where a level is refused, it is because an input is missing — a TSA for `t`
+and above, a reachable responder for `lt` and `lta` — and the error names the flag
+that supplies it. Nothing silently produces a lower level than you asked for;
+that would be a false claim about the file.
 
 ---
 
@@ -202,6 +204,18 @@ of the signature, which is why it must be written last.
 
 A CMS `SignedData` with the content embedded and the CAdES-required signed
 attributes. `.p7m` is the conventional name.
+
+- **CAdES-T** adds a `signature-time-stamp` unsigned attribute.
+- **CAdES-LT** adds `revocationValues` (`1.2.840.113549.1.9.16.2.24`) carrying the
+  OCSP responses, so the signature stays checkable after the responder is gone.
+- **CAdES-LTA** adds `archiveTimestampV3` over the container as it stands,
+  revocation material included.
+
+The revocation attribute's OID is worth stating: `.24` is `revocationValues`, and
+the neighbouring `.23` is `certificateValues`. Using the wrong one produces a
+container that parses and labels OCSP responses as certificates — it looks
+correct, which is why the tests assert the OID through OpenSSL rather than
+trusting our own encoder.
 
 ---
 

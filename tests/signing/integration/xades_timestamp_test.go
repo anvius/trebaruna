@@ -472,11 +472,23 @@ func TestXadesLtaReplacesTheRefusal(t *testing.T) {
 		t.Errorf("the error must name --tsa, got: %v", err)
 	}
 
+	// LTA also needs revocation material, which is a separate, opt-in step.
+	request.TimestampURL = "http://tsa.example.invalid"
+	request.EmbedRevocation = true
+	if _, err := infrastructure.NewXadesSigner(nil).SignXades(context.Background(), request); err == nil {
+		t.Fatal("XAdES-LTA without a revocation source must be refused")
+	}
+
 	// With one, the file must really carry the archive property.
 	tsa := newLocalTSA(t)
-	request.TimestampURL = "http://tsa.example.invalid"
-
+	_, revocationSigner := ltaFixture(t)
 	signed, err := infrastructure.NewXadesSigner(tsa).SignXades(context.Background(), request)
+	if err == nil {
+		t.Fatal("a signer without an OCSP responder cannot satisfy LTA")
+	}
+
+	request.Signer = revocationSigner
+	signed, err = infrastructure.NewXadesSigner(tsa).SignXades(context.Background(), request)
 	if err != nil {
 		t.Fatalf("sign: %v", err)
 	}
@@ -494,9 +506,11 @@ func TestXadesLtaEmitsArchiveTimeStamp(t *testing.T) {
 	tsa := newLocalTSA(t)
 	signer := xadesTestSigner(t)
 
+	_, signer = ltaFixture(t)
 	request := buildXadesRequest(signer, []byte(`<fattura><n>3</n></fattura>`), false)
 	request.Level = domain.LTA
 	request.TimestampURL = "http://tsa.example.invalid"
+	request.EmbedRevocation = true
 
 	signed, err := infrastructure.NewXadesSigner(tsa).SignXades(context.Background(), request)
 	if err != nil {
@@ -528,9 +542,11 @@ func TestVerifierReadsArchiveTimeStamp(t *testing.T) {
 	tsa := newLocalTSA(t)
 	signer := xadesTestSigner(t)
 
+	_, signer = ltaFixture(t)
 	request := buildXadesRequest(signer, []byte(`<atto><n>4</n></atto>`), false)
 	request.Level = domain.LTA
 	request.TimestampURL = "http://tsa.example.invalid"
+	request.EmbedRevocation = true
 
 	signed, err := infrastructure.NewXadesSigner(tsa).SignXades(context.Background(), request)
 	if err != nil {

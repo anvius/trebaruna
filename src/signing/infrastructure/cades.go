@@ -8,6 +8,10 @@ import (
 	"codeberg.org/simplicer/firma-it/src/signing/application"
 	"codeberg.org/simplicer/firma-it/src/signing/domain"
 	"codeberg.org/simplicer/firma-it/src/signing/infrastructure/cms"
+	verificationdomain "codeberg.org/simplicer/firma-it/src/verification/domain"
+	verificationinfra "codeberg.org/simplicer/firma-it/src/verification/infrastructure"
+	"strings"
+	"time"
 )
 
 // CadesSigner produces .p7m files: CMS SignedData with embedded content.
@@ -68,7 +72,118 @@ func (s *CadesSigner) SignCades(ctx context.Context, request application.CadesRe
 		return nil, err
 	}
 
-	return signature.WithTimestamp(response)
+	signed, err := signature.WithTimestamp(response)
+	if err != nil {
+		return nil, err
+	}
+
+	if !request.Level.EmbedsRevocation() {
+		return signed, nil
+	}
+	if !request.EmbedRevocation {
+		return nil, fmt.Errorf(
+			"%s needs embedded revocation and a source for it:\n"+
+				"    --level lt --online-revocation   query OCSP and attach the answers",
+			request.Level)
+	}
+
+	withRevocation, err := s.withRevocationValues(ctx, signed, request, keyPair)
+	if err != nil {
+		return nil, err
+	}
+
+	if !request.Level.Archival() {
+		return withRevocation, nil
+	}
+
+	return s.withArchiveTimeStamp(ctx, withRevocation, request)
+}
+
+// withArchiveTimeStamp adds the CAdES-LTA archive timestamp.
+//
+// The token covers the container as it stands — signature, timestamps and the
+// revocation material attached a moment ago — so the validation data's own state
+// is proven at this instant. That is what survives the responder and the CA
+// disappearing.
+func (s *CadesSigner) withArchiveTimeStamp(
+	ctx context.Context,
+	container []byte,
+	request application.CadesRequest,
+) ([]byte, error) {
+	if s.timestamps == nil || request.TimestampURL == "" {
+		return nil, fmt.Errorf("level %s needs a timestamp authority: pass --tsa <url>", request.Level)
+	}
+
+	// ETSI defines the coverage as the DER of the container as it stands, which is
+	// what makes the token reproducible by any validator: no canonicalisation step
+	// that could differ between implementations.
+	digest, err := digestFor(container, crypto.SHA256)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := s.timestamps.Token(
+		ctx, digest, request.TimestampURL,
+		request.TimestampUser, request.TimestampSecret,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	tokenDER, err := cms.ExtractToken(response)
+	if err != nil {
+		return nil, err
+	}
+	return cms.WithArchiveTimeStamp(container, tokenDER)
+}
+
+// withRevocationValues attaches the CAdES-LT revocation material.
+//
+// The attribute is unsigned, which is the point: the signature covers the document
+// and the signed attributes, and the validation data rides beside them. Refusing to
+// sign a revoked certificate is the same rule as in PAdES — producing a signature
+// nobody can rely on wastes everyone's time.
+func (s *CadesSigner) withRevocationValues(
+	ctx context.Context,
+	signed []byte,
+	request application.CadesRequest,
+	keyPair KeyPair,
+) ([]byte, error) {
+	checker := verificationinfra.NewOCSPChecker()
+
+	chain := keyPair.Certificates()
+	if len(chain) == 0 {
+		return nil, fmt.Errorf("the signer carries no certificate chain to embed")
+	}
+
+	var responses [][]byte
+	var warnings []string
+	for index, certificate := range chain {
+		if index+1 >= len(chain) {
+			// The root revokes itself by definition.
+			break
+		}
+		status := checker.Check(ctx, certificate, chain[index+1])
+		switch {
+		case status.IsRevoked():
+			return nil, fmt.Errorf(
+				"refusing to sign: the certificate for %q is revoked since %s",
+				certificate.Subject.CommonName, status.RevokedAt.Format(time.RFC3339))
+		case status.Status == verificationdomain.RevocationGood && len(status.RawResponse) > 0:
+			responses = append(responses, status.RawResponse)
+		default:
+			warnings = append(warnings, fmt.Sprintf("%s: %s",
+				certificate.Subject.CommonName, status.Reason))
+		}
+	}
+
+	if len(responses) == 0 {
+		return nil, fmt.Errorf(
+			"no revocation answer could be obtained, so CAdES-LT cannot carry a complete "+
+				"RevocationValues attribute:\n  %s", strings.Join(warnings, "\n  "))
+	}
+
+	return cms.WithRevocationValuesFrom(signed, responses, nil)
 }
 
 // compile-time proof that the adapter satisfies the port.

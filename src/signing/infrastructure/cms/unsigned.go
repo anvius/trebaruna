@@ -119,3 +119,75 @@ func addUnsignedAttribute(signerInfoDER []byte, attribute []byte) ([]byte, error
 
 	return encoder.tagged(0x30, rebuilt...), nil
 }
+
+// RevocationValues builds the CAdES-LT attribute payload.
+//
+//	RevocationValues ::= SEQUENCE {
+//	    crlVals  [0] SEQUENCE OF OCTET STRING OPTIONAL,
+//	    ocspVals [1] SEQUENCE OF OCTET STRING OPTIONAL }
+//
+// The entries are the DER of the CRLs and BasicOCSPResponses as the responders
+// produced them: a validator re-parses them, so re-encoding would break the
+// signature the responder attached.
+func RevocationValues(ocspResponses, crls [][]byte) []byte {
+	encoder := &der{}
+
+	var fields [][]byte
+	if len(crls) > 0 {
+		entries := make([][]byte, 0, len(crls))
+		for _, crl := range crls {
+			entries = append(entries, encoder.octetString(crl))
+		}
+		fields = append(fields, encoder.tagged(0xa0, entries...))
+	}
+	if len(ocspResponses) > 0 {
+		entries := make([][]byte, 0, len(ocspResponses))
+		for _, response := range ocspResponses {
+			entries = append(entries, encoder.octetString(response))
+		}
+		fields = append(fields, encoder.tagged(0xa1, entries...))
+	}
+	return encoder.seq(fields...)
+}
+
+// WithRevocationValues rebuilds the container with a RevocationValues attribute.
+//
+// This is what turns CAdES-T into CAdES-LT: the signature bytes are untouched and
+// the validation material is attached beside them, so the signature keeps
+// verifying after the responders disappear.
+func (s Signature) WithRevocationValues(ocspResponses, crls [][]byte) ([]byte, error) {
+	if s.DER == nil {
+		return nil, fmt.Errorf("cms: signature not built")
+	}
+	return appendUnsignedAttribute(s.DER, OIDRevocationValues,
+		RevocationValues(ocspResponses, crls))
+}
+
+// WithRevocationValuesFrom attaches RevocationValues to an existing container.
+//
+// The method form needs a Signature value, which the CAdES adapter does not keep
+// once the timestamp has been appended and the bytes rebuilt. This entry point
+// takes the container itself, so the caller can attach the material after any
+// number of unsigned attributes have already been added.
+func WithRevocationValuesFrom(signedDER []byte, ocspResponses, crls [][]byte) ([]byte, error) {
+	if len(signedDER) == 0 {
+		return nil, fmt.Errorf("cms: no container to extend")
+	}
+	return appendUnsignedAttribute(signedDER, OIDRevocationValues,
+		RevocationValues(ocspResponses, crls))
+}
+
+// WithArchiveTimeStamp attaches the CAdES-LTA archive timestamp.
+//
+// The token is produced by the caller over the digest of the container as it
+// stands, so everything already attached is covered. Adding anything afterwards
+// invalidates it, which is why this is the last step.
+func WithArchiveTimeStamp(signedDER, tokenDER []byte) ([]byte, error) {
+	if len(signedDER) == 0 {
+		return nil, fmt.Errorf("cms: no container to archive")
+	}
+	if len(tokenDER) == 0 {
+		return nil, fmt.Errorf("cms: no archive timestamp token")
+	}
+	return appendUnsignedAttribute(signedDER, OIDArchiveTimeStampV3, tokenDER)
+}
