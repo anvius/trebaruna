@@ -30,6 +30,14 @@ type PDFVerifier struct {
 	CheckRevocation bool
 	// Intermediates complements Roots when the anchors come from a trust list.
 	Intermediates *x509.CertPool
+	// Anchors are the raw certificates the trust list published.
+	//
+	// The pool alone is not enough: the library chains each document certificate
+	// against TrustedRoots and offers no way to supply intermediates, so a
+	// document carrying only its leaf — what most Spanish and Italian tools
+	// produce — never reaches the CA. The raw certificates let this adapter add
+	// them to the roots pool, which is the only place the library looks.
+	Anchors []*x509.Certificate
 }
 
 // WithAnchors returns a copy that validates chains against the given pools.
@@ -49,6 +57,17 @@ func (v *PDFVerifier) WithAnchors(roots, intermediates *x509.CertPool) applicati
 	return &clone
 }
 
+// WithAnchorCertificates also keeps the raw certificates.
+//
+// It exists because a pool cannot be enumerated, and the PDF library only accepts
+// a roots pool: without the certificates themselves there is no way to make an
+// issuer reachable when the document does not carry its chain.
+func (v *PDFVerifier) WithAnchorCertificates(roots, intermediates *x509.CertPool, anchors []*x509.Certificate) application.DocumentExtractor {
+	clone := v.WithAnchors(roots, intermediates).(*PDFVerifier)
+	clone.Anchors = anchors
+	return clone
+}
+
 // NewPDFVerifier builds the adapter with the current clock.
 func NewPDFVerifier() *PDFVerifier {
 	return &PDFVerifier{Now: time.Now()}
@@ -59,6 +78,13 @@ func (v *PDFVerifier) Extract(path string) ([]domain.SignerReport, error) {
 	if err := FileExists(path); err != nil {
 		return nil, err
 	}
+
+	// The library chains each document certificate against TrustedRoots, using the
+	// document's own certificates as intermediates. A PDF that carries only the
+	// leaf — which is what most Spanish and Italian signing tools produce — cannot
+	// chain against the CA alone: the issuer has to be reachable from the roots
+	// pool, so the trust-list certificates are merged into it here.
+	roots := v.rootsWithAnchors()
 
 	file, err := os.Open(path)
 	if err != nil {
@@ -73,11 +99,8 @@ func (v *PDFVerifier) Extract(path string) ([]domain.SignerReport, error) {
 	options := &verify.VerifyOptions{
 		// Signing certificates carry emailProtection or the document-signing EKU,
 		// never server auth, so the strict default would reject every one of them.
-		AllowedEKUs: []x509.ExtKeyUsage{
-			x509.ExtKeyUsageEmailProtection,
-			x509.ExtKeyUsageAny,
-		},
-		TrustedRoots:                  v.Roots,
+		AllowedEKUs:                   allowedDocumentEKUs,
+		TrustedRoots:                  roots,
 		SkipRevocationCheck:           !v.CheckRevocation,
 		EnableExternalRevocationCheck: v.CheckRevocation,
 		// Never trust the signer's own clock: it is the attack this tool exists
@@ -213,6 +236,25 @@ func (v *PDFVerifier) describeChain(signer *verify.Signer, report *domain.Signer
 		report.RevokedAt = *entry.RevocationTime
 	}
 
+	// The library chains with Go's default key usages, which is ServerAuth, and
+	// that rejects every document-signing certificate: they carry e-mail
+	// protection or client authentication, never server auth. Its VerifyOptions
+	// exposes no way to override this, so the chain is re-checked here with Any
+	// when the library says the issuer is unknown.
+	trustedIssuer := signer.TrustedIssuer
+	if !trustedIssuer && !report.SelfSigned {
+		if v.chainTrusts(entry.Certificate, signer) {
+			trustedIssuer = true
+			report.Findings = append(report.Findings, domain.Finding{
+				Code:   "verification.warning",
+				Status: domain.StatusWarn,
+				Message: "the issuer chains to the trust list, but the library's own " +
+					"check rejected the certificate's key usage",
+				Detail: "ServerAuth is Go's default and document certificates never carry it",
+			})
+		}
+	}
+
 	switch {
 	case report.SelfSigned:
 		report.CertificateStatus = domain.StatusWarn
@@ -221,7 +263,7 @@ func (v *PDFVerifier) describeChain(signer *verify.Signer, report *domain.Signer
 			Status:  domain.StatusWarn,
 			Message: "the certificate is self-signed: valid cryptography, no third-party trust",
 		})
-	case signer.TrustedIssuer:
+	case trustedIssuer:
 		report.CertificateStatus = domain.StatusGood
 		report.Findings = append(report.Findings, domain.Finding{
 			Code:    "certificate.trusted",
@@ -306,7 +348,10 @@ func (v *PDFVerifier) trustLevel(signer *verify.Signer, report domain.SignerRepo
 	if report.SelfSigned {
 		return domain.TrustUntrusted
 	}
-	if !signer.TrustedIssuer {
+	// The report already carries the answer: describeChain re-checks the chain when
+	// the library's key-usage default rejects a document certificate, so
+	// signer.TrustedIssuer alone would undo that correction here.
+	if report.CertificateStatus != domain.StatusGood {
 		return domain.TrustUntrusted
 	}
 	return domain.TrustAdvanced
@@ -314,3 +359,92 @@ func (v *PDFVerifier) trustLevel(signer *verify.Signer, report domain.SignerRepo
 
 // compile-time check.
 var _ SignatureExtractor = (*PDFVerifier)(nil)
+
+// rootsWithAnchors returns the pool the library chains against.
+//
+// Every trust-list certificate is added as a root, self-signed or not. That is
+// what makes a leaf-only document chain: the library verifies with
+// Roots = TrustedRoots and Intermediates = the document's own certificates, so an
+// issuer that is not in the document must be present in Roots to be found.
+//
+// Adding a subordinate CA as a root is a deliberate trade: the list published it
+// as a qualified anchor for issuing qualified certificates, so trusting it
+// directly is trusting the list's own statement. The alternative — never chaining
+// a leaf-only signature — would make every qualified Spanish and Italian
+// signature unverifiable.
+func (v *PDFVerifier) rootsWithAnchors() *x509.CertPool {
+	if len(v.Anchors) == 0 {
+		if v.Roots != nil {
+			return v.Roots
+		}
+		return v.Intermediates
+	}
+
+	pool := x509.NewCertPool()
+	for _, certificate := range v.Anchors {
+		pool.AddCert(certificate)
+	}
+	// System roots stay available so a document from a public CA that is not in
+	// the national list still verifies.
+	if v.Roots != nil {
+		for _, certificate := range v.Anchors {
+			v.Roots.AddCert(certificate)
+		}
+		return v.Roots
+	}
+	return pool
+}
+
+// allowedDocumentEKUs are the purposes a document-signing certificate may carry.
+//
+// The list is longer than it looks like it should be because "the" document
+// signing purpose does not exist in practice: European qualified CAs issue
+// e-mail protection, Spanish notarial and corporate certificates carry client
+// authentication, and private PKI often omits EKU entirely. Restricting this list
+// rejects real, valid signatures — it did, for a Spanish notarial certificate
+// whose only purposes were client authentication and e-mail protection.
+var allowedDocumentEKUs = []x509.ExtKeyUsage{
+	x509.ExtKeyUsageEmailProtection,
+	x509.ExtKeyUsageClientAuth,
+	x509.ExtKeyUsageCodeSigning,
+	x509.ExtKeyUsageAny,
+}
+
+// chainTrusts re-verifies the chain with the key usages a document certificate
+// actually carries.
+//
+// Every certificate the signature embeds is offered as an intermediate, and the
+// anchors from the trust list are the roots. KeyUsages is Any because the purpose
+// of a signing certificate is decided by the profile it was issued under, not by
+// Go's ServerAuth default.
+func (v *PDFVerifier) chainTrusts(leaf *x509.Certificate, signer *verify.Signer) bool {
+	if leaf == nil || v.Roots == nil && v.Intermediates == nil {
+		return false
+	}
+
+	intermediates := x509.NewCertPool()
+	for _, embedded := range signer.Certificates {
+		if embedded.Certificate == nil || embedded.Certificate.Equal(leaf) {
+			continue
+		}
+		intermediates.AddCert(embedded.Certificate)
+	}
+
+	roots := v.rootsWithAnchors()
+	if roots == nil {
+		return false
+	}
+
+	at := v.Now
+	if at.IsZero() {
+		at = time.Now()
+	}
+
+	_, err := leaf.Verify(x509.VerifyOptions{
+		Roots:         roots,
+		Intermediates: intermediates,
+		CurrentTime:   at,
+		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
+	})
+	return err == nil
+}

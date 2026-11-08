@@ -90,9 +90,16 @@ it should be refreshed.
 
 ```bash
 firma-it trust show IT
+firma-it trust show ES --match fnmt          # is my issuer in there?
+firma-it trust show IT --type TSA/QTST       # only timestamp authorities
+firma-it trust show ES --match fnmt --json
 ```
 
-Lists the services: provider, service name, type, status, and validity.
+Lists the services: provider, service name, type, status, and validity. `--match`
+searches provider and service name; `--type` filters by service type.
+
+This is the command that answers "will my signature verify for someone else?" —
+run it before you sign.
 
 ### Refresh a single territory
 
@@ -147,17 +154,20 @@ The EU list is the primary source. What it gives you:
 
 | Coverage | Territories |
 |---|---|
-| **Full** (machine-readable XML) | 18 territories, including IT, DE, NL, BE, AT, PL, SE, LV, RO, SK, HR, SI, IE, LT |
-| **Not machine-readable** | ES, FR, PT, LU, BG, CZ, DK, EE, HU, IS, NO publish their list only as a PDF |
+| **Full** (machine-readable XML) | 19 territories, including ES, IT, DE, NL, BE, AT, PL, SE, LV, RO, SK, HR, SI, IE, LT |
+| **Not machine-readable** | FR, PT, LU, BG, CZ, DK, EE, HU, IS, NO publish their list only as a PDF |
 
-For the second group, there are no services to parse, so no verdict can come from
-them. That is a limitation of the published format, not of the parser, and the
-tool says so rather than pretending.
+Spain publishes **both** a PDF and an XML pointer in the EU list, and the XML one
+is used. An earlier version took the first pointer it found — the PDF — and
+rejected the whole territory, which made every Spanish qualified signature read as
+untrusted. That is fixed, and the pointer selection is pinned by tests.
 
-If you sign for a Spanish administration, your certificate may still be perfectly
-good: it is the *list* that cannot be read. Consider `--territory IT` or `EU` when
-the issuer is cross-border, or rely on the other findings (integrity, validity,
-revocation) which do not need a list.
+For the territories that only publish a PDF there are no services to parse, so no
+verdict can come from their list. That is a limitation of the published format,
+not of the parser, and the tool says so rather than pretending.
+
+Verified against the real lists: **ES 442 services, 131 qualified** (six active
+FNMT-RCM qualified CAs among them), **IT 562 services, 142 qualified**.
 
 ---
 

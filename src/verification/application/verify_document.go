@@ -26,6 +26,16 @@ type AnchorAware interface {
 	WithAnchors(roots, intermediates *x509.CertPool) DocumentExtractor
 }
 
+// CertificateAware is implemented by extractors that can also take the raw
+// anchor certificates.
+//
+// A pool cannot be enumerated, and the PDF library accepts only a roots pool, so
+// an extractor that needs to make an issuer reachable must receive the
+// certificates themselves.
+type CertificateAware interface {
+	WithAnchorCertificates(roots, intermediates *x509.CertPool, anchors []*x509.Certificate) DocumentExtractor
+}
+
 // TrustProvider supplies the trust list for a territory.
 //
 // It returns an empty list rather than an error when no list is cached: a
@@ -123,7 +133,10 @@ func (u *VerifyDocument) Execute(request Request) (verification.DocumentReport, 
 	// Cached lists are inventory until authenticated against pinned publication
 	// keys. Their contents must never grant trust to a document.
 	if anchors := anchorPool(list); anchors != nil {
-		if aware, ok := extractor.(AnchorAware); ok {
+		if aware, ok := extractor.(CertificateAware); ok {
+			extractor = aware.WithAnchorCertificates(
+				anchors.roots, anchors.intermediates, list.QualifiedAnchors())
+		} else if aware, ok := extractor.(AnchorAware); ok {
 			extractor = aware.WithAnchors(anchors.roots, anchors.intermediates)
 		}
 	}

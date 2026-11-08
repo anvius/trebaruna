@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	trustapplication "codeberg.org/simplicer/firma-it/src/trust/application"
+	trustdomain "codeberg.org/simplicer/firma-it/src/trust/domain"
 	trustinfra "codeberg.org/simplicer/firma-it/src/trust/infrastructure"
 	verificationinfra "codeberg.org/simplicer/firma-it/src/verification/infrastructure"
 )
@@ -47,7 +49,7 @@ var knownSources = []trustSource{
 // runTrust implements `firma-it trust` with `sync` and `list`.
 func runTrust(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
-		fmt.Fprintln(stderr, "usage: firma-it trust sync|list [--territory XX]")
+		fmt.Fprintln(stderr, "usage: firma-it trust sync|list|show [--territory XX]")
 		return exitUsage
 	}
 
@@ -56,6 +58,8 @@ func runTrust(args []string, stdout, stderr io.Writer) int {
 		return runTrustSync(args[1:], stdout, stderr)
 	case "list":
 		return runTrustList(args[1:], stdout, stderr)
+	case "show":
+		return runTrustShow(args[1:], stdout, stderr)
 	}
 
 	fmt.Fprintf(stderr, "unknown trust command %q\n", args[0])
@@ -207,4 +211,135 @@ func runTrustList(args []string, stdout, stderr io.Writer) int {
 			list.NextUpdate.Format("2006-01-02"), staleness)
 	}
 	return exitVerified
+}
+
+// runTrustShow prints the services of one authenticated list.
+//
+// It answers the question the other subcommands leave open: "is my issuer in
+// there?". Searching 442 Spanish services by eye is not an answer, so the output
+// can be filtered with --match.
+func runTrustShow(args []string, stdout, stderr io.Writer) int {
+	flags := flag.NewFlagSet("trust show", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+
+	var (
+		territory = flags.String("territory", "", "territory to show, e.g. ES or IT")
+		match     = flags.String("match", "", "only services whose provider or name contains this text")
+		kinds     = flags.String("type", "", "only services of this type, e.g. CA/QC or TSA/QTST")
+		asJSON    = flags.Bool("json", false, "machine-readable output")
+		directory = flags.String("dir", "", "cache directory (default: XDG cache)")
+	)
+	// Go's flag package stops at the first non-flag argument, so `trust show ES
+	// --match fnmt` would leave --match unparsed and silently ignore the filter.
+	// The territory is therefore lifted out before parsing, keeping both orders.
+	remaining := args
+	if territoryAt := firstPositional(args); territoryAt >= 0 {
+		if *territory == "" {
+			*territory = args[territoryAt]
+		}
+		remaining = append(append([]string{}, args[:territoryAt]...), args[territoryAt+1:]...)
+	}
+
+	if err := flags.Parse(remaining); err != nil {
+		return exitUsage
+	}
+
+	code := *territory
+	if code == "" {
+		fmt.Fprintln(stderr, "usage: firma-it trust show <territory> [--match text]")
+		return exitUsage
+	}
+
+	cache := *directory
+	if cache == "" {
+		cache = verificationinfra.DefaultCacheDirectory()
+	}
+
+	provider := verificationinfra.CachedTrustProvider{Directory: cache}
+	list, err := provider.Load(code)
+	if err != nil {
+		fmt.Fprintf(stderr, "cannot read the cached list for %s: %v\n", code, err)
+		fmt.Fprintf(stderr, "  download it with: firma-it trust sync --territory %s\n", code)
+		return exitUnverified
+	}
+	if !list.Authenticated {
+		// An unauthenticated list is inventory. Saying so beats printing services
+		// that would not be used for any verdict.
+		fmt.Fprintf(stderr,
+			"the cached list for %s is not authenticated; it was downloaded but its "+
+				"signature was not verified against the EU certificates\n", code)
+		return exitUnverified
+	}
+
+	needle := strings.ToLower(strings.TrimSpace(*match))
+	wanted := strings.ToUpper(strings.TrimSpace(*kinds))
+
+	var shown []trustdomain.TrustService
+	for _, service := range list.Services {
+		if wanted != "" && !strings.EqualFold(service.ServiceType, wanted) {
+			continue
+		}
+		if needle != "" &&
+			!strings.Contains(strings.ToLower(service.ProviderName), needle) &&
+			!strings.Contains(strings.ToLower(service.ServiceName), needle) {
+			continue
+		}
+		shown = append(shown, service)
+	}
+
+	if *asJSON {
+		encoder := json.NewEncoder(stdout)
+		encoder.SetIndent("", "  ")
+		_ = encoder.Encode(shown)
+		return exitOK
+	}
+
+	if len(shown) == 0 {
+		fmt.Fprintf(stdout, "no service in %s matches", strings.ToUpper(code))
+		if needle != "" {
+			fmt.Fprintf(stdout, " %q", *match)
+		}
+		if wanted != "" {
+			fmt.Fprintf(stdout, " of type %s", wanted)
+		}
+		fmt.Fprintln(stdout)
+		return exitOK
+	}
+
+	fmt.Fprintf(stdout, "%s — %d service(s)\n\n", strings.ToUpper(code), len(shown))
+	for _, service := range shown {
+		status := string(service.Status)
+		if !service.Qualified {
+			status += ", not qualified"
+		}
+		since := ""
+		if !service.StatusSince.IsZero() {
+			since = " since " + service.StatusSince.Format("2006-01-02")
+		}
+		fmt.Fprintf(stdout, "%-9s %s\n", service.ServiceType, service.ProviderName)
+		if service.ServiceName != "" && service.ServiceName != service.ProviderName {
+			fmt.Fprintf(stdout, "          %s\n", service.ServiceName)
+		}
+		fmt.Fprintf(stdout, "          %s%s, %d certificate(s)\n\n",
+			status, since, len(service.Certificates))
+	}
+	return exitOK
+}
+
+// firstPositional returns the index of the first argument that is not a flag or
+// a flag value, or -1 when there is none.
+func firstPositional(args []string) int {
+	for index := 0; index < len(args); index++ {
+		argument := args[index]
+		if strings.HasPrefix(argument, "-") {
+			// Skip the value of a flag written as `--flag value`.
+			if !strings.Contains(argument, "=") && index+1 < len(args) &&
+				!strings.HasPrefix(args[index+1], "-") {
+				index++
+			}
+			continue
+		}
+		return index
+	}
+	return -1
 }

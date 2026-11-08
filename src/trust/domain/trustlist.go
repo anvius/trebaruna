@@ -372,12 +372,27 @@ type LOTL struct {
 // Find returns the entry for a territory.
 func (l LOTL) Find(territory string) (LOTLEntry, bool) {
 	wanted := strings.ToUpper(strings.TrimSpace(territory))
+	fallback := LOTLEntry{}
+	found := false
+
 	for _, entry := range l.Entries {
-		if entry.Territory == wanted {
+		if entry.Territory != wanted {
+			continue
+		}
+		// A territory may publish several pointers: Spain, for instance, lists
+		// both TSL.pdf and TSL.xml. Returning the first match picked the PDF and
+		// rejected the whole territory as unparseable. The XML pointer is the one
+		// this tool can both read and authenticate, so it is preferred; a
+		// non-XML entry is only kept as a fallback so the reason stays accurate.
+		if entry.XML() {
 			return entry, true
 		}
+		if !found {
+			fallback, found = entry, true
+		}
 	}
-	return LOTLEntry{}, false
+
+	return fallback, found
 }
 
 // CanSign reports whether the entry publishes at least one signing certificate.

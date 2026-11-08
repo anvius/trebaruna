@@ -191,6 +191,9 @@ worse than none.
 - The cryptographic signature against the document bytes.
 - The signer certificate against the trust lists the tool downloaded **and
   authenticated** against the EU root.
+- The certificate chain, including when the document carries only the leaf. Most
+  Spanish and Italian signing tools embed just the signer certificate, so the
+  issuer is resolved from the trust list itself.
 - The certificate validity window, against the proven signing time when a trusted
   timestamp exists.
 - Revocation, when `--offline=false`, with the answer recorded as checked or not.
@@ -203,6 +206,16 @@ worse than none.
 
 - **The signer's identity.** A qualified signature means the CA verified a
   document; it does not mean the person who pressed the button was that person.
+
+### A note on the key-usage check
+
+Document-signing certificates carry no single purpose: European qualified CAs issue
+e-mail protection, Spanish notarial and corporate certificates carry client
+authentication, and private PKI often omits the extension. The underlying PDF
+library chains with Go's default of *server authentication*, which no signing
+certificate carries, so chains that should verify were rejected as
+"incompatible key usage". The verifier now re-checks the chain with the purposes a
+document certificate actually has. Measured on a real Spanish notarial signature.
 - **That the document is the one the parties agreed.** That is an editorial
   question, not a cryptographic one.
 - **Anything inside the document.** Page rendering, embedded macros, JavaScript.
