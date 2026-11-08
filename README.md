@@ -493,21 +493,41 @@ choosing. The secret is that step. The page cannot read it, cannot guess it
 (32 random bytes), cannot replay it (single use), and cannot wait it out (30
 seconds).
 
+### Delivering the result
+
+After approval the signature is produced and posted to the declared callback:
+
+```bash
+firma-it handler "firma-it://sign?document=/tmp/atto.xml&format=pdf&origin=https://sede.example.gob.es&callback=https://sede.example.gob.es/result" --root /tmp --p12 key.p12 --pass secret
+```
+
+```
+sign /tmp/atto.xml ?  [y/N] y
+signed   /tmp/atto_signed.xml
+delivered to https://sede.example.gob.es/result
+```
+
+The POST carries JSON describing the artefact — path, format, level, size,
+signing time, signer, verdict — not the file itself. The timeout is 20 seconds,
+and a non-2xx answer is reported as a failed delivery rather than a successful
+one: the signature exists, the delivery did not happen, and the caller must be
+able to tell the difference.
+
+The document is read from the **approved** request, never from a parameter sent
+later, so what the person saw is what gets signed.
+
 ### What is still missing
 
 - **Per-issuer request formats.** Spanish administrations each define their own
-  payload dialect. This implementation understands one explicit shape
-  (`document`, `format`, `territory`, `origin`, `callback`) rather than guessing
-  at a dozen undocumented ones.
-- **The callback post.** The original is delivered by the caller after approval;
-  a full replacement must post a form to the administration's endpoint. That
-  needs a real integration to test against, and none is available here.
-- **Approval UI in the window.** The API and CLI expose the decision; the desktop
-  window shows the pending request but the approve/reject controls are not wired
-  to the Fyne layout yet.
-
-Until those exist, this is not a drop-in replacement for AutoFirma's web flow,
-and saying otherwise would be the kind of claim this project refuses to make.
+  payload dialect. This implements one explicit shape (`document`, `format`,
+  `territory`, `origin`, `callback`) rather than guessing at a dozen undocumented
+  ones. Supporting a specific administration means writing an adapter that maps
+  its URI onto these five parameters; the approval, signing and delivery steps are
+  already generic.
+- **A tested integration against a real administration.** Everything above is
+  exercised against a local receiver. No public endpoint was available to test
+  against, and claiming compatibility without one would be the kind of unverified
+  claim this project refuses to make.
 
 ## Contributing
 

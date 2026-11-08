@@ -66,6 +66,9 @@ type Service struct {
 
 	// Pending holds protocol-handler requests awaiting a human decision.
 	Pending *PendingRequests
+	// Sender is the HTTP client used to deliver results. Nil uses a bounded
+	// default, and tests substitute one to avoid the network.
+	Sender *http.Client
 }
 
 // SigningUseCase is the signing capability the server needs.
@@ -151,6 +154,7 @@ func (s *Service) Handler() http.Handler {
 	mux.HandleFunc("GET /v1/requests", s.handleListRequests)
 	mux.HandleFunc("GET /v1/requests/{id}", s.handleGetRequest)
 	mux.HandleFunc("POST /v1/requests/{id}/decision", s.handleDecideRequest)
+	mux.HandleFunc("POST /v1/requests/{id}/sign", s.handleFulfilRequest)
 
 	return s.guard(mux)
 }
@@ -722,4 +726,75 @@ func (s *Service) RegisterRequest(payload RequestBody) (PendingRequest, error) {
 		Screen:    Screen{Origin: payload.Origin, Callback: payload.Callback},
 		Report:    report,
 	})
+}
+
+// fulfilBody names the key the approved request is signed with.
+type fulfilBody struct {
+	P12        string `json:"p12,omitempty"`
+	Passphrase string `json:"passphrase,omitempty"`
+	PEM        string `json:"pem,omitempty"`
+}
+
+// handleFulfilRequest signs an approved request and delivers it.
+//
+// It is a separate step from the decision on purpose: approving is the human's
+// act, and signing is the consequence. Splitting them means a request that was
+// approved but whose key is missing fails loudly instead of silently doing
+// nothing.
+func (s *Service) handleFulfilRequest(writer http.ResponseWriter, request *http.Request) {
+	var payload fulfilBody
+	if err := decodeJSON(request, &payload); err != nil {
+		writeProblem(writer, http.StatusBadRequest, "invalid-body", err.Error())
+		return
+	}
+
+	keySource, err := s.signingKey(payload)
+	if err != nil {
+		writeProblem(writer, http.StatusBadRequest, "invalid-credentials", err.Error())
+		return
+	}
+
+	delivery, err := s.Fulfil(request.Context(), request.PathValue("id"), keySource)
+	if err != nil {
+		writeProblem(writer, http.StatusForbidden, "fulfil-rejected", err.Error())
+		return
+	}
+
+	status := http.StatusOK
+	if !delivery.Delivered && delivery.Callback != "" {
+		// The signature exists; the delivery did not happen. Saying so is better
+		// than a 500 that suggests nothing was produced.
+		status = http.StatusBadGateway
+	}
+	writeJSON(writer, status, delivery)
+}
+
+// signingKey resolves the key material from the fulfil payload.
+func (s *Service) signingKey(payload fulfilBody) (signingdomain.Signer, error) {
+	switch {
+	case payload.P12 != "":
+		resolved, err := s.Files.Allowed(payload.P12)
+		if err != nil {
+			return signingdomain.Signer{}, fmt.Errorf("%w: %v", ErrPathRejected, err)
+		}
+		content, err := os.ReadFile(resolved)
+		if err != nil {
+			return signingdomain.Signer{}, fmt.Errorf("read the P12: %w", err)
+		}
+		return signingdomain.NewSigner("api", signingdomain.FromP12,
+			signingdomain.WithKeyMaterial(content),
+			signingdomain.WithPassphrase(payload.Passphrase))
+	case payload.PEM != "":
+		resolved, err := s.Files.Allowed(payload.PEM)
+		if err != nil {
+			return signingdomain.Signer{}, fmt.Errorf("%w: %v", ErrPathRejected, err)
+		}
+		content, err := os.ReadFile(resolved)
+		if err != nil {
+			return signingdomain.Signer{}, fmt.Errorf("read the PEM: %w", err)
+		}
+		return signingdomain.NewSigner("api", signingdomain.FromPEM,
+			signingdomain.WithKeyMaterial(content))
+	}
+	return signingdomain.Signer{}, errors.New("no key source: send p12 or pem")
 }

@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 
 	"codeberg.org/simplicer/firma-it/src/entrypoint/serve"
@@ -163,14 +164,27 @@ func runHandler(args []string, stdout, stderr io.Writer) int {
 		root       string
 		uri        string
 		positional []string
+		p12Path    string
+		pemPath    string
+		passphrase string
 	)
 	for index := 0; index < len(args); index++ {
+		next := func() string {
+			if index+1 < len(args) {
+				index++
+				return args[index]
+			}
+			return ""
+		}
 		switch args[index] {
 		case "-root", "--root":
-			if index+1 < len(args) {
-				root = args[index+1]
-				index++
-			}
+			root = next()
+		case "-p12", "--p12":
+			p12Path = next()
+		case "-pem", "--pem":
+			pemPath = next()
+		case "-pass", "--pass":
+			passphrase = next()
 		default:
 			positional = append(positional, args[index])
 		}
@@ -239,6 +253,14 @@ func runHandler(args []string, stdout, stderr io.Writer) int {
 		Version: Version,
 	}
 
+	keySource, err := buildSigner(signerOptions{
+		name: "handler", p12Path: p12Path, pemPath: pemPath, passphrase: passphrase,
+	})
+	if err != nil {
+		fmt.Fprintf(stderr, "%v\n", err)
+		return exitUsage
+	}
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
@@ -275,6 +297,42 @@ func runHandler(args []string, stdout, stderr io.Writer) int {
 	fmt.Fprintf(stdout, "       -d '{\"secret\":\"%s\",\"approved\":true}'\n", pending.Secret)
 	fmt.Fprintln(stdout, "the request expires in 30 seconds")
 
-	<-ctx.Done()
+	// The person at the machine decides here. Reading the answer from the terminal
+	// is what makes this usable without a window: the request is printed, the
+	// verdict is printed, and the answer is typed.
+	fmt.Fprintf(stdout, "\nsign %s ?  [y/N] ", pending.Path)
+	answer := ""
+	if _, err := fmt.Fscan(os.Stdin, &answer); err != nil {
+		fmt.Fprintf(stderr, "\nno answer read: %v\n", err)
+		return exitUsage
+	}
+
+	approved := strings.EqualFold(strings.TrimSpace(answer), "y") ||
+		strings.EqualFold(strings.TrimSpace(answer), "yes")
+
+	if err := service.Pending.Decide(pending.ID, pending.Secret, approved); err != nil {
+		fmt.Fprintf(stderr, "%v\n", err)
+		return exitInvalid
+	}
+	if !approved {
+		fmt.Fprintln(stdout, "rejected; nothing was signed")
+		return exitOK
+	}
+
+	delivery, err := service.Fulfil(ctx, pending.ID, keySource)
+	if err != nil {
+		fmt.Fprintf(stderr, "signing failed: %v\n", err)
+		return exitInvalid
+	}
+
+	fmt.Fprintf(stdout, "signed   %s\n", delivery.ArtefactPath())
+	if delivery.Callback != "" {
+		if delivery.Delivered {
+			fmt.Fprintf(stdout, "delivered to %s\n", delivery.Callback)
+		} else {
+			fmt.Fprintf(stdout, "NOT delivered: %s\n", delivery.Error)
+			return exitInvalid
+		}
+	}
 	return exitOK
 }

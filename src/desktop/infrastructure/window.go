@@ -577,10 +577,12 @@ func NewTestWindow(options Options) fyne.Window {
 func (w *Window) withTabs(signingContent fyne.CanvasObject) fyne.CanvasObject {
 	report := reportmessaging.For(languageCode(w.messages.Language))
 	verification := newVerificationTab(w.window, w.messages, report, w.palette, w.binaryPath)
+	requests := newRequestsTab(w.window, w.messages, w.palette, w.binaryPath)
 
 	tabs := container.NewAppTabs(
 		container.NewTabItemWithIcon(w.messages.SignTab, theme.DocumentCreateIcon(), signingContent),
 		container.NewTabItemWithIcon(w.messages.VerifyTab, theme.SearchIcon(), verification.content()),
+		container.NewTabItemWithIcon(w.messages.RequestsTab, theme.MailComposeIcon(), requests.content()),
 	)
 	tabs.SetTabLocation(container.TabLocationTop)
 	return tabs

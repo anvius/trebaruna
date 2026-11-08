@@ -86,6 +86,15 @@ type Catalogue struct {
 	// Verification tab.
 	VerifyTab              string
 	SignTab                string
+	RequestsTab            string
+	Approve                string
+	Reject                 string
+	ApprovalSecret         string
+	DecisionRecorded       string
+	NoPendingRequests      string
+	PendingRequests        string
+	ExpiresIn              string
+	NoBinary               string
 	VerifySection          string
 	VerifyHint             string
 	VerifyButton           string
@@ -118,6 +127,17 @@ func For(language Language) Catalogue {
 
 var spanish = Catalogue{
 	Language:             Spanish,
+	SignTab:              "Firma",
+	VerifyTab:            "Verificar",
+	RequestsTab:          "Peticiones",
+	Approve:              "Aprobar",
+	Reject:               "Rechazar",
+	ApprovalSecret:       "Secreto de aprobación",
+	DecisionRecorded:     "Decisión registrada",
+	NoPendingRequests:    "No hay peticiones pendientes",
+	PendingRequests:      "Peticiones pendientes: %d",
+	ExpiresIn:            "Caduca en",
+	NoBinary:             "No se encontró el binario firma-it",
 	WindowTitle:          "firma-it — firma electrónica AdES",
 	Subtitle:             "CAdES · PAdES · XAdES — sin código propietario",
 	DocumentLabel:        "Documento",
@@ -168,6 +188,17 @@ var spanish = Catalogue{
 
 var italian = Catalogue{
 	Language:             Italian,
+	SignTab:              "Firma",
+	VerifyTab:            "Verifica",
+	RequestsTab:          "Richieste",
+	Approve:              "Approva",
+	Reject:               "Rifiuta",
+	ApprovalSecret:       "Segreto di approvazione",
+	DecisionRecorded:     "Decisione registrata",
+	NoPendingRequests:    "Nessuna richiesta in attesa",
+	PendingRequests:      "Richieste in attesa: %d",
+	ExpiresIn:            "Scade tra",
+	NoBinary:             "Binario firma-it non trovato",
 	WindowTitle:          "firma-it — firma elettronica AdES",
 	Subtitle:             "CAdES · PAdES · XAdES — senza codice proprietario",
 	DocumentLabel:        "Documento",
@@ -218,6 +249,17 @@ var italian = Catalogue{
 
 var english = Catalogue{
 	Language:             English,
+	SignTab:              "Sign",
+	VerifyTab:            "Verify",
+	RequestsTab:          "Requests",
+	Approve:              "Approve",
+	Reject:               "Reject",
+	ApprovalSecret:       "Approval secret",
+	DecisionRecorded:     "Decision recorded",
+	NoPendingRequests:    "No pending requests",
+	PendingRequests:      "Pending requests: %d",
+	ExpiresIn:            "Expires in",
+	NoBinary:             "The firma-it binary was not found",
 	WindowTitle:          "firma-it — AdES electronic signature",
 	Subtitle:             "CAdES · PAdES · XAdES — no proprietary code",
 	DocumentLabel:        "Document",
