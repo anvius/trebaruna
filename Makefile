@@ -95,4 +95,4 @@ check-gui:
 	CGO_ENABLED=1 $(GO) build -tags gui -o /dev/null ./src/entrypoint/desktop
 
 package-desktop:
-	bash bin/package-desktop.sh $(shell $(GO) env GOOS)
+	bash packaging/package-desktop.sh $(shell $(GO) env GOOS)

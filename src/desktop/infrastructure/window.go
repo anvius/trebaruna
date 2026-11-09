@@ -66,7 +66,7 @@ type Options struct {
 
 // NewWindow builds the window and returns it ready to run.
 func NewWindow(options Options) *Window {
-	fyneApp := app.NewWithID("it.firma.desktop")
+	fyneApp := app.NewWithID("org.codeberg.simplicer.trebaruna")
 	fyneApp.Settings().SetTheme(NewAppTheme(DefaultPalette()))
 	fyneApp.SetIcon(fyne.NewStaticResource("trebaruna.png", appIconPNG))
 
@@ -551,7 +551,7 @@ func translate(err error, m messaging.Catalogue) string {
 // NewTestWindow builds the window content without starting the event loop, so
 // diagnostics and tests can inspect the widget tree.
 func NewTestWindow(options Options) fyne.Window {
-	fyneApp := app.NewWithID("it.firma.desktop.diagnostics")
+	fyneApp := app.NewWithID("org.codeberg.simplicer.trebaruna.diagnostics")
 	fyneApp.Settings().SetTheme(NewAppTheme(DefaultPalette()))
 
 	catalogue := messaging.For(options.Language)

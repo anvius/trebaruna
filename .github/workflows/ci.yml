@@ -127,6 +127,15 @@ jobs:
         run: CGO_ENABLED=1 go test -tags gui ./src/desktop/... -count=1
       - name: Build
         run: CGO_ENABLED=1 go build -tags gui -trimpath -o bin/trebaruna-desktop ./src/entrypoint/desktop
+      # The packaging script and the install target both broke silently once
+      # (an untracked script, a renamed .desktop file): running them here is
+      # what keeps a fresh clone able to package and install.
+      - name: Package and install into a scratch root
+        run: |
+          make package-desktop
+          make install-desktop DESTDIR="$RUNNER_TEMP/root" PREFIX=/usr
+          test -f "$RUNNER_TEMP/root/usr/share/applications/trebaruna.desktop"
+          test "$("$RUNNER_TEMP/root/usr/bin/trebaruna" version)" = "$(cat VERSION)"
       - uses: actions/upload-artifact@v4
         with:
           name: trebaruna-desktop-linux-amd64

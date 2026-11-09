@@ -7,7 +7,7 @@
   <key>CFBundleDisplayName</key>
   <string>trebaruna</string>
   <key>CFBundleIdentifier</key>
-  <string>codeberg.anvius.trebaruna</string>
+  <string>org.codeberg.simplicer.trebaruna</string>
   <key>CFBundleVersion</key>
   <string>__VERSION__</string>
   <key>CFBundleShortVersionString</key>

@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `make install-desktop` failed on every machine: it installed
+  `packaging/trebaruna.desktop`, but the file was still `firma-it.desktop`.
+- `make package-desktop` called a script that lived in the ignored `bin/`
+  directory and still produced `pignus` archives; it is now the tracked
+  `packaging/package-desktop.sh` and builds `trebaruna` archives with the
+  version injected. CI runs both targets.
+- The macOS bundle injected the version into `cli.Version`, a variable that
+  does not exist, so the bundled CLI never reported the release version.
+- The desktop app ID and the macOS bundle identifier are now the same,
+  `org.codeberg.simplicer.trebaruna`, instead of the old `it.firma.desktop`.
+
 ### Security
 
 - The desktop app no longer passes the certificate passphrase as `--pass`,

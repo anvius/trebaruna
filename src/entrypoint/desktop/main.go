@@ -65,8 +65,8 @@ func resolveBinary() string {
 	if executable, err := os.Executable(); err == nil {
 		directory := filepath.Dir(executable)
 		// Inside a macOS bundle the layout is
-		//   Firma-it.app/Contents/MacOS/trebaruna-desktop
-		//   Firma-it.app/Contents/MacOS/trebaruna
+		//   trebaruna.app/Contents/MacOS/trebaruna-desktop
+		//   trebaruna.app/Contents/MacOS/trebaruna
 		// so the sibling lookup is right, but Contents/Resources is also checked
 		// because that is where a packager may put the CLI.
 		candidates := []string{
