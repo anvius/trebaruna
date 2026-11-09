@@ -519,9 +519,6 @@ func (v *XadesVerifier) describeSignatureTimeStamp(signature *etree.Element, rep
 		return
 	}
 
-	// The covered content is the element as serialised in this document.
-	covered := serialiseElement(signatureValue)
-	hasher := token.HashAlgorithm.New()
 	if !token.HashAlgorithm.Available() {
 		report.Findings = append(report.Findings, domain.Finding{
 			Code:    "timestamp.invalid",
@@ -530,8 +527,22 @@ func (v *XadesVerifier) describeSignatureTimeStamp(signature *etree.Element, rep
 		})
 		return
 	}
-	hasher.Write(covered)
-	if !bytes.Equal(hasher.Sum(nil), token.HashedMessage) {
+	covers := func(content []byte) bool {
+		hasher := token.HashAlgorithm.New()
+		hasher.Write(content)
+		return bytes.Equal(hasher.Sum(nil), token.HashedMessage)
+	}
+	// The token covers ds:SignatureValue in its canonical form where it
+	// stands, with the C14N the SignatureTimeStamp declares (EN 319 132-1,
+	// 5.4.1.3). trebaruna before 0.38.2 timestamped the element as written,
+	// which only it accepts: that is told, not hidden.
+	canonical, canonicalErr := xmldsig.Canonicalize(signatureValue, signatureTimeStampCanonicalization(signature), "")
+	legacy := false
+	switch {
+	case canonicalErr == nil && covers(canonical):
+	case covers(serialiseElement(signatureValue)):
+		legacy = true
+	default:
 		report.Findings = append(report.Findings, domain.Finding{
 			Code:    "timestamp.invalid",
 			Status:  domain.StatusBad,
@@ -559,6 +570,13 @@ func (v *XadesVerifier) describeSignatureTimeStamp(signature *etree.Element, rep
 		Status:  domain.StatusGood,
 		Message: "the timestamp is bound to this signature",
 	})
+	if legacy {
+		report.Findings = append(report.Findings, domain.Finding{
+			Code:    "timestamp.legacy_form",
+			Status:  domain.StatusWarn,
+			Message: "the timestamp covers the signature value as trebaruna wrote it before 0.38.2, not its canonical form: other validators will not accept it",
+		})
+	}
 	if !facts.CanTimestamp {
 		report.Findings = append(report.Findings, domain.Finding{
 			Code:    "timestamp.not_timestamping_certificate",
@@ -618,6 +636,23 @@ func (v *XadesVerifier) describeArchiveTimeStamp(signature *etree.Element, repor
 		Message: "the signature carries an archive timestamp (XAdES-A)",
 		Detail:  token.Time.UTC().Format(time.RFC3339),
 	})
+}
+
+// signatureTimeStampCanonicalization is the C14N a SignatureTimeStamp
+// declares, inclusive C14N 1.0 when it names none.
+func signatureTimeStampCanonicalization(signature *etree.Element) string {
+	algorithm := xmldsig.C14N10
+	walk(signature, func(element *etree.Element) {
+		if element.Tag != "SignatureTimeStamp" || element.NamespaceURI() != xadesNamespace {
+			return
+		}
+		for _, child := range element.ChildElements() {
+			if child.Tag == "CanonicalizationMethod" {
+				algorithm = child.SelectAttrValue("Algorithm", algorithm)
+			}
+		}
+	})
+	return algorithm
 }
 
 // findSignatureValue locates ds:SignatureValue inside the signature.

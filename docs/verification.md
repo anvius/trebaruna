@@ -157,6 +157,7 @@ anyone can verify it again.
 | `timestamp.not_timestamping_certificate` | warn | The token certificate lacks the time-stamping key usage |
 | `timestamp.invalid` | bad | The token does not parse, verify, or cover this signature |
 | `timestamp.archival` | good | An archive timestamp is present (XAdES-A) |
+| `timestamp.legacy_form` | warn | A trebaruna XAdES-T made before 0.38.2: the token seals the signature value as written, not its canonical form, and other validators refuse it |
 
 ### Environment
 

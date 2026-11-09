@@ -142,6 +142,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- XAdES signature timestamps cover the canonical `ds:SignatureValue`.
+  - EN 319 132-1 (5.4.1.3) has the token seal the element canonicalised
+    where it stands, its inherited namespaces included. The signer sealed
+    the element as written, and the verifier checked it the same way, so
+    trebaruna's XAdES-T was refused by other validators and theirs read as
+    a timestamp over "a different signature value".
+  - Both now canonicalise in place, with the C14N the SignatureTimeStamp
+    declares; the verifier finds SignatureValue under any prefix.
+  - Files written before 0.38.2 still read as timestamped, with
+    `timestamp.legacy_form` (warn) saying others will refuse them.
+  - `openssl ts -verify` checks the token against the canonical bytes.
+
 - XML is canonicalised with trebaruna's own C14N.
   - goxmldsig's canonicaliser sorted prefixed attributes by local name
     instead of namespace URI. LibreOffice's content.xml, or any element with

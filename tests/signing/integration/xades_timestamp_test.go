@@ -33,7 +33,9 @@ import (
 	"codeberg.org/simplicer/trebaruna/src/signing/domain"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/cms"
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/xmldsig"
 	verificationinfra "codeberg.org/simplicer/trebaruna/src/verification/infrastructure"
+	"github.com/beevik/etree"
 )
 
 // oidTSTInfoXades is the content type a timestamp token declares.
@@ -251,17 +253,40 @@ func TestXadesTimestampImprintCoversSignatureValue(t *testing.T) {
 		t.Fatalf("sign: %v", err)
 	}
 
-	// Read the element back from the produced bytes, exactly as a verifier would.
-	element := regexp.MustCompile(`(?s)<ds:SignatureValue>.*?</ds:SignatureValue>`).Find(output)
-	if element == nil {
-		t.Fatal("the signed file carries no ds:SignatureValue")
+	// EN 319 132-1, 5.4.1.3: the token covers ds:SignatureValue canonicalised
+	// where it stands, its inherited namespaces included; read back from the
+	// produced bytes, as a verifier would.
+	element := canonicalSignatureValueOf(t, output)
+	if !bytes.Contains(element, []byte(`<ds:SignatureValue xmlns:ds="http://www.w3.org/2000/09/xmldsig#"`)) {
+		t.Fatalf("the canonical form declares its namespaces: %.120s", element)
 	}
-
 	digest := sha256.Sum256(element)
 	if !bytes.Equal(digest[:], tsa.imprint) {
-		t.Errorf("the token imprint does not cover ds:SignatureValue\n  file: %x\n  token: %x",
+		t.Errorf("the token imprint does not cover the canonical ds:SignatureValue\n  file: %x\n  token: %x",
 			digest, tsa.imprint)
 	}
+	raw := sha256.Sum256(regexp.MustCompile(`(?s)<ds:SignatureValue>.*?</ds:SignatureValue>`).Find(output))
+	if bytes.Equal(raw[:], tsa.imprint) {
+		t.Error("the token must not cover the element as written (trebaruna before 0.38.2)")
+	}
+}
+
+// canonicalSignatureValueOf canonicalises ds:SignatureValue in a signed file.
+func canonicalSignatureValueOf(t *testing.T, signed []byte) []byte {
+	t.Helper()
+	document := etree.NewDocument()
+	if err := document.ReadFromBytes(signed); err != nil {
+		t.Fatal(err)
+	}
+	value := document.FindElement("//SignatureValue")
+	if value == nil {
+		t.Fatal("the signed file carries no ds:SignatureValue")
+	}
+	canonical, err := xmldsig.Canonicalize(value, xmldsig.C14N10, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return canonical
 }
 
 // TestXadesTimestampTokenVerifiesWithOpenSSL hands the token to an independent
@@ -309,12 +334,9 @@ func TestXadesTimestampTokenVerifiesWithOpenSSL(t *testing.T) {
 	}
 
 	// -data is the *content* the imprint covers, not the imprint itself: OpenSSL
-	// hashes it and compares. The content here is ds:SignatureValue as it appears
-	// in the signed file, which is what the token must seal.
-	element := regexp.MustCompile(`(?s)<ds:SignatureValue>.*?</ds:SignatureValue>`).Find(output)
-	if element == nil {
-		t.Fatal("the signed file carries no ds:SignatureValue")
-	}
+	// hashes it and compares. The content here is ds:SignatureValue in its
+	// canonical form, which is what the token must seal.
+	element := canonicalSignatureValueOf(t, output)
 	coveredPath := filepath.Join(directory, "covered.bin")
 	if err := os.WriteFile(coveredPath, element, 0o644); err != nil {
 		t.Fatalf("write the covered content: %v", err)
@@ -580,5 +602,51 @@ func TestVerifierReadsArchiveTimeStamp(t *testing.T) {
 	}
 	if !got.Timestamped {
 		t.Error("XAdES-A implies XAdES-T, so the signature timestamp must be present too")
+	}
+}
+
+// TestATimestampOverTheOldFormIsAcceptedAndTold: files trebaruna wrote
+// before 0.38.2 sealed ds:SignatureValue as written. They still read as
+// timestamped, with a warning that other validators will refuse them; a
+// new file carries no such warning.
+func TestATimestampOverTheOldFormIsAcceptedAndTold(t *testing.T) {
+	tsa := newLocalTSA(t)
+	signer := xadesTestSigner(t)
+	request := buildXadesRequest(signer, []byte(`<fattura><n>10</n></fattura>`), false)
+	request.Level = domain.T
+	request.TimestampURL = "http://tsa.example.invalid"
+	signed, err := infrastructure.NewXadesSigner(tsa).SignXades(context.Background(), request)
+	if err != nil {
+		t.Fatalf("sign: %v", err)
+	}
+
+	raw := sha256.Sum256(regexp.MustCompile(`(?s)<ds:SignatureValue>.*?</ds:SignatureValue>`).Find(signed))
+	response, err := tsa.Token(context.Background(), raw[:], "", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	oldToken, err := cms.ExtractToken(response)
+	if err != nil {
+		t.Fatal(err)
+	}
+	old := regexp.MustCompile(`<xades:EncapsulatedTimeStamp>[^<]+</xades:EncapsulatedTimeStamp>`).ReplaceAll(signed,
+		[]byte("<xades:EncapsulatedTimeStamp>"+base64.StdEncoding.EncodeToString(oldToken)+"</xades:EncapsulatedTimeStamp>"))
+
+	for name, content := range map[string][]byte{"new": signed, "old": old} {
+		path := filepath.Join(t.TempDir(), name+".xml")
+		if err := os.WriteFile(path, content, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		reports, err := verificationinfra.NewXadesVerifier().Extract(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		legacy := false
+		for _, finding := range reports[0].Findings {
+			legacy = legacy || finding.Code == "timestamp.legacy_form"
+		}
+		if !reports[0].TimestampEvidence.Bound || legacy != (name == "old") {
+			t.Errorf("%s: bound %v, legacy warning %v", name, reports[0].TimestampEvidence.Bound, legacy)
+		}
 	}
 }

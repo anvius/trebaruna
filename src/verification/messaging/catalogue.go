@@ -117,6 +117,7 @@ var Spanish = Catalogue{
 		"certificate.revocation_unchecked":       "no se ha podido obtener el estado de revocación del certificado",
 		"timestamp.invalid":                      "el sello de tiempo existe pero no verifica",
 		"timestamp.bound":                        "el sello de tiempo cubre esta firma",
+		"timestamp.legacy_form":                  "el sello cubre el valor de firma tal como lo escribía trebaruna antes de 0.38.2, no su forma canónica: otros validadores no lo aceptarán",
 		"timestamp.archival":                     "la firma lleva un sello de archivo (XAdES-A)",
 		"timestamp.accredited":                   "la autoridad de sellado es un servicio cualificado de una lista autenticada",
 		"timestamp.untrusted_authority":          "el sello cubre la firma, pero su autoridad no está acreditada",
@@ -188,6 +189,7 @@ var Italian = Catalogue{
 		"certificate.revocation_unchecked":       "non è stato possibile ottenere lo stato di revoca del certificato",
 		"timestamp.invalid":                      "la marca temporale esiste ma non verifica",
 		"timestamp.bound":                        "la marca temporale copre questa firma",
+		"timestamp.legacy_form":                  "la marca copre il valore di firma come lo scriveva trebaruna prima della 0.38.2, non la sua forma canonica: altri validatori non la accetteranno",
 		"timestamp.archival":                     "la firma porta una marca di archivio (XAdES-A)",
 		"timestamp.accredited":                   "l'autorità di marcatura è un servizio qualificato di un elenco autenticato",
 		"timestamp.untrusted_authority":          "la marca copre la firma, ma la sua autorità non è accreditata",
@@ -259,6 +261,7 @@ var English = Catalogue{
 		"certificate.revocation_unchecked":       "the certificate revocation status could not be obtained",
 		"timestamp.invalid":                      "the timestamp token exists but does not verify",
 		"timestamp.bound":                        "the timestamp covers this signature",
+		"timestamp.legacy_form":                  "the timestamp covers the signature value as trebaruna wrote it before 0.38.2, not its canonical form: other validators will not accept it",
 		"timestamp.archival":                     "the signature carries an archive timestamp (XAdES-A)",
 		"timestamp.accredited":                   "the timestamp authority is a qualified service of an authenticated list",
 		"timestamp.untrusted_authority":          "the timestamp covers the signature, but its authority is not accredited",
@@ -338,7 +341,7 @@ func init() {
 		"timestamp.not_timestamping_certificate", "trustlist.unavailable",
 		"trustlist.stale", "format.unsupported", "verification.warning",
 		"signature.qualified", "signature.not_qualified",
-		"signature.unverifiable", "container.covers", "container.unsigned_files",
+		"signature.unverifiable", "container.covers", "container.unsigned_files", "timestamp.legacy_form",
 	}
 
 	for name, catalogue := range map[string]Catalogue{
