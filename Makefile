@@ -21,6 +21,8 @@ help:
 	@echo "make install          copia $(BIN) a ~/.local/bin"
 	@echo "make install-desktop  instala CLI + app + icono + lanzador (PREFIX=$(PREFIX))"
 	@echo "make version      versión actual"
+	@echo "make release-artifacts  binarios por plataforma, SBOM y SHA256SUMS en dist/release"
+	@echo "make reproducible       compila dos veces la misma revisión y compara los hashes"
 
 build:
 	CGO_ENABLED=0 $(GO) build -trimpath -ldflags="$(LDFLAGS)" -o $(BIN) $(MAIN)
@@ -78,7 +80,7 @@ version:
 
 clean:
 	rm -rf bin
-.PHONY: format test-race check-gui package-desktop
+.PHONY: format test-race check-gui package-desktop release-artifacts reproducible
 format:
 	gofmt -w src tests
 
@@ -96,3 +98,10 @@ check-gui:
 
 package-desktop:
 	bash packaging/package-desktop.sh $(shell $(GO) env GOOS)
+
+release-artifacts:
+	bash packaging/release.sh
+
+reproducible:
+	bash packaging/reproducible.sh
+

@@ -16,11 +16,16 @@ func runAbout(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("about", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	asJSON := flags.Bool("json", false, "machine-readable output")
+	asSBOM := flags.Bool("sbom", false, "CycloneDX 1.5 software bill of materials")
 	if err := flags.Parse(args); err != nil {
 		return exitUsage
 	}
 
 	build := transparency.Describe(version, signinginfra.PKCS11Available)
+	if *asSBOM {
+		encodeJSONValue(stdout, transparency.BillOfMaterials(build))
+		return exitOK
+	}
 	if *asJSON {
 		encodeJSONValue(stdout, build)
 		return exitOK

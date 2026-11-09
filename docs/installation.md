@@ -271,3 +271,23 @@ and no state between runs, apart from the trust-list cache.
 
 - [Command line](command-line.md) — every command and flag
 - [Signing](signing.md) — your first signature
+
+---
+
+## Checking a release
+
+Every release carries `SHA256SUMS` and a CycloneDX SBOM (`trebaruna-<version>.cdx.json`).
+The build is reproducible: the same commit gives the same bytes wherever it is built.
+
+```bash
+sha256sum -c SHA256SUMS                      # the files are the ones published
+git checkout v<version> && make release-artifacts
+diff SHA256SUMS dist/release/SHA256SUMS      # rebuilt from source, same sums
+trebaruna about                              # revision, card support, dependencies and licences
+```
+
+`make reproducible` builds the current commit twice, in two directories, and
+fails if the binaries differ; CI runs it on every push. Releases are not
+code-signed yet (ADR-0017): until certificates exist, the sums and the
+reproducible build are the proof.
+

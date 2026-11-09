@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -180,5 +181,41 @@ func TestAboutListsWhatTheBinaryContains(t *testing.T) {
 	}
 	if strings.Contains(stdout, `"unreviewed"`) {
 		t.Errorf("a linked module has no reviewed licence:\n%s", stdout)
+	}
+}
+
+func TestAboutWritesACycloneDXBillOfMaterials(t *testing.T) {
+	stdout, _, code := run("about", "--sbom")
+	if code != 0 {
+		t.Fatalf("about --sbom exited %d", code)
+	}
+	var sbom struct {
+		Format      string `json:"bomFormat"`
+		SpecVersion string `json:"specVersion"`
+		Metadata    struct {
+			Component struct {
+				Name string `json:"name"`
+			} `json:"component"`
+		} `json:"metadata"`
+		Components []struct {
+			Name     string `json:"name"`
+			PURL     string `json:"purl"`
+			Licenses []struct {
+				License struct {
+					ID string `json:"id"`
+				} `json:"license"`
+			} `json:"licenses"`
+		} `json:"components"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &sbom); err != nil {
+		t.Fatalf("not JSON: %v", err)
+	}
+	if sbom.Format != "CycloneDX" || sbom.SpecVersion != "1.5" || sbom.Metadata.Component.Name != "trebaruna" {
+		t.Errorf("header = %+v", sbom)
+	}
+	for _, component := range sbom.Components {
+		if !strings.HasPrefix(component.PURL, "pkg:golang/") || len(component.Licenses) != 1 || component.Licenses[0].License.ID == "unreviewed" {
+			t.Errorf("component %s = %+v", component.Name, component)
+		}
 	}
 }

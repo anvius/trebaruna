@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Release: `make release-artifacts` builds the CLI for five platforms with a
+  CycloneDX SBOM (`trebaruna about --sbom`, written by the binary itself) and
+  SHA256SUMS; `make reproducible` proves two builds of a commit are identical
+  (CI runs it); a tag workflow publishes the artefacts and the Linux desktop
+  package, with minisign signing ready for when a key exists.
+
 - `trebaruna about [--json]`: version, platform, source revision, card support
   and every linked module with its licence; the desktop About dialog shows the
   same. A test regenerates the licence table from the modules' licence files and

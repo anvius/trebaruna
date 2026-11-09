@@ -1,0 +1,64 @@
+name: release
+
+# Runs on the GitHub mirror when a version tag arrives from Codeberg.
+# Publishes the command line for five platforms, the Linux desktop package,
+# a CycloneDX SBOM and SHA256SUMS. Nothing is published unless the build is
+# reproducible and every test passes.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    # Secrets cannot appear in a step's condition; job-level env can.
+    env:
+      MINISIGN_SECRET_KEY: ${{ secrets.MINISIGN_SECRET_KEY }}
+      MINISIGN_PASSWORD: ${{ secrets.MINISIGN_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27'
+      - name: GUI toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc pkg-config libgl1-mesa-dev xorg-dev \
+            libxkbcommon-dev libwayland-dev libegl1-mesa-dev
+      - name: Tests
+        run: make check
+      - name: Reproducibility
+        run: make reproducible
+      - name: Command-line artefacts, SBOM and sums
+        run: make release-artifacts
+      - name: Linux desktop package
+        run: |
+          make package-desktop
+          cp dist/trebaruna-*-linux-amd64.tar.gz dist/release/
+          (cd dist/release && sha256sum trebaruna-* > SHA256SUMS)
+      # Signing is ready for when a key exists (ADR-0017): add the minisign
+      # secret key as MINISIGN_SECRET_KEY and its password as MINISIGN_PASSWORD.
+      - name: Sign the sums
+        if: env.MINISIGN_SECRET_KEY != ''
+        run: |
+          sudo apt-get install -y minisign
+          printf '%s' "$MINISIGN_SECRET_KEY" > "$RUNNER_TEMP/minisign.key"
+          printf '%s\n' "$MINISIGN_PASSWORD" | minisign -S -s "$RUNNER_TEMP/minisign.key" -m dist/release/SHA256SUMS
+      - name: Release notes from the changelog
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          awk -v v="$version" '$0 ~ "^## \\[" v "\\]" {p=1; next} /^## \[/ {p=0} p' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+          test -s "$RUNNER_TEMP/notes.md" || echo "See CHANGELOG.md." > "$RUNNER_TEMP/notes.md"
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prerelease=""
+          case "$GITHUB_REF_NAME" in *-unstable*|*-rc*) prerelease="--prerelease" ;; esac
+          gh release create "$GITHUB_REF_NAME" dist/release/* $prerelease \
+            --title "trebaruna ${GITHUB_REF_NAME#v}" --notes-file "$RUNNER_TEMP/notes.md"

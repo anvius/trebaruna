@@ -37,6 +37,10 @@ jobs:
 
       - name: Unit, domain and integration tests
         run: CGO_ENABLED=1 go test ./tests/... -count=1 -race
+      # Two builds of the same commit from different directories must match:
+      # that is what lets anyone check a published binary (ADR-0017).
+      - name: Reproducible build
+        run: make reproducible
 
       # The PKCS#11 adapter is behind the `token` tag, so the default run never
       # compiles it. This job does, and exercises it against SoftHSM.
