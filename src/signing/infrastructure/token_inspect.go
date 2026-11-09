@@ -27,6 +27,11 @@ type TokenSlot struct {
 	PINState domain.PINState
 	// PINPad reports a reader that takes the PIN on its own keypad.
 	PINPad bool
+	// PUKState is what the card says about its PUK (the PKCS#11 security
+	// officer PIN), which unlocks a locked PIN.
+	PUKState domain.PINState
+	// Limits are the PIN lengths the card accepts.
+	Limits domain.PINLimits
 	// Certificates are the certificates the token holds, one per key object
 	// that has a certificate attached.
 	Certificates []TokenCertificate

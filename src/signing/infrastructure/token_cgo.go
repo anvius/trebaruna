@@ -33,13 +33,11 @@ func openToken(signer domain.Signer) (tokenContext, error) {
 	}
 
 	opened, err := openSession(signer.PKCS11Module(), signer.PKCS11Parameters(), uint(slot.Index),
-		signer.PKCS11PIN(), slot.PINState != domain.PINNotRequired)
+		pkcs11.CKU_USER, signer.PKCS11PIN(), slot.PINState != domain.PINNotRequired)
 	if err != nil {
 		if refused := pinRefusal(err); refused != nil {
-			if after := stateAfterRefusal(signer, slot.Index); after != nil && !errors.Is(refused, after) {
-				return nil, fmt.Errorf("%w (%s): %w", refused, name, after)
-			}
-			return nil, fmt.Errorf("%w (%s)", refused, name)
+			return nil, withStateAfter(refused, name,
+				stateAfterRefusal(signer.PKCS11Module(), signer.PKCS11Parameters(), slot.Index, userPIN))
 		}
 		return nil, fmt.Errorf(
 			"cannot open %s with module %s: %w\n"+
@@ -68,11 +66,23 @@ func pinRefusal(err error) error {
 	return nil
 }
 
-// stateAfterRefusal reads the card again after a refused PIN, so the message
-// says whether the next mistake locks it (ErrLastAttempt) or it just did
-// (ErrCardLocked).
-func stateAfterRefusal(signer domain.Signer, index int) error {
-	slots, err := inspectToken(signer.PKCS11Module(), signer.PKCS11Parameters(), "")
+// secretState reads one secret's state from a slot: the user PIN's or the
+// PUK's, with the error that says it is now locked.
+type secretState struct {
+	read   func(TokenSlot) domain.PINState
+	locked error
+}
+
+var (
+	userPIN = secretState{read: func(slot TokenSlot) domain.PINState { return slot.PINState }, locked: domain.ErrCardLocked}
+	cardPUK = secretState{read: func(slot TokenSlot) domain.PINState { return slot.PUKState }, locked: domain.ErrPUKLocked}
+)
+
+// stateAfterRefusal reads the card again after a refused PIN or PUK, so the
+// message says whether the next mistake locks it (ErrLastAttempt) or it just
+// did.
+func stateAfterRefusal(module, parameters string, index int, secret secretState) error {
+	slots, err := inspectToken(module, parameters, "")
 	if err != nil {
 		return nil
 	}
@@ -80,14 +90,23 @@ func stateAfterRefusal(signer domain.Signer, index int) error {
 		if slot.Index != index {
 			continue
 		}
-		switch slot.PINState {
+		switch secret.read(slot) {
 		case domain.PINFinalTry:
 			return domain.ErrLastAttempt
 		case domain.PINLocked:
-			return domain.ErrCardLocked
+			return secret.locked
 		}
 	}
 	return nil
+}
+
+// withStateAfter names a refusal, the token, and what the card said
+// afterwards when it adds something.
+func withStateAfter(refused error, name string, state error) error {
+	if state != nil && !errors.Is(refused, state) {
+		return fmt.Errorf("%w (%s): %w", refused, name, state)
+	}
+	return fmt.Errorf("%w (%s)", refused, name)
 }
 
 // slotFor finds the reader whose card signs.
@@ -101,12 +120,16 @@ func stateAfterRefusal(signer domain.Signer, index int) error {
 // that shows no certificate before login is still found when it is the only
 // card that fits.
 func slotFor(signer domain.Signer) (TokenSlot, error) {
-	slots, err := inspectToken(signer.PKCS11Module(), signer.PKCS11Parameters(), "")
+	return findSlot(signer.PKCS11Module(), signer.PKCS11Parameters(), signer.PKCS11Token(), signer.CertificateChoice())
+}
+
+// findSlot is slotFor for any module, label and certificate choice.
+func findSlot(module, parameters, label string, choice domain.CertificateChoice) (TokenSlot, error) {
+	slots, err := inspectToken(module, parameters, "")
 	if err != nil {
 		return TokenSlot{}, err
 	}
 
-	label := signer.PKCS11Token()
 	var present []TokenSlot
 	for _, slot := range slots {
 		if slot.TokenLabel != "" && (label == "" || slot.TokenLabel == label) {
@@ -115,13 +138,12 @@ func slotFor(signer domain.Signer) (TokenSlot, error) {
 	}
 	if len(present) == 0 && label != "" {
 		return TokenSlot{}, fmt.Errorf("no card labelled %q in the readers of %s; list them with: trebaruna token",
-			label, signer.PKCS11Module())
+			label, module)
 	}
 	if len(present) == 1 && label != "" {
 		return present[0], nil
 	}
 
-	choice := signer.CertificateChoice()
 	var holding []TokenSlot
 	for _, slot := range present {
 		if _, err := choice.Pick(parsedCertificates(slot.Certificates)); !errors.Is(err, domain.ErrNoCertificateMatches) {
@@ -139,10 +161,10 @@ func slotFor(signer domain.Signer) (TokenSlot, error) {
 		if choice.Automatic() {
 			return TokenSlot{}, fmt.Errorf("no card in the readers of %s shows a certificate.\n"+
 				"  check: the card is inserted and pcscd is running; list them with: trebaruna token",
-				signer.PKCS11Module())
+				module)
 		}
 		return TokenSlot{}, fmt.Errorf("%w %q in any reader of %s; list them with: trebaruna token",
-			domain.ErrNoCertificateMatches, choice.String(), signer.PKCS11Module())
+			domain.ErrNoCertificateMatches, choice.String(), module)
 	default:
 		labels := make([]string, len(holding))
 		for index, slot := range holding {

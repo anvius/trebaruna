@@ -91,6 +91,7 @@ func newFormFixtureWithCards(t *testing.T, reader application.CertificateReader,
 	desktop.inspect = application.NewInspectCertificate(reader)
 	desktop.cards = application.NewListCards(cards)
 	desktop.firefox = application.NewListCards(cards)
+	desktop.pinChange = application.NewChangeCardPIN(&scriptedPINChanger{})
 	desktop.preview = application.NewPreviewPage(blankRenderer{}, application.InkFinder{})
 	window.SetContent(desktop.withTabs(desktop.buildContent("")))
 	window.Resize(fyne.NewSize(1220, 800))

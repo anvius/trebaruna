@@ -30,7 +30,7 @@ var (
 // few the card allows before it locks.
 func StopsCard(err error) bool {
 	return errors.Is(err, ErrWrongPIN) || errors.Is(err, ErrCardLocked) ||
-		errors.Is(err, ErrPINExpired) || errors.Is(err, ErrPINMissing)
+		errors.Is(err, ErrPINExpired) || errors.Is(err, ErrPINMissing) || stopsWithPUK(err)
 }
 
 // PINState is what a card says about its user PIN before anyone types it.

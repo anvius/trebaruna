@@ -95,6 +95,13 @@ passphrase. **Look for cards** reads the readers again after inserting a card.
 Choosing a certificate file (File → Choose certificate…, or dropping one)
 switches the step back to **File**.
 
+**Card → Change the PIN…** and **Card → Unlock with the PUK…** act on the card
+chosen in step 2 (or the only card present). The dialog asks for the current PIN
+or the PUK, and the new PIN twice; two new PINs that differ, an empty secret or
+a new PIN the card cannot take are said in the dialog without reaching the card.
+A refused PIN or PUK is cleared, the dialog stays open with the reason, and the
+last-attempt warning is shown when the card gives it.
+
 **Firefox** lists the certificates of the Firefox store the same way and signs
 with them in place, never exporting them. Its PIN field asks for Firefox's
 primary password, and is disabled when the store has none. An empty store says
@@ -209,6 +216,7 @@ Linux and Windows, `Cmd` on macOS):
 | Signature | Sign | `Ctrl+Enter` |
 | Signature | Previous page / Next page | `Ctrl+PgUp` / `Ctrl+PgDn` |
 | Signature | Find free space | `Ctrl+F` |
+| Card | Change the PIN…, Unlock with the PUK… | — |
 | Tools | Requests from web pages… | — |
 | Help | Manual, About trebaruna | — |
 

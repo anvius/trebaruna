@@ -54,6 +54,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runCertificate(args[1:], stdout, stderr)
 	case "token":
 		return runToken(args[1:], stdout, stderr)
+	case "pin":
+		return runPIN(args[1:], stdout, stderr)
 	case "asic":
 		return runAsic(args[1:], stdout, stderr)
 	case "serve":
@@ -473,6 +475,7 @@ usage:
   trebaruna verify-tsr <token.tsr> [file]
   trebaruna certificate <file.p12|.pem|.crt>   (or: cert)
   trebaruna token [--module <pkcs11.so>]     (list cards and their certificates)
+  trebaruna pin change|unlock [--token L]    (new PIN; secrets only in $TREBARUNA_PIN/_PUK/_NEW_PIN)
   trebaruna asic <document> <signature>        (ASiC-S / ASiC-E container)
   trebaruna serve --root <dir> --listen 127.0.0.1:0   (local HTTP API)
   trebaruna extract <document.p7m> [--out path]  (the document inside one or more envelopes)

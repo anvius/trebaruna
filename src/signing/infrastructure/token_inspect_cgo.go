@@ -66,6 +66,9 @@ func inspectToken(path, parameters, pin string) ([]TokenSlot, error) {
 			ToBeChanged:   token.Flags&pkcs11.CKF_USER_PIN_TO_BE_CHANGED != 0,
 		})
 		entry.PINPad = token.Flags&pkcs11.CKF_PROTECTED_AUTHENTICATION_PATH != 0
+		entry.PUKState = domain.PUKStateOf(token.Flags&pkcs11.CKF_SO_PIN_LOCKED != 0,
+			token.Flags&pkcs11.CKF_SO_PIN_FINAL_TRY != 0, token.Flags&pkcs11.CKF_SO_PIN_COUNT_LOW != 0)
+		entry.Limits = pinLimits(token)
 		entry.Certificates = readCertificates(context, slot, pin)
 		markDefault(entry.Certificates)
 
@@ -73,6 +76,19 @@ func inspectToken(path, parameters, pin string) ([]TokenSlot, error) {
 	}
 
 	return result, nil
+}
+
+// pinLimits reads the PIN lengths a token declares. A token that does not
+// know says so with an absurd maximum, which counts as no limit.
+func pinLimits(token pkcs11.TokenInfo) domain.PINLimits {
+	limits := domain.PINLimits{Minimum: int(token.MinPinLen), Maximum: int(token.MaxPinLen)}
+	if token.MaxPinLen > 1024 {
+		limits.Maximum = 0
+	}
+	if token.MinPinLen > 1024 {
+		limits.Minimum = 0
+	}
+	return limits
 }
 
 // describeLoginState renders the login state of a token.

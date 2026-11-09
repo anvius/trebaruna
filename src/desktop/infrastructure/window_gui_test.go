@@ -48,8 +48,8 @@ func TestADroppedFileGoesWhereItBelongs(t *testing.T) {
 func TestTheMenuNamesEveryActionWithItsShortcut(t *testing.T) {
 	fixture := newFormFixture(t, scriptedCertificate{summary: qualifiedRossi()})
 	menu := fixture.desktop.window.MainMenu()
-	if menu == nil || len(menu.Items) != 4 {
-		t.Fatalf("main menu = %v, want File, Signature, Tools and Help", menu)
+	if menu == nil || len(menu.Items) != 5 {
+		t.Fatalf("main menu = %v, want File, Signature, Card, Tools and Help", menu)
 	}
 
 	m := fixture.desktop.messages
@@ -69,6 +69,11 @@ func TestTheMenuNamesEveryActionWithItsShortcut(t *testing.T) {
 	}
 	for label := range wanted {
 		t.Errorf("the menu lacks %q", label)
+	}
+	card := menu.Items[2]
+	if card.Label != m.MenuCard || len(card.Items) != 2 ||
+		card.Items[0].Label != m.MenuChangePIN || card.Items[1].Label != m.MenuUnlockPIN {
+		t.Errorf("the Card menu must offer changing and unlocking the PIN: %+v", card)
 	}
 }
 

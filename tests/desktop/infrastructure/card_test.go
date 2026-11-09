@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"codeberg.org/simplicer/trebaruna/src/desktop/domain"
@@ -133,5 +134,52 @@ func TestTheFirefoxStoreIsListedAndSignedWithItsOwnFlag(t *testing.T) {
 	arguments := recordedArguments(t, recorded)
 	if !contains(arguments, "--firefox") || !containsPair(arguments, "--certificate", "a18a8855") || contains(arguments, "--token") {
 		t.Errorf("arguments %v: the store is named by --firefox, not by a card label", arguments)
+	}
+}
+
+func TestAPINChangeRunsTheCommandWithItsSecretsInTheEnvironment(t *testing.T) {
+	seen := filepath.Join(t.TempDir(), "environment")
+	binary, recorded := fakeCommand(t, "printf '%s %s' \"$TREBARUNA_PUK\" \"$TREBARUNA_NEW_PIN\" > "+seen+"; echo '{\"changed\":true}'")
+
+	change := domain.PINChange{Action: domain.UnlockPIN, Token: "Carta Nazionale", Secret: "87654321", NewPIN: "2468", Repeat: "2468"}
+	if err := (infrastructure.CommandLinePINChanger{BinaryPath: binary}).Apply(context.Background(), change); err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+	arguments := recordedArguments(t, recorded)
+	if arguments[0] != "pin" || arguments[1] != "unlock" || !containsPair(arguments, "--token", "Carta Nazionale") {
+		t.Errorf("arguments %v", arguments)
+	}
+	for _, argument := range arguments {
+		if argument == "87654321" || argument == "2468" {
+			t.Fatalf("a secret reached the command line: %v", arguments)
+		}
+	}
+	if got, _ := os.ReadFile(seen); string(got) != "87654321 2468" {
+		t.Errorf("environment carried %q", got)
+	}
+}
+
+func TestTheCardsAnswersToAPINChangeBecomeProblems(t *testing.T) {
+	cases := []struct {
+		stderr string
+		code   domain.ProblemCode
+		detail string
+	}{
+		{`the card refused the PUK (token "X"): one more wrong PIN locks the card`, domain.ProblemWrongPUK, string(signing.PINFinalTry)},
+		{`the card refused the PUK (token "X"): the card's PUK is locked: only its issuer can unlock it`, domain.ProblemWrongPUK, string(signing.PINLocked)},
+		{`the card's PUK is locked: only its issuer can unlock it (token "X")`, domain.ProblemPUKLocked, ""},
+		{`the new PIN does not fit the card: it has 2 characters, the card wants at least 4 (token "X")`, domain.ProblemNewPINRejected, "min:4"},
+		{`the new PIN does not fit the card: it has 12 characters, the card takes at most 8 (token "X")`, domain.ProblemNewPINRejected, "max:8"},
+		{`the card refused the PIN (token "X")`, domain.ProblemWrongPIN, ""},
+		{`the card is locked: unlock it with its PUK (token "X")`, domain.ProblemCardLocked, ""},
+	}
+	for _, entry := range cases {
+		binary, _ := fakeCommand(t, "echo '"+strings.ReplaceAll(entry.stderr, "'", "'\\''")+"' >&2; exit 1")
+		err := (infrastructure.CommandLinePINChanger{BinaryPath: binary}).Apply(context.Background(),
+			domain.PINChange{Action: domain.ChangePIN, Secret: "1", NewPIN: "2", Repeat: "2"})
+		var problem domain.Problem
+		if !errors.As(err, &problem) || problem.Code != entry.code || problem.Detail != entry.detail {
+			t.Errorf("%q became %v, want %s/%s", entry.stderr, err, entry.code, entry.detail)
+		}
 	}
 }

@@ -65,13 +65,17 @@ func TestScreenshots(t *testing.T) {
 		capture(t, window, filepath.Join(directory, fmt.Sprintf("signed-%s.png", language)))
 
 		// The card source, with a card that already refused a PIN once.
-		desktop.form.cards.list = application.NewListCards(&scriptedCards{
+		desktop.form.cardList = application.NewListCards(&scriptedCards{
 			listings: [][]domain.CardCertificate{identityCard(signing.PINCountLow)},
 		})
 		desktop.form.keySource.SetSelected(desktop.messages.KeyFromCard)
 		waitFor(t, func() bool { return desktop.form.summary != nil })
 		desktop.form.cards.pin.SetText("123456")
 		capture(t, window, filepath.Join(directory, fmt.Sprintf("card-%s.png", language)))
+		unlock := desktop.showPINDialog(domain.UnlockPIN)
+		unlock.secret.SetText("12345678")
+		capture(t, window, filepath.Join(directory, fmt.Sprintf("pin-%s.png", language)))
+		unlock.dialog.Hide()
 		desktop.form.keySource.SetSelected(desktop.messages.KeyFromFile)
 
 		tabs := window.Content().(*container.AppTabs)

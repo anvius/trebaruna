@@ -13,6 +13,10 @@ const (
 	passphraseVariable = "TREBARUNA_PASSPHRASE"
 	pinVariable        = "TREBARUNA_PIN"
 	tsaSecretVariable  = "TREBARUNA_TSA_PASS"
+	// The card management secrets have no flags at all: they are only ever
+	// typed by a person, and a person can set them without echo.
+	pukVariable    = "TREBARUNA_PUK"
+	newPINVariable = "TREBARUNA_NEW_PIN"
 )
 
 // secretFrom prefers an explicit flag and falls back to the environment.

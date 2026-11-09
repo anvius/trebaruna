@@ -58,7 +58,7 @@ user seeing what is signed and where anything goes.
 | PIN attempts are never spent needlessly: state read before login, no empty PIN, a refused PIN stops the run (a batch included), the state after a refusal stated | built |
 | Cards and tokens in the desktop window: every certificate listed in full, the signing one chosen, PIN state and locked cards stated before typing, a refused PIN cleared and the card read again | built |
 | Firefox / NSS store used in place, without exporting: read-only, primary password as PIN, CLI (`--firefox`, `--nss-db`) and window | built |
-| Change PIN, unlock with PUK | planned (C4) |
+| Change PIN, unlock with PUK: state and length checked before any attempt, secrets only in the environment, CLI (`pin`) and window (Card menu) | built |
 | Windows and macOS system stores | planned (C5) |
 | Remote signing through the CSC API v2 only (ADR-0014) | planned (F5) |
 
@@ -107,8 +107,9 @@ user seeing what is signed and where anything goes.
 | Slice | Use case | One public method |
 |---|---|---|
 | signing | `SignDocument` | `Execute(ctx, Request) (Artefact, error)` |
+| signing | `ChangeCardPIN`, `UnlockCard` | `Execute(ctx, Card, secret, newPIN) error` |
 | verification | `VerifyDocument` | `Execute` |
 | trust | `VerifyList` | `Execute` |
-| desktop | `SignFromDesktop`, `PreviewPage`, `InspectCertificate`, `ListCards` | `Execute` |
+| desktop | `SignFromDesktop`, `PreviewPage`, `InspectCertificate`, `ListCards`, `ChangeCardPIN` | `Execute` |
 
 New capabilities add use cases here as they are built.

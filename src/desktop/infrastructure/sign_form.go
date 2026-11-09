@@ -546,6 +546,23 @@ func (f *signForm) showListedSource(remembered string, list *application.ListCar
 	f.cards.switchTo(list, empty, pinName)
 }
 
+// cardToken is the label of the card chosen in the step, for card
+// management; empty when no card is chosen, which means the only one present.
+func (f *signForm) cardToken() string {
+	if f.keySource.Selected != f.m.KeyFromCard || f.cards.chosen == nil {
+		return ""
+	}
+	return f.cards.chosen.Token
+}
+
+// cardsChanged reads the cards again after their PIN changed, so the state
+// shown is the card's new one.
+func (f *signForm) cardsChanged() {
+	if f.keySource.Selected == f.m.KeyFromCard {
+		f.cards.refresh()
+	}
+}
+
 // cardChosen fills the certificate card from the card's certificate: the
 // listing already carries the holder and the issuer's standing.
 func (f *signForm) cardChosen(certificate domain.CardCertificate) {

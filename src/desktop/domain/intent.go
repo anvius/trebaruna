@@ -165,13 +165,31 @@ const (
 
 	// ProblemPINExpired means the card wants its PIN set or changed first.
 	ProblemPINExpired ProblemCode = "pin_expired"
+
+	// ProblemMissingPUK means an unlock was asked without the PUK.
+	ProblemMissingPUK ProblemCode = "missing_puk"
+
+	// ProblemWrongPUK means the card refused the PUK; Detail carries what the
+	// card says about the next attempt.
+	ProblemWrongPUK ProblemCode = "wrong_puk"
+
+	// ProblemPUKLocked means only the card's issuer can unlock it now.
+	ProblemPUKLocked ProblemCode = "puk_locked"
+
+	// ProblemPINMismatch means the new PIN and its repetition differ.
+	ProblemPINMismatch ProblemCode = "pin_mismatch"
+
+	// ProblemNewPINRejected means the card cannot take the new PIN; Detail
+	// carries the card's limits as the command stated them.
+	ProblemNewPINRejected ProblemCode = "new_pin_rejected"
 )
 
 // StopsCard reports whether the problem forbids trying the card again with
 // the same PIN: in a batch, the next document would spend another attempt.
 func (p Problem) StopsCard() bool {
 	switch p.Code {
-	case ProblemMissingPIN, ProblemWrongPIN, ProblemCardLocked, ProblemPINExpired:
+	case ProblemMissingPIN, ProblemWrongPIN, ProblemCardLocked, ProblemPINExpired,
+		ProblemMissingPUK, ProblemWrongPUK, ProblemPUKLocked:
 		return true
 	}
 	return false

@@ -40,6 +40,7 @@ type Window struct {
 	inspect     *application.InspectCertificate
 	cards       *application.ListCards
 	firefox     *application.ListCards
+	pinChange   *application.ChangeCardPIN
 	preview     *application.PreviewPage
 	window      fyne.Window
 	messages    messaging.Catalogue
@@ -103,6 +104,7 @@ func newDesktop(window fyne.Window, catalogue messaging.Catalogue, binaryPath st
 		inspect:     application.NewInspectCertificate(CommandLineCertificateReader{BinaryPath: binaryPath}),
 		cards:       application.NewListCards(CommandLineCardReader{BinaryPath: binaryPath}),
 		firefox:     application.NewListCards(CommandLineCardReader{BinaryPath: binaryPath, Store: domain.StoreFirefox}),
+		pinChange:   application.NewChangeCardPIN(CommandLinePINChanger{BinaryPath: binaryPath}),
 		preview:     application.NewPreviewPage(NewPopplerRenderer(), application.InkFinder{}),
 		binaryPath:  binaryPath,
 		window:      window,
@@ -278,6 +280,10 @@ func (w *Window) mainMenu(tabs *container.AppTabs, checkFile func(string)) *fyne
 	return fyne.NewMainMenu(
 		fyne.NewMenu(m.MenuFile, openDocument, signFolder, chooseCertificate, fyne.NewMenuItemSeparator(), checkDocument),
 		fyne.NewMenu(m.MenuSignature, sign, fyne.NewMenuItemSeparator(), previous, next, freeSpace),
+		fyne.NewMenu(m.MenuCard,
+			fyne.NewMenuItem(m.MenuChangePIN, func() { w.showPINDialog(domain.ChangePIN) }),
+			fyne.NewMenuItem(m.MenuUnlockPIN, func() { w.showPINDialog(domain.UnlockPIN) }),
+		),
 		fyne.NewMenu(m.MenuTools,
 			fyne.NewMenuItem(m.MenuNetwork, w.showNetworkActivity),
 			fyne.NewMenuItem(m.MenuRequests, w.showRequests),
@@ -444,6 +450,29 @@ func translate(err error, m messaging.Catalogue) string {
 			return m.WrongPINNowLocked
 		}
 		return m.WrongPIN
+	case domain.ProblemMissingPUK:
+		return m.MissingPUK
+	case domain.ProblemPUKLocked:
+		return m.PUKLocked
+	case domain.ProblemPINMismatch:
+		return m.PINMismatch
+	case domain.ProblemWrongPUK:
+		switch problem.Detail {
+		case string(signing.PINFinalTry):
+			return m.WrongPUKFinalTry
+		case string(signing.PINLocked):
+			return m.WrongPUKNowLocked
+		}
+		return m.WrongPUK
+	case domain.ProblemNewPINRejected:
+		kind, limit, _ := strings.Cut(problem.Detail, ":")
+		switch kind {
+		case "min":
+			return fmt.Sprintf(m.NewPINTooShort, limit)
+		case "max":
+			return fmt.Sprintf(m.NewPINTooLong, limit)
+		}
+		return m.NewPINRejected
 	}
 	return err.Error()
 }

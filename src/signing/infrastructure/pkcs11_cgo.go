@@ -101,9 +101,10 @@ type session struct {
 	closed bool
 }
 
-// openSession opens a session on the slot and logs in. A pinpad reader gets
-// no PIN at all, which is how PKCS#11 asks it to read the PIN on its keypad.
-func openSession(path, parameters string, slot uint, pin string, login bool) (*session, error) {
+// openSession opens a session on the slot and, when asked, logs in as the
+// user (CKU_USER, with the PIN) or the security officer (CKU_SO, with the
+// PUK).
+func openSession(path, parameters string, slot uint, userType uint, secret string, login bool) (*session, error) {
 	cardSessions.Lock()
 	loaded, err := loadModule(path, parameters)
 	if err != nil {
@@ -126,13 +127,13 @@ func openSession(path, parameters string, slot uint, pin string, login bool) (*s
 		// An empty PIN with a zero length is how a reader with a keypad is
 		// asked to read the PIN itself (OpenSC treats it so); elsewhere the
 		// caller never gets here without a PIN.
-		err := loaded.context.Login(handle, pkcs11.CKU_USER, pin)
+		err := loaded.context.Login(handle, userType, secret)
 		var code pkcs11.Error
 		if errors.As(err, &code) && code == pkcs11.CKR_USER_ALREADY_LOGGED_IN {
 			// A login left over from elsewhere in this process must not stand
 			// in for this PIN: log out and let the card check it.
 			_ = loaded.context.Logout(handle)
-			err = loaded.context.Login(handle, pkcs11.CKU_USER, pin)
+			err = loaded.context.Login(handle, userType, secret)
 		}
 		if err != nil {
 			_ = opened.Close()

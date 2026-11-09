@@ -172,6 +172,34 @@ type Catalogue struct {
 	MenuPreviousPage      string
 	MenuNextPage          string
 	MenuTools             string
+	MenuCard              string
+	MenuChangePIN         string
+	MenuUnlockPIN         string
+	ChangePINTitle        string
+	UnlockPINTitle        string
+	ChangePINHint         string
+	UnlockPINHint         string
+	PINDialogCard         string
+	PINDialogOnlyCard     string
+	CurrentPINLabel       string
+	PUKLabel              string
+	NewPINLabel           string
+	RepeatPINLabel        string
+	ChangePINButton       string
+	UnlockPINButton       string
+	CancelButton          string
+	TalkingToCard         string
+	PINChanged            string
+	CardUnlocked          string
+	PINMismatch           string
+	MissingPUK            string
+	WrongPUK              string
+	WrongPUKFinalTry      string
+	WrongPUKNowLocked     string
+	PUKLocked             string
+	NewPINRejected        string
+	NewPINTooShort        string
+	NewPINTooLong         string
 	MenuRequests          string
 	MenuHelp              string
 	MenuManual            string
@@ -360,6 +388,34 @@ var spanish = Catalogue{
 	MenuPreviousPage:           "Página anterior",
 	MenuNextPage:               "Página siguiente",
 	MenuTools:                  "Herramientas",
+	MenuCard:                   "Tarjeta",
+	MenuChangePIN:              "Cambiar el PIN…",
+	MenuUnlockPIN:              "Desbloquear con el PUK…",
+	ChangePINTitle:             "Cambiar el PIN de la tarjeta",
+	UnlockPINTitle:             "Desbloquear la tarjeta con el PUK",
+	ChangePINHint:              "La tarjeta comprueba el PIN actual una sola vez: si es erróneo, gasta uno de sus pocos intentos.",
+	UnlockPINHint:              "El PUK viene en el sobre de la tarjeta, junto al PIN. Sirve también si has olvidado el PIN. Sus intentos también son pocos: si se bloquea, solo el emisor puede desbloquear la tarjeta.",
+	PINDialogCard:              "Tarjeta «%s».",
+	PINDialogOnlyCard:          "La tarjeta del lector.",
+	CurrentPINLabel:            "PIN actual",
+	PUKLabel:                   "PUK",
+	NewPINLabel:                "PIN nuevo",
+	RepeatPINLabel:             "Repite el PIN nuevo",
+	ChangePINButton:            "Cambiar el PIN",
+	UnlockPINButton:            "Desbloquear",
+	CancelButton:               "Cancelar",
+	TalkingToCard:              "Hablando con la tarjeta…",
+	PINChanged:                 "PIN cambiado: la tarjeta ya acepta el nuevo.",
+	CardUnlocked:               "Tarjeta desbloqueada: el PIN nuevo ya funciona.",
+	PINMismatch:                "Los dos PIN nuevos no coinciden.",
+	MissingPUK:                 "Escribe el PUK de la tarjeta.",
+	WrongPUK:                   "La tarjeta ha rechazado el PUK. No se ha cambiado nada.",
+	WrongPUKFinalTry:           "La tarjeta ha rechazado el PUK. Queda un solo intento: otro error lo bloqueará y solo el emisor podrá desbloquear la tarjeta.",
+	WrongPUKNowLocked:          "La tarjeta ha rechazado el PUK y lo ha bloqueado: solo el emisor puede desbloquearla.",
+	PUKLocked:                  "El PUK está bloqueado: solo el emisor de la tarjeta puede desbloquearla.",
+	NewPINRejected:             "La tarjeta no acepta ese PIN nuevo.",
+	NewPINTooShort:             "El PIN nuevo es demasiado corto: la tarjeta pide al menos %s caracteres.",
+	NewPINTooLong:              "El PIN nuevo es demasiado largo: la tarjeta admite como mucho %s caracteres.",
 	MenuRequests:               "Peticiones de páginas web…",
 	MenuHelp:                   "Ayuda",
 	MenuManual:                 "Manual",
@@ -532,6 +588,34 @@ var italian = Catalogue{
 	MenuPreviousPage:           "Pagina precedente",
 	MenuNextPage:               "Pagina successiva",
 	MenuTools:                  "Strumenti",
+	MenuCard:                   "Carta",
+	MenuChangePIN:              "Cambia il PIN…",
+	MenuUnlockPIN:              "Sblocca con il PUK…",
+	ChangePINTitle:             "Cambia il PIN della carta",
+	UnlockPINTitle:             "Sblocca la carta con il PUK",
+	ChangePINHint:              "La carta controlla il PIN attuale una sola volta: se è errato, consuma uno dei suoi pochi tentativi.",
+	UnlockPINHint:              "Il PUK si trova nella busta della carta, insieme al PIN. Serve anche se hai dimenticato il PIN. Anche i suoi tentativi sono pochi: se si blocca, solo l'emittente può sbloccare la carta.",
+	PINDialogCard:              "Carta «%s».",
+	PINDialogOnlyCard:          "La carta nel lettore.",
+	CurrentPINLabel:            "PIN attuale",
+	PUKLabel:                   "PUK",
+	NewPINLabel:                "Nuovo PIN",
+	RepeatPINLabel:             "Ripeti il nuovo PIN",
+	ChangePINButton:            "Cambia il PIN",
+	UnlockPINButton:            "Sblocca",
+	CancelButton:               "Annulla",
+	TalkingToCard:              "Comunicazione con la carta…",
+	PINChanged:                 "PIN cambiato: la carta accetta già quello nuovo.",
+	CardUnlocked:               "Carta sbloccata: il nuovo PIN funziona già.",
+	PINMismatch:                "I due nuovi PIN non coincidono.",
+	MissingPUK:                 "Scrivi il PUK della carta.",
+	WrongPUK:                   "La carta ha rifiutato il PUK. Non è cambiato nulla.",
+	WrongPUKFinalTry:           "La carta ha rifiutato il PUK. Resta un solo tentativo: un altro errore lo bloccherà e solo l'emittente potrà sbloccare la carta.",
+	WrongPUKNowLocked:          "La carta ha rifiutato il PUK e lo ha bloccato: solo l'emittente può sbloccarla.",
+	PUKLocked:                  "Il PUK è bloccato: solo l'emittente della carta può sbloccarla.",
+	NewPINRejected:             "La carta non accetta quel nuovo PIN.",
+	NewPINTooShort:             "Il nuovo PIN è troppo corto: la carta ne chiede almeno %s caratteri.",
+	NewPINTooLong:              "Il nuovo PIN è troppo lungo: la carta ne accetta al massimo %s caratteri.",
 	MenuRequests:               "Richieste dalle pagine web…",
 	MenuHelp:                   "Aiuto",
 	MenuManual:                 "Manuale",
@@ -704,6 +788,34 @@ var english = Catalogue{
 	MenuPreviousPage:           "Previous page",
 	MenuNextPage:               "Next page",
 	MenuTools:                  "Tools",
+	MenuCard:                   "Card",
+	MenuChangePIN:              "Change the PIN…",
+	MenuUnlockPIN:              "Unlock with the PUK…",
+	ChangePINTitle:             "Change the card PIN",
+	UnlockPINTitle:             "Unlock the card with the PUK",
+	ChangePINHint:              "The card checks the current PIN once: a wrong one spends one of its few attempts.",
+	UnlockPINHint:              "The PUK comes in the card's envelope, with the PIN. It also helps if you forgot the PIN. It has few attempts too: once it locks, only the issuer can unlock the card.",
+	PINDialogCard:              "Card “%s”.",
+	PINDialogOnlyCard:          "The card in the reader.",
+	CurrentPINLabel:            "Current PIN",
+	PUKLabel:                   "PUK",
+	NewPINLabel:                "New PIN",
+	RepeatPINLabel:             "Repeat the new PIN",
+	ChangePINButton:            "Change the PIN",
+	UnlockPINButton:            "Unlock",
+	CancelButton:               "Cancel",
+	TalkingToCard:              "Talking to the card…",
+	PINChanged:                 "PIN changed: the card now takes the new one.",
+	CardUnlocked:               "Card unlocked: the new PIN works now.",
+	PINMismatch:                "The two new PINs differ.",
+	MissingPUK:                 "Type the card's PUK.",
+	WrongPUK:                   "The card refused the PUK. Nothing changed.",
+	WrongPUKFinalTry:           "The card refused the PUK. One attempt left: one more mistake locks it, and only the issuer can unlock the card.",
+	WrongPUKNowLocked:          "The card refused the PUK and locked it: only the issuer can unlock the card.",
+	PUKLocked:                  "The PUK is locked: only the card's issuer can unlock it.",
+	NewPINRejected:             "The card does not take that new PIN.",
+	NewPINTooShort:             "The new PIN is too short: the card wants at least %s characters.",
+	NewPINTooLong:              "The new PIN is too long: the card takes at most %s characters.",
 	MenuRequests:               "Requests from web pages…",
 	MenuHelp:                   "Help",
 	MenuManual:                 "Manual",

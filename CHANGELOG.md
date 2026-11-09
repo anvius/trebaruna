@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Card PIN management: `trebaruna pin change` (current PIN → new) and
+  `trebaruna pin unlock` (PUK → new PIN, for a locked or forgotten PIN), with
+  the secrets only in `TREBARUNA_PIN`, `TREBARUNA_PUK` and `TREBARUNA_NEW_PIN`.
+  The card is read first: a locked card or PUK, or a new PIN outside the
+  lengths the card declares, is refused without an attempt; refusals are named
+  with the last-attempt warning. The window gains a **Card** menu with both
+  operations in a dialog that checks the repeated PIN. Use cases
+  `ChangeCardPIN` and `UnlockCard` (signing) and `ChangeCardPIN` (desktop).
+
 - Firefox / NSS stores used in place: `sign --firefox` (the profile Firefox
   starts with, found in profiles.ini under the usual, Snap and Flatpak roots)
   and `sign --nss-db <dir>` (any NSS store, e.g. Chromium's `~/.pki/nssdb`)
