@@ -87,6 +87,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- XAdES with ECDSA keys: the signer wrote the SignatureValue as an ASN.1
+  SEQUENCE and the verifier (goxmldsig, through `x509.CheckSignature`) read only
+  that form. XML-DSig requires r||s (RFC 6931). Our signatures were refused by
+  other verifiers, and a correct ECDSA signature from another producer was
+  reported as **tampered**. The signer now writes r||s; the verifier accepts
+  r||s and still accepts the old form, so files already issued keep verifying.
+  RSA signatures were not affected.
 - XAdES signatures lacked `xades:DataObjectFormat`, which the XAdES baseline
   (EN 319 132-1, B-B) asks for. It now declares `text/xml` for enveloped
   signatures and `application/octet-stream` with base64 encoding for

@@ -4,11 +4,14 @@ import (
 	"bytes"
 	"context"
 	"crypto"
+	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
+	"encoding/asn1"
 	"encoding/base64"
 	"fmt"
+	"math/big"
 	"strings"
 	"time"
 
@@ -172,6 +175,11 @@ func (s *XadesSigner) SignXades(ctx context.Context, request application.XadesRe
 	if err != nil {
 		return nil, fmt.Errorf("sign XAdES SignedInfo: %w", err)
 	}
+	if key, ok := keyPair.Certificate.PublicKey.(*ecdsa.PublicKey); ok {
+		if signatureValue, err = xmldsigECDSA(key, signatureValue); err != nil {
+			return nil, err
+		}
+	}
 
 	signatureValueElement := signatureElement.SelectElement("SignatureValue")
 	if signatureValueElement == nil {
@@ -317,6 +325,21 @@ func canonicalDigest(element *etree.Element) ([]byte, error) {
 	}
 	digest := sha256.Sum256(canonical)
 	return digest[:], nil
+}
+
+// xmldsigECDSA rewrites an ECDSA signature from the ASN.1 SEQUENCE Go returns
+// into the fixed-width r||s that XML-DSig requires (RFC 6931 §2.3.6). The ASN.1
+// form verified with our own reader and failed with every other one.
+func xmldsigECDSA(key *ecdsa.PublicKey, der []byte) ([]byte, error) {
+	var parts struct{ R, S *big.Int }
+	if rest, err := asn1.Unmarshal(der, &parts); err != nil || len(rest) != 0 {
+		return nil, fmt.Errorf("unreadable ECDSA signature: %v", err)
+	}
+	size := (key.Curve.Params().BitSize + 7) / 8
+	raw := make([]byte, 2*size)
+	parts.R.FillBytes(raw[:size])
+	parts.S.FillBytes(raw[size:])
+	return raw, nil
 }
 
 // buildSignedProperties emits xades:SignedProperties with the namespaces it needs.

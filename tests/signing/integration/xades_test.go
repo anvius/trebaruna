@@ -6,13 +6,21 @@ package integration_test
 // regressions cannot return, and verify the digests the way a reader does.
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/sha256"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/base64"
+	"encoding/pem"
 	"encoding/xml"
 	"io"
+	"math/big"
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"codeberg.org/simplicer/trebaruna/src/signing/application"
 	"codeberg.org/simplicer/trebaruna/src/signing/domain"
@@ -209,5 +217,47 @@ func TestXadesDeclaresTheFormatOfWhatItSigns(t *testing.T) {
 	enveloping := signXades(t, `<fattura/>`, true)
 	if !strings.Contains(enveloping, `<xades:MimeType>application/octet-stream</xades:MimeType><xades:Encoding>http://www.w3.org/2000/09/xmldsig#base64</xades:Encoding>`) {
 		t.Error("an enveloping signature carries base64 and must say so")
+	}
+}
+
+// TestXadesWritesECDSAAsXMLDSigExpects pins RFC 6931: an ECDSA SignatureValue
+// is r||s at the curve's width, not the ASN.1 SEQUENCE crypto.Signer returns.
+// The SEQUENCE verified with our own reader and was refused by signxml.
+func TestXadesWritesECDSAAsXMLDSigExpects(t *testing.T) {
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	template := &x509.Certificate{
+		SerialNumber: big.NewInt(7),
+		Subject:      pkix.Name{CommonName: "MARIO ROSSI"},
+		NotBefore:    time.Now().Add(-time.Hour),
+		NotAfter:     time.Now().Add(time.Hour),
+	}
+	der, err := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	keyDER, err := x509.MarshalPKCS8PrivateKey(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	signer := buildPemSigner(t,
+		pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: keyDER}),
+		pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}))
+
+	output, err := infrastructure.NewXadesSigner(nil).SignXades(t.Context(), buildXadesRequest(signer, []byte(`<fattura/>`), false))
+	if err != nil {
+		t.Fatalf("SignXades: %v", err)
+	}
+
+	start := strings.Index(string(output), "<ds:SignatureValue>") + len("<ds:SignatureValue>")
+	end := strings.Index(string(output), "</ds:SignatureValue>")
+	value, err := base64.StdEncoding.DecodeString(string(output[start:end]))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(value) != 64 {
+		t.Fatalf("SignatureValue is %d bytes, want 64 (r||s on P-256)", len(value))
 	}
 }

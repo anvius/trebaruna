@@ -2,10 +2,14 @@ package infrastructure
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"crypto/x509"
+	"encoding/asn1"
 	"encoding/base64"
 	"fmt"
+	"math/big"
 	"os"
+	"strings"
 	"time"
 
 	"codeberg.org/simplicer/trebaruna/src/verification/application"
@@ -361,7 +365,49 @@ func validate(document *etree.Document, certificate *x509.Certificate) error {
 	context.Clock = dsig.NewFakeClockAt(certificate.NotBefore)
 
 	_, err := context.Validate(document.Root())
+	if err == nil {
+		return nil
+	}
+
+	// XML-DSig writes ECDSA as r||s (RFC 6931 §2.3.6); goxmldsig hands the bytes
+	// to x509.CheckSignature, which reads the ASN.1 form only. Without this a
+	// correct ECDSA signature from any other producer was reported as tampered.
+	// Signatures already written in the ASN.1 form verify on the first attempt.
+	if converted, ok := withASN1ECDSA(document, certificate); ok {
+		if _, retry := context.Validate(converted.Root()); retry == nil {
+			return nil
+		}
+	}
 	return err
+}
+
+// withASN1ECDSA returns a copy of the document whose SignatureValue holds the
+// ASN.1 form of an r||s ECDSA signature, or false when there is nothing to
+// convert. The copy is used only to check the value: the digests and the
+// timestamp over SignatureValue are judged on the document as written.
+func withASN1ECDSA(document *etree.Document, certificate *x509.Certificate) (*etree.Document, bool) {
+	key, ok := certificate.PublicKey.(*ecdsa.PublicKey)
+	if !ok {
+		return nil, false
+	}
+	converted := document.Copy()
+	element := findSignatureValue(converted.Root())
+	if element == nil {
+		return nil, false
+	}
+	raw, err := base64.StdEncoding.DecodeString(strings.Join(strings.Fields(element.Text()), ""))
+	size := (key.Curve.Params().BitSize + 7) / 8
+	if err != nil || len(raw) != 2*size {
+		return nil, false
+	}
+	der, err := asn1.Marshal(struct{ R, S *big.Int }{
+		new(big.Int).SetBytes(raw[:size]), new(big.Int).SetBytes(raw[size:]),
+	})
+	if err != nil {
+		return nil, false
+	}
+	element.SetText(base64.StdEncoding.EncodeToString(der))
+	return converted, true
 }
 
 // singleCertificateStore exposes exactly one certificate.
