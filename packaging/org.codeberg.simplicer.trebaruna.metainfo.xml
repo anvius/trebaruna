@@ -55,6 +55,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.69.1-unstable" date="2026-11-09">
+      <description>
+        <p>Pages that name FacturaEtri, Adobe PDF TriPhase or PKCS1 are understood.</p>
+      </description>
+    </release>
     <release version="0.69.0-unstable" date="2026-11-09">
       <description>
         <p>Pages that send a document's digest instead of the document get a CAdES signature over it, with the digest shown before you approve.</p>

@@ -792,6 +792,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- afirma:// pages asking for `FacturaEtri` or `Adobe PDF TriPhase` were
+  answered SAF_06 (unknown format), though signing through the site's
+  server was built for both families; and NONE's other names, `PKCS1` and
+  `PKCS#1`, were unknown too. Every signature format name in AutoFirma's
+  AOSignConstants is now read, except SOAP and the Externally Detached
+  variants.
+
 - Usage and key errors said what the person can act on: `verify`,
   `extract` and `certificate` without a document said "sign needs a
   document path"; a PKCS#12 file that did not open named a placeholder

@@ -179,3 +179,26 @@ func TestAnswersAreWrittenLikeAutoFirma(t *testing.T) {
 		t.Error("other failures keep the generic text")
 	}
 }
+
+// TestEveryNameAutoFirmaSignsIsKnown: AOSignConstants' names, each to its
+// family and phase; Externally Detached and SOAP are not signed.
+func TestEveryNameAutoFirmaSignsIsKnown(t *testing.T) {
+	for name, want := range map[string]domain.Format{
+		"FacturaEtri":        {Family: "facturae", Triphase: true},
+		"Adobe PDF TriPhase": {Family: "pades", Triphase: true},
+		"PAdEStri":           {Family: "pades", Triphase: true},
+		"PKCS1":              {Family: "none"},
+		"PKCS#1":             {Family: "none"},
+		"NONEtri":            {Family: "none", Triphase: true},
+	} {
+		got, err := domain.ParseFormat(name)
+		if err != nil || got.Family != want.Family || got.Triphase != want.Triphase || got.Packaging != want.Packaging {
+			t.Errorf("%s: %+v %v", name, got, err)
+		}
+	}
+	for _, name := range []string{"SOAP", "XMLDSig Externally Detached"} {
+		if _, err := domain.ParseFormat(name); err == nil {
+			t.Errorf("%s is not signed", name)
+		}
+	}
+}

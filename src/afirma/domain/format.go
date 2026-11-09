@@ -42,13 +42,17 @@ func ParseFormat(name string) (Format, error) {
 		"pades":                      {Family: "pades"},
 		"adobe pdf":                  {Family: "pades"},
 		"padestri":                   {Family: "pades", Triphase: true},
+		"adobe pdf triphase":         {Family: "pades", Triphase: true},
 		"facturae":                   {Family: "facturae"},
 		"odf":                        {Family: "odf"},
 		"odf (open document format)": {Family: "odf"},
 		"ooxml":                      {Family: "ooxml"},
 		"ooxml (office open xml)":    {Family: "ooxml"},
 		"factura-e":                  {Family: "facturae"},
+		"facturaetri":                {Family: "facturae", Triphase: true},
 		"none":                       {Family: "none"},
+		"pkcs1":                      {Family: "none"},
+		"pkcs#1":                     {Family: "none"},
 		"nonetri":                    {Family: "none", Triphase: true},
 	}
 	format, known := formats[lower]

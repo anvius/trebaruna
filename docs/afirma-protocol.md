@@ -434,7 +434,7 @@ constants in `core:signers/AOSignConstants`):
 | PAdES | `PAdES`, `PAdEStri`, `Adobe PDF`, `Adobe PDF TriPhase` |
 | FacturaE | `FacturaE`, `Factura-e`, `FacturaEtri` |
 | Office | `OOXML`, `OOXML (Office Open XML)`, `ODF`, `ODF (Open Document Format)` |
-| Raw | `NONE` (PKCS#1), `NONEtri` |
+| Raw | `NONE` (PKCS#1), `PKCS1`, `PKCS#1`, `NONEtri` |
 | Auto | `auto` |
 
 trebaruna: `NONE` signs the data as AutoFirma's `AOPkcs1Signer` does (the
