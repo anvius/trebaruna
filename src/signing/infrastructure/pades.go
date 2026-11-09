@@ -263,8 +263,8 @@ func (s *PadesSigner) embedRevocation(
 	return updated, nil
 }
 
-// signatureValueDigest returns the SHA-1 of the first signature's /Contents, in
-// the uppercase hex form the VRI dictionary requires.
+// signatureValueDigest returns the SHA-1 of the latest signature's
+// /Contents, in the uppercase hex form the VRI dictionary requires.
 //
 // EN 319 142-1 keys the VRI entry by the digest of the signature value, not of
 // the whole CMS container, so the /Contents string is read from the document and
@@ -275,7 +275,7 @@ func signatureValueDigest(signed []byte) (string, error) {
 		return "", fmt.Errorf("reopen the signed PDF: %w", err)
 	}
 
-	contents, err := firstSignatureContents(reader)
+	contents, err := latestSignatureContents(reader)
 	if err != nil {
 		return "", err
 	}
@@ -284,21 +284,36 @@ func signatureValueDigest(signed []byte) (string, error) {
 	return strings.ToUpper(hex.EncodeToString(digest[:])), nil
 }
 
-// firstSignatureContents walks the AcroForm fields looking for /Contents.
-func firstSignatureContents(reader *pdf.Reader) ([]byte, error) {
-	fields := reader.Trailer().Key("Root").Key("AcroForm").Key("Fields")
-	for index := 0; index < fields.Len(); index++ {
-		value := fields.Index(index).Key("V")
-		if value.Kind() != pdf.Dict {
-			continue
+// latestSignatureContents is the /Contents of the signature just made:
+// among every signature field, nested ones too, the one whose /ByteRange
+// reaches furthest into the file. The first field was taken before, which
+// in a form signed earlier is someone else's signature.
+func latestSignatureContents(reader *pdf.Reader) ([]byte, error) {
+	var latest []byte
+	reach := int64(-1)
+	var visit func(fields pdf.Value, depth int)
+	visit = func(fields pdf.Value, depth int) {
+		if depth > 16 {
+			return
 		}
-		raw := value.Key("Contents").RawString()
-		if raw == "" {
-			continue
+		for index := 0; index < fields.Len(); index++ {
+			field := fields.Index(index)
+			value := field.Key("V")
+			raw := value.Key("Contents").RawString()
+			byteRange := value.Key("ByteRange")
+			if value.Kind() == pdf.Dict && raw != "" && byteRange.Len() == 4 {
+				if end := byteRange.Index(2).Int64() + byteRange.Index(3).Int64(); end > reach {
+					latest, reach = []byte(raw), end
+				}
+			}
+			visit(field.Key("Kids"), depth+1)
 		}
-		return []byte(raw), nil
 	}
-	return nil, fmt.Errorf("the signed PDF carries no signature value")
+	visit(reader.Trailer().Key("Root").Key("AcroForm").Key("Fields"), 0)
+	if latest == nil {
+		return nil, fmt.Errorf("the signed PDF carries no signature value")
+	}
+	return latest, nil
 }
 
 // pdfFormatFor maps the domain level onto the library format.

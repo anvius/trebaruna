@@ -9,7 +9,9 @@ package integration_test
 import (
 	"bytes"
 	"context"
+	"crypto/sha1"
 	"crypto/x509"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -211,5 +213,31 @@ func TestAFieldTooSmallForTheIdentityAsksForAnInvisibleSignature(t *testing.T) {
 	})
 	if err == nil || !strings.Contains(err.Error(), "--invisible") {
 		t.Errorf("%v", err)
+	}
+}
+
+// TestTheRevocationEntryIsTheNewSignatures: in a form signed before, a
+// B-LT signature's /VRI entry is keyed by its own value; the first field's
+// was taken.
+func TestTheRevocationEntryIsTheNewSignatures(t *testing.T) {
+	fixture, authority := newFixture(t), newLocalTSA(t)
+	_, signer := ltaFixture(t)
+	first := signField(t, authority, formPDF(false, false), application.PadesRequest{Signer: pemSigner(t, fixture), Level: domain.BES, Field: "Firma1"})
+	second, err := infrastructure.NewPadesSigner(authority).SignPades(context.Background(), application.PadesRequest{
+		Content: first, Signer: signer, Level: domain.LT, Field: "form.Firma2", SignedAt: timeNow(),
+		TimestampURL: authority.url(t), EmbedRevocation: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	reader, err := pdf.NewReader(bytes.NewReader(second), int64(len(second)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	contents := reader.Trailer().Key("Root").Key("AcroForm").Key("Fields").Index(1).Key("Kids").Index(0).Key("V").Key("Contents").RawString()
+	digest := sha1.Sum([]byte(contents))
+	vri := reader.Trailer().Key("Root").Key("DSS").Key("VRI")
+	if keys := vri.Keys(); len(keys) != 1 || keys[0] != strings.ToUpper(hex.EncodeToString(digest[:])) {
+		t.Errorf("VRI keys %v, the new signature's %X", keys, digest)
 	}
 }

@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A PAdES B-LT signature added to a PDF signed before keys its /DSS /VRI
+  entry to its own signature value: the first signature field's was taken,
+  someone else's in a co-signed PDF or a form, so validators could not
+  match the revocation data to the new signature. The latest signature is
+  the one whose /ByteRange reaches furthest, nested fields included.
+
 - Every HTTP request names the program (User-Agent `trebaruna`, no
   version): the Estonian trusted list answered Go's default one with 403,
   so Estonia was never synced. trust sync downloads the EU list of the
