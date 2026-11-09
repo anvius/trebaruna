@@ -626,10 +626,10 @@ func (v *XadesVerifier) describeSignatureTimeStamp(signature *etree.Element, rep
 // describeArchiveTimeStamp reads xades141:ArchiveTimeStamp.
 //
 // It is a different token from the signature timestamp: it covers every object
-// of the signature, not the signature value, so it reports that the archival
-// level exists and names its authority. Verifying its imprint would mean
-// reproducing the whole §5.5.2.2 octet stream, which the signer builds; what is
-// asserted here is that the token is real and that it parses.
+// of the signature, not the signature value. Its imprint is checked against the
+// EN 319 132-1 §5.5.2.2 octet stream, rebuilt with the signer's own
+// xmldsig.ArchiveTimeStampInput: what it sealed changed or is gone, and the
+// report says timestamp.archive_unbound.
 func (v *XadesVerifier) describeArchiveTimeStamp(document *etree.Document, signature *etree.Element, resolve xmldsig.Resolver, report *domain.SignerReport) {
 	var archive *etree.Element
 	var tokenText string

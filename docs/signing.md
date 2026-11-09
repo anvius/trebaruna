@@ -124,12 +124,12 @@ what proves anything, and giving the impression otherwise is misleading.
 The signature is refused rather than printed truncated:
 
 ```
-signing failed: page 1: the identity does not fit the seal box
-  "MARIA LOPEZ GARCIA MARTINEZ" needs 3 lines at 12pt in 240x100 pt
-  options:
-    enlarge the box:   --box 60,540,340,700
-    drop the seal:     omit --box for an invisible signature
+signing failed: page 1: certificate identity needs 7.4 pt of height but the seal offers 6.0 pt; enlarge the box instead of truncating the identity
 ```
+
+Enlarge the box, or sign with `--invisible` for a signature without a seal
+(omitting `--box` gives the default seal in the corner, not an invisible
+signature).
 
 A truncated name on a signature is worse than no seal at all: it looks like a
 different person.

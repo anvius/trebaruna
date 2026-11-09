@@ -20,8 +20,10 @@ user seeing what is signed and where anything goes.
    drivers (OpenSC) by default, a vendor module only when the user picks it.
 3. **Transparent**: every connection is explicit and recorded (ADR-0010); the
    document fingerprint is shown before signing; web requests are shown and
-   approved by a person (ADR-0004); secrets never appear on a command line
-   (ADR-0006); builds are reproducible.
+   approved by a person (ADR-0004); the window and the local API pass
+   secrets in the environment, never on a command line, and the CLI reads
+   them from it (`--pass`, `--pin`, `--tsa-pass` remain for interactive use,
+   ADR-0006); builds are reproducible.
 4. **Honest verdicts**: an intact document is never reported as altered
    (ADR-0005); trust comes only from authenticated trusted lists (ADR-0003).
 
@@ -95,6 +97,9 @@ user seeing what is signed and where anything goes.
 | Co-signing ASiC containers (`sign x.asics|x.asice --cosign`): an ASiC-S's CAdES signature co-signed in place or one more XAdES signature in its signatures file (refused if any signature would break); an ASiC-E a new signature file over all its documents | built (command line, window, which offers a parallel signature for a container, and afirma:// `cosign` with `CAdES-ASiC-S`/`XAdES-ASiC-S`) |
 | Exportable report (`verify --report x.md|.html|.pdf`): file and SHA-256, verdict, every signature and finding in the chosen language, connections, version; home directory as `~` | built (CLI; the Check tab saves a PDF) |
 | Check tab: counter-signatures indented under what they sign; the files each container signature covers and those none covers; extraction from `.p7m`, `.tsd` and ASiC containers | built |
+| RSA-PSS (RFC 4055) in CMS, PDF and XML signatures, in keys published as id-RSASSA-PSS (German qualified authorities) and in timestamp tokens, everywhere a token is read; tokens must declare a TSTInfo | built |
+| Keys on brainpool curves (German health-professional cards): Go's certificate parser refuses them, so they need an own parser, curve arithmetic and chain check | pending (R18) |
+| An independent validator (EU DSS) as a common judge, notably for the CAdES-A archive-time-stamp-v3, which only trebaruna has checked | pending (R20) |
 
 ### Encrypt
 
@@ -131,7 +136,7 @@ user seeing what is signed and where anything goes.
 | Capability | Status |
 |---|---|
 | `.deb` with the window, the card CLI, the launcher and its URL handlers, icons, AppStream, dependencies from the binaries (`make package-deb`); checked with dpkg-deb, apt and the extracted binaries | built |
-| AppImage (`make package-appimage`): the window, or the command line through a link named `trebaruna`; AppDir checked, packing needs appimagetool | built (packed in CI) |
+| AppImage (`make package-appimage`): the window, or the command line through a link named `trebaruna`; AppDir checked, packing needs appimagetool | built (AppDir checked here; packing in CI, not yet run) |
 | Flatpak (`make package-flatpak`) with cards: OpenSC and the PC/SC client inside, the system's pcscd through `--socket=pcsc` | built (here; in CI, not yet run) |
 | Windows installer (WiX v4, per user, `afirma://` optional and off by default) | in CI, not yet run |
 | CI on Windows (tests, window, zip, MSI) and macOS (tests, `.app`); Linux `.deb` installed and removed, AppImage, Flatpak | written, not yet run (needs publishing) |
@@ -166,6 +171,7 @@ user seeing what is signed and where anything goes.
 | signing | `ChangeCardPIN`, `UnlockCard` | `Execute(ctx, Card, secret, newPIN) error` |
 | verification | `VerifyDocument` | `Execute` |
 | trust | `SyncTerritory` | `Execute(territory) (Result, error)` |
+| verification | `ExtractDocument` | `Execute` |
 | encryption | `EncryptDocument`, `DecryptDocument` | `Execute` |
 | afirma | `AnswerPage` | `Execute(ctx, Invocation) (Answer, error)` |
 | desktop | `SignFromDesktop`, `PreviewPage`, `InspectCertificate`, `ListCards`, `ListFormFields`, `ChangeCardPIN`, `ReviewPageRequest`, `EncryptForRecipients`, `OpenEnvelope` | `Execute` |

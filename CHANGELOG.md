@@ -13,79 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   what that server computes, which trebaruna cannot show: the person
   approved an id without knowing where it went.
 
-### Security
-
-- An XML signature over part of a document left out of its unsigned
-  parts anything inside an element that merely looked like another
-  signature (`ds:Signature`), so content could hide there unreported.
-  Another signature is left out only when it holds; a look-alike is named
-  among the unsigned parts (content.partly_signed).
-
-- A CMS signature over data that merely parses as a TSTInfo was read as a
-  timestamp token: the timestamp library does not check the declared
-  content type, nor did trebaruna's RSA-PSS fallback. A token must now
-  declare id-ct-TSTInfo (RFC 3161, 2.4.2) wherever it is read: CAdES and
-  XAdES signature timestamps, archive timestamps, ASiC and PDF timestamps.
-
-- The EU list of the lists, the root every national list is
-  authenticated against, was trusted on TLS alone, and `--lotl` accepted
-  plain http. It is now used only when its own signature, over all of
-  it, was made with a certificate the Official Journal announced (the
-  six of notice C/2026/1944, embedded with their provenance), or with one
-  a chain of pivot lists announced after that notice; a list that no
-  longer names the notice is refused until trebaruna carries the newer
-  one. `--lotl` takes https, or http on this computer only. Checked live:
-  the Commission's list authenticates and Spain's syncs.
-- A territory code from the EU list, or given to `verify`, named a file in
-  the cache unchecked: a hostile list could write `../` paths outside it.
-  Only two capital letters are a territory now; the cache file is named by
-  the code the authenticated list publishes.
-
-### Fixed
-
-- A PAdES-T whose timestamp authority is on no trusted list was reported
-  as not timestamped, the claimed signing time shown instead: the PDF
-  library drops a token whose authority it cannot chain to its roots.
-  A token on a valid PDF signature is bound (the library checks its
-  imprint before the signature), so it is now recorded as CAdES and XAdES
-  record theirs: the time it proves, its authority, timestamp.bound and
-  the evidence the trust list is weighed against (timestamp.accredited or
-  timestamp.untrusted_authority). PDF timestamps were never weighed
-  against the trust lists before.
-
-- The default visible seal was drawn by the PDF library, which gives the
-  standard fonts every glyph 500 units wide and writes UTF-8 into WinAnsi
-  strings: "MARI O  ROSSI", "TINIT-… Â· 09/11/2026". Every signature with
-  a seal is now written by trebaruna, whose appearance sets the text in
-  Helvetica, WinAnsi encoded, with the fonts' own metrics, as signatures
-  with a policy or in a form's field already were.
-
-### Added
-
 - afirma:// pages co-sign ASiC-S containers: a `cosign` with
   `CAdES-ASiC-S` or `XAdES-ASiC-S` takes the container and answers it with
   one more signature of the kind it holds, as AutoFirma does. The
   container co-signature is now a use case of its own, CosignContainer,
   shared by signing a file and answering a page. A counter-signature of a
   container is refused as not supported yet.
-
-### Fixed
-
-- A PDF changed under a document timestamp whose authority signed with
-  RSA-PSS was reported unaltered. The PDF library cannot read such a token
-  and stops before comparing its imprint with the document; trebaruna's
-  own check then verified the token's signature over its TSTInfo and took
-  that for the document. A document timestamp (its content a TSTInfo) is
-  now checked as one: the token's signature, then its imprint against the
-  bytes its /ByteRange covers, with the same code as ASiC timestamps.
-- A PDF envelope carrying content of its own (adbe.pkcs7.sha1, or another
-  document's envelope put in /Contents) is left to the PDF library's
-  verdict: trebaruna's RSA-PSS fallback judged envelopes against their
-  content, which for these is not the PDF.
-- A PDF signature whose signature timestamp an authority signed with
-  RSA-PSS was "unverifiable": the library stops at the token before
-  checking the signature. Such a signature now gets the CAdES checks,
-  timestamp included.
 
 - The window signs with a remote service: *Remote service* in step 2 takes
   the service's address and a user and password, or the client id of an
@@ -110,16 +43,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   in signatures/signHash. `--csc-redirect` takes the address a provider
   registered (on this computer only); `TREBARUNA_CSC_CLIENT_SECRET` a
   confidential client's secret. oauth2code credentials were refused.
-
-### Fixed
-
-- A remote signature asked the CSC service for the credential twice
-  (credentials/info, and the sign-in before it): once to show the signer,
-  once to sign. A credential read is remembered for as long as one call
-  may last (a minute), per service, credential and secrets, so a
-  signature asks once; another credential is read again.
-
-### Added
 
 - The window encrypts and opens `.p7e` envelopes, in a window of its own
   from the File menu (*Encrypt for others…*, *Open an encrypted
@@ -148,81 +71,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the same test; `FYNE_THEME` overrides it. The page preview lies on a desk
   colour of its own, darker than the paper in both. Chosen when the window
   opens; colours the theme leaves to Fyne come in the palette's variant.
-
-### Fixed
-
-- Timestamp tokens an authority signed with RSA-PSS are read: the
-  timestamp library's CMS code does not implement it, so a valid token was
-  reported invalid (CAdES and XAdES signature timestamps, archive
-  timestamps, ASiC timestamps). The token's SignerInfo is checked over its
-  TSTInfo with trebaruna's CMS check, then the TSTInfo is read. Brainpool
-  keys, which Go's certificate parser refuses, and PSS tokens inside PDF
-  signatures the PDF library checks remain out of reach (docs/verification.md).
-
-- CAdES-LTA's archive timestamp is an archive-time-stamp-v3 as ETSI EN
-  319 122-1 defines it: the token covers the signed content's type and
-  digest, the SignerInfo and an ats-hash-index-v3 of the certificates,
-  revocation values and unsigned attribute values (5.5.2, 5.5.3), the index
-  carried in the token, under id-aa-ets-archiveTimestampV3
-  (0.4.0.1733.2.4). It covered the container's DER under the v2 OID
-  (1.2.840.113549.1.9.16.2.48), which no validator could check, and nothing
-  checked it: verify now recomputes it (timestamp.archival, or
-  timestamp.archive_unbound when what it sealed changed or is gone). The
-  signer and the verifier share cms.ArchiveTimeStampV3Input; the archive
-  timestamp is added to one SignerInfo, not to every one.
-
-- A PAdES B-LT signature added to a PDF signed before keys its /DSS /VRI
-  entry to its own signature value: the first signature field's was taken,
-  someone else's in a co-signed PDF or a form, so validators could not
-  match the revocation data to the new signature. The latest signature is
-  the one whose /ByteRange reaches furthest, nested fields included.
-
-- Every HTTP request names the program (User-Agent `trebaruna`, no
-  version): the Estonian trusted list answered Go's default one with 403,
-  so Estonia was never synced. trust sync downloads the EU list of the
-  lists once per run instead of once per territory (31 times, half a
-  megabyte each); a failed download is tried again for the next territory.
-  On 9 November 2026 a full sync authenticated all 31 lists.
-
-- verify recomputes what a XAdES archive timestamp seals (EN 319 132-1
-  5.5.2: the references, SignedInfo, SignatureValue, KeyInfo, the unsigned
-  properties before it, the other objects, with its declared C14N) and
-  compares the token's imprint: it was reported as present, never checked.
-  One that seals something else is `timestamp.archive_unbound`. The signer
-  and the verifier share the computation (`xmldsig.ArchiveTimeStampInput`).
-
-### Security
-
-- trust sync accepts a national list only when its own signature (a child
-  of the list's root, ETSI TS 119 612 5.7) signs the whole list: one over
-  a part, with the authorities left unsigned, or nested elsewhere is
-  refused. The signature is checked with the XML-Signature verifier signed
-  documents use, instead of a second, partial one (it refused inclusive
-  C14N and read a missing SignatureMethod as SHA-512); among the
-  certificates KeyInfo shows, the one the EU list publishes is used.
-  goxmldsig is no longer a dependency. Of the lists the EU list pointed at
-  on 9 November 2026, the 30 that could be fetched authenticate but
-  Germany's, signed with RSA-PSS and refused as before.
-
-- verify names the parts of an XML document its signature does not cover:
-  a signature whose references point at one element by Id, none at the
-  whole document, leaves the rest unsigned and readable as if signed (the
-  ground of signature wrapping). `content.partly_signed`, with the paths
-  of the unsigned elements; detached and enveloping signatures, and
-  references to the whole document, are not concerned.
-
-- verify checks that the certificate a signature carries is the one it
-  names in its signed attributes: signing-certificate-v2 or v1 in CAdES and
-  PAdES (read from each PDF signature field's envelope, which the PDF
-  library does not hand back), SigningCertificate or SigningCertificateV2 in
-  XAdES (only when SignedInfo covers the signed properties). A certificate
-  with the same key and another identity put in its place left the
-  signature value valid and the wrong name on the report; it is now
-  `signing_certificate.mismatch` and the signature counts as broken. A
-  signature that names no certificate gets a warning. Among CMS
-  certificates answering to the same identifier, the named one is chosen.
-
-### Added
 
 - ASiC containers are co-signed (`sign x.asics|x.asice --cosign`), with
   the kind of signature they hold: an ASiC-S's CAdES signature in place,
@@ -525,178 +373,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - The parts were checked with OpenSSL, xmlsec1 1.3.9 and Java 25, and the
     containers with trebaruna's ASiC verifier.
 
-### Changed
-
-- The seal is laid out as marks (the rubric, the accent rule, the lines of
-  text) apart from the PDF library that draws them, so trebaruna can draw
-  the same seal in a signature field the library does not create. The
-  appearance the library receives is unchanged.
-
-- `asic` packs an ASiC-S as ETSI EN 319 162-1 lays it out: the signature
-  under `META-INF` (it went to the root), `.asics` by default (it was
-  `.asice`). A `.p7m`, an XML signature or ASiC-E are refused, with the
-  `sign --asic` command that makes them.
-
-- `verify` reads ASiC containers (`.asics`, `.asice`, `.scs`, `.sce`; ETSI
-  EN 319 162-1).
-  - The container is unpacked into a private directory. Entries whose
-    names leave it, entries over 512 MiB, and ZIPs whose mimetype is not
-    ASiC are refused.
-  - Each signature under `META-INF` gets a report:
-    - CAdES `signature*.p7s` over the one document of an ASiC-S, or over the
-      `ASiCManifest` that names it, whose digests must match the files;
-    - XAdES `signatures*.xml` with its references resolved from the
-      container's root.
-  - New findings: `container.covers` lists the files a signature covers;
-    `container.unsigned_files` (warn) names the files no signature covers.
-  - Judged against containers built with zip, OpenSSL and xmlsec1
-    (tests/verification/asic/testdata/PROVENANCE.md). A changed or missing
-    file, an added file, a missing manifest, an entry outside the
-    container, an OpenDocument ZIP and a container without signatures are
-    each told apart.
-  - `signature.unverifiable` gets its Spanish and Italian text, missing
-    since it was added.
-
-- Plain XMLDSig.
-  - `sign --format xmldsig`, and afirma:// `XMLDSig`, `XMLDSig Enveloped`,
-    `XMLDSig Enveloping`, `XMLDSig Detached` (enveloping by default, as
-    AutoFirma; Detached is the AFIRMA layout).
-  - The XAdES layouts without signed properties: one reference, no
-    QualifyingProperties. Level B only; a policy is refused (SAF_23 on a
-    page), roles are left out on pages as AutoFirma does.
-  - `verify` reports such a signature as XMLDSig.
-  - Checked with xmlsec1 1.3.9 and Java 25.
-
-- XAdES detached: `sign --format xades --detached` writes
-  `<document>.xsig` beside the untouched document.
-  - The reference names the file (escaped) and digests its bytes.
-  - `verify` reads the file of that name in the signature's directory, a
-    plain name only, never fetched. `--content` names another, and reports
-    `content.detached`, or `content.missing` (unknown) without it.
-  - Every level works; the archive timestamp covers the external document.
-- XAdES enveloping of any file: XML travels as XML in the `ds:Object`, other
-  files in Base64 with the Base64 transform and their sniffed media type, as
-  AutoFirma does.
-- afirma:// "XAdES Detached" is AutoFirma's layout: a new document whose
-  `AFIRMA` root holds `CONTENT` (XML as XML, other data in Base64) and the
-  signature. `expPolicy=FirmaAGE` with XAdES, detached as AutoFirma forces
-  it, now signs.
-- Judged with xmlsec1 1.3.9 and Java 25's XML-Signature on all four
-  layouts, a detached file whose name has spaces included.
-
-### Changed
-
-- afirma:// `format=XAdES` with no variant is enveloping, AutoFirma's
-  default (`XAdESSigner`); it was enveloped.
-- An enveloping XAdES of XML carries it as XML (`MimeType="text/xml"`, C14N
-  reference) instead of Base64.
-
-### Fixed
-
-- The visible seal keeps every line inside its right margin. Lines were
-  wrapped to the box minus both paddings but drawn after the accent rule,
-  3.2 pt further right, so a line that filled its width ran past the edge
-  and the end of a name could be clipped.
-- The local API (`trebaruna serve` and the `trebaruna://` handler) signs and
-  verifies every format the command line does: it was wired with PAdES,
-  CAdES and XAdES only, so ASiC containers, OpenDocument and Office Open
-  XML files were refused or unreadable through it. The command line, the
-  API and their tests now share one wiring (`cli.Signing`,
-  `cli.Verification`).
-- XAdES signature timestamps cover the canonical `ds:SignatureValue`.
-  - EN 319 132-1 (5.4.1.3) has the token seal the element canonicalised
-    where it stands, its inherited namespaces included. The signer sealed
-    the element as written, and the verifier checked it the same way, so
-    trebaruna's XAdES-T was refused by other validators and theirs read as
-    a timestamp over "a different signature value".
-  - Both now canonicalise in place, with the C14N the SignatureTimeStamp
-    declares; the verifier finds SignatureValue under any prefix.
-  - Files written before 0.38.2 still read as timestamped, with
-    `timestamp.legacy_form` (warn) saying others will refuse them.
-  - `openssl ts -verify` checks the token against the canonical bytes.
-
-- XML is canonicalised with trebaruna's own C14N.
-  - goxmldsig's canonicaliser sorted prefixed attributes by local name
-    instead of namespace URI. LibreOffice's content.xml, or any element with
-    `xml:lang` and `xsi:` attributes, came out in a different order from
-    every other implementation: a signature over such XML did not verify
-    elsewhere, and trebaruna misjudged other producers' signatures over it.
-  - The new canonicaliser (C14N 1.0 and 1.1, exclusive with
-    InclusiveNamespaces, with and without comments) handles the document
-    node, subsets with their inherited namespaces and xml: attributes,
-    `xmlns=""`, superfluous declarations, and attribute and text escaping.
-  - It is used everywhere the signer and verifier canonicalise.
-  - It matches libxml2 (xmllint --c14n, --c14n11, --exc-c14n) byte for byte
-    on LibreOffice's XML and a corpus of namespace and escaping cases.
-
-- The XAdES-A archive timestamp covers the signed document. Its input
-  skipped the enveloped document reference (`URI=""`), so the token covered
-  the signature's objects but not the document, and no other validator could
-  reproduce its imprint. Every SignedInfo reference is now processed as
-  XML-Signature processes it (EN 319 132-1, 5.5.2.2), by the code that
-  computes the digests. A test rebuilds the input from the file, step by
-  step, and compares it with the token's imprint.
-
-- A second XAdES on a signed XML no longer breaks the first.
-  - The enveloped reference only excluded its own signature, so the next
-    signature added to the root changed what the first one signed.
-  - Each enveloped signature now leaves every signature out, with the
-    XPath filter `not(ancestor-or-self::ds:Signature)` as AutoFirma writes
-    it. FacturaE keeps AutoFirma's transforms, without the filter.
-  - Checked with xmlsec1 1.3.9 and Java 25 on both signatures of a
-    twice-signed FatturaPA.
-
-- XML verification reads AutoFirma's enveloped signatures and every
-  signature of a document.
-  - AutoFirma writes the XPath filter after C14N, on the canonical octets.
-    That read as unverifiable; the octets are now read back into nodes and
-    filtered, as XML-Signature does.
-  - A co-signed XML reported its first signature only, vouching for the
-    others unseen. Each signature gets its own report now.
-  - Judged against xmlsec1 1.3.9 fixtures: AutoFirma's order, and a document
-    signed twice (RSA, then ECDSA) where both signatures hold.
-
-- XAdES enveloped keeps what surrounds the root. The signed file was
-  rebuilt from the root element alone, so the processing instructions and
-  comments outside it were dropped: a FatturaPA lost its
-  `<?xml-stylesheet?>`. They stay now.
-  - The document reference digests the document node, those instructions
-    included, as C14N requires. The signer computes every DigestValue with
-    the verifier's own dereferencing code (`xmldsig.ReferenceData`).
-  - A document that starts with `<?xml-stylesheet` still gets an XML
-    declaration (it was mistaken for one).
-  - Each signature names its elements with Ids of its own
-    (`trebaruna-signature-<random>`…). With the fixed Ids, signing a signed
-    XML again made the new SignedProperties reference digest the old
-    signature's properties.
-  - Verified with xmlsec1 1.3.9 and Java 25's XML-Signature. signxml
-    canonicalises only the root and calls such a file modified
-    (docs/signing.md).
-
-- XML signatures are verified completely. The verifier, built on goxmldsig,
-  checked only the reference to the document element. As a result:
-  - a change inside the signed properties (signing time, policy, role,
-    signing certificate) went unnoticed;
-  - enveloping signatures, trebaruna's own among them, read as broken;
-  - the XPath filter AutoFirma writes (`not(ancestor-or-self::ds:Signature)`)
-    made a correct signature read as broken.
-
-  Every reference is now dereferenced (`""`, `#id`, a file), transformed
-  (enveloped signature, that XPath filter, Base64, C14N 1.0, 1.1 and
-  exclusive) and digested, and the value over `SignedInfo` is checked with
-  RSA (SHA-1 to SHA-512) or ECDSA (r‖s or ASN.1). `URI=""` digests the
-  document node, the processing instructions outside the root included, as
-  xmlsec1 does. Two elements carrying the signed Id are refused.
-
-  What trebaruna cannot evaluate is reported as `signature.unverifiable`
-  (unknown), and a detached reference without its document as
-  `content.missing`, not as broken.
-
-  Judged against signatures made by signxml 5.2.0 and xmlsec1 1.3.9, each
-  verified with xmlsec1 first (tests/signing/xmldsig/testdata).
-
-### Added
-
 - Signature policies (EPES): `sign --policy age|age18|facturae|facturae30`
   declares AutoFirma 1.9's AGE and FacturaE policies with its digests, and
   `--policy-id`, `--policy-hash`, `--policy-hash-alg`, `--policy-qualifier`
@@ -897,6 +573,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   shortcuts for the frequent ones; dropping a file on the window routes it
   (certificate, file to check, or document to sign); an About dialog with the
   version and licence.
+
 - Desktop: the Check tab states the verdict as a word, a sentence and a
   colour, with one readable block per signature and an OCSP checkbox.
   "Signer not entitled to sign" is now red instead of grey; "no trusted list"
@@ -911,8 +588,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   place live under "More options", the place prefilled from the certificate.
   The certificate path, level and TSA are remembered; the passphrase is not.
   After signing: Open, Folder and Check (which verifies the new file).
+
 - CLI: `certificate --json` reports `issuer_name` and `locality`, and a wrong
   passphrase is reported as such instead of "not a certificate".
+
 - Desktop: LT and LTA are offered and pass `--online-revocation`, which those
   levels require.
 
@@ -921,26 +600,100 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   arrow keys nudge it. The page and the pointer share one `DisplayFit`, which
   fixes the old overlay drifting away from the cursor (it was drawn at a fixed
   scale of 1.0 over a page scaled to fit).
+
 - Desktop: the seal preview is drawn as the signer prints it (name, identifier,
   date, time, accent rule), with the same line breaks. Its frame turns amber
   when it covers text.
+
 - Desktop: page navigation shows "Page N of M" above the page; the seal goes on
   the page shown. "Find free space" cycles through the empty areas.
+
 - Desktop: screenshot harness (`TREBARUNA_SCREENSHOTS=dir go test -tags gui`)
   and interaction tests for the page canvas, run in CI.
 
 - Seal position is repeatable: `--box` may appear several times, optionally as
   `PAGE:x1,y1,x2,y2`, and every mark shares a single cryptographic signature.
   `seal_count` is reported in the JSON output.
+
 - Chained signatures verified: signing an already-signed PDF adds a valid
   incremental signature. Checked with up to five chained signatures.
+
 - Free-space detection: the renderer rasterises the page with poppler, measures
   ink through a summed-area table, and proposes the emptiest conventional gap.
+
 - Draggable seal overlay in the desktop app, clamped to the page.
+
 - Welcome cover with the application icon, in three languages.
+
 - Localised window theme; Italian Fyne strings supplied by hand.
 
 ### Changed
+
+- The seal is laid out as marks (the rubric, the accent rule, the lines of
+  text) apart from the PDF library that draws them, so trebaruna can draw
+  the same seal in a signature field the library does not create. The
+  appearance the library receives is unchanged.
+
+- `asic` packs an ASiC-S as ETSI EN 319 162-1 lays it out: the signature
+  under `META-INF` (it went to the root), `.asics` by default (it was
+  `.asice`). A `.p7m`, an XML signature or ASiC-E are refused, with the
+  `sign --asic` command that makes them.
+
+- `verify` reads ASiC containers (`.asics`, `.asice`, `.scs`, `.sce`; ETSI
+  EN 319 162-1).
+  - The container is unpacked into a private directory. Entries whose
+    names leave it, entries over 512 MiB, and ZIPs whose mimetype is not
+    ASiC are refused.
+  - Each signature under `META-INF` gets a report:
+    - CAdES `signature*.p7s` over the one document of an ASiC-S, or over the
+      `ASiCManifest` that names it, whose digests must match the files;
+    - XAdES `signatures*.xml` with its references resolved from the
+      container's root.
+  - New findings: `container.covers` lists the files a signature covers;
+    `container.unsigned_files` (warn) names the files no signature covers.
+  - Judged against containers built with zip, OpenSSL and xmlsec1
+    (tests/verification/asic/testdata/PROVENANCE.md). A changed or missing
+    file, an added file, a missing manifest, an entry outside the
+    container, an OpenDocument ZIP and a container without signatures are
+    each told apart.
+  - `signature.unverifiable` gets its Spanish and Italian text, missing
+    since it was added.
+
+- Plain XMLDSig.
+  - `sign --format xmldsig`, and afirma:// `XMLDSig`, `XMLDSig Enveloped`,
+    `XMLDSig Enveloping`, `XMLDSig Detached` (enveloping by default, as
+    AutoFirma; Detached is the AFIRMA layout).
+  - The XAdES layouts without signed properties: one reference, no
+    QualifyingProperties. Level B only; a policy is refused (SAF_23 on a
+    page), roles are left out on pages as AutoFirma does.
+  - `verify` reports such a signature as XMLDSig.
+  - Checked with xmlsec1 1.3.9 and Java 25.
+
+- XAdES detached: `sign --format xades --detached` writes
+  `<document>.xsig` beside the untouched document.
+  - The reference names the file (escaped) and digests its bytes.
+  - `verify` reads the file of that name in the signature's directory, a
+    plain name only, never fetched. `--content` names another, and reports
+    `content.detached`, or `content.missing` (unknown) without it.
+  - Every level works; the archive timestamp covers the external document.
+
+- XAdES enveloping of any file: XML travels as XML in the `ds:Object`, other
+  files in Base64 with the Base64 transform and their sniffed media type, as
+  AutoFirma does.
+
+- afirma:// "XAdES Detached" is AutoFirma's layout: a new document whose
+  `AFIRMA` root holds `CONTENT` (XML as XML, other data in Base64) and the
+  signature. `expPolicy=FirmaAGE` with XAdES, detached as AutoFirma forces
+  it, now signs.
+
+- Judged with xmlsec1 1.3.9 and Java 25's XML-Signature on all four
+  layouts, a detached file whose name has spaces included.
+
+- afirma:// `format=XAdES` with no variant is enveloping, AutoFirma's
+  default (`XAdESSigner`); it was enveloped.
+
+- An enveloping XAdES of XML carries it as XML (`MimeType="text/xml"`, C14N
+  reference) instead of Base64.
 
 - Card signatures go through an own PKCS#11 session over `miekg/pkcs11`
   instead of `crypto11` (ADR-0018): module parameters for software stores,
@@ -950,24 +703,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Desktop packages (`install-desktop`, `package-desktop`, the macOS bundle)
   ship the CLI built with cgo, so the window can sign with cards (ADR-0016);
   CI checks that the installed CLI reports PKCS#11 support.
+
 - Trust: the list downloaders moved from the application layer to
   `trust/infrastructure` (`WebLOTL`, `WebList`).
+
 - Desktop: the command-line adapter moved out of the application and domain
   layers. `SignFromDesktop` now depends on a `Signer` port and returns a typed
   `Receipt` read from `sign --json`, instead of predicting the output name and
   echoing raw JSON. A receipt whose file is missing is reported as a
   translatable problem rather than a Spanish sentence built in the use case.
+
 - Desktop: the application layer is covered by unit tests (100 %), and the
   adapter by tests that run a stand-in command.
 
 - The seal now prints the certificate identity and the signing instant, never
   user-typed text. `--caption` and `--image` are gone, and the GUI has no caption
   field: a signature mark whose text the signer writes is decoration, not proof.
+
 - Default seal is 64x48 pt instead of 200x70 pt, and it grows the text into
   several lines rather than abbreviating the name.
+
 - The certificate identity prefers givenName and surname over the common name.
+
 - One clock: the instant is captured once and used for both the stamp and the
   report, so they cannot disagree by a second.
+
 - Free-space search keeps a safety margin from the paper edge, because printers
   clip a few millimetres.
 
@@ -975,12 +735,199 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Desktop: the Requests tab; web-page requests open from Tools in their own
   window. The editable monospaced report box in the Check tab.
+
 - Desktop: the raw JSON "Result" box, the free-text certificate and document
   path fields, and the `pades`/`bes` technical values in the selectors.
+
 - Desktop: the page number and `x1,y1,x2,y2` box fields, and the "Show page"
   button. The page renders as soon as a PDF is chosen.
 
 ### Fixed
+
+- A PAdES-T whose timestamp authority is on no trusted list was reported
+  as not timestamped, the claimed signing time shown instead: the PDF
+  library drops a token whose authority it cannot chain to its roots.
+  A token on a valid PDF signature is bound (the library checks its
+  imprint before the signature), so it is now recorded as CAdES and XAdES
+  record theirs: the time it proves, its authority, timestamp.bound and
+  the evidence the trust list is weighed against (timestamp.accredited or
+  timestamp.untrusted_authority). PDF timestamps were never weighed
+  against the trust lists before.
+
+- The default visible seal was drawn by the PDF library, which gives the
+  standard fonts every glyph 500 units wide and writes UTF-8 into WinAnsi
+  strings: "MARI O  ROSSI", "TINIT-… Â· 09/11/2026". Every signature with
+  a seal is now written by trebaruna, whose appearance sets the text in
+  Helvetica, WinAnsi encoded, with the fonts' own metrics, as signatures
+  with a policy or in a form's field already were.
+
+- A PDF changed under a document timestamp whose authority signed with
+  RSA-PSS was reported unaltered. The PDF library cannot read such a token
+  and stops before comparing its imprint with the document; trebaruna's
+  own check then verified the token's signature over its TSTInfo and took
+  that for the document. A document timestamp (its content a TSTInfo) is
+  now checked as one: the token's signature, then its imprint against the
+  bytes its /ByteRange covers, with the same code as ASiC timestamps.
+
+- A PDF envelope carrying content of its own (adbe.pkcs7.sha1, or another
+  document's envelope put in /Contents) is left to the PDF library's
+  verdict: trebaruna's RSA-PSS fallback judged envelopes against their
+  content, which for these is not the PDF.
+
+- A PDF signature whose signature timestamp an authority signed with
+  RSA-PSS was "unverifiable": the library stops at the token before
+  checking the signature. Such a signature now gets the CAdES checks,
+  timestamp included.
+
+- A remote signature asked the CSC service for the credential twice
+  (credentials/info, and the sign-in before it): once to show the signer,
+  once to sign. A credential read is remembered for as long as one call
+  may last (a minute), per service, credential and secrets, so a
+  signature asks once; another credential is read again.
+
+- Timestamp tokens an authority signed with RSA-PSS are read: the
+  timestamp library's CMS code does not implement it, so a valid token was
+  reported invalid (CAdES and XAdES signature timestamps, archive
+  timestamps, ASiC timestamps). The token's SignerInfo is checked over its
+  TSTInfo with trebaruna's CMS check, then the TSTInfo is read. Brainpool
+  keys, which Go's certificate parser refuses, and PSS tokens inside PDF
+  signatures the PDF library checks remain out of reach (docs/verification.md).
+
+- CAdES-LTA's archive timestamp is an archive-time-stamp-v3 as ETSI EN
+  319 122-1 defines it: the token covers the signed content's type and
+  digest, the SignerInfo and an ats-hash-index-v3 of the certificates,
+  revocation values and unsigned attribute values (5.5.2, 5.5.3), the index
+  carried in the token, under id-aa-ets-archiveTimestampV3
+  (0.4.0.1733.2.4). It covered the container's DER under the v2 OID
+  (1.2.840.113549.1.9.16.2.48), which no validator could check, and nothing
+  checked it: verify now recomputes it (timestamp.archival, or
+  timestamp.archive_unbound when what it sealed changed or is gone). The
+  signer and the verifier share cms.ArchiveTimeStampV3Input; the archive
+  timestamp is added to one SignerInfo, not to every one.
+
+- A PAdES B-LT signature added to a PDF signed before keys its /DSS /VRI
+  entry to its own signature value: the first signature field's was taken,
+  someone else's in a co-signed PDF or a form, so validators could not
+  match the revocation data to the new signature. The latest signature is
+  the one whose /ByteRange reaches furthest, nested fields included.
+
+- Every HTTP request names the program (User-Agent `trebaruna`, no
+  version): the Estonian trusted list answered Go's default one with 403,
+  so Estonia was never synced. trust sync downloads the EU list of the
+  lists once per run instead of once per territory (31 times, half a
+  megabyte each); a failed download is tried again for the next territory.
+  On 9 November 2026 a full sync authenticated all 31 lists.
+
+- verify recomputes what a XAdES archive timestamp seals (EN 319 132-1
+  5.5.2: the references, SignedInfo, SignatureValue, KeyInfo, the unsigned
+  properties before it, the other objects, with its declared C14N) and
+  compares the token's imprint: it was reported as present, never checked.
+  One that seals something else is `timestamp.archive_unbound`. The signer
+  and the verifier share the computation (`xmldsig.ArchiveTimeStampInput`).
+
+- The visible seal keeps every line inside its right margin. Lines were
+  wrapped to the box minus both paddings but drawn after the accent rule,
+  3.2 pt further right, so a line that filled its width ran past the edge
+  and the end of a name could be clipped.
+
+- The local API (`trebaruna serve` and the `trebaruna://` handler) signs and
+  verifies every format the command line does: it was wired with PAdES,
+  CAdES and XAdES only, so ASiC containers, OpenDocument and Office Open
+  XML files were refused or unreadable through it. The command line, the
+  API and their tests now share one wiring (`cli.Signing`,
+  `cli.Verification`).
+
+- XAdES signature timestamps cover the canonical `ds:SignatureValue`.
+  - EN 319 132-1 (5.4.1.3) has the token seal the element canonicalised
+    where it stands, its inherited namespaces included. The signer sealed
+    the element as written, and the verifier checked it the same way, so
+    trebaruna's XAdES-T was refused by other validators and theirs read as
+    a timestamp over "a different signature value".
+  - Both now canonicalise in place, with the C14N the SignatureTimeStamp
+    declares; the verifier finds SignatureValue under any prefix.
+  - Files written before 0.38.2 still read as timestamped, with
+    `timestamp.legacy_form` (warn) saying others will refuse them.
+  - `openssl ts -verify` checks the token against the canonical bytes.
+
+- XML is canonicalised with trebaruna's own C14N.
+  - goxmldsig's canonicaliser sorted prefixed attributes by local name
+    instead of namespace URI. LibreOffice's content.xml, or any element with
+    `xml:lang` and `xsi:` attributes, came out in a different order from
+    every other implementation: a signature over such XML did not verify
+    elsewhere, and trebaruna misjudged other producers' signatures over it.
+  - The new canonicaliser (C14N 1.0 and 1.1, exclusive with
+    InclusiveNamespaces, with and without comments) handles the document
+    node, subsets with their inherited namespaces and xml: attributes,
+    `xmlns=""`, superfluous declarations, and attribute and text escaping.
+  - It is used everywhere the signer and verifier canonicalise.
+  - It matches libxml2 (xmllint --c14n, --c14n11, --exc-c14n) byte for byte
+    on LibreOffice's XML and a corpus of namespace and escaping cases.
+
+- The XAdES-A archive timestamp covers the signed document. Its input
+  skipped the enveloped document reference (`URI=""`), so the token covered
+  the signature's objects but not the document, and no other validator could
+  reproduce its imprint. Every SignedInfo reference is now processed as
+  XML-Signature processes it (EN 319 132-1, 5.5.2.2), by the code that
+  computes the digests. A test rebuilds the input from the file, step by
+  step, and compares it with the token's imprint.
+
+- A second XAdES on a signed XML no longer breaks the first.
+  - The enveloped reference only excluded its own signature, so the next
+    signature added to the root changed what the first one signed.
+  - Each enveloped signature now leaves every signature out, with the
+    XPath filter `not(ancestor-or-self::ds:Signature)` as AutoFirma writes
+    it. FacturaE keeps AutoFirma's transforms, without the filter.
+  - Checked with xmlsec1 1.3.9 and Java 25 on both signatures of a
+    twice-signed FatturaPA.
+
+- XML verification reads AutoFirma's enveloped signatures and every
+  signature of a document.
+  - AutoFirma writes the XPath filter after C14N, on the canonical octets.
+    That read as unverifiable; the octets are now read back into nodes and
+    filtered, as XML-Signature does.
+  - A co-signed XML reported its first signature only, vouching for the
+    others unseen. Each signature gets its own report now.
+  - Judged against xmlsec1 1.3.9 fixtures: AutoFirma's order, and a document
+    signed twice (RSA, then ECDSA) where both signatures hold.
+
+- XAdES enveloped keeps what surrounds the root. The signed file was
+  rebuilt from the root element alone, so the processing instructions and
+  comments outside it were dropped: a FatturaPA lost its
+  `<?xml-stylesheet?>`. They stay now.
+  - The document reference digests the document node, those instructions
+    included, as C14N requires. The signer computes every DigestValue with
+    the verifier's own dereferencing code (`xmldsig.ReferenceData`).
+  - A document that starts with `<?xml-stylesheet` still gets an XML
+    declaration (it was mistaken for one).
+  - Each signature names its elements with Ids of its own
+    (`trebaruna-signature-<random>`…). With the fixed Ids, signing a signed
+    XML again made the new SignedProperties reference digest the old
+    signature's properties.
+  - Verified with xmlsec1 1.3.9 and Java 25's XML-Signature. signxml
+    canonicalises only the root and calls such a file modified
+    (docs/signing.md).
+
+- XML signatures are verified completely. The verifier, built on goxmldsig,
+  checked only the reference to the document element. As a result:
+  - a change inside the signed properties (signing time, policy, role,
+    signing certificate) went unnoticed;
+  - enveloping signatures, trebaruna's own among them, read as broken;
+  - the XPath filter AutoFirma writes (`not(ancestor-or-self::ds:Signature)`)
+    made a correct signature read as broken.
+
+  Every reference is now dereferenced (`""`, `#id`, a file), transformed
+  (enveloped signature, that XPath filter, Base64, C14N 1.0, 1.1 and
+  exclusive) and digested, and the value over `SignedInfo` is checked with
+  RSA (SHA-1 to SHA-512) or ECDSA (r‖s or ASN.1). `URI=""` digests the
+  document node, the processing instructions outside the root included, as
+  xmlsec1 does. Two elements carrying the signed Id are refused.
+
+  What trebaruna cannot evaluate is reported as `signature.unverifiable`
+  (unknown), and a detached reference without its document as
+  `content.missing`, not as broken.
+
+  Judged against signatures made by signxml 5.2.0 and xmlsec1 1.3.9, each
+  verified with xmlsec1 first (tests/signing/xmldsig/testdata).
 
 - A seal word wider than its line (a long identifier) was cut by bytes, so a
   word with accents could be split inside a character and print garbage. It is
@@ -994,6 +941,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The default seal assumed A4: on a Letter page it sat away from the corner,
   and on a landscape page off the visible area. It is now placed on the page's
   real CropBox/MediaBox, inherited from the page tree when needed.
+
 - XAdES with ECDSA keys: the signer wrote the SignatureValue as an ASN.1
   SEQUENCE and the verifier (goxmldsig, through `x509.CheckSignature`) read only
   that form. XML-DSig requires r||s (RFC 6931). Our signatures were refused by
@@ -1001,14 +949,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reported as **tampered**. The signer now writes r||s; the verifier accepts
   r||s and still accepts the old form, so files already issued keep verifying.
   RSA signatures were not affected.
+
 - XAdES signatures lacked `xades:DataObjectFormat`, which the XAdES baseline
   (EN 319 132-1, B-B) asks for. It now declares `text/xml` for enveloped
   signatures and `application/octet-stream` with base64 encoding for
   enveloping ones, bound to the document reference. Checked with signxml.
+
 - PDF signatures carried `/Name (signer)` — or `handler`, or `api`, depending on
   the entry point — and the JSON receipt reported the same placeholder. A signer
   nobody named now takes the holder printed on the certificate, as other signing
   tools do; `--name` still overrides it.
+
 - PKCS#12 files exported by Firefox or Thunderbird (NSS) were refused as "not a
   certificate" even with the right passphrase: they are BER with indefinite
   lengths and Go's PKCS#12 library reads DER only. A new `keybundle` package
@@ -1016,28 +967,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   384/512), legacy 3DES with the PKCS#12 KDF, and the integrity MAC checked on
   the bytes as written. Every earlier version failed on these files too, only
   later, at signing time.
+
 - The PDF seal never carried its design: every line printed pure black and the
   blue accent rule was missing. With pdfsign v1.0.0, `Position()` commits a text
   element, so the colour set after it was dropped; and `DrawRect()` registers a
   type its renderer does not draw. Colours are now set before the position and
   the rule is drawn as a thick line. Checked by rendering a signed PDF with
   poppler; `pdfsig` still reports the signature valid.
+
 - The PDF seal printed the identifier and the date on top of the second line
   of a name that wrapped (any long name: "MARIA DEL CARMEN LOPEZ GARCIA
   MARTINEZ" overprinted "MARTINEZ"). The details now start below the last name
   line; a layout test checks that no line overprints another.
+
 - The verification tab showed an empty heading, hint and button in every
   language: four catalogue entries had never been written. The catalogue test
   now walks every string field by reflection instead of a hand-kept list, which
   is how the gap was found.
+
 - `make install-desktop` failed on every machine: it installed
   `packaging/trebaruna.desktop`, but the file was still `firma-it.desktop`.
+
 - `make package-desktop` called a script that lived in the ignored `bin/`
   directory and still produced `pignus` archives; it is now the tracked
   `packaging/package-desktop.sh` and builds `trebaruna` archives with the
   version injected. CI runs both targets.
+
 - The macOS bundle injected the version into `cli.Version`, a variable that
   does not exist, so the bundled CLI never reported the release version.
+
 - The desktop app ID and the macOS bundle identifier are now the same,
   `org.codeberg.simplicer.trebaruna`, instead of the old `it.firma.desktop`.
 
@@ -1046,14 +1004,74 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `SignatureValue` (schema-invalid order), and missing `enveloped-signature`
   transforms so verifiers hashed the document with the signature inside.
   Digests were also taken over hand-written strings instead of canonical form.
+
 - The signing skeleton is re-parsed before measuring, so the tree that is
   hashed is byte-for-byte the tree that is written.
+
 - `isSelfSigned` used `CheckSignatureFrom`, which requires KeyUsageCertSign and
   therefore reported every self-signed signing certificate as CA-issued.
+
 - The preview pane collapsed to zero width; the form pane clipped its buttons.
+
 - The seal was drawn at the page origin instead of the requested box.
 
 ### Security
+
+- An XML signature over part of a document left out of its unsigned
+  parts anything inside an element that merely looked like another
+  signature (`ds:Signature`), so content could hide there unreported.
+  Another signature is left out only when it holds; a look-alike is named
+  among the unsigned parts (content.partly_signed).
+
+- A CMS signature over data that merely parses as a TSTInfo was read as a
+  timestamp token: the timestamp library does not check the declared
+  content type, nor did trebaruna's RSA-PSS fallback. A token must now
+  declare id-ct-TSTInfo (RFC 3161, 2.4.2) wherever it is read: CAdES and
+  XAdES signature timestamps, archive timestamps, ASiC and PDF timestamps.
+
+- The EU list of the lists, the root every national list is
+  authenticated against, was trusted on TLS alone, and `--lotl` accepted
+  plain http. It is now used only when its own signature, over all of
+  it, was made with a certificate the Official Journal announced (the
+  six of notice C/2026/1944, embedded with their provenance), or with one
+  a chain of pivot lists announced after that notice; a list that no
+  longer names the notice is refused until trebaruna carries the newer
+  one. `--lotl` takes https, or http on this computer only. Checked live:
+  the Commission's list authenticates and Spain's syncs.
+
+- A territory code from the EU list, or given to `verify`, named a file in
+  the cache unchecked: a hostile list could write `../` paths outside it.
+  Only two capital letters are a territory now; the cache file is named by
+  the code the authenticated list publishes.
+
+- trust sync accepts a national list only when its own signature (a child
+  of the list's root, ETSI TS 119 612 5.7) signs the whole list: one over
+  a part, with the authorities left unsigned, or nested elsewhere is
+  refused. The signature is checked with the XML-Signature verifier signed
+  documents use, instead of a second, partial one (it refused inclusive
+  C14N and read a missing SignatureMethod as SHA-512); among the
+  certificates KeyInfo shows, the one the EU list publishes is used.
+  goxmldsig is no longer a dependency. Of the lists the EU list pointed at
+  on 9 November 2026, the 30 that could be fetched authenticate but
+  Germany's, signed with RSA-PSS and refused as before.
+
+- verify names the parts of an XML document its signature does not cover:
+  a signature whose references point at one element by Id, none at the
+  whole document, leaves the rest unsigned and readable as if signed (the
+  ground of signature wrapping). `content.partly_signed`, with the paths
+  of the unsigned elements; detached and enveloping signatures, and
+  references to the whole document, are not concerned.
+
+- verify checks that the certificate a signature carries is the one it
+  names in its signed attributes: signing-certificate-v2 or v1 in CAdES and
+  PAdES (read from each PDF signature field's envelope, which the PDF
+  library does not hand back), SigningCertificate or SigningCertificateV2 in
+  XAdES (only when SignedInfo covers the signed properties). A certificate
+  with the same key and another identity put in its place left the
+  signature value valid and the wrong name on the report; it is now
+  `signing_certificate.mismatch` and the signature counts as broken. A
+  signature that names no certificate gets a warning. Among CMS
+  certificates answering to the same identifier, the named one is chosen.
 
 - A wrong card PIN could sign while another signature of the same process
   held a logged-in session (the local API serving two requests, for
