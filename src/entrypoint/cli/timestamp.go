@@ -133,6 +133,7 @@ func runTimestamp(args []string, stdout, stderr io.Writer) int {
 			"serial":     token.SerialNumber.String(),
 			"policy":     token.Policy.String(),
 			"size_bytes": len(response),
+			"network":    connections(),
 		})
 		return exitOK
 	}
@@ -141,6 +142,7 @@ func runTimestamp(args []string, stdout, stderr io.Writer) int {
 	fmt.Fprintf(stdout, "  time    %s\n", token.Time.UTC().Format(time.RFC3339))
 	fmt.Fprintf(stdout, "  tsa     %s\n", firstCertificateName(token))
 	fmt.Fprintf(stdout, "  digest  %s\n", hex.EncodeToString(digest))
+	printConnections(stdout)
 	return exitOK
 }
 

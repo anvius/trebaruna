@@ -104,6 +104,15 @@ trebaruna sign <document> [flags]
 | `--enveloping` | off | XAdES enveloping rather than enveloped |
 | `--json` | off | Machine-readable result |
 
+#### Connections in the result
+
+Every `--json` result of `sign`, `verify` and `timestamp` carries `network`: the
+connections the command made, each with its purpose (`timestamp`,
+`revocation`, `trust-list`, …), method, destination without credentials or
+query values, status and bytes. An offline command says `"network": []`.
+Connections opened by a library with its own client are recorded too, marked
+`"via": "library"`. Human output lists them under `connections`. See ADR-0010.
+
 #### Secrets without the command line
 
 Any local user can read the command line of any process (`ps -ef`), so a

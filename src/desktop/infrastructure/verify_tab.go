@@ -24,6 +24,8 @@ import (
 	"codeberg.org/simplicer/trebaruna/src/desktop/messaging"
 	"codeberg.org/simplicer/trebaruna/src/verification/domain"
 	reportmessaging "codeberg.org/simplicer/trebaruna/src/verification/messaging"
+
+	transparency "codeberg.org/simplicer/trebaruna/src/transparency/domain"
 )
 
 // verifyReport mirrors the JSON emitted by `trebaruna verify --json`.
@@ -57,6 +59,7 @@ type verifyReport struct {
 		Status  string `json:"status"`
 		Message string `json:"message"`
 	} `json:"warnings"`
+	Network []transparency.Connection `json:"network"`
 }
 
 // signedExtensions are the containers a signed document arrives in.
@@ -73,8 +76,10 @@ type verificationTab struct {
 	palette Palette
 	binary  string
 
-	file        *fileRow
-	path        string
+	file *fileRow
+	path string
+	// onNetwork receives the connections a check reported.
+	onNetwork   func([]transparency.Connection)
 	online      *widget.Check
 	check       *widget.Button
 	verdict     *canvas.Text
@@ -182,6 +187,9 @@ func (v *verificationTab) showVerdict(verdict, explanation string, colour color.
 func (v *verificationTab) render(report verifyReport) {
 	m := v.report
 	verdict := domain.TrustLevel(report.Verdict)
+	if v.onNetwork != nil && len(report.Network) > 0 {
+		v.onNetwork(report.Network)
+	}
 
 	if !report.Signed {
 		v.showVerdict(m.NoSignatures, "", v.palette.TextMuted)

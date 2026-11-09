@@ -14,6 +14,9 @@ import (
 	"net/http"
 	"os"
 	"time"
+
+	transparencydomain "codeberg.org/simplicer/trebaruna/src/transparency/domain"
+	transparency "codeberg.org/simplicer/trebaruna/src/transparency/infrastructure"
 )
 
 // runRequests lists what is waiting for a decision.
@@ -40,7 +43,7 @@ func runRequests(args []string, stdout, stderr io.Writer) int {
 	}
 	request.Header.Set("X-Firma-Token", token)
 
-	response, err := (&http.Client{Timeout: 10 * time.Second}).Do(request)
+	response, err := transparency.Client(transparencydomain.PurposeLocalAPI, 10*time.Second).Do(request)
 	if err != nil {
 		fmt.Fprintf(stderr, "cannot reach the local API at %s: %v\n", *address, err)
 		return exitUnverified
@@ -125,7 +128,7 @@ func runDecide(args []string, stdout, stderr io.Writer) int {
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("X-Firma-Token", token)
 
-	response, err := (&http.Client{Timeout: 10 * time.Second}).Do(request)
+	response, err := transparency.Client(transparencydomain.PurposeLocalAPI, 10*time.Second).Do(request)
 	if err != nil {
 		fmt.Fprintf(stderr, "cannot reach the local API: %v\n", err)
 		return exitUnverified

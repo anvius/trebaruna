@@ -16,6 +16,8 @@ import (
 
 	"codeberg.org/simplicer/trebaruna/src/desktop/application"
 	"codeberg.org/simplicer/trebaruna/src/desktop/domain"
+
+	transparencydomain "codeberg.org/simplicer/trebaruna/src/transparency/domain"
 )
 
 // CommandLineSigner signs by running `trebaruna sign --json`.
@@ -47,12 +49,13 @@ func (s CommandLineSigner) Sign(ctx context.Context, intent domain.SigningIntent
 	}
 
 	var printed struct {
-		Path       string `json:"path"`
-		Standard   string `json:"standard"`
-		Signer     string `json:"signer"`
-		SignedAt   string `json:"signed_at"`
-		SealCount  int    `json:"seal_count"`
-		SelfSigned bool   `json:"self_signed"`
+		Path       string                          `json:"path"`
+		Standard   string                          `json:"standard"`
+		Signer     string                          `json:"signer"`
+		SignedAt   string                          `json:"signed_at"`
+		SealCount  int                             `json:"seal_count"`
+		SelfSigned bool                            `json:"self_signed"`
+		Network    []transparencydomain.Connection `json:"network"`
 	}
 	if err := json.Unmarshal(stdout.Bytes(), &printed); err != nil {
 		return domain.Receipt{}, fmt.Errorf("the signer printed an unreadable receipt: %w", err)
@@ -65,6 +68,7 @@ func (s CommandLineSigner) Sign(ctx context.Context, intent domain.SigningIntent
 		SignedAt:   printed.SignedAt,
 		SealCount:  printed.SealCount,
 		SelfSigned: printed.SelfSigned,
+		Network:    printed.Network,
 	}, nil
 }
 

@@ -11,6 +11,9 @@ import (
 
 	"codeberg.org/simplicer/trebaruna/src/verification/domain"
 	"golang.org/x/crypto/ocsp"
+
+	transparencydomain "codeberg.org/simplicer/trebaruna/src/transparency/domain"
+	transparency "codeberg.org/simplicer/trebaruna/src/transparency/infrastructure"
 )
 
 // OCSPChecker asks a responder whether a certificate is revoked.
@@ -36,7 +39,7 @@ type OCSPChecker struct {
 // NewOCSPChecker builds the checker with a bounded client.
 func NewOCSPChecker() *OCSPChecker {
 	return &OCSPChecker{
-		Client:  &http.Client{},
+		Client:  transparency.Client(transparencydomain.PurposeRevocation, 0),
 		Timeout: 10 * time.Second,
 		Now:     time.Now(),
 		MaxBody: 256 * 1024,
@@ -140,7 +143,7 @@ func (c *OCSPChecker) query(ctx context.Context, url string, requestDER []byte) 
 
 	client := c.Client
 	if client == nil {
-		client = &http.Client{}
+		client = transparency.Client(transparencydomain.PurposeRevocation, 0)
 	}
 
 	response, err := client.Do(httpRequest)

@@ -3,13 +3,20 @@
 package infrastructure
 
 import (
+	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 
+	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/test"
+	"fyne.io/fyne/v2/widget"
 
+	"codeberg.org/simplicer/trebaruna/src/desktop/application"
+	"codeberg.org/simplicer/trebaruna/src/desktop/domain"
 	"codeberg.org/simplicer/trebaruna/src/desktop/messaging"
+	transparency "codeberg.org/simplicer/trebaruna/src/transparency/domain"
 	reportmessaging "codeberg.org/simplicer/trebaruna/src/verification/messaging"
 )
 
@@ -142,4 +149,73 @@ func TestSigningTimesReadLikeTheSeal(t *testing.T) {
 	if got := readableInstant("yesterday"); got != "yesterday" {
 		t.Errorf("an unparsable value must pass through, got %q", got)
 	}
+}
+
+type networkedSigner struct{}
+
+func (networkedSigner) Sign(_ context.Context, intent domain.SigningIntent) (domain.Receipt, error) {
+	return domain.Receipt{SignedPath: intent.OutputName(), Network: []transparency.Connection{
+		{Purpose: transparency.PurposeTimestamp, Method: "POST", URL: "https://tsa.example/tsa", Status: 200, SentBytes: 77, Received: 2152, Via: "library"},
+	}}, nil
+}
+
+func TestTheConnectionsOfASignatureAreSaidAndKept(t *testing.T) {
+	fixture := newFormFixture(t, scriptedCertificate{summary: qualifiedRossi()})
+	form := fixture.desktop.form
+	form.signing = application.NewSignFromDesktop(networkedSigner{}, func(string) bool { return true })
+	form.setDocument("/tmp/offerta.docx")
+	form.setCertificate("/tmp/rossi.p12")
+
+	test.Tap(form.signButton)
+	settle(t, func() bool { return form.afterSign.Visible() })
+
+	if !strings.Contains(form.status.Text, "tsa.example (sello de tiempo)") {
+		t.Errorf("status = %q, want the authority named", form.status.Text)
+	}
+	if entries := fixture.desktop.activity.list(); len(entries) != 1 || entries[0].Host() != "tsa.example" {
+		t.Errorf("session activity = %+v", entries)
+	}
+}
+
+func TestTheActivityWindowListsOrSaysThereIsNothing(t *testing.T) {
+	test.NewTempApp(t)
+	m := messaging.For(messaging.Spanish)
+
+	empty := activityContent(nil, m)
+	if label, ok := empty.(*fyne.Container).Objects[0].(*widget.Label); !ok || label.Text != m.NetworkEmpty {
+		t.Errorf("empty state = %#v", empty)
+	}
+
+	listing := activityContent([]transparency.Connection{
+		{Purpose: transparency.PurposeRevocation, Method: "POST", URL: "http://ocsp.example/", Status: 200},
+		{Purpose: transparency.PurposeUnattributed, Method: "GET", URL: "https://elsewhere.example/x", Error: "dial tcp: refused", Via: "library"},
+	}, m)
+	window := test.NewTempWindow(t, listing)
+	window.Resize(fyne.NewSize(700, 400))
+	texts := collectTexts(window.Content())
+	for _, want := range []string{"consulta de revocación: ocsp.example", "sin motivo identificado: elsewhere.example", "dial tcp: refused", m.NetworkViaLibrary} {
+		if !strings.Contains(texts, want) {
+			t.Errorf("the listing lacks %q", want)
+		}
+	}
+}
+
+// collectTexts joins every label's text under an object.
+func collectTexts(object fyne.CanvasObject) string {
+	var builder strings.Builder
+	var visit func(fyne.CanvasObject)
+	visit = func(current fyne.CanvasObject) {
+		switch typed := current.(type) {
+		case *widget.Label:
+			builder.WriteString(typed.Text + "\n")
+		case *fyne.Container:
+			for _, child := range typed.Objects {
+				visit(child)
+			}
+		case *container.Scroll:
+			visit(typed.Content)
+		}
+	}
+	visit(object)
+	return builder.String()
 }

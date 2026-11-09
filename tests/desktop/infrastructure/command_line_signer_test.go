@@ -4,11 +4,14 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
 	"codeberg.org/simplicer/trebaruna/src/desktop/domain"
 	"codeberg.org/simplicer/trebaruna/src/desktop/infrastructure"
+
+	transparencydomain "codeberg.org/simplicer/trebaruna/src/transparency/domain"
 )
 
 // fakeCommand writes an executable that stands in for trebaruna: it records its
@@ -50,7 +53,8 @@ func fullIntent() domain.SigningIntent {
 }
 
 const receiptJSON = `{"path":"/tmp/contratto_signed.pdf","standard":"PAdES-B-T","signer":"MARIO ROSSI",` +
-	`"signed_at":"2026-11-09T10:00:00+01:00","seal_count":1,"self_signed":true}`
+	`"signed_at":"2026-11-09T10:00:00+01:00","seal_count":1,"self_signed":true,` +
+	`"network":[{"purpose":"timestamp","method":"POST","url":"https://tsa.example/tsa","status":200}]}`
 
 func TestTheIntentBecomesTheCommandsFlags(t *testing.T) {
 	binary, recorded := fakeCommand(t, "echo '"+receiptJSON+"'")
@@ -122,8 +126,9 @@ func TestTheReceiptIsReadFromTheCommandOutput(t *testing.T) {
 	want := domain.Receipt{
 		SignedPath: "/tmp/contratto_signed.pdf", Standard: "PAdES-B-T", Signer: "MARIO ROSSI",
 		SignedAt: "2026-11-09T10:00:00+01:00", SealCount: 1, SelfSigned: true,
+		Network: []transparencydomain.Connection{{Purpose: "timestamp", Method: "POST", URL: "https://tsa.example/tsa", Status: 200}},
 	}
-	if receipt != want {
+	if !reflect.DeepEqual(receipt, want) {
 		t.Errorf("receipt = %+v, want %+v", receipt, want)
 	}
 }

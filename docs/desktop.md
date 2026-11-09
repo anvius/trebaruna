@@ -144,6 +144,16 @@ See [Web pages](web-pages.md) for the full flow.
 
 ---
 
+## Network activity
+
+**Tools → Network activity…** lists every connection made in the session: why
+(timestamp, revocation check, trusted list…), where, the result and the bytes
+moved, newest first. After a signature that needed the network, the line under
+the Sign button names the destinations. The window opens no connection itself:
+it shows what each command reported (ADR-0008, ADR-0010).
+
+---
+
 ## Menus, shortcuts and drag and drop
 
 Every action has a menu entry; the frequent ones have a shortcut (`Ctrl` on

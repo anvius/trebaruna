@@ -3,6 +3,7 @@ package application_test
 import (
 	"context"
 	"errors"
+	"reflect"
 	"testing"
 
 	"codeberg.org/simplicer/trebaruna/src/desktop/application"
@@ -85,7 +86,7 @@ func TestASuccessfulSignatureHandsBackTheReceipt(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Execute: %v", err)
 	}
-	if got != want {
+	if !reflect.DeepEqual(got, want) {
 		t.Errorf("receipt = %+v, want %+v", got, want)
 	}
 }
@@ -95,7 +96,7 @@ func TestWithoutAnExistenceCheckTheReceiptIsTrusted(t *testing.T) {
 	useCase := application.NewSignFromDesktop(&recordingSigner{receipt: want}, nil)
 
 	got, err := useCase.Execute(context.Background(), completeIntent())
-	if err != nil || got != want {
+	if err != nil || !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %+v, %v; want %+v", got, err, want)
 	}
 }

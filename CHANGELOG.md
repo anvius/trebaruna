@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Transparency: every connection is recorded (ADR-0010). A new `transparency`
+  slice hands out the only HTTP clients; it also wraps the default transport,
+  so connections libraries open with their own client (pdfsign's timestamp and
+  revocation requests) are recorded too, marked `via: library`. `sign`,
+  `verify` and `timestamp` report `network` in JSON and list connections in
+  human output; the window summarises them after signing and lists the session
+  under Tools → Network activity. An architecture test fails if any code builds
+  its own HTTP client.
+
 - Desktop: user and password for timestamp authorities that require an
   account, such as Aruba's and InfoCert's. The user is remembered; the password
   is passed as `TREBARUNA_TSA_PASS`, never on the command line, and not stored.
@@ -61,6 +70,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Trust: the list downloaders moved from the application layer to
+  `trust/infrastructure` (`WebLOTL`, `WebList`).
 - Desktop: the command-line adapter moved out of the application and domain
   layers. `SignFromDesktop` now depends on a `Signer` port and returns a typed
   `Receipt` read from `sign --json`, instead of predicting the output name and

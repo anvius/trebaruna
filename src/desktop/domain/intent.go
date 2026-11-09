@@ -4,7 +4,11 @@
 // of the signing slice, so its model must stay independent of the toolkit.
 package domain
 
-import "strings"
+import (
+	"strings"
+
+	transparency "codeberg.org/simplicer/trebaruna/src/transparency/domain"
+)
 
 // SigningIntent is everything the user filled in before pressing Sign.
 type SigningIntent struct {
@@ -96,6 +100,8 @@ type Receipt struct {
 	SignedAt   string
 	SealCount  int
 	SelfSigned bool
+	// Network is every connection the signature needed (ADR-0010).
+	Network []transparency.Connection
 }
 
 // ProblemCode identifies a validation failure without tying it to a language.

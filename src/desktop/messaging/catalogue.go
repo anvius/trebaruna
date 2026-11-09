@@ -164,6 +164,22 @@ type Catalogue struct {
 	ExplainInvalid   string
 	ExplainBroken    string
 	ExplainUnknown   string
+
+	// Network activity (ADR-0010).
+	MenuNetwork          string
+	NetworkTitle         string
+	NetworkEmpty         string
+	NetworkSummary       string
+	NetworkBytes         string
+	NetworkViaLibrary    string
+	PurposeTimestamp     string
+	PurposeRevocation    string
+	PurposeTrustList     string
+	PurposeWebDelivery   string
+	PurposeLocalAPI      string
+	PurposeSigningServer string
+	PurposeRemoteSigning string
+	PurposeUnattributed  string
 }
 
 // For returns the catalogue for a language.
@@ -289,6 +305,20 @@ var spanish = Catalogue{
 	ExplainInvalid:             "El documento no ha cambiado, pero el certificado no servía para firmar en ese momento: estaba caducado o revocado.",
 	ExplainBroken:              "El documento cambió después de firmarse: la firma ya no corresponde a su contenido.",
 	ExplainUnknown:             "Con la información disponible no se puede decidir si la firma es válida.",
+	MenuNetwork:                "Actividad de red…",
+	NetworkTitle:               "Actividad de red de esta sesión",
+	NetworkEmpty:               "En esta sesión no se ha hecho ninguna conexión. Firmar en nivel básico y comprobar sin consultar la revocación no usan la red.",
+	NetworkSummary:             "Conexiones: %s",
+	NetworkBytes:               "%s enviados, %s recibidos",
+	NetworkViaLibrary:          "Abierta por una librería de terceros con su propio cliente; registrada igualmente.",
+	PurposeTimestamp:           "sello de tiempo",
+	PurposeRevocation:          "consulta de revocación",
+	PurposeTrustList:           "lista de confianza",
+	PurposeWebDelivery:         "entrega a la página web",
+	PurposeLocalAPI:            "servidor local de trebaruna",
+	PurposeSigningServer:       "servidor de la sede",
+	PurposeRemoteSigning:       "firma remota",
+	PurposeUnattributed:        "sin motivo identificado",
 }
 
 var italian = Catalogue{
@@ -402,6 +432,20 @@ var italian = Catalogue{
 	ExplainInvalid:             "Il documento non è cambiato, ma il certificato non poteva firmare in quel momento: era scaduto o revocato.",
 	ExplainBroken:              "Il documento è cambiato dopo la firma: la firma non corrisponde più al contenuto.",
 	ExplainUnknown:             "Con le informazioni disponibili non si può stabilire se la firma è valida.",
+	MenuNetwork:                "Attività di rete…",
+	NetworkTitle:               "Attività di rete di questa sessione",
+	NetworkEmpty:               "In questa sessione non è stata aperta nessuna connessione. La firma di livello base e la verifica senza controllo di revoca non usano la rete.",
+	NetworkSummary:             "Connessioni: %s",
+	NetworkBytes:               "%s inviati, %s ricevuti",
+	NetworkViaLibrary:          "Aperta da una libreria di terze parti con un proprio client; registrata comunque.",
+	PurposeTimestamp:           "marca temporale",
+	PurposeRevocation:          "verifica di revoca",
+	PurposeTrustList:           "lista di fiducia",
+	PurposeWebDelivery:         "consegna alla pagina web",
+	PurposeLocalAPI:            "server locale di trebaruna",
+	PurposeSigningServer:       "server del portale",
+	PurposeRemoteSigning:       "firma remota",
+	PurposeUnattributed:        "motivo non identificato",
 }
 
 var english = Catalogue{
@@ -515,6 +559,20 @@ var english = Catalogue{
 	ExplainInvalid:             "The document has not changed, but the certificate could not sign at that moment: it was expired or revoked.",
 	ExplainBroken:              "The document changed after it was signed: the signature no longer matches its content.",
 	ExplainUnknown:             "The available information is not enough to decide whether the signature is valid.",
+	MenuNetwork:                "Network activity…",
+	NetworkTitle:               "Network activity in this session",
+	NetworkEmpty:               "No connection has been made in this session. Basic signatures and checks without revocation queries do not use the network.",
+	NetworkSummary:             "Connections: %s",
+	NetworkBytes:               "%s sent, %s received",
+	NetworkViaLibrary:          "Opened by a third-party library with its own client; recorded all the same.",
+	PurposeTimestamp:           "timestamp",
+	PurposeRevocation:          "revocation check",
+	PurposeTrustList:           "trusted list",
+	PurposeWebDelivery:         "delivery to the web page",
+	PurposeLocalAPI:            "trebaruna's local server",
+	PurposeSigningServer:       "site's signing server",
+	PurposeRemoteSigning:       "remote signing",
+	PurposeUnattributed:        "no identified purpose",
 }
 
 // LevelName renders a level name for display.

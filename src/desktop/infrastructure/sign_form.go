@@ -20,6 +20,8 @@ import (
 	"codeberg.org/simplicer/trebaruna/src/desktop/application"
 	"codeberg.org/simplicer/trebaruna/src/desktop/domain"
 	"codeberg.org/simplicer/trebaruna/src/desktop/messaging"
+
+	transparency "codeberg.org/simplicer/trebaruna/src/transparency/domain"
 )
 
 // Preference keys. The certificate path, the timestamp authority and its
@@ -48,6 +50,8 @@ type signForm struct {
 	pages       *pagePane
 	// onCheck hands a signed file to the verification tab.
 	onCheck func(path string)
+	// onNetwork receives the connections a signature reported.
+	onNetwork func([]transparency.Connection)
 
 	document    string
 	certificate string
@@ -477,7 +481,14 @@ func (f *signForm) sign() {
 				f.preferences.SetString(preferenceTSAUser, intent.TimestampUser)
 			}
 			f.signedPath = receipt.SignedPath
-			f.report(fmt.Sprintf(f.m.SignedAs, filepath.Base(receipt.SignedPath)), widget.SuccessImportance)
+			message := fmt.Sprintf(f.m.SignedAs, filepath.Base(receipt.SignedPath))
+			if summary := summarise(receipt.Network, f.m); summary != "" {
+				message += "\n" + summary
+			}
+			if f.onNetwork != nil {
+				f.onNetwork(receipt.Network)
+			}
+			f.report(message, widget.SuccessImportance)
 			f.afterSign.Show()
 		})
 	}()

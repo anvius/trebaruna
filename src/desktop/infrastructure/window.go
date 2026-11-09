@@ -44,6 +44,9 @@ type Window struct {
 	form  *signForm
 	pages *pagePane
 
+	// activity collects the connections every command reported.
+	activity *networkActivity
+
 	// binaryPath is the CLI the window drives.
 	binaryPath string
 }
@@ -98,6 +101,7 @@ func newDesktop(window fyne.Window, catalogue messaging.Catalogue, binaryPath st
 		window:      window,
 		messages:    catalogue,
 		palette:     DefaultPalette(),
+		activity:    &networkActivity{},
 	}
 }
 
@@ -113,6 +117,7 @@ func (w *Window) buildContent(initialDocument string) fyne.CanvasObject {
 	w.pages = newPagePane(w.messages, w.palette, w.preview)
 	w.form = newSignForm(w.window, w.messages, w.palette, fyne.CurrentApp().Preferences(),
 		w.application, w.inspect, w.pages)
+	w.form.onNetwork = w.activity.add
 	if initialDocument != "" {
 		w.form.setDocument(initialDocument)
 	}
@@ -133,6 +138,7 @@ func (w *Window) buildContent(initialDocument string) fyne.CanvasObject {
 func (w *Window) withTabs(signingContent fyne.CanvasObject) fyne.CanvasObject {
 	report := reportmessaging.For(languageCode(w.messages.Language))
 	verification := newVerificationTab(w.window, w.messages, report, w.palette, w.binaryPath)
+	verification.onNetwork = w.activity.add
 
 	tabs := container.NewAppTabs(
 		container.NewTabItemWithIcon(w.messages.SignTab, theme.DocumentCreateIcon(), signingContent),
@@ -219,7 +225,10 @@ func (w *Window) mainMenu(tabs *container.AppTabs, checkFile func(string)) *fyne
 	return fyne.NewMainMenu(
 		fyne.NewMenu(m.MenuFile, openDocument, chooseCertificate, fyne.NewMenuItemSeparator(), checkDocument),
 		fyne.NewMenu(m.MenuSignature, sign, fyne.NewMenuItemSeparator(), previous, next, freeSpace),
-		fyne.NewMenu(m.MenuTools, fyne.NewMenuItem(m.MenuRequests, w.showRequests)),
+		fyne.NewMenu(m.MenuTools,
+			fyne.NewMenuItem(m.MenuNetwork, w.showNetworkActivity),
+			fyne.NewMenuItem(m.MenuRequests, w.showRequests),
+		),
 		fyne.NewMenu(m.MenuHelp,
 			fyne.NewMenuItem(m.MenuManual, func() { _ = fyne.CurrentApp().OpenURL(manualURL()) }),
 			fyne.NewMenuItem(m.MenuAbout, w.showAbout),
@@ -236,6 +245,14 @@ func (w *Window) showRequests() {
 	window.Resize(fyne.NewSize(760, 440))
 	window.Show()
 	go requests.load()
+}
+
+// showNetworkActivity lists every connection made during the session.
+func (w *Window) showNetworkActivity() {
+	window := fyne.CurrentApp().NewWindow(w.messages.NetworkTitle)
+	window.SetContent(activityContent(w.activity.list(), w.messages))
+	window.Resize(fyne.NewSize(720, 460))
+	window.Show()
 }
 
 // showAbout states what the program is, which version, and under which licence.

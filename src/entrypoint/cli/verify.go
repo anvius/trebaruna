@@ -13,6 +13,8 @@ import (
 	verification "codeberg.org/simplicer/trebaruna/src/verification/domain"
 	verificationinfra "codeberg.org/simplicer/trebaruna/src/verification/infrastructure"
 	"codeberg.org/simplicer/trebaruna/src/verification/messaging"
+
+	transparencydomain "codeberg.org/simplicer/trebaruna/src/transparency/domain"
 )
 
 // Verification exit codes. They are distinct on purpose: a script must be able
@@ -87,6 +89,7 @@ func runVerify(args []string, stdout, stderr io.Writer) int {
 		encodeVerificationJSON(stdout, report)
 	} else {
 		printVerification(stdout, report, catalogue)
+		printConnections(stdout)
 	}
 
 	switch report.Verdict() {
@@ -140,6 +143,8 @@ type verificationJSON struct {
 	VerifiedAt string        `json:"verified_at"`
 	Signers    []signerJSON  `json:"signers"`
 	Warnings   []findingJSON `json:"warnings,omitempty"`
+	// Network lists every connection the check needed (ADR-0010).
+	Network []transparencydomain.Connection `json:"network"`
 }
 
 // signerJSON is one signature in the JSON output.
@@ -219,6 +224,7 @@ func encodeVerificationJSON(writer io.Writer, report verification.DocumentReport
 		Signed:     report.Signed,
 		Verdict:    string(report.Verdict()),
 		VerifiedAt: report.VerifiedAt.Format(time.RFC3339),
+		Network:    connections(),
 	}
 
 	for _, signer := range report.Signers {

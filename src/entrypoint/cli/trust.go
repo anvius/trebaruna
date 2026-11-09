@@ -87,8 +87,8 @@ func runTrustSync(args []string, stdout, stderr io.Writer) int {
 	}
 
 	syncer := &trustapplication.SyncTerritory{
-		LOTL:          trustapplication.HTTPLOTL{URL: *lotlURL},
-		Lists:         trustapplication.HTTPList{},
+		LOTL:          trustinfra.WebLOTL{URL: *lotlURL},
+		Lists:         trustinfra.WebList{},
 		CacheDir:      cache,
 		QuarantineDir: filepath.Join(cache, "rejected"),
 	}
@@ -126,6 +126,7 @@ func runTrustSync(args []string, stdout, stderr io.Writer) int {
 			result.Services, result.Qualified, result.NextUpdate.Format("2006-01-02"))
 	}
 
+	printConnections(stdout)
 	if rejected > 0 {
 		fmt.Fprintf(stdout, "\n%d list(s) rejected; see %s\n", rejected,
 			filepath.Join(cache, "rejected"))
@@ -143,7 +144,7 @@ func selectTerritories(syncer *trustapplication.SyncTerritory, requested, lotlUR
 		return []string{strings.ToUpper(strings.TrimSpace(requested))}, nil
 	}
 
-	content, err := trustapplication.HTTPLOTL{URL: lotlURL}.Fetch()
+	content, err := trustinfra.WebLOTL{URL: lotlURL}.Fetch()
 	if err != nil {
 		return nil, fmt.Errorf("fetch the EU list of the lists: %w", err)
 	}

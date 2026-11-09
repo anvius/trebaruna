@@ -18,6 +18,9 @@ import (
 	"codeberg.org/simplicer/trebaruna/src/signing/application"
 	"codeberg.org/simplicer/trebaruna/src/signing/domain"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure"
+
+	transparencydomain "codeberg.org/simplicer/trebaruna/src/transparency/domain"
+	transparency "codeberg.org/simplicer/trebaruna/src/transparency/infrastructure"
 )
 
 // Exit codes. They are part of the contract with scripts and AI callers.
@@ -29,6 +32,9 @@ const (
 
 // Run executes the CLI and returns the process exit code.
 func Run(args []string, stdout, stderr io.Writer) int {
+	// Each command reports the connections it made, not those of an earlier
+	// command run in the same process (tests, the local server).
+	transparency.Reset()
 	if len(args) == 0 {
 		printUsage(stderr)
 		return exitUsage
@@ -381,6 +387,8 @@ type artefactJSON struct {
 	HasSeal    bool   `json:"has_seal"`
 	SealCount  int    `json:"seal_count"`
 	SelfSigned bool   `json:"self_signed"`
+	// Network lists every connection the signature needed (ADR-0010).
+	Network []transparencydomain.Connection `json:"network"`
 }
 
 func encodeJSON(writer io.Writer, artefact application.Artefact) {
@@ -395,6 +403,7 @@ func encodeJSON(writer io.Writer, artefact application.Artefact) {
 		HasSeal:    artefact.HasSeal,
 		SealCount:  artefact.SealCount,
 		SelfSigned: artefact.SelfSigned,
+		Network:    connections(),
 	}
 	encoder := json.NewEncoder(writer)
 	encoder.SetIndent("", "  ")
@@ -413,6 +422,7 @@ func printArtefact(writer io.Writer, artefact application.Artefact) {
 	if artefact.SelfSigned {
 		fmt.Fprintf(writer, "  warning self-signed certificate: valid cryptography, no third-party trust\n")
 	}
+	printConnections(writer)
 }
 
 func printUsage(writer io.Writer) {

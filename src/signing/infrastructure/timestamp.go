@@ -9,6 +9,9 @@ import (
 	"io"
 	"net/http"
 	"time"
+
+	transparencydomain "codeberg.org/simplicer/trebaruna/src/transparency/domain"
+	transparency "codeberg.org/simplicer/trebaruna/src/transparency/infrastructure"
 )
 
 // oidSignatureTimeStampToken is the CMS unsigned attribute that carries an
@@ -35,7 +38,7 @@ type Rfc3161Timestamper struct {
 // NewRfc3161Timestamper builds the client. A bounded timeout matters: a hung
 // TSA must not hang the signature.
 func NewRfc3161Timestamper() *Rfc3161Timestamper {
-	return &Rfc3161Timestamper{client: &http.Client{Timeout: 45 * time.Second}}
+	return &Rfc3161Timestamper{client: transparency.Client(transparencydomain.PurposeTimestamp, 45*time.Second)}
 }
 
 // Token performs the request/response exchange defined by RFC 3161.

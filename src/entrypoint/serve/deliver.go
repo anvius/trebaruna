@@ -27,6 +27,9 @@ import (
 
 	"codeberg.org/simplicer/trebaruna/src/signing/application"
 	signingdomain "codeberg.org/simplicer/trebaruna/src/signing/domain"
+
+	transparencydomain "codeberg.org/simplicer/trebaruna/src/transparency/domain"
+	transparency "codeberg.org/simplicer/trebaruna/src/transparency/infrastructure"
 )
 
 // DeliveryTimeout bounds the post back to the caller.
@@ -166,7 +169,7 @@ func (s *Service) deliveryClient() *http.Client {
 	if s.Sender != nil {
 		return s.Sender
 	}
-	return &http.Client{Timeout: DeliveryTimeout}
+	return transparency.Client(transparencydomain.PurposeWebDelivery, DeliveryTimeout)
 }
 
 // redactURL keeps credentials out of error messages.

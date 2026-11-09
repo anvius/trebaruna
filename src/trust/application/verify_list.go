@@ -4,8 +4,6 @@ package application
 import (
 	"bytes"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 	"time"
@@ -133,49 +131,6 @@ func (u *SyncTerritory) Territory(territory string) (domain.LOTLEntry, error) {
 		return domain.LOTLEntry{}, fmt.Errorf("territory %q does not appear in the EU list of the lists", territory)
 	}
 	return entry, nil
-}
-
-// HTTPLOTL fetches the EU list over HTTPS.
-type HTTPLOTL struct {
-	URL    string
-	Client *http.Client
-}
-
-// Fetch downloads the list.
-func (h HTTPLOTL) Fetch() ([]byte, error) {
-	client := h.Client
-	if client == nil {
-		client = &http.Client{Timeout: 2 * time.Minute}
-	}
-	return fetch(client, h.URL)
-}
-
-// HTTPList fetches a national list over HTTPS.
-type HTTPList struct {
-	Client *http.Client
-}
-
-// Fetch downloads the list.
-func (h HTTPList) Fetch(url string) ([]byte, error) {
-	client := h.Client
-	if client == nil {
-		client = &http.Client{Timeout: 3 * time.Minute}
-	}
-	return fetch(client, url)
-}
-
-// fetch performs the request with a size limit.
-func fetch(client *http.Client, url string) ([]byte, error) {
-	response, err := client.Get(url)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = response.Body.Close() }()
-
-	if response.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("HTTP %d", response.StatusCode)
-	}
-	return io.ReadAll(io.LimitReader(response.Body, 32<<20))
 }
 
 // writeInto writes content into a directory, creating it if needed.
