@@ -19,18 +19,24 @@ type Palette struct {
 	Background    color.Color
 	Surface       color.Color
 	SurfaceRaised color.Color
-	Accent        color.Color
-	AccentMuted   color.Color
-	Danger        color.Color
-	Warning       color.Color
-	Success       color.Color
-	Text          color.Color
-	TextMuted     color.Color
-	Border        color.Color
+	// Desk is the field the page preview lies on: darker than the paper in
+	// either palette, so the sheet stands out.
+	Desk        color.Color
+	Accent      color.Color
+	AccentMuted color.Color
+	Danger      color.Color
+	Warning     color.Color
+	Success     color.Color
+	Text        color.Color
+	TextMuted   color.Color
+	Border      color.Color
 	// Outline draws the edge of a field: it must stand out from the
 	// background (WCAG 1.4.11), unlike a decorative Border.
 	Outline color.Color
 	Overlay color.Color
+	// Variant is the Fyne variant the palette belongs to: the colours this
+	// theme does not answer come from Fyne's default theme in that variant.
+	Variant fyne.ThemeVariant
 }
 
 // DefaultPalette is the shipped identity.
@@ -41,6 +47,7 @@ func DefaultPalette() Palette {
 		Background:    color.NRGBA{R: 26, G: 32, B: 43, A: 255},
 		Surface:       color.NRGBA{R: 34, G: 42, B: 55, A: 255},
 		SurfaceRaised: color.NRGBA{R: 43, G: 53, B: 69, A: 255},
+		Desk:          color.NRGBA{R: 34, G: 42, B: 55, A: 255},
 		// A muted teal: reads as "official document" rather than as a warning.
 		// Accent and Danger are as dark as WCAG AA allows on every surface
 		// (4.5:1 for text, raised surfaces included).
@@ -54,7 +61,57 @@ func DefaultPalette() Palette {
 		Border:      color.NRGBA{R: 58, G: 70, B: 88, A: 255},
 		Outline:     color.NRGBA{R: 118, G: 130, B: 146, A: 255},
 		Overlay:     color.NRGBA{R: 0, G: 0, B: 0, A: 160},
+		Variant:     theme.VariantDark,
 	}
+}
+
+// LightPalette is the identity on a light desktop: a pale grey window with
+// white fields, and the teal and the signal colours darkened until they keep,
+// on every light surface, the contrast the dark palette keeps on its own.
+func LightPalette() Palette {
+	return Palette{
+		Background:    color.NRGBA{R: 238, G: 241, B: 245, A: 255},
+		Surface:       color.NRGBA{R: 255, G: 255, B: 255, A: 255},
+		SurfaceRaised: color.NRGBA{R: 225, G: 230, B: 237, A: 255},
+		Desk:          color.NRGBA{R: 208, G: 214, B: 223, A: 255},
+		Accent:        color.NRGBA{R: 11, G: 107, B: 103, A: 255},
+		AccentMuted:   color.NRGBA{R: 11, G: 107, B: 103, A: 50},
+		Danger:        color.NRGBA{R: 176, G: 38, B: 32, A: 255},
+		Warning:       color.NRGBA{R: 138, G: 83, B: 0, A: 255},
+		Success:       color.NRGBA{R: 37, G: 107, B: 41, A: 255},
+		Text:          color.NRGBA{R: 23, G: 32, B: 43, A: 255},
+		TextMuted:     color.NRGBA{R: 74, G: 86, B: 104, A: 255},
+		Border:        color.NRGBA{R: 197, G: 205, B: 216, A: 255},
+		Outline:       color.NRGBA{R: 107, G: 118, B: 134, A: 255},
+		Overlay:       color.NRGBA{R: 0, G: 0, B: 0, A: 90},
+		Variant:       theme.VariantLight,
+	}
+}
+
+// PaletteFor is the palette for the desktop's preference: the light one on
+// a light desktop, the shipped dark one otherwise.
+func PaletteFor(variant fyne.ThemeVariant) Palette {
+	if variant == theme.VariantLight {
+		return LightPalette()
+	}
+	return DefaultPalette()
+}
+
+// useTheme themes the app after the desktop's preference (FYNE_THEME=light
+// or dark overrides it). It is chosen once, when the app starts: the
+// window's own drawings take their colours when built, so a change of
+// preference applies on the next start.
+func useTheme(fyneApp fyne.App) {
+	fyneApp.Settings().SetTheme(NewAppTheme(PaletteFor(fyneApp.Settings().ThemeVariant())))
+}
+
+// currentPalette is the palette of the app's theme, the dark one when the
+// app has another theme (as in tests).
+func currentPalette() Palette {
+	if applied, ok := fyne.CurrentApp().Settings().Theme().(*AppTheme); ok {
+		return applied.palette
+	}
+	return DefaultPalette()
 }
 
 // AppTheme applies the palette to every Fyne widget.
@@ -125,7 +182,7 @@ func (t *AppTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) co
 		return p.Background
 	}
 
-	return t.base.Color(name, variant)
+	return t.base.Color(name, p.Variant)
 }
 
 // Font returns the default typeface; the app does not ship custom fonts, so

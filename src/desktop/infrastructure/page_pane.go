@@ -79,7 +79,7 @@ func newPagePane(messages messaging.Catalogue, palette Palette, preview *applica
 	pane.next = newNamedButton(messages.NextPage, theme.NavigateNextIcon(), func() { pane.turn(+1) })
 	pane.suggest = widget.NewButtonWithIcon(messages.SuggestButton, theme.SearchIcon(), pane.suggestAnother)
 
-	backdrop := canvas.NewRectangle(palette.Surface)
+	backdrop := canvas.NewRectangle(palette.Desk)
 	pane.stage = container.NewStack(backdrop)
 
 	toolbar := container.NewHBox(pane.previous, pane.pageLabel, pane.next, layout.NewSpacer(), pane.suggest)

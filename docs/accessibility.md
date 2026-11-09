@@ -13,7 +13,7 @@ use trebaruna today (see the end).
 | 1.1.1 Non-text content | met | Buttons carry text; the two page arrows, which show only an icon, have names ("Previous page", "Next page"). The seal preview is a drawing; the line under the page says in words where it is and whether it covers text. Test: `TestScreenReadersGetNamesNotIconFiles`. |
 | 1.3.1 Info and relationships | partly | The form is three numbered steps with headings and labels above their fields. Screen readers learn the structure only where Fyne exposes it (below). |
 | 1.4.1 Use of colour | met | Findings carry a symbol (✓ ! ✗) and words; a seal over text turns amber *and* the line under the page says so. |
-| 1.4.3 Contrast (minimum) | met | Every text colour reaches 4.5:1 on the window, the fields, the buttons and the dialogs; the text on a primary button too. Test: `TestEveryTextColourReadsOnEverySurface`. |
+| 1.4.3 Contrast (minimum) | met | Every text colour reaches 4.5:1 on the window, the fields, the buttons and the dialogs; the text on a primary button too; in the dark palette and in the light one, which a light desktop gets. Test: `TestEveryTextColourReadsOnEverySurface`. |
 | 1.4.4 Resize text | met | `FYNE_SCALE=1.5 trebaruna-desktop` scales the whole window; labels wrap instead of being cut. |
 | 1.4.11 Non-text contrast | met | The edges of fields and the focus ring reach 3:1 on every surface (same test). |
 | 2.1.1 Keyboard | met | Every action has a shortcut: Ctrl+O open a document, Ctrl+K choose the certificate, Ctrl+Shift+O check a document, Ctrl+Enter sign, Ctrl+PgUp / Ctrl+PgDn change page, Ctrl+F next free space. Tab reaches the page and the sign button; on the page the arrows move the seal and + and − resize it. Tests: `TestTabReachesThePageAndTheSignButton`, `TestTheSealGrowsAndShrinksFromTheKeyboard`. |
@@ -39,7 +39,8 @@ use trebaruna today (see the end).
 
 - Screen readers on Linux, which waits for Fyne; and a try with NVDA,
   Narrator and VoiceOver on the Windows and macOS builds.
-- A light or high-contrast theme: the window has one dark palette.
+- A high-contrast theme: the window has a dark and a light palette, both
+  AA, neither AAA.
 - Fyne has no tooltips in its core widgets, so icon buttons rely on their
   names.
 

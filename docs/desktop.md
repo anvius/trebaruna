@@ -289,6 +289,18 @@ in Spanish, or a lost `%s` fails them instead of showing an empty or broken
 label at runtime. Fyne's own widget strings are supplied by hand for Italian,
 Catalan, Galician and Basque, because Fyne does not ship them.
 
+## Light and dark
+
+The window follows the desktop: a light palette when the desktop prefers
+light, the dark one otherwise. `FYNE_THEME=light` or `FYNE_THEME=dark`
+overrides it. The palette is chosen when the window opens; a change of
+preference applies on the next start. Both palettes keep the contrast the
+accessibility review requires (docs/accessibility.md).
+
+```bash
+FYNE_THEME=light trebaruna-desktop
+```
+
 ---
 
 ## Without poppler

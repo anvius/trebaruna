@@ -113,6 +113,28 @@ func TestScreenshots(t *testing.T) {
 		tabs.Refresh()
 		capture(t, window, filepath.Join(directory, fmt.Sprintf("check-container-%s.png", language)))
 	}
+
+	// The light palette, as a light desktop gets it.
+	app.Settings().SetTheme(NewAppTheme(LightPalette()))
+	window := test.NewTempWindow(t, nil)
+	desktop := newDesktop(window, messaging.For(messaging.Spanish), "trebaruna")
+	desktop.inspect = application.NewInspectCertificate(portraitReader{})
+	window.SetContent(desktop.withTabs(desktop.buildContent(document)))
+	window.Resize(fyne.NewSize(1220, 800))
+	desktop.form.setCertificate("/home/mario/Documenti/firma/rossi-mario-infocert.p12")
+	waitFor(t, func() bool { return desktop.pages.canvas != nil && desktop.form.summary != nil })
+	capture(t, window, filepath.Join(directory, "sign-light.png"))
+	tabs := window.Content().(*container.AppTabs)
+	tabs.SelectIndex(1)
+	verification := newVerificationTab(window, desktop.messages, reportmessaging.For("es"), desktop.palette, "trebaruna")
+	tabs.Items[1].Content = verification.content()
+	verification.path = "/home/mario/Documenti/contratto-di-locazione_signed.pdf"
+	verification.file.show(verification.path, "")
+	var report verifyReport
+	_ = json.Unmarshal([]byte(sampleReport), &report)
+	verification.render(report)
+	tabs.Refresh()
+	capture(t, window, filepath.Join(directory, "check-light.png"))
 }
 
 // sampleContainerReport is an ASiC-E with a counter-signature and a file

@@ -71,7 +71,7 @@ type Options struct {
 // NewWindow builds the window and returns it ready to run.
 func NewWindow(options Options) *Window {
 	fyneApp := app.NewWithID("org.codeberg.simplicer.trebaruna")
-	fyneApp.Settings().SetTheme(NewAppTheme(DefaultPalette()))
+	useTheme(fyneApp)
 	fyneApp.SetIcon(fyne.NewStaticResource("trebaruna.png", appIconPNG))
 
 	catalogue := messaging.For(options.Language)
@@ -113,7 +113,7 @@ func newDesktop(window fyne.Window, catalogue messaging.Catalogue, binaryPath st
 		binaryPath: binaryPath,
 		window:     window,
 		messages:   catalogue,
-		palette:    DefaultPalette(),
+		palette:    currentPalette(),
 		activity:   &networkActivity{},
 	}
 }

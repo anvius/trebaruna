@@ -147,7 +147,8 @@ user seeing what is signed and where anything goes.
 |---|---|
 | WCAG 2.2 AA review of the window (docs/accessibility.md): text 4.5:1 and control edges 3:1 on every surface, every action on the keyboard (seal moved with arrows, resized with + and −), names for icon buttons and the page | built |
 | Screen readers through Fyne's accessibility tag on Windows and macOS | built, untried with NVDA/VoiceOver |
-| Screen readers on Linux; light or high-contrast theme | pending (Fyne; owner choice) |
+| Light palette when the desktop prefers light (`FYNE_THEME` overrides), with the dark palette's contrast | built |
+| Screen readers on Linux; high-contrast theme | pending (Fyne; owner choice) |
 
 ### Languages
 

@@ -11,6 +11,7 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/driver/desktop"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
 	"codeberg.org/simplicer/trebaruna/src/desktop/domain"
@@ -526,7 +527,7 @@ func (r *pageCanvasRenderer) applyState() {
 	}
 	r.focusRing.StrokeColor = color.Transparent
 	if p.focused {
-		r.focusRing.StrokeColor = DefaultPalette().Accent
+		r.focusRing.StrokeColor = theme.Color(theme.ColorNameFocus)
 	}
 }
 

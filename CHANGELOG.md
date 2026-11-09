@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The window follows the desktop's light or dark preference: a light
+  palette (pale desk, white fields, the teal and the signal colours
+  darkened) with the same WCAG 2.2 AA contrast as the dark one, checked by
+  the same test; `FYNE_THEME` overrides it. The page preview lies on a desk
+  colour of its own, darker than the paper in both. Chosen when the window
+  opens; colours the theme leaves to Fyne come in the palette's variant.
+
 ### Fixed
 
 - Timestamp tokens an authority signed with RSA-PSS are read: the

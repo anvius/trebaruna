@@ -58,7 +58,7 @@ type pageRequest struct {
 // RunPageRequest opens the approval window for a URI and blocks until it closes.
 func RunPageRequest(options Options, uri string) {
 	fyneApp := app.NewWithID("org.codeberg.simplicer.trebaruna")
-	fyneApp.Settings().SetTheme(NewAppTheme(DefaultPalette()))
+	useTheme(fyneApp)
 	fyneApp.SetIcon(fyne.NewStaticResource("trebaruna.png", appIconPNG))
 	catalogue := messaging.For(options.Language)
 	window := fyneApp.NewWindow(catalogue.PageTitle)
