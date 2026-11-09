@@ -20,6 +20,8 @@ import (
 // the token is located in the raw DER and handed to the timestamp package, which
 // does understand it. That keeps the parsing risk confined to finding an offset.
 type CadesVerifier struct {
+	// contentPath is the document a detached signature signs.
+	contentPath string
 	// Roots is the trusted root pool. Nil tells the library to use its own
 	// defaults, which means "do not trust the embedded certificates".
 	Roots *x509.CertPool
@@ -39,6 +41,13 @@ type CadesVerifier struct {
 }
 
 // NewCadesVerifier builds the adapter.
+// WithContent checks a detached signature against the document at path.
+func (v *CadesVerifier) WithContent(path string) application.DocumentExtractor {
+	clone := *v
+	clone.contentPath = path
+	return &clone
+}
+
 func NewCadesVerifier() *CadesVerifier {
 	return &CadesVerifier{Now: time.Now()}
 }
@@ -116,8 +125,33 @@ func (v *CadesVerifier) Extract(path string) ([]domain.SignerReport, error) {
 		Format:    "CAdES",
 	}
 
+	// A detached signature (.p7s) carries no content: the document it signs
+	// comes from beside it. Without that document the bytes cannot be compared,
+	// which is "unknown", never "altered" (ADR-0005).
+	detached := len(parsed.Content) == 0
+	if detached && v.contentPath != "" {
+		external, err := os.ReadFile(v.contentPath)
+		if err != nil {
+			return nil, fmt.Errorf("read the signed document %q: %w", v.contentPath, err)
+		}
+		parsed.Content = external
+		report.Findings = append(report.Findings, domain.Finding{
+			Code:    "content.detached",
+			Status:  domain.StatusGood,
+			Message: "detached signature checked against the document beside it",
+			Detail:  v.contentPath,
+		})
+	}
+
 	// Integrity: the detached/embedded content must still match the digest.
-	if err := verifyContent(parsed); err != nil {
+	if detached && v.contentPath == "" {
+		report.Integrity = domain.StatusUnknown
+		report.Findings = append(report.Findings, domain.Finding{
+			Code:    "content.missing",
+			Status:  domain.StatusUnknown,
+			Message: "detached signature: the signed document is needed to compare its bytes",
+		})
+	} else if err := verifyContent(parsed); err != nil {
 		report.Integrity = domain.StatusBad
 		report.Findings = append(report.Findings, domain.Finding{
 			Code:    "signature.modified",

@@ -9,10 +9,10 @@ import (
 
 func TestTheDocumentDecidesWhichFormatsMakeSense(t *testing.T) {
 	cases := map[string][]domain.SignatureFormat{
-		"/tmp/contratto.PDF":  {domain.FormatPAdES, domain.FormatCAdES},
-		"/tmp/fattura.xml":    {domain.FormatXAdES, domain.FormatCAdES},
-		"/tmp/offerta.docx":   {domain.FormatCAdES},
-		"/tmp/senza-estensio": {domain.FormatCAdES},
+		"/tmp/contratto.PDF":  {domain.FormatPAdES, domain.FormatCAdES, domain.FormatCAdESDetached},
+		"/tmp/fattura.xml":    {domain.FormatXAdES, domain.FormatCAdES, domain.FormatCAdESDetached},
+		"/tmp/offerta.docx":   {domain.FormatCAdES, domain.FormatCAdESDetached},
+		"/tmp/senza-estensio": {domain.FormatCAdES, domain.FormatCAdESDetached},
 	}
 	for path, want := range cases {
 		got := domain.FormatsFor(path)
@@ -29,7 +29,7 @@ func TestTheDocumentDecidesWhichFormatsMakeSense(t *testing.T) {
 }
 
 func TestOnlyPAdESPutsAMarkOnThePage(t *testing.T) {
-	if !domain.FormatPAdES.HasVisibleSeal() || domain.FormatCAdES.HasVisibleSeal() || domain.FormatXAdES.HasVisibleSeal() {
+	if !domain.FormatPAdES.HasVisibleSeal() || domain.FormatCAdES.HasVisibleSeal() || domain.FormatXAdES.HasVisibleSeal() || domain.FormatCAdESDetached.HasVisibleSeal() {
 		t.Error("only PAdES carries a visible seal")
 	}
 }

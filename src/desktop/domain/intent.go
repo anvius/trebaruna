@@ -74,6 +74,8 @@ func (i SigningIntent) OutputName() string {
 	switch i.Format {
 	case FormatCAdES:
 		return i.DocumentPath + ".p7m"
+	case FormatCAdESDetached:
+		return i.DocumentPath + ".p7s"
 	case FormatXAdES:
 		return trimExtension(i.DocumentPath) + "_signed.xml"
 	default:

@@ -236,3 +236,17 @@ func TestAnInvisibleSignatureSendsNoSeal(t *testing.T) {
 		t.Errorf("arguments = %v", arguments)
 	}
 }
+
+func TestADetachedFormatAsksTheCommandForADetachedCAdES(t *testing.T) {
+	binary, recorded := fakeCommand(t, "echo '"+receiptJSON+"'")
+	intent := fullIntent()
+	intent.Format = domain.FormatCAdESDetached
+
+	if _, err := (infrastructure.CommandLineSigner{BinaryPath: binary}).Sign(context.Background(), intent); err != nil {
+		t.Fatalf("Sign: %v", err)
+	}
+	arguments := recordedArguments(t, recorded)
+	if !containsPair(arguments, "--format", "cades") || !contains(arguments, "--detached") {
+		t.Errorf("arguments = %v", arguments)
+	}
+}

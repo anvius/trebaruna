@@ -94,6 +94,7 @@ func TestOutputNameFollowsTheSameConventionAsTheCLI(t *testing.T) {
 	}{
 		{"/tmp/contratto.pdf", "pades", "/tmp/contratto_signed.pdf"},
 		{"/tmp/fattura.xml", "cades", "/tmp/fattura.xml.p7m"},
+		{"/tmp/fattura.xml", "cades-detached", "/tmp/fattura.xml.p7s"},
 		{"/tmp/atto.xml", "xades", "/tmp/atto_signed.xml"},
 		{"/tmp/senza_estensione", "pades", "/tmp/senza_estensione_signed.pdf"},
 	}

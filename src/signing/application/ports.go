@@ -44,7 +44,10 @@ type CadesSigner interface {
 
 // CadesRequest carries everything a CMS adapter needs.
 type CadesRequest struct {
-	Content         []byte
+	Content []byte
+	// Detached leaves the content out of the container (.p7s): the signature
+	// travels beside the document instead of wrapping it.
+	Detached        bool
 	Signer          domain.Signer
 	Level           domain.Level
 	TimestampURL    string

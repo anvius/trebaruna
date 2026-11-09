@@ -37,6 +37,7 @@ func runVerify(args []string, stdout, stderr io.Writer) int {
 		asJSON    = flags.Bool("json", false, "machine-readable output")
 		offline   = flags.Bool("offline", true, "do not contact OCSP/CRL responders")
 		lang      = flags.String("lang", "", "language for messages: es | it | en")
+		content   = flags.String("content", "", "the document a detached signature (.p7s) signs (default: the same name without .p7s, if present)")
 	)
 
 	flags.Usage = func() {
@@ -77,6 +78,7 @@ func runVerify(args []string, stdout, stderr io.Writer) int {
 		Path:      path,
 		Format:    *format,
 		Territory: *territory,
+		Content:   signedDocumentFor(path, *content),
 	})
 	if err != nil {
 		fmt.Fprintf(stderr, "verification failed: %v\n", err)
@@ -111,6 +113,22 @@ type systemClock struct{}
 
 // Now returns the current time.
 func (systemClock) Now() time.Time { return time.Now() }
+
+// signedDocumentFor returns the document a detached signature signs: the one
+// named with --content, or, for x.pdf.p7s, the x.pdf beside it when it exists.
+// The verification report names the file that was used.
+func signedDocumentFor(signature, explicit string) string {
+	if explicit != "" {
+		return explicit
+	}
+	if strings.HasSuffix(strings.ToLower(signature), ".p7s") {
+		candidate := signature[:len(signature)-len(".p7s")]
+		if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
+			return candidate
+		}
+	}
+	return ""
+}
 
 // defaultTerritory guesses from the locale, defaulting to the EU list.
 func defaultTerritory() string {

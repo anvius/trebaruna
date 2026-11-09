@@ -36,6 +36,12 @@ type CertificateAware interface {
 	WithAnchorCertificates(roots, intermediates *x509.CertPool, anchors []*x509.Certificate) DocumentExtractor
 }
 
+// ContentAware is implemented by extractors that can check a detached
+// signature against the document it signs, read from a separate file.
+type ContentAware interface {
+	WithContent(path string) DocumentExtractor
+}
+
 // TrustProvider supplies the trust list for a territory.
 //
 // It returns an empty list rather than an error when no list is cached: a
@@ -98,6 +104,9 @@ type Request struct {
 	Format string
 	// Territory selects the trust list, e.g. "IT" or "ES".
 	Territory string
+	// Content is the document a detached signature signs. Empty means the
+	// signature carries its content, or that it is not available.
+	Content string
 }
 
 // Execute verifies and returns the report.
@@ -138,6 +147,12 @@ func (u *VerifyDocument) Execute(request Request) (verification.DocumentReport, 
 				anchors.roots, anchors.intermediates, list.QualifiedAnchors())
 		} else if aware, ok := extractor.(AnchorAware); ok {
 			extractor = aware.WithAnchors(anchors.roots, anchors.intermediates)
+		}
+	}
+
+	if request.Content != "" {
+		if aware, ok := extractor.(ContentAware); ok {
+			extractor = aware.WithContent(request.Content)
 		}
 	}
 

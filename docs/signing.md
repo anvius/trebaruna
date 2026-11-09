@@ -152,6 +152,22 @@ the PDF library always adds a new field.
 
 ---
 
+## Detached signatures
+
+`--format cades --detached` writes `<document>.p7s` and leaves the document
+untouched: the signature travels beside it. Every level works.
+
+```bash
+trebaruna sign offerta.docx --format cades --detached --p12 k.p12   # → offerta.docx.p7s
+trebaruna verify offerta.docx.p7s                  # uses offerta.docx beside it
+trebaruna verify firma.p7s --content offerta.docx  # or name the document
+```
+
+Without the document the bytes cannot be compared: the integrity is reported as
+unknown, never as altered (ADR-0005).
+
+---
+
 ## Chained signatures
 
 Signing an already-signed PDF adds an **incremental update**: the earlier bytes

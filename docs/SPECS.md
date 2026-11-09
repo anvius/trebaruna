@@ -38,7 +38,7 @@ user seeing what is signed and where anything goes.
 | PAdES visible seal: certificate data only (ADR-0007), placed by the user, repeatable across pages; chained signatures by incremental update | built |
 | PAdES invisible signature; default seal placed on the real page size | built |
 | PAdES seal in an existing empty form field | planned (needs an incremental writer of our own; the PDF library always adds a field) |
-| CAdES detached (`.p7s`), verified with the document beside it | planned (B2) |
+| CAdES detached (`.p7s`), verified with the document beside it | built |
 | Parallel signatures (co-signing) and counter-signatures on CAdES and XAdES | planned (B4, B5) |
 | Several documents in one run, same settings, one result per document | planned (B6) |
 | Signature policies (EPES): AGE, FacturaE; FacturaE invoices | planned (E1) |

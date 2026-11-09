@@ -109,7 +109,7 @@ func TestAPDFOffersASignedPDFOrAnEnvelope(t *testing.T) {
 
 	form.setDocument("/tmp/contratto.pdf")
 
-	if len(form.formatChoice.Options) != 2 || form.format != domain.FormatPAdES {
+	if len(form.formatChoice.Options) != 3 || form.format != domain.FormatPAdES {
 		t.Fatalf("options %v, format %s: want PAdES first and CAdES offered", form.formatChoice.Options, form.format)
 	}
 	if form.documentRow.note.Text != "Se guardará como contratto_signed.pdf" {
@@ -126,14 +126,18 @@ func TestAPDFOffersASignedPDFOrAnEnvelope(t *testing.T) {
 	}
 }
 
-func TestAnyOtherFileGoesInAnEnvelope(t *testing.T) {
+func TestAnyOtherFileGoesInAnEnvelopeOrBesideIt(t *testing.T) {
 	fixture := newFormFixture(t, scriptedCertificate{summary: qualifiedRossi()})
 	form := fixture.desktop.form
 
 	form.setDocument("/tmp/offerta.docx")
 
-	if form.format != domain.FormatCAdES || form.formatChoice.Visible() || !form.formatNote.Visible() {
-		t.Errorf("format %s, choice visible %v: a .docx has one format and says so", form.format, form.formatChoice.Visible())
+	if form.format != domain.FormatCAdES || len(form.formatChoice.Options) != 2 {
+		t.Fatalf("format %s, options %v: a .docx goes in an envelope or gets a .p7s beside it", form.format, form.formatChoice.Options)
+	}
+	form.formatChoice.SetSelected(form.m.FormatDetachedLabel)
+	if form.format != domain.FormatCAdESDetached || form.documentRow.note.Text != "Se guardará como offerta.docx.p7s" {
+		t.Errorf("format %s, note %q", form.format, form.documentRow.note.Text)
 	}
 }
 

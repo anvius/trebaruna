@@ -17,6 +17,10 @@ const (
 
 	// FormatXAdES signs inside an XML document.
 	FormatXAdES SignatureFormat = "xades"
+
+	// FormatCAdESDetached writes a .p7s beside the document, which stays
+	// untouched.
+	FormatCAdESDetached SignatureFormat = "cades-detached"
 )
 
 // FormatsFor lists the formats that make sense for a document, the
@@ -25,11 +29,11 @@ const (
 func FormatsFor(documentPath string) []SignatureFormat {
 	switch strings.ToLower(filepath.Ext(documentPath)) {
 	case ".pdf":
-		return []SignatureFormat{FormatPAdES, FormatCAdES}
+		return []SignatureFormat{FormatPAdES, FormatCAdES, FormatCAdESDetached}
 	case ".xml":
-		return []SignatureFormat{FormatXAdES, FormatCAdES}
+		return []SignatureFormat{FormatXAdES, FormatCAdES, FormatCAdESDetached}
 	}
-	return []SignatureFormat{FormatCAdES}
+	return []SignatureFormat{FormatCAdES, FormatCAdESDetached}
 }
 
 // HasVisibleSeal reports whether the format puts a mark on a page.

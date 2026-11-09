@@ -48,6 +48,8 @@ type Request struct {
 	// Invisible signs a PDF without any mark on its pages. It excludes
 	// Placement and Placements.
 	Invisible bool
+	// Detached writes a CAdES signature without the content (.p7s).
+	Detached bool
 	// SignedAt is the single instant used for both the stamp and the report, so
 	// the document and the JSON cannot disagree about when it was signed.
 	SignedAt        time.Time
@@ -83,7 +85,11 @@ func (u *SignDocument) Execute(ctx context.Context, request Request) (Artefact, 
 	}
 
 	output := request.OutputPath
-	if output == "" {
+	switch {
+	case output != "":
+	case request.Detached:
+		output = request.Document.DetachedSignatureName()
+	default:
 		output = request.Document.SignedName(request.Format)
 	}
 
@@ -133,6 +139,9 @@ func (u *SignDocument) validate(request Request) error {
 	if request.Level.NeedsTimestamp() && request.TimestampURL == "" {
 		return fmt.Errorf("level %s needs a timestamp authority: pass --tsa <url>", request.Level)
 	}
+	if request.Detached && request.Format != domain.Cades {
+		return fmt.Errorf("only CAdES signatures can be detached; %s carries its signature inside the document", request.Format)
+	}
 	if request.Invisible && (len(request.Placements) > 0 || !request.Placement.IsZero()) {
 		return fmt.Errorf("an invisible signature cannot also place a seal")
 	}
@@ -167,6 +176,7 @@ func (u *SignDocument) sign(ctx context.Context, request Request, content []byte
 	case domain.Cades:
 		signed, err := u.cades.SignCades(ctx, CadesRequest{
 			Content:         content,
+			Detached:        request.Detached,
 			Signer:          request.Signer,
 			Level:           request.Level,
 			EmbedRevocation: request.EmbedRevocation,

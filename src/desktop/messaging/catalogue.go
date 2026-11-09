@@ -188,6 +188,7 @@ type Catalogue struct {
 	AboutDependencies    string
 	InvisibleSignature   string
 	InvisibleExplained   string
+	FormatDetachedLabel  string
 }
 
 // For returns the catalogue for a language.
@@ -335,6 +336,7 @@ var spanish = Catalogue{
 	AboutDependencies:          "Dependencias y licencias (%d)",
 	InvisibleSignature:         "Firma invisible (sin sello en la página)",
 	InvisibleExplained:         "Firma invisible: el PDF queda firmado y cualquier lector lo muestra en su panel de firmas, pero no se dibuja ningún sello en la página.",
+	FormatDetachedLabel:        "Firma separada .p7s (CAdES): el documento no se modifica",
 }
 
 var italian = Catalogue{
@@ -470,6 +472,7 @@ var italian = Catalogue{
 	AboutDependencies:          "Dipendenze e licenze (%d)",
 	InvisibleSignature:         "Firma invisibile (senza timbro sulla pagina)",
 	InvisibleExplained:         "Firma invisibile: il PDF è firmato e ogni lettore lo mostra nel pannello delle firme, ma sulla pagina non compare alcun timbro.",
+	FormatDetachedLabel:        "Firma separata .p7s (CAdES): il documento non viene modificato",
 }
 
 var english = Catalogue{
@@ -605,6 +608,7 @@ var english = Catalogue{
 	AboutDependencies:          "Dependencies and licences (%d)",
 	InvisibleSignature:         "Invisible signature (no seal on the page)",
 	InvisibleExplained:         "Invisible signature: the PDF is signed and every reader shows it in its signature panel, but no seal is drawn on the page.",
+	FormatDetachedLabel:        "Detached .p7s signature (CAdES): the document is left untouched",
 }
 
 // LevelName renders a level name for display.

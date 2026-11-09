@@ -320,6 +320,8 @@ func (f *signForm) formatLabel(format domain.SignatureFormat) string {
 		return f.m.FormatCAdESLabel
 	case domain.FormatXAdES:
 		return f.m.FormatXAdESLabel
+	case domain.FormatCAdESDetached:
+		return f.m.FormatDetachedLabel
 	}
 	return f.m.FormatPAdESLabel
 }

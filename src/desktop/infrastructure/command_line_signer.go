@@ -78,11 +78,18 @@ func (s CommandLineSigner) Sign(ctx context.Context, intent domain.SigningIntent
 
 // signArguments translates the intent into the command's flags.
 func signArguments(intent domain.SigningIntent) []string {
+	format := string(intent.Format)
+	if intent.Format == domain.FormatCAdESDetached {
+		format = string(domain.FormatCAdES)
+	}
 	arguments := []string{
 		"sign", intent.DocumentPath,
-		"--format", string(intent.Format),
+		"--format", format,
 		"--level", string(intent.Level),
 		"--json",
+	}
+	if intent.Format == domain.FormatCAdESDetached {
+		arguments = append(arguments, "--detached")
 	}
 
 	if strings.HasSuffix(strings.ToLower(intent.Key.Path), ".pem") {

@@ -29,8 +29,9 @@ func NewCadesSigner(timestamps Timestamper) *CadesSigner {
 
 // SignCades builds the CMS container.
 //
-// Content is embedded, not detached, because that is what .p7m means in
-// Italian practice: signers embed the content (detached=false).
+// By default the content is embedded, because that is what .p7m means in
+// Italian practice; a detached request leaves it out and the result is a
+// .p7s that travels beside the document.
 func (s *CadesSigner) SignCades(ctx context.Context, request application.CadesRequest) ([]byte, error) {
 	keyPair, err := LoadKeyPair(request.Signer)
 	if err != nil {
@@ -42,7 +43,7 @@ func (s *CadesSigner) SignCades(ctx context.Context, request application.CadesRe
 		Certificate:        keyPair.Certificate,
 		Chain:              keyPair.Chain,
 		Signer:             keyPair.Signer,
-		EmbeddedContent:    true,
+		EmbeddedContent:    !request.Detached,
 		IncludeSigningTime: true,
 	})
 	if err != nil {

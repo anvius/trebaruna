@@ -57,6 +57,12 @@ func (d Document) SignedName(format Format) string {
 	return filepath.Join(dir, stem+"_signed"+format.Extension())
 }
 
+// DetachedSignatureName is where a detached CAdES signature goes: the
+// document's name plus .p7s, next to the document it signs.
+func (d Document) DetachedSignatureName() string {
+	return d.path + ".p7s"
+}
+
 // Supports reports whether the format makes sense for this document.
 func (d Document) Supports(format Format) bool {
 	switch format {

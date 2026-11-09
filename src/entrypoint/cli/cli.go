@@ -107,6 +107,7 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 		boxes      = boxList{}
 		enveloping = flags.Bool("enveloping", false, "XAdES enveloping (default: enveloped)")
 		invisible  = flags.Bool("invisible", false, "PAdES without any visible seal (excludes --box)")
+		detached   = flags.Bool("detached", false, "CAdES without the content: writes <document>.p7s beside it")
 		asJSON     = flags.Bool("json", false, "machine-readable output")
 	)
 
@@ -194,6 +195,7 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 		OutputPath:      *output,
 		Placements:      placements,
 		Invisible:       *invisible,
+		Detached:        *detached,
 		Reason:          *reason,
 		Location:        *location,
 		TimestampURL:    *tsaURL,
@@ -230,6 +232,7 @@ func extractDocument(args []string) (documentPath string, remaining []string, er
 		"-tsa": true, "--tsa": true, "-tsa-user": true, "--tsa-user": true,
 		"-tsa-pass": true, "--tsa-pass": true, "-page": true, "--page": true,
 		"-box": true, "--box": true,
+		"-content": true, "--content": true,
 	}
 
 	var positional []string

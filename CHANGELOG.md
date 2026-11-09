@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- CAdES detached signatures: `sign --format cades --detached` writes
+  `<document>.p7s`; `verify` checks it against `--content`, or the document of
+  the same name beside it, and reports unknown integrity, not tampering, when
+  the document is missing. The desktop offers it as a fourth format.
+
 - PAdES `--invisible`: a complete signature with an empty widget
   (`/Rect [0 0 0 0]`); the desktop offers it under More options for signed PDFs.
 

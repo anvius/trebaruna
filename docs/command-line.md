@@ -103,6 +103,7 @@ trebaruna sign <document> [flags]
 | `--out` | convention | Output path |
 | `--enveloping` | off | XAdES enveloping rather than enveloped |
 | `--invisible` | off | PAdES without a visible seal; excludes `--box` |
+| `--detached` | off | CAdES without the content: `<document>.p7s` beside it |
 | `--json` | off | Machine-readable result |
 
 #### Connections in the result
