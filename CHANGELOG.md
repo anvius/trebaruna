@@ -87,6 +87,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- PDF signatures carried `/Name (signer)` — or `handler`, or `api`, depending on
+  the entry point — and the JSON receipt reported the same placeholder. A signer
+  nobody named now takes the holder printed on the certificate, as other signing
+  tools do; `--name` still overrides it.
 - PKCS#12 files exported by Firefox or Thunderbird (NSS) were refused as "not a
   certificate" even with the right passphrase: they are BER with indefinite
   lengths and Go's PKCS#12 library reads DER only. A new `keybundle` package

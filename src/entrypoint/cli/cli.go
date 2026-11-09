@@ -87,7 +87,7 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 		pin        = flags.String("pin", "", "PIN for PKCS#11 tokens (or $TREBARUNA_PIN)")
 		tokenLabel = flags.String("token", "", "PKCS#11 token label (smartcard)")
 		module     = flags.String("module", defaultPKCS11Module, "PKCS#11 module path")
-		name       = flags.String("name", "", "signer display name (default: certificate CN)")
+		name       = flags.String("name", "", "signer display name (default: the holder printed on the certificate)")
 		reason     = flags.String("reason", "", "reason for signing")
 		location   = flags.String("location", "", "location of signing")
 		tsaURL     = flags.String("tsa", "", "RFC 3161 timestamp authority URL")
@@ -269,7 +269,7 @@ func buildSigner(options signerOptions) (domain.Signer, error) {
 
 	displayName := options.name
 	if displayName == "" {
-		displayName = "signer"
+		displayName = domain.NameFromCertificate
 	}
 
 	if options.tokenLabel != "" {

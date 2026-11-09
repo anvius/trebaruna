@@ -13,6 +13,7 @@ import (
 
 	"codeberg.org/simplicer/trebaruna/src/entrypoint/serve"
 	"codeberg.org/simplicer/trebaruna/src/signing/application"
+	"codeberg.org/simplicer/trebaruna/src/signing/domain"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure"
 	verificationapp "codeberg.org/simplicer/trebaruna/src/verification/application"
 	verificationinfra "codeberg.org/simplicer/trebaruna/src/verification/infrastructure"
@@ -254,7 +255,7 @@ func runHandler(args []string, stdout, stderr io.Writer) int {
 	}
 
 	keySource, err := buildSigner(signerOptions{
-		name: "handler", p12Path: p12Path, pemPath: pemPath, passphrase: passphrase,
+		name: domain.NameFromCertificate, p12Path: p12Path, pemPath: pemPath, passphrase: passphrase,
 	})
 	if err != nil {
 		fmt.Fprintf(stderr, "%v\n", err)

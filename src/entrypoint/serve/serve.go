@@ -435,7 +435,7 @@ func (s *Service) resolveSigner(payload signatureRequest) (signingdomain.Signer,
 		if err != nil {
 			return signingdomain.Signer{}, fmt.Errorf("read the P12: %w", err)
 		}
-		return signingdomain.NewSigner("api", signingdomain.FromP12,
+		return signingdomain.NewSigner(signingdomain.NameFromCertificate, signingdomain.FromP12,
 			signingdomain.WithKeyMaterial(content),
 			signingdomain.WithPassphrase(payload.Pass))
 	case payload.PEM != "":
@@ -443,7 +443,7 @@ func (s *Service) resolveSigner(payload signatureRequest) (signingdomain.Signer,
 		if err != nil {
 			return signingdomain.Signer{}, fmt.Errorf("read the PEM: %w", err)
 		}
-		return signingdomain.NewSigner("api", signingdomain.FromPEM,
+		return signingdomain.NewSigner(signingdomain.NameFromCertificate, signingdomain.FromPEM,
 			signingdomain.WithKeyMaterial(content))
 	}
 	return signingdomain.Signer{}, errors.New("no key source: send p12 or pem")
@@ -781,7 +781,7 @@ func (s *Service) signingKey(payload fulfilBody) (signingdomain.Signer, error) {
 		if err != nil {
 			return signingdomain.Signer{}, fmt.Errorf("read the P12: %w", err)
 		}
-		return signingdomain.NewSigner("api", signingdomain.FromP12,
+		return signingdomain.NewSigner(signingdomain.NameFromCertificate, signingdomain.FromP12,
 			signingdomain.WithKeyMaterial(content),
 			signingdomain.WithPassphrase(payload.Passphrase))
 	case payload.PEM != "":
@@ -793,7 +793,7 @@ func (s *Service) signingKey(payload fulfilBody) (signingdomain.Signer, error) {
 		if err != nil {
 			return signingdomain.Signer{}, fmt.Errorf("read the PEM: %w", err)
 		}
-		return signingdomain.NewSigner("api", signingdomain.FromPEM,
+		return signingdomain.NewSigner(signingdomain.NameFromCertificate, signingdomain.FromPEM,
 			signingdomain.WithKeyMaterial(content))
 	}
 	return signingdomain.Signer{}, errors.New("no key source: send p12 or pem")

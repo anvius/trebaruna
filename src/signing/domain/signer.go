@@ -35,6 +35,20 @@ const (
 //
 // Every field is validated here so the infrastructure layer never receives
 // a half-built configuration.
+// NameFromCertificate is the name of a signer nobody named. Once the
+// certificate is loaded it is replaced by the holder printed on it, which is
+// what a PDF reader shows next to the signature and what the receipt reports.
+const NameFromCertificate = "certificate holder"
+
+// NameFor returns the name the signature should carry: the one chosen for the
+// signer, or the certificate holder when none was chosen.
+func (s Signer) NameFor(holder string) string {
+	if s.name == NameFromCertificate && strings.TrimSpace(holder) != "" {
+		return holder
+	}
+	return s.name
+}
+
 func NewSigner(name string, source KeySource, options ...SignerOption) (Signer, error) {
 	trimmedName := strings.TrimSpace(name)
 	if trimmedName == "" {

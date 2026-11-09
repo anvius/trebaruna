@@ -167,3 +167,24 @@ func TestSignerAcceptsP12(t *testing.T) {
 		t.Errorf("passphrase = %q", signer.Passphrase())
 	}
 }
+
+func TestAnUnnamedSignerTakesTheCertificateHolder(t *testing.T) {
+	unnamed, err := domain.NewSigner(domain.NameFromCertificate, domain.FromP12, domain.WithKeyMaterial([]byte{1}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := unnamed.NameFor("MARIO ROSSI"); got != "MARIO ROSSI" {
+		t.Errorf("NameFor = %q, want the holder", got)
+	}
+	if got := unnamed.NameFor(" "); got != domain.NameFromCertificate {
+		t.Errorf("without a holder the placeholder stays, got %q", got)
+	}
+
+	named, err := domain.NewSigner("Studio Rossi", domain.FromP12, domain.WithKeyMaterial([]byte{1}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := named.NameFor("MARIO ROSSI"); got != "Studio Rossi" {
+		t.Errorf("an explicit name must win, got %q", got)
+	}
+}

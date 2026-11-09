@@ -101,7 +101,7 @@ func (u *SignDocument) Execute(ctx context.Context, request Request) (Artefact, 
 		Level:      request.Level,
 		Size:       len(signed),
 		SignedAt:   signedAt,
-		SignerName: request.Signer.Name(),
+		SignerName: request.Signer.NameFor(identity.Holder),
 		// Only a PDF carries a visible seal: reporting one for CAdES or XAdES
 		// would be a lie the caller could act on.
 		SealCount:  sealCount(request),

@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"codeberg.org/simplicer/trebaruna/src/signing/domain"
+	"codeberg.org/simplicer/trebaruna/src/signing/domain/identity"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/keybundle"
 )
 
@@ -63,7 +64,7 @@ func loadP12(signer domain.Signer) (KeyPair, error) {
 		Signer:      cryptoSigner,
 		Certificate: cert,
 		Chain:       chain,
-		Name:        signer.Name(),
+		Name:        signer.NameFor(identity.FromCertificate(cert).Name),
 		SelfSigned:  isSelfSigned(cert),
 		KeySource:   domain.FromP12,
 	}, nil
@@ -118,7 +119,7 @@ func loadPEM(signer domain.Signer) (KeyPair, error) {
 		Signer:      key,
 		Certificate: cert,
 		Chain:       chain,
-		Name:        signer.Name(),
+		Name:        signer.NameFor(identity.FromCertificate(cert).Name),
 		SelfSigned:  isSelfSigned(cert),
 		KeySource:   domain.FromPEM,
 	}, nil

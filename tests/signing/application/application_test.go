@@ -363,3 +363,28 @@ func TestTrustedCertificateIsNotFlagged(t *testing.T) {
 		t.Error("a CA-issued certificate must not be flagged as self-signed")
 	}
 }
+
+func TestAnUnnamedSignerIsReportedByItsCertificateHolder(t *testing.T) {
+	store := newFakeStore(map[string][]byte{"/tmp/a.xml": []byte("xml")})
+	identity := selfSignedIdentity()
+	identity.identity.Holder = "MARIO ROSSI"
+	useCase := application.NewSignDocument(store, fakeClock{time.Unix(0, 0)},
+		identity, &fakeCades{}, &fakePades{}, &fakeXades{})
+
+	unnamed, err := domain.NewSigner(domain.NameFromCertificate, domain.FromP12, domain.WithKeyMaterial([]byte{1}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	artefact, err := useCase.Execute(context.Background(), application.Request{
+		Document: newDocument(t, "/tmp/a.xml"),
+		Format:   domain.Cades,
+		Level:    domain.BES,
+		Signer:   unnamed,
+	})
+	if err != nil {
+		t.Fatalf("Execute: %v", err)
+	}
+	if artefact.SignerName != "MARIO ROSSI" {
+		t.Errorf("signer = %q, want the holder instead of a placeholder", artefact.SignerName)
+	}
+}

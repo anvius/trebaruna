@@ -114,6 +114,8 @@ type Clock interface {
 // It exists so the use case can report trust facts (self-signed, subject,
 // issuer) before and after signing, instead of hiding them inside an adapter.
 type Identity struct {
+	// Holder is the name printed on the certificate, for signers nobody named.
+	Holder     string
 	Subject    string
 	Issuer     string
 	SelfSigned bool

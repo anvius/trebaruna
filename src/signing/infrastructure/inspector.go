@@ -23,6 +23,7 @@ func (CertificateInspector) Resolve(signer domain.Signer) (application.Identity,
 	}
 
 	return application.Identity{
+		Holder:     keyPair.Name,
 		Subject:    keyPair.Certificate.Subject.String(),
 		Issuer:     keyPair.Certificate.Issuer.String(),
 		SelfSigned: keyPair.SelfSigned,

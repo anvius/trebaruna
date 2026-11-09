@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"codeberg.org/simplicer/trebaruna/src/signing/domain"
+	"codeberg.org/simplicer/trebaruna/src/signing/domain/identity"
 )
 
 // tokenPair is a certificate together with its signing key, as the token
@@ -70,7 +71,7 @@ func loadToken(signer domain.Signer) (KeyPair, error) {
 		Signer:      pair.Signer,
 		Certificate: leaf,
 		Chain:       chain,
-		Name:        signer.Name(),
+		Name:        signer.NameFor(identity.FromCertificate(leaf).Name),
 		SelfSigned:  isSelfSigned(leaf),
 		KeySource:   domain.FromToken,
 	}, nil
