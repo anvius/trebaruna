@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A PAdES-T whose timestamp authority is on no trusted list was reported
+  as not timestamped, the claimed signing time shown instead: the PDF
+  library drops a token whose authority it cannot chain to its roots.
+  A token on a valid PDF signature is bound (the library checks its
+  imprint before the signature), so it is now recorded as CAdES and XAdES
+  record theirs: the time it proves, its authority, timestamp.bound and
+  the evidence the trust list is weighed against (timestamp.accredited or
+  timestamp.untrusted_authority). PDF timestamps were never weighed
+  against the trust lists before.
+
 - The default visible seal was drawn by the PDF library, which gives the
   standard fonts every glyph 500 units wide and writes UTF-8 into WinAnsi
   strings: "MARI O  ROSSI", "TINIT-… Â· 09/11/2026". Every signature with

@@ -256,18 +256,19 @@ func (v *PDFVerifier) translate(signer *verify.Signer, index int) domain.SignerR
 	return report
 }
 
-// describeTime decides which moment the certificate must be valid at.
-//
-// A trusted timestamp is authoritative. Without one the claimed signing time is
-// used but flagged, because the signer controls it.
+// describeTime decides the moment the signature is reported at: the
+// timestamp's, when a token is bound to it, else the time the signer
+// claims, flagged as such.
 func (v *PDFVerifier) describeTime(signer *verify.Signer, report *domain.SignerReport) {
-	verified, ok := trustedInstant(signer)
-	if ok {
-		report.SignedAt = verified
-		report.Timestamped = true
-		if signer.TimeStamp != nil && len(signer.TimeStamp.Certificates) > 0 {
-			report.TimestampAuthority = signer.TimeStamp.Certificates[0].Subject.CommonName
-		}
+	// The library verifies a signature only after the imprint of its
+	// timestamp matched the signature value, and a document timestamp only
+	// after its imprint matched the document: a token on a valid signature
+	// is bound. Whether its authority is qualified is the trust list's
+	// question, answered by the use case as for CAdES and XAdES; the
+	// library's own judgement, against the roots alone, dropped a bound
+	// token whose authority it did not know.
+	if signer.TimeStamp != nil && signer.ValidSignature {
+		describeBoundToken(signer.TimeStamp, report)
 		return
 	}
 
@@ -281,17 +282,6 @@ func (v *PDFVerifier) describeTime(signer *verify.Signer, report *domain.SignerR
 			Message: "the timestamp token is present but does not verify",
 		})
 	}
-}
-
-// trustedInstant returns the timestamp when it is present and verifies.
-func trustedInstant(signer *verify.Signer) (time.Time, bool) {
-	if signer.TimeStamp == nil || !signer.TimestampTrusted {
-		return time.Time{}, false
-	}
-	if signer.TimestampStatus != "valid" {
-		return time.Time{}, false
-	}
-	return signer.TimeStamp.Time, true
 }
 
 // describeChain reports what is known about the issuer and revocation.

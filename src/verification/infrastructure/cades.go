@@ -381,6 +381,13 @@ func describeToken(tokenDER, signatureValue []byte, report *domain.SignerReport)
 		return
 	}
 
+	describeBoundToken(token, report)
+}
+
+// describeBoundToken records a token whose imprint is the signature's own
+// value: the time it proves, its authority and the facts the use case
+// weighs against the trust list (qualified or not).
+func describeBoundToken(token *timestamp.Timestamp, report *domain.SignerReport) {
 	report.SignedAt = token.Time
 	report.Timestamped = true
 
