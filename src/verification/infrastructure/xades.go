@@ -2,21 +2,18 @@ package infrastructure
 
 import (
 	"bytes"
-	"crypto/ecdsa"
 	"crypto/x509"
-	"encoding/asn1"
 	"encoding/base64"
+	"errors"
 	"fmt"
-	"math/big"
 	"os"
-	"strings"
 	"time"
 
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/xmldsig"
 	"codeberg.org/simplicer/trebaruna/src/verification/application"
 	"codeberg.org/simplicer/trebaruna/src/verification/domain"
 	"github.com/beevik/etree"
 	"github.com/digitorus/timestamp"
-	dsig "github.com/russellhaering/goxmldsig"
 )
 
 // XadesVerifier checks XML signatures (XAdES, XMLDSig).
@@ -117,22 +114,7 @@ func (v *XadesVerifier) Extract(path string) ([]domain.SignerReport, error) {
 	// with a properly issued certificate would read as untrusted.
 	embedded := extractCertificates(signature)
 
-	if err := validate(document, certificate); err != nil {
-		report.Integrity = domain.StatusBad
-		report.Findings = append(report.Findings, domain.Finding{
-			Code:    "signature.modified",
-			Status:  domain.StatusBad,
-			Message: "the signed XML does not match the signature",
-			Detail:  err.Error(),
-		})
-	} else {
-		report.Integrity = domain.StatusGood
-		report.Findings = append(report.Findings, domain.Finding{
-			Code:    "signature.intact",
-			Status:  domain.StatusGood,
-			Message: "the signed content is unaltered",
-		})
-	}
+	describeIntegrity(validate(document, signature, certificate), &report)
 
 	v.describeSigningTime(signature, &report)
 	v.describeSignatureTimeStamp(signature, &report)
@@ -347,77 +329,55 @@ func walk(element *etree.Element, visit func(*etree.Element)) {
 
 // validate checks the signature with the embedded certificate as the trust anchor.
 //
-// Using the embedded certificate as the store is deliberate: this step answers
-// "does the signature match this certificate", not "is this certificate
-// trusted". Trust is a separate question with a separate source.
-func validate(document *etree.Document, certificate *x509.Certificate) error {
+// validate checks the XML signature completely: every reference it makes,
+// the signed properties included, and the value over SignedInfo, against the
+// embedded certificate. This answers "does the signature match this
+// certificate", not "is this certificate trusted": trust is a separate
+// question with a separate source.
+func validate(document *etree.Document, signature *etree.Element, certificate *x509.Certificate) error {
 	if certificate == nil {
-		return fmt.Errorf("no signing certificate to validate against")
+		return fmt.Errorf("%w: no signing certificate to validate against", xmldsig.ErrUnverifiable)
 	}
-
-	store := &singleCertificateStore{certificate: certificate}
-	context := dsig.NewDefaultValidationContext(store)
-
-	// Id attributes in XAdES are spelled "Id", which is what the signer emits.
-	context.IdAttribute = "Id"
-	// The embedded leaf is used only to verify the XMLDSig value. Its validity
-	// and issuer trust are reported separately, not as tampered content.
-	context.Clock = dsig.NewFakeClockAt(certificate.NotBefore)
-
-	_, err := context.Validate(document.Root())
-	if err == nil {
-		return nil
-	}
-
-	// XML-DSig writes ECDSA as r||s (RFC 6931 §2.3.6); goxmldsig hands the bytes
-	// to x509.CheckSignature, which reads the ASN.1 form only. Without this a
-	// correct ECDSA signature from any other producer was reported as tampered.
-	// Signatures already written in the ASN.1 form verify on the first attempt.
-	if converted, ok := withASN1ECDSA(document, certificate); ok {
-		if _, retry := context.Validate(converted.Root()); retry == nil {
-			return nil
-		}
-	}
-	return err
+	return xmldsig.Check(document, signature, certificate.PublicKey, nil)
 }
 
-// withASN1ECDSA returns a copy of the document whose SignatureValue holds the
-// ASN.1 form of an r||s ECDSA signature, or false when there is nothing to
-// convert. The copy is used only to check the value: the digests and the
-// timestamp over SignatureValue are judged on the document as written.
-func withASN1ECDSA(document *etree.Document, certificate *x509.Certificate) (*etree.Document, bool) {
-	key, ok := certificate.PublicKey.(*ecdsa.PublicKey)
-	if !ok {
-		return nil, false
+// describeIntegrity reports what the check found: intact, modified, or not
+// checkable here (an algorithm trebaruna does not implement, or signed
+// content it does not have), which is not the same as modified (ADR-0005).
+func describeIntegrity(err error, report *domain.SignerReport) {
+	switch {
+	case err == nil:
+		report.Integrity = domain.StatusGood
+		report.Findings = append(report.Findings, domain.Finding{
+			Code:    "signature.intact",
+			Status:  domain.StatusGood,
+			Message: "the signed content is unaltered",
+		})
+	case errors.Is(err, xmldsig.ErrContentMissing):
+		report.Integrity = domain.StatusUnknown
+		report.Findings = append(report.Findings, domain.Finding{
+			Code:    "content.missing",
+			Status:  domain.StatusUnknown,
+			Message: "detached signature: the signed document is needed to compare its bytes",
+			Detail:  err.Error(),
+		})
+	case errors.Is(err, xmldsig.ErrUnverifiable):
+		report.Integrity = domain.StatusUnknown
+		report.Findings = append(report.Findings, domain.Finding{
+			Code:    "signature.unverifiable",
+			Status:  domain.StatusUnknown,
+			Message: "the signature uses something trebaruna cannot check",
+			Detail:  err.Error(),
+		})
+	default:
+		report.Integrity = domain.StatusBad
+		report.Findings = append(report.Findings, domain.Finding{
+			Code:    "signature.modified",
+			Status:  domain.StatusBad,
+			Message: "the signed XML does not match the signature",
+			Detail:  err.Error(),
+		})
 	}
-	converted := document.Copy()
-	element := findSignatureValue(converted.Root())
-	if element == nil {
-		return nil, false
-	}
-	raw, err := base64.StdEncoding.DecodeString(strings.Join(strings.Fields(element.Text()), ""))
-	size := (key.Curve.Params().BitSize + 7) / 8
-	if err != nil || len(raw) != 2*size {
-		return nil, false
-	}
-	der, err := asn1.Marshal(struct{ R, S *big.Int }{
-		new(big.Int).SetBytes(raw[:size]), new(big.Int).SetBytes(raw[size:]),
-	})
-	if err != nil {
-		return nil, false
-	}
-	element.SetText(base64.StdEncoding.EncodeToString(der))
-	return converted, true
-}
-
-// singleCertificateStore exposes exactly one certificate.
-type singleCertificateStore struct {
-	certificate *x509.Certificate
-}
-
-// Certificates returns the embedded certificate as the only anchor.
-func (s *singleCertificateStore) Certificates() ([]*x509.Certificate, error) {
-	return []*x509.Certificate{s.certificate}, nil
 }
 
 // describeSigningTime reads xades:SigningTime.

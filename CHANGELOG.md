@@ -6,6 +6,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- XML signatures are verified completely. The verifier, built on goxmldsig,
+  checked only the reference to the document element. As a result:
+  - a change inside the signed properties (signing time, policy, role,
+    signing certificate) went unnoticed;
+  - enveloping signatures, trebaruna's own among them, read as broken;
+  - the XPath filter AutoFirma writes (`not(ancestor-or-self::ds:Signature)`)
+    made a correct signature read as broken.
+
+  Every reference is now dereferenced (`""`, `#id`, a file), transformed
+  (enveloped signature, that XPath filter, Base64, C14N 1.0, 1.1 and
+  exclusive) and digested, and the value over `SignedInfo` is checked with
+  RSA (SHA-1 to SHA-512) or ECDSA (r‖s or ASN.1). `URI=""` digests the
+  document node, the processing instructions outside the root included, as
+  xmlsec1 does. Two elements carrying the signed Id are refused.
+
+  What trebaruna cannot evaluate is reported as `signature.unverifiable`
+  (unknown), and a detached reference without its document as
+  `content.missing`, not as broken.
+
+  Judged against signatures made by signxml 5.2.0 and xmlsec1 1.3.9, each
+  verified with xmlsec1 first (tests/signing/xmldsig/testdata).
+
 ### Added
 
 - Signature policies (EPES): `sign --policy age|age18|facturae|facturae30`

@@ -43,7 +43,18 @@ most confusion about electronic signatures.
 
 ### 1. Integrity — did the bytes change?
 
-`signature.intact`, `signature.modified`, `certificate.missing`.
+`signature.intact`, `signature.modified`, `signature.unverifiable`,
+`content.missing`, `certificate.missing`.
+
+An XML signature is checked completely: every reference in `SignedInfo` —
+the document, the signed properties (signing time, signing certificate,
+policy, role), any other object — is dereferenced, transformed and digested,
+then the signature value over `SignedInfo`. A change to any of them is
+`signature.modified`. A signature that uses an algorithm or a transform
+trebaruna does not implement (an XPath expression other than the
+`not(ancestor-or-self::ds:Signature)` filter, XPointer, XSLT) is
+`signature.unverifiable`: unknown, not broken. SHA-1 signatures, still found
+in older files, are checked.
 
 If integrity is bad, nothing else matters. A tampered document with an otherwise
 perfect certificate is worthless.
@@ -84,6 +95,8 @@ signature. One made in 2022 with a certificate that expired in 2020 is not.
 |---|---|---|
 | `signature.intact` | good | The signature matches the document |
 | `signature.modified` | bad | The document changed after signing |
+| `signature.unverifiable` | unknown | The signature uses an algorithm or transform trebaruna does not check |
+| `content.missing` | unknown | A detached signature without the document it signs |
 | `signature.not_qualified` | warn | A valid advanced signature that is not a QES |
 | `signature.qualified` | good | The QES conditions all held |
 
