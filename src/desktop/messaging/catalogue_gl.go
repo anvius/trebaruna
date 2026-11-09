@@ -44,7 +44,7 @@ var galician = Catalogue{
 	RenderingMessage:           "Preparando a páxina…",
 	PreviewUnavailable:         "Non se pode mostrar a páxina porque falta poppler (pdftoppm). A sinatura funciona igual: o selo irá na esquina inferior dereita da páxina 1.",
 	PageOf:                     "Páxina %d de %d",
-	SealHint:                   "Fai clic na páxina para colocar o selo, arrástrao para movelo e tira da esquina para amplialo. Co teclado, as frechas desprázano.",
+	SealHint:                   "Fai clic na páxina para colocar o selo, arrástrao para movelo e tira da esquina para amplialo. Co teclado, as frechas desprázano e + e − amplíano ou redúceno.",
 	SealCoversText:             "O selo tapa texto do documento. Móveo a un oco ou preme «Buscar oco libre».",
 	SealHolderPlaceholder:      "Titular do certificado",
 	NoSuggestion:               "Non hai outro oco libre nesta páxina: coloca o selo a man ou cambia de páxina.",
@@ -245,4 +245,6 @@ var galician = Catalogue{
 	BatchDone:                  "Asinados %d de %d.",
 	MenuSignFolder:             "Asinar un cartafol…",
 	PreviewApproximate:         "É un bosquexo de trebaruna: o texto vai noutra tipografía. Con poppler (pdftoppm) instalado verás a páxina exacta.",
+	PreviousPage:               "Páxina anterior",
+	NextPage:                   "Páxina seguinte",
 }

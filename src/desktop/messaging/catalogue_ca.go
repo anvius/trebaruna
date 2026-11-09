@@ -45,7 +45,7 @@ var catalan = Catalogue{
 	RenderingMessage:           "S'està preparant la pàgina…",
 	PreviewUnavailable:         "No es pot mostrar la pàgina perquè falta poppler (pdftoppm). La signatura funciona igualment: el segell anirà a la cantonada inferior dreta de la pàgina 1.",
 	PageOf:                     "Pàgina %d de %d",
-	SealHint:                   "Fes clic a la pàgina per col·locar el segell, arrossega'l per moure'l i estira'n la cantonada per ampliar-lo. Amb el teclat, les fletxes el desplacen.",
+	SealHint:                   "Fes clic a la pàgina per col·locar el segell, arrossega'l per moure'l i estira'n la cantonada per ampliar-lo. Amb el teclat, les fletxes el desplacen i + i − l'amplien o el redueixen.",
 	SealCoversText:             "El segell tapa text del document. Mou-lo a un espai buit o prem «Cerca un espai lliure».",
 	SealHolderPlaceholder:      "Titular del certificat",
 	NoSuggestion:               "No hi ha cap altre espai lliure en aquesta pàgina: col·loca el segell a mà o canvia de pàgina.",
@@ -246,4 +246,6 @@ var catalan = Catalogue{
 	BatchDone:                  "S'han signat %d de %d.",
 	MenuSignFolder:             "Signa una carpeta…",
 	PreviewApproximate:         "És un esbós de trebaruna: el text fa servir una altra tipografia. Amb el poppler (pdftoppm) instal·lat veuràs la pàgina exacta.",
+	PreviousPage:               "Pàgina anterior",
+	NextPage:                   "Pàgina següent",
 }

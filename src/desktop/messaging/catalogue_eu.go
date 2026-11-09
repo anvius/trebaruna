@@ -48,7 +48,7 @@ var basque = Catalogue{
 	RenderingMessage:           "Orrialdea prestatzen…",
 	PreviewUnavailable:         "Ezin da orrialdea erakutsi, poppler (pdftoppm) falta delako. Sinadurak berdin funtzionatzen du: zigilua 1. orrialdearen beheko eskuineko izkinan joango da.",
 	PageOf:                     "%d/%d orrialdea",
-	SealHint:                   "Egin klik orrialdean zigilua kokatzeko, arrastatu mugitzeko eta tiratu izkinatik handitzeko. Teklatuarekin, gezi-teklek mugitzen dute.",
+	SealHint:                   "Egin klik orrialdean zigilua kokatzeko, arrastatu mugitzeko eta tiratu izkinatik handitzeko. Teklatuarekin, gezi-teklek mugitzen dute, eta + eta − teklek handitu edo txikitzen dute.",
 	SealCoversText:             "Zigiluak dokumentuko testua estaltzen du. Eraman leku huts batera edo sakatu «Bilatu leku librea».",
 	SealHolderPlaceholder:      "Ziurtagiriaren titularra",
 	NoSuggestion:               "Orrialde honetan ez dago beste leku librerik: kokatu zigilua eskuz edo aldatu orrialdez.",
@@ -249,4 +249,6 @@ var basque = Catalogue{
 	BatchDone:                  "Sinatuta: %d / %d.",
 	MenuSignFolder:             "Sinatu karpeta bat…",
 	PreviewApproximate:         "trebaruna programaren zirriborroa da: testuak beste letra-tipo bat du. Poppler (pdftoppm) instalatuta, orrialde zehatza ikusiko duzu.",
+	PreviousPage:               "Aurreko orrialdea",
+	NextPage:                   "Hurrengo orrialdea",
 }

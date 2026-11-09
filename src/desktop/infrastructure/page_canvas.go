@@ -29,7 +29,8 @@ type SealIdentity struct {
 //   - a click on the paper centres the seal under the pointer;
 //   - dragging the seal moves it, dragging its corner handle enlarges it;
 //   - dragging on empty paper drops the seal there and keeps moving it;
-//   - with the canvas focused, the arrow keys nudge it two points.
+//   - with the canvas focused, the arrow keys nudge it two points, and +
+//     and - grow and shrink it.
 //
 // The page image is drawn by this widget, not by a separate canvas.Image with
 // its own fit: the page and the pointer must share one DisplayFit, and the
@@ -47,6 +48,9 @@ type PageCanvas struct {
 	rubricPicture image.Image
 	moment        time.Time
 	onChange      func(domain.SealRect)
+	// description is what a screen reader says for the page: how to place
+	// the seal, or that it covers text.
+	description string
 
 	// fit is recomputed on every layout; pointer events read it.
 	fit     domain.DisplayFit
@@ -133,6 +137,16 @@ func (p *PageCanvas) SetIdentity(identity SealIdentity) {
 	p.Refresh()
 }
 
+// SetDescription sets what a screen reader says for the page.
+func (p *PageCanvas) SetDescription(description string) { p.description = description }
+
+// AccessibilityLabel is the page's description (Fyne's accessibility, on
+// the platforms it reaches).
+func (p *PageCanvas) AccessibilityLabel() string { return p.description }
+
+// AccessibilityRole is text: Fyne has no role for a placement surface.
+func (p *PageCanvas) AccessibilityRole() fyne.AccessibleRole { return fyne.AccessibleRoleText }
+
 // SetRubric shows the rubric the seal will carry; a zero one removes it.
 func (p *PageCanvas) SetRubric(rubric signing.Rubric, picture image.Image) {
 	p.rubric, p.rubricPicture = rubric, picture
@@ -209,8 +223,24 @@ func (p *PageCanvas) FocusGained() { p.focused = true; p.Refresh() }
 // FocusLost hides the focus ring.
 func (p *PageCanvas) FocusLost() { p.focused = false; p.Refresh() }
 
-// TypedRune ignores text input.
-func (p *PageCanvas) TypedRune(rune) {}
+// TypedRune grows the seal with + (or =, the same key unshifted) and shrinks
+// it with -, keeping its proportions: the keyboard's way to do what the
+// corner handle does, for whoever cannot drag (WCAG 2.5.7).
+func (p *PageCanvas) TypedRune(typed rune) {
+	const step = 4.0
+	var sign float64
+	switch typed {
+	case '+', '=':
+		sign = 1
+	case '-':
+		sign = -1
+	default:
+		return
+	}
+	ratio := p.rect.Height() / p.rect.Width()
+	p.rect = p.fit.Grow(p.rect, sign*step*p.fit.Scale, sign*step*ratio*p.fit.Scale)
+	p.changed()
+}
 
 // TypedKey nudges the seal with the arrow keys.
 func (p *PageCanvas) TypedKey(event *fyne.KeyEvent) {
@@ -492,4 +522,5 @@ var (
 	_ fyne.Focusable     = (*PageCanvas)(nil)
 	_ desktop.Hoverable  = (*PageCanvas)(nil)
 	_ desktop.Cursorable = (*PageCanvas)(nil)
+	_ fyne.Accessible    = (*PageCanvas)(nil)
 )

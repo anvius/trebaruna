@@ -36,8 +36,8 @@ type pagePane struct {
 
 	stage     *fyne.Container
 	pageLabel *widget.Label
-	previous  *widget.Button
-	next      *widget.Button
+	previous  *namedButton
+	next      *namedButton
 	suggest   *widget.Button
 	hint      *widget.Label
 	root      fyne.CanvasObject
@@ -72,8 +72,8 @@ func newPagePane(messages messaging.Catalogue, palette Palette, preview *applica
 	pane.hint.Wrapping = fyne.TextWrapWord
 	pane.pageLabel.Alignment = fyne.TextAlignCenter
 
-	pane.previous = widget.NewButtonWithIcon("", theme.NavigateBackIcon(), func() { pane.turn(-1) })
-	pane.next = widget.NewButtonWithIcon("", theme.NavigateNextIcon(), func() { pane.turn(+1) })
+	pane.previous = newNamedButton(messages.PreviousPage, theme.NavigateBackIcon(), func() { pane.turn(-1) })
+	pane.next = newNamedButton(messages.NextPage, theme.NavigateNextIcon(), func() { pane.turn(+1) })
 	pane.suggest = widget.NewButtonWithIcon(messages.SuggestButton, theme.SearchIcon(), pane.suggestAnother)
 
 	backdrop := canvas.NewRectangle(palette.Surface)
@@ -238,17 +238,17 @@ func (p *pagePane) describe() {
 	if p.canvas == nil {
 		return
 	}
-	if p.canvas.CoversText() {
-		p.hint.Importance = widget.WarningImportance
-		p.hint.SetText(p.messages.SealCoversText)
-		return
+	importance, text := widget.MediumImportance, p.messages.SealHint
+	switch {
+	case p.canvas.CoversText():
+		importance, text = widget.WarningImportance, p.messages.SealCoversText
+	case p.result.Preview.Approximate:
+		text += " " + p.messages.PreviewApproximate
 	}
-	p.hint.Importance = widget.MediumImportance
-	if p.result.Preview.Approximate {
-		p.hint.SetText(p.messages.SealHint + " " + p.messages.PreviewApproximate)
-		return
-	}
-	p.hint.SetText(p.messages.SealHint)
+	p.hint.Importance = importance
+	p.hint.SetText(text)
+	// The page says to a screen reader what the line under it says.
+	p.canvas.SetDescription(text)
 }
 
 // suggestAnother cycles through the free gaps the page offers.

@@ -137,6 +137,14 @@ user seeing what is signed and where anything goes.
 |---|---|
 | Page preview without poppler: trebaruna draws the page itself (text in place in Go's typeface, shapes, JPEG/Flate pictures with transparency, forms, annotation appearances, OCR text left out), poppler preferred when installed, the window saying which | built |
 
+### Accessibility
+
+| Capability | Status |
+|---|---|
+| WCAG 2.2 AA review of the window (docs/accessibility.md): text 4.5:1 and control edges 3:1 on every surface, every action on the keyboard (seal moved with arrows, resized with + and −), names for icon buttons and the page | built |
+| Screen readers through Fyne's accessibility tag on Windows and macOS | built, untried with NVDA/VoiceOver |
+| Screen readers on Linux; light or high-contrast theme | pending (Fyne; owner choice) |
+
 ### Languages
 
 | Capability | Status |

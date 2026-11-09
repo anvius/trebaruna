@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Accessibility (plan G8), after a WCAG 2.2 AA review of the window
+  (docs/accessibility.md):
+  - + and − resize the seal from the keyboard, as the corner handle does
+    with the mouse; the hint says so in every language.
+  - The page arrows and the page have names for screen readers; the Windows
+    and macOS windows are built with Fyne's accessibility tag (UI Automation,
+    VoiceOver). Linux waits for Fyne.
+  - The accent teal and the error red are slightly lighter, and field edges
+    have their own colour, so text reaches 4.5:1 and control edges 3:1 on
+    every surface, dialogs and buttons included.
+  - Tests pin the contrasts, Tab reaching the page and the sign button, the
+    keyboard resizing and the accessible names.
+
 - Page preview without poppler (plan G7): when `pdftoppm` is not installed
   the window draws the page itself, in plain Go, instead of falling back to
   the default corner.

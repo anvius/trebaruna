@@ -27,7 +27,10 @@ case "$platform" in
     # the window signs through it, and cards need it.
     CGO_ENABLED=1 GOOS="$platform" go build -trimpath -ldflags "$ldflags" -o "$stage/trebaruna$suffix" ./src/entrypoint/main
     guiflags="$ldflags"; [[ $platform != windows ]] || guiflags="$guiflags -H=windowsgui"
-    CGO_ENABLED=1 go build -tags gui -trimpath -ldflags "$guiflags" -o "$stage/trebaruna-desktop$suffix" ./src/entrypoint/desktop
+    # Fyne's screen-reader support (UI Automation) is behind a build tag;
+    # on Linux it does nothing yet.
+    guitags=gui; [[ $platform != windows ]] || guitags=gui,accessibility
+    CGO_ENABLED=1 go build -tags "$guitags" -trimpath -ldflags "$guiflags" -o "$stage/trebaruna-desktop$suffix" ./src/entrypoint/desktop
     cp LICENSE README.md "$stage/"
     cp assets/icons/trebaruna-256.png "$stage/"
     if [[ $platform == linux ]]; then

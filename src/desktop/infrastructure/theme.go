@@ -27,7 +27,10 @@ type Palette struct {
 	Text          color.Color
 	TextMuted     color.Color
 	Border        color.Color
-	Overlay       color.Color
+	// Outline draws the edge of a field: it must stand out from the
+	// background (WCAG 1.4.11), unlike a decorative Border.
+	Outline color.Color
+	Overlay color.Color
 }
 
 // DefaultPalette is the shipped identity.
@@ -39,14 +42,17 @@ func DefaultPalette() Palette {
 		Surface:       color.NRGBA{R: 34, G: 42, B: 55, A: 255},
 		SurfaceRaised: color.NRGBA{R: 43, G: 53, B: 69, A: 255},
 		// A muted teal: reads as "official document" rather than as a warning.
-		Accent:      color.NRGBA{R: 45, G: 164, B: 160, A: 255},
-		AccentMuted: color.NRGBA{R: 45, G: 164, B: 160, A: 70},
-		Danger:      color.NRGBA{R: 232, G: 104, B: 100, A: 255},
+		// Accent and Danger are as dark as WCAG AA allows on every surface
+		// (4.5:1 for text, raised surfaces included).
+		Accent:      color.NRGBA{R: 66, G: 173, B: 169, A: 255},
+		AccentMuted: color.NRGBA{R: 66, G: 173, B: 169, A: 70},
+		Danger:      color.NRGBA{R: 235, G: 125, B: 121, A: 255},
 		Warning:     color.NRGBA{R: 226, G: 170, B: 84, A: 255},
 		Success:     color.NRGBA{R: 110, G: 196, B: 128, A: 255},
 		Text:        color.NRGBA{R: 236, G: 240, B: 245, A: 255},
 		TextMuted:   color.NRGBA{R: 160, G: 172, B: 188, A: 255},
 		Border:      color.NRGBA{R: 58, G: 70, B: 88, A: 255},
+		Outline:     color.NRGBA{R: 118, G: 130, B: 146, A: 255},
 		Overlay:     color.NRGBA{R: 0, G: 0, B: 0, A: 160},
 	}
 }
@@ -110,7 +116,7 @@ func (t *AppTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) co
 	case theme.ColorNameSeparator:
 		return p.Border
 	case theme.ColorNameInputBorder:
-		return p.Border
+		return p.Outline
 	case theme.ColorNameShadow:
 		return p.Overlay
 	case theme.ColorNameScrollBar:

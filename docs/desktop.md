@@ -136,7 +136,7 @@ you are looking at.
 |---|---|
 | Put the seal somewhere | Click the page: the seal centres under the pointer |
 | Move it | Drag it, or drag from any empty spot on the paper |
-| Make it larger | Drag the square handle in its bottom-right corner |
+| Make it larger or smaller | Drag the square handle in its bottom-right corner, or press + and − with the page focused |
 | Nudge it | Click the page, then use the arrow keys (2 pt per press) |
 | Try another gap | **Find free space** cycles through the empty areas of the page |
 | Change page | The arrows above the page; the seal follows the page shown |

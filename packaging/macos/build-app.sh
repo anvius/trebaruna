@@ -21,8 +21,8 @@ CGO_ENABLED=1 go build -trimpath \
   -ldflags "-s -w -X codeberg.org/simplicer/trebaruna/src/entrypoint/cli.injectedVersion=$VERSION" \
   -o "$APP/Contents/MacOS/trebaruna" "$ROOT/src/entrypoint/main"
 
-# The window: cgo + Cocoa.
-CGO_ENABLED=1 go build -tags gui -trimpath \
+# The window: cgo + Cocoa, with Fyne's VoiceOver support (a build tag).
+CGO_ENABLED=1 go build -tags gui,accessibility -trimpath \
   -ldflags "-s -w -X codeberg.org/simplicer/trebaruna/src/entrypoint/cli.injectedVersion=$VERSION" \
   -o "$APP/Contents/MacOS/trebaruna-desktop" "$ROOT/src/entrypoint/desktop"
 

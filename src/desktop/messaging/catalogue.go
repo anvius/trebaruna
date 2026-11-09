@@ -162,6 +162,8 @@ type Catalogue struct {
 	RemoveRubric               string
 	RubricInvalid              string
 	PreviewApproximate         string
+	PreviousPage               string
+	NextPage                   string
 	FormatOnlyCAdES            string
 	SealOnPagePane             string
 	MoreOptions                string
@@ -374,7 +376,7 @@ var spanish = Catalogue{
 	RenderingMessage:           "Preparando la página…",
 	PreviewUnavailable:         "No se puede mostrar la página porque falta poppler (pdftoppm). La firma funciona igual: el sello irá en la esquina inferior derecha de la página 1.",
 	PageOf:                     "Página %d de %d",
-	SealHint:                   "Haz clic en la página para colocar el sello, arrástralo para moverlo y tira de la esquina para ampliarlo. Con el teclado, las flechas lo desplazan.",
+	SealHint:                   "Haz clic en la página para colocar el sello, arrástralo para moverlo y tira de la esquina para ampliarlo. Con el teclado, las flechas lo desplazan y + y − lo agrandan o lo encogen.",
 	SealCoversText:             "El sello tapa texto del documento. Muévelo a un hueco o pulsa «Buscar hueco libre».",
 	SealHolderPlaceholder:      "Titular del certificado",
 	NoSuggestion:               "No hay otro hueco libre en esta página: coloca el sello a mano o cambia de página.",
@@ -575,6 +577,8 @@ var spanish = Catalogue{
 	BatchDone:                  "Firmados %d de %d.",
 	MenuSignFolder:             "Firmar una carpeta…",
 	PreviewApproximate:         "Es un esbozo de trebaruna: el texto va en otra tipografía. Con poppler (pdftoppm) instalado verás la página exacta.",
+	PreviousPage:               "Página anterior",
+	NextPage:                   "Página siguiente",
 }
 
 var italian = Catalogue{
@@ -621,7 +625,7 @@ var italian = Catalogue{
 	RenderingMessage:           "Preparazione della pagina…",
 	PreviewUnavailable:         "Impossibile mostrare la pagina: manca poppler (pdftoppm). La firma funziona comunque: il timbro andrà nell'angolo in basso a destra della pagina 1.",
 	PageOf:                     "Pagina %d di %d",
-	SealHint:                   "Fai clic sulla pagina per posizionare il timbro, trascinalo per spostarlo e tira l'angolo per ingrandirlo. Da tastiera, le frecce lo spostano.",
+	SealHint:                   "Fai clic sulla pagina per posizionare il timbro, trascinalo per spostarlo e tira l'angolo per ingrandirlo. Da tastiera, le frecce lo spostano e + e − lo ingrandiscono o lo rimpiccioliscono.",
 	SealCoversText:             "Il timbro copre del testo. Spostalo in uno spazio vuoto o premi «Trova uno spazio libero».",
 	SealHolderPlaceholder:      "Titolare del certificato",
 	NoSuggestion:               "Nessun altro spazio libero in questa pagina: posiziona il timbro a mano o cambia pagina.",
@@ -822,6 +826,8 @@ var italian = Catalogue{
 	BatchDone:                  "Firmati %d di %d.",
 	MenuSignFolder:             "Firma una cartella…",
 	PreviewApproximate:         "È un abbozzo di trebaruna: il testo usa un altro carattere. Con poppler (pdftoppm) installato vedrai la pagina esatta.",
+	PreviousPage:               "Pagina precedente",
+	NextPage:                   "Pagina successiva",
 }
 
 var english = Catalogue{
@@ -868,7 +874,7 @@ var english = Catalogue{
 	RenderingMessage:           "Preparing the page…",
 	PreviewUnavailable:         "The page cannot be shown because poppler (pdftoppm) is missing. Signing still works: the seal goes in the bottom-right corner of page 1.",
 	PageOf:                     "Page %d of %d",
-	SealHint:                   "Click the page to place the seal, drag it to move it and pull its corner to enlarge it. With the keyboard, the arrow keys nudge it.",
+	SealHint:                   "Click the page to place the seal, drag it to move it and pull its corner to enlarge it. With the keyboard, the arrow keys nudge it and + and − enlarge or shrink it.",
 	SealCoversText:             "The seal covers text in the document. Move it to an empty area or press \"Find free space\".",
 	SealHolderPlaceholder:      "Certificate holder",
 	NoSuggestion:               "No other free space on this page: place the seal by hand or change page.",
@@ -1069,6 +1075,8 @@ var english = Catalogue{
 	BatchDone:                  "Signed %d of %d.",
 	MenuSignFolder:             "Sign a folder…",
 	PreviewApproximate:         "This is trebaruna's sketch: the text is in another typeface. With poppler (pdftoppm) installed you see the exact page.",
+	PreviousPage:               "Previous page",
+	NextPage:                   "Next page",
 }
 
 // LevelName renders a level name for display.
