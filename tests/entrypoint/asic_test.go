@@ -168,6 +168,12 @@ func TestSignSeveralDocumentsIntoAnASiCE(t *testing.T) {
 		if !strings.Contains(stdout, `"integrity": "good"`) || !strings.Contains(stdout, `"detail": "acta.txt, plano.pdf"`) {
 			t.Errorf("%s: %s", format, stdout)
 		}
+		// A parallel signature is of the container's kind, whatever --format
+		// says, and the report names that kind.
+		stdout, stderr, code := run("sign", output, "--p12", key, "--cosign", "--format", "cades", "--json")
+		if code != 0 || !strings.Contains(stdout, `"format": "`+format+`"`) {
+			t.Errorf("%s co-signed: exit %d %s %s", format, code, stdout, stderr)
+		}
 		changed := rewriteEntry(t, output, "plano.pdf", []byte("%PDF-1.4\n%otro plano\n"))
 		if result := verifyJSON(t, changed); result.Verdict != "broken" {
 			t.Errorf("%s with a changed document: %s", format, result.Verdict)

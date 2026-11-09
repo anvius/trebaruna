@@ -3,7 +3,6 @@ package infrastructure
 import (
 	"encoding/base64"
 	"fmt"
-	"net/http"
 	"net/url"
 	"strings"
 
@@ -11,6 +10,7 @@ import (
 
 	"codeberg.org/simplicer/trebaruna/src/signing/application"
 	"codeberg.org/simplicer/trebaruna/src/signing/domain"
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/mediatype"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/xmldsig"
 )
 
@@ -117,7 +117,7 @@ func layoutFor(request application.XadesRequest) (documentLayout, error) {
 	if document, err := parseDocument(request.Content); err == nil {
 		layout.xml, layout.mimeType = document, "text/xml"
 	} else {
-		layout.mimeType = mediaType(request.Content)
+		layout.mimeType = mediatype.Of(request.DocumentName, request.Content)
 	}
 	switch {
 	case layout.packaging.NeedsXML() && layout.xml == nil:
@@ -141,7 +141,7 @@ func layoutFor(request application.XadesRequest) (documentLayout, error) {
 	if layout.packaging == domain.XMLDetached {
 		layout.files = []detachedFile{{uri: layout.uri, mimeType: layout.mimeType, content: request.Content, canonical: request.DocumentCanonical}}
 		for _, document := range request.MoreDocuments {
-			file := detachedFile{uri: escapePath(document.Name), mimeType: mediaType(document.Content), content: document.Content,
+			file := detachedFile{uri: escapePath(document.Name), mimeType: mediatype.Of(document.Name, document.Content), content: document.Content,
 				canonical: document.Canonical}
 			if _, err := parseDocument(document.Content); err == nil {
 				file.mimeType = "text/xml"
@@ -181,15 +181,6 @@ func referencedLayout(layout documentLayout, request application.XadesRequest) (
 		layout.files = append(layout.files, detachedFile{uri: document.URI, mimeType: mimeType, digest: document.Digest})
 	}
 	return layout, nil
-}
-
-// mediaType sniffs the media type of bytes, without its parameters.
-func mediaType(content []byte) string {
-	detected := http.DetectContentType(content)
-	if semicolon := strings.Index(detected, ";"); semicolon >= 0 {
-		detected = detected[:semicolon]
-	}
-	return strings.TrimSpace(detected)
 }
 
 // referenceCount is how many references SignedInfo holds: the document,

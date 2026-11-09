@@ -10,11 +10,19 @@ import (
 )
 
 // cosignContainer co-signs a container through CosignContainer.
-func (u *SignDocument) cosignContainer(ctx context.Context, request Request, content []byte) ([]byte, error) {
+func (u *SignDocument) cosignContainer(ctx context.Context, request Request, content []byte) (CosignedContainer, error) {
 	if u.containers == nil {
-		return nil, fmt.Errorf("no container adapter configured")
+		return CosignedContainer{}, fmt.Errorf("no container adapter configured")
 	}
 	return NewCosignContainer(u.containers, u.cades, u.xades).Execute(ctx, request, content)
+}
+
+// CosignedContainer is the container with its signature added, and the
+// format of that signature: the kind the container held, whatever the
+// request asked.
+type CosignedContainer struct {
+	Content []byte
+	Format  domain.Format
 }
 
 // CosignContainer is the use case that adds a parallel signature to an
@@ -37,10 +45,10 @@ func NewCosignContainer(containers ContainerWriter, cades CadesSigner, xades Xad
 
 // Execute returns the container with the request's signature added; the
 // request's document is not read, the container is.
-func (u *CosignContainer) Execute(ctx context.Context, request Request, content []byte) ([]byte, error) {
+func (u *CosignContainer) Execute(ctx context.Context, request Request, content []byte) (CosignedContainer, error) {
 	container, entries, err := u.containers.ReadContainer(content)
 	if err != nil {
-		return nil, err
+		return CosignedContainer{}, err
 	}
 	var documents []ContainerEntry
 	cades, xades := -1, -1
@@ -56,53 +64,68 @@ func (u *CosignContainer) Execute(ctx context.Context, request Request, content 
 		}
 	}
 	if len(documents) == 0 {
-		return nil, fmt.Errorf("the container holds no document to co-sign")
+		return CosignedContainer{}, fmt.Errorf("the container holds no document to co-sign")
 	}
+	entries, format, err := u.addSignature(ctx, request, container, entries, documents, cades, xades)
+	if err != nil {
+		return CosignedContainer{}, err
+	}
+	written, err := u.containers.WriteContainer(container, entries)
+	if err != nil {
+		return CosignedContainer{}, err
+	}
+	return CosignedContainer{Content: written, Format: format}, nil
+}
 
+// addSignature adds the parallel signature to the entries, of the kind the
+// container holds (cades and xades index its first signature of each kind,
+// -1 for none), and names that kind.
+func (u *CosignContainer) addSignature(ctx context.Context, request Request, container domain.Container, entries, documents []ContainerEntry,
+	cades, xades int) ([]ContainerEntry, domain.Format, error) {
 	switch {
 	case container == domain.ASiCS && cades >= 0:
 		cosigning := containerCades(request, entries[cades].Content)
 		cosigning.Cosign, cosigning.DetachedContent = true, documents[0].Content
 		cosigned, err := u.cades.SignCades(ctx, cosigning)
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 		entries[cades].Content = cosigned
+		return entries, domain.Cades, nil
 	case container == domain.ASiCS && xades >= 0:
 		added, err := u.xades.SignXades(ctx, containerXades(request, documents))
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 		merged, err := u.containers.AddXMLSignatures(entries[xades].Content, added, documents)
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 		entries[xades].Content = merged
+		return entries, domain.Xades, nil
 	case container == domain.ASiCE && xades >= 0:
 		added, err := u.xades.SignXades(ctx, containerXades(request, documents))
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
-		entries = append(entries, ContainerEntry{Name: freeEntry(entries, "META-INF/signatures%03d.xml"), Content: added})
+		return append(entries, ContainerEntry{Name: freeEntry(entries, "META-INF/signatures%03d.xml"), Content: added}), domain.Xades, nil
 	case container == domain.ASiCE && cades >= 0:
 		signatureEntry := freeEntry(entries, "META-INF/signature%03d.p7s")
 		manifest, err := u.containers.Manifest(signatureEntry, documents)
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 		signing := containerCades(request, manifest)
 		signing.Detached = true
 		signed, err := u.cades.SignCades(ctx, signing)
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
-		entries = append(entries,
+		return append(entries,
 			ContainerEntry{Name: freeEntry(entries, "META-INF/ASiCManifest%03d.xml"), Content: manifest},
-			ContainerEntry{Name: signatureEntry, Content: signed})
-	default:
-		return nil, fmt.Errorf("the container holds no CAdES or XAdES signature to co-sign")
+			ContainerEntry{Name: signatureEntry, Content: signed}), domain.Cades, nil
 	}
-	return u.containers.WriteContainer(container, entries)
+	return nil, "", fmt.Errorf("the container holds no CAdES or XAdES signature to co-sign")
 }
 
 // containerCades is a CAdES signature over content for a container.

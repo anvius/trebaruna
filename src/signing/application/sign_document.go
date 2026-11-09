@@ -185,7 +185,10 @@ func (u *SignDocument) Execute(ctx context.Context, request Request) (Artefact, 
 	var signed []byte
 	switch {
 	case request.Cosign && request.Document.IsContainer():
-		signed, err = u.cosignContainer(ctx, request.WithSignedAt(signedAt), content)
+		// The container decides the kind of the signature added.
+		var cosigned CosignedContainer
+		cosigned, err = u.cosignContainer(ctx, request.WithSignedAt(signedAt), content)
+		signed, request.Format = cosigned.Content, cosigned.Format
 	case request.Container == domain.ASiCE:
 		signed, err = u.signExtended(ctx, request.WithSignedAt(signedAt), content)
 	default:

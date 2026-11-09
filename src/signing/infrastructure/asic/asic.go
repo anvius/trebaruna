@@ -12,10 +12,11 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
-	"net/http"
 	"net/url"
 	"path"
 	"strings"
+
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/mediatype"
 )
 
 // Entry is a file of the container, by its path inside it.
@@ -81,7 +82,7 @@ func Manifest(signatureEntry string, documents []Entry) ([]byte, error) {
 		}
 		digest := sha256.Sum256(document.Content)
 		manifest.WriteString(`<asic:DataObjectReference URI="` + attribute(escapePath(document.Name)) +
-			`" MimeType="` + attribute(mediaType(document.Content)) + `">` +
+			`" MimeType="` + attribute(mediatype.Of(document.Name, document.Content)) + `">` +
 			`<ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>` +
 			`<ds:DigestValue>` + base64.StdEncoding.EncodeToString(digest[:]) + `</ds:DigestValue>` +
 			`</asic:DataObjectReference>`)
@@ -98,15 +99,6 @@ func escapePath(name string) string {
 		segments[index] = url.PathEscape(segment)
 	}
 	return strings.Join(segments, "/")
-}
-
-// mediaType sniffs a document's media type, without parameters.
-func mediaType(content []byte) string {
-	detected := http.DetectContentType(content)
-	if semicolon := strings.Index(detected, ";"); semicolon >= 0 {
-		detected = detected[:semicolon]
-	}
-	return strings.TrimSpace(detected)
 }
 
 // attribute escapes text for an attribute value.

@@ -920,6 +920,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Co-signing an ASiC reported `"format": "cades"` even when the container
+  took a XAdES signature: the report now names the kind added. The media
+  type of a document, in an ASiC-E manifest and in a XAdES
+  `DataObjectFormat`, was sniffed from its bytes alone: an XML document
+  without its declaration read as `text/plain`, an office document as
+  `application/zip`. Its name's extension now decides when known, and XML
+  is recognised without the declaration.
+
 - `verify` named an XML counter-signature "XMLSignature #2", like a second
   signature of the document; it is now named after the one it signs
   ("XMLSignature › countersignature 1"), as CMS counter-signatures were.

@@ -474,7 +474,7 @@ func (s NativePageSigner) cosignASiC(ctx context.Context, request application.Pa
 	if err != nil {
 		return nil, domain.Failure{Code: domain.SignatureFailed, Cause: err.Error()}
 	}
-	return cosigned, nil
+	return cosigned.Content, nil
 }
 
 // dataExtension names the data's kind from its content, as AutoFirma's

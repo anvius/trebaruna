@@ -20,16 +20,18 @@ func TestAContainerIsCoSignedWithTheKindOfSignatureItHolds(t *testing.T) {
 		container domain.Container
 		signature application.ContainerEntry
 		want      []string
+		format    domain.Format
 	}{
 		"ASiC-S CAdES": {domain.ASiCS, application.ContainerEntry{Name: "META-INF/signature.p7s", Content: []byte("p7s")},
-			[]string{"plano.pdf", "memoria.txt", "META-INF/signature.p7s=cades-output"}},
+			[]string{"plano.pdf", "memoria.txt", "META-INF/signature.p7s=cades-output"}, domain.Cades},
 		"ASiC-S XAdES": {domain.ASiCS, application.ContainerEntry{Name: "META-INF/signatures.xml", Content: []byte("xml")},
-			[]string{"plano.pdf", "memoria.txt", "META-INF/signatures.xml=xml+xades-output"}},
+			[]string{"plano.pdf", "memoria.txt", "META-INF/signatures.xml=xml+xades-output"}, domain.Xades},
 		"ASiC-E XAdES": {domain.ASiCE, application.ContainerEntry{Name: "META-INF/signatures001.xml", Content: []byte("xml")},
-			[]string{"plano.pdf", "memoria.txt", "META-INF/signatures001.xml=xml", "META-INF/signatures002.xml=xades-output"}},
+			[]string{"plano.pdf", "memoria.txt", "META-INF/signatures001.xml=xml", "META-INF/signatures002.xml=xades-output"}, domain.Xades},
 		"ASiC-E CAdES": {domain.ASiCE, application.ContainerEntry{Name: "META-INF/signature001.p7s", Content: []byte("p7s")},
 			[]string{"plano.pdf", "memoria.txt", "META-INF/signature001.p7s=p7s",
-				"META-INF/ASiCManifest002.xml=manifest META-INF/signature002.p7s plano.pdf memoria.txt", "META-INF/signature002.p7s=cades-output"}},
+				"META-INF/ASiCManifest002.xml=manifest META-INF/signature002.p7s plano.pdf memoria.txt", "META-INF/signature002.p7s=cades-output"},
+			domain.Cades},
 	} {
 		store := newFakeStore(map[string][]byte{"/tmp/expediente.asice": []byte("zip")})
 		cades, xades := &fakeCades{}, &fakeXades{}
@@ -52,6 +54,10 @@ func TestAContainerIsCoSignedWithTheKindOfSignatureItHolds(t *testing.T) {
 		if strings.Join(got, "|") != strings.Join(check.want, "|") || containers.container != check.container ||
 			artefact.Path != "/tmp/expediente_cosigned.asice" {
 			t.Errorf("%s: %q into %s at %s", name, got, containers.container, artefact.Path)
+		}
+		// The request asked CAdES; the container's kind is what was signed.
+		if artefact.Format != check.format {
+			t.Errorf("%s: the artefact says %s, want %s", name, artefact.Format, check.format)
 		}
 		switch {
 		case strings.HasPrefix(name, "ASiC-S CAdES") && (!cades.request.Cosign || string(cades.request.DetachedContent) != "%PDF"):

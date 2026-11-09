@@ -375,6 +375,10 @@ trebaruna sign acta.txt plano.pdf --format cades --asic e --out expediente.asice
 XAdES writes one signature with a reference to each document. CAdES signs
 `META-INF/ASiCManifest.xml`, which lists every document with its digest.
 Documents are stored by their name, so two with the same name are refused.
+Each document's media type, in the manifest and in a XAdES
+`DataObjectFormat`, comes from its name's extension when that is a known one
+(an office document is no plain ZIP), else from its bytes (an XML document
+without its declaration is still XML).
 
 `verify` judges every signature of a container against the files it covers,
 and names any file no signature covers.
@@ -406,7 +410,8 @@ every signature that verified must still verify (a file whose root declares
 other namespaces would change the new signature's canonical form, and is
 refused); an ASiC-E takes a new signature file over all its documents, a CAdES
 `signatureNNN.p7s` over a new `ASiCManifestNNN.xml` or a XAdES
-`signaturesNNN.xml`. The result is `expediente_cosigned.asice`.
+`signaturesNNN.xml`. The result is `expediente_cosigned.asice`, and the
+report (`--json`'s `format`) names the kind added, whatever `--format` said.
 
 A signed XML document is counter-signed in place too: `sign acta_signed.xml
 --countersign leaves` (or `all`) adds a XAdES signature over each chosen

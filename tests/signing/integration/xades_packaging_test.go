@@ -221,3 +221,24 @@ func TestADetachedXadesSignsSeveralDocuments(t *testing.T) {
 		t.Error("a changed third document must not verify")
 	}
 }
+
+// TestADetachedXadesNamesOfficeDocumentsByTheirKind: an office document's
+// bytes are a ZIP; its name says what it is, and the DataObjectFormat says
+// it too, for the first document and the others.
+func TestADetachedXadesNamesOfficeDocumentsByTheirKind(t *testing.T) {
+	fixture := newFixture(t)
+	signer := buildPemSigner(t, readFile(t, fixture.keyPath), readFile(t, fixture.certPath))
+	output, err := infrastructure.NewXadesSigner(nil).SignXades(t.Context(), application.XadesRequest{
+		Content: []byte("PK\x03\x04memoria"), DocumentName: "memoria.odt", Signer: signer, Level: domain.BES, Packaging: domain.XMLDetached,
+		MoreDocuments: []application.DetachedDocument{{Name: "informe.docx", Content: []byte("PK\x03\x04informe")}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, format := range []string{"application/vnd.oasis.opendocument.text",
+		"application/vnd.openxmlformats-officedocument.wordprocessingml.document"} {
+		if !strings.Contains(string(output), "<xades:MimeType>"+format+"</xades:MimeType>") {
+			t.Errorf("no %s format:\n%.1200s", format, output)
+		}
+	}
+}
