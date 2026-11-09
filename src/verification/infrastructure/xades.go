@@ -533,7 +533,7 @@ func (v *XadesVerifier) describeSignatureTimeStamp(signature *etree.Element, rep
 		return
 	}
 
-	token, err := timestamp.Parse(tokenDER)
+	token, err := parseTimeStamp(tokenDER)
 	if err != nil {
 		report.Findings = append(report.Findings, domain.Finding{
 			Code:    "timestamp.invalid",
@@ -660,7 +660,7 @@ func (v *XadesVerifier) describeArchiveTimeStamp(document *etree.Document, signa
 		return
 	}
 
-	token, err := timestamp.Parse(tokenDER)
+	token, err := parseTimeStamp(tokenDER)
 	if err != nil {
 		report.Findings = append(report.Findings, domain.Finding{
 			Code:    "timestamp.invalid",

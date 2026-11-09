@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Timestamp tokens an authority signed with RSA-PSS are read: the
+  timestamp library's CMS code does not implement it, so a valid token was
+  reported invalid (CAdES and XAdES signature timestamps, archive
+  timestamps, ASiC timestamps). The token's SignerInfo is checked over its
+  TSTInfo with trebaruna's CMS check, then the TSTInfo is read. Brainpool
+  keys, which Go's certificate parser refuses, and PSS tokens inside PDF
+  signatures the PDF library checks remain out of reach (docs/verification.md).
+
 - CAdES-LTA's archive timestamp is an archive-time-stamp-v3 as ETSI EN
   319 122-1 defines it: the token covers the signed content's type and
   digest, the SignerInfo and an ats-hash-index-v3 of the certificates,

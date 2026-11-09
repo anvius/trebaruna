@@ -8,11 +8,15 @@ import (
 	"context"
 	"crypto/sha256"
 	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/asn1"
 	"encoding/pem"
+	"math/big"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
+	"time"
 
 	signingdomain "codeberg.org/simplicer/trebaruna/src/signing/domain"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/asic"
@@ -122,5 +126,55 @@ func TestAnExtendedContainersTimestampCoversItsManifest(t *testing.T) {
 	reports, err = verifier().Extract(writeContainer(t, "expediente.asice", signingdomain.ASiCE.MediaType(), entries))
 	if err != nil || reports[0].Integrity != domain.StatusBad {
 		t.Errorf("a file the manifest lists, changed: %+v %v", reports, err)
+	}
+}
+
+// TestATimestampSignedWithRSAPSSIsRead: the timestamp library's CMS code
+// does not implement RSASSA-PSS, and a valid PSS token read as invalid.
+// The token is OpenSSL's: a TSTInfo over the document signed with PSS
+// (id-ct-TSTInfo encapsulated, signing-certificate-v2).
+func TestATimestampSignedWithRSAPSSIsRead(t *testing.T) {
+	if _, err := exec.LookPath("openssl"); err != nil {
+		t.Skip("openssl is not available")
+	}
+	directory := t.TempDir()
+	key, certificate := filepath.Join(directory, "tsa.key"), filepath.Join(directory, "tsa.pem")
+	if output, err := exec.Command("openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", key, "-out", certificate,
+		"-days", "1", "-subj", "/CN=PSS TSA", "-addext", "extendedKeyUsage=critical,timeStamping").CombinedOutput(); err != nil {
+		t.Fatalf("%v\n%s", err, output)
+	}
+	document := []byte("%PDF-1.7 solicitud")
+	digest := sha256.Sum256(document)
+	type imprint struct {
+		Algorithm pkix.AlgorithmIdentifier
+		Digest    []byte
+	}
+	info, err := asn1.Marshal(struct {
+		Version      int
+		Policy       asn1.ObjectIdentifier
+		Imprint      imprint
+		SerialNumber *big.Int
+		Time         time.Time `asn1:"generalized"`
+	}{1, asn1.ObjectIdentifier{1, 2, 3, 4}, imprint{pkix.AlgorithmIdentifier{Algorithm: asn1.ObjectIdentifier{2, 16, 840, 1, 101, 3, 4, 2, 1}}, digest[:]},
+		big.NewInt(7), time.Now().UTC().Truncate(time.Second)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	infoPath, tokenPath := filepath.Join(directory, "tstinfo.der"), filepath.Join(directory, "timestamp.tst")
+	os.WriteFile(infoPath, info, 0o600)
+	if output, err := exec.Command("openssl", "cms", "-sign", "-binary", "-nodetach", "-cades", "-econtent_type", "1.2.840.113549.1.9.16.1.4",
+		"-in", infoPath, "-signer", certificate, "-inkey", key, "-keyopt", "rsa_padding_mode:pss", "-md", "sha256",
+		"-outform", "DER", "-out", tokenPath).CombinedOutput(); err != nil {
+		t.Fatalf("%v\n%s", err, output)
+	}
+	token, _ := os.ReadFile(tokenPath)
+	path := writeContainer(t, "solicitud.pdf.asics", signingdomain.ASiCS.MediaType(), []asic.Entry{
+		{Name: "solicitud.pdf", Content: document}, {Name: "META-INF/timestamp.tst", Content: token}})
+	reports, err := verifier().Extract(path)
+	if err != nil || len(reports) != 1 {
+		t.Fatalf("%v %v", reports, err)
+	}
+	if report := reports[0]; report.Integrity != domain.StatusGood || report.SignerName != "PSS TSA" || report.SignedAt.IsZero() {
+		t.Errorf("%+v", report)
 	}
 }

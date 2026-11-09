@@ -68,6 +68,7 @@ it. An authority whose key is published as id-RSASSA-PSS — German
 qualified ones such as D-TRUST CA 3-1 2016 and the HBA authorities —
 anchors chains like any other. An algorithm neither trebaruna nor the
 libraries implement is `signature.unverifiable`, never `signature.modified`.
+Timestamp tokens an authority signed with RSASSA-PSS are read the same way.
 
 An ASiC container (`.asics`, `.asice`, ETSI EN 319 162-1) is unpacked into a
 private directory, refusing entries whose names leave it or that exceed
@@ -283,6 +284,13 @@ worse than none.
 
 - **The signer's identity.** A qualified signature means the CA verified a
   document; it does not mean the person who pressed the button was that person.
+- **Keys on brainpool curves**, which some German health-professional cards
+  carry: Go's certificate parser refuses their certificates, so such
+  signatures cannot be read at all.
+- **A timestamp signed with RSA-PSS inside a PDF signature** the PDF library
+  checks (one not itself signed with RSA-PSS): the library reads that token as
+  invalid. Timestamps elsewhere (CAdES, XAdES, ASiC, archive timestamps) are
+  read whatever RSA padding their authority uses.
 
 ### A note on the key-usage check
 

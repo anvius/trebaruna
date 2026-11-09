@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/digitorus/timestamp"
-
 	"codeberg.org/simplicer/trebaruna/src/verification/domain"
 )
 
@@ -24,7 +22,7 @@ func (v *AsicVerifier) timeStamp(unpacked container, entry string) ([]domain.Sig
 		return nil, nil, err
 	}
 	report := domain.SignerReport{Format: "RFC 3161"}
-	token, err := timestamp.Parse(raw)
+	token, err := parseTimeStamp(raw)
 	if err != nil {
 		report.Integrity = domain.StatusBad
 		report.Findings = append(report.Findings, domain.Finding{Code: "timestamp.invalid", Status: domain.StatusBad,

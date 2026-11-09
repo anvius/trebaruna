@@ -4,8 +4,6 @@ import (
 	"encoding/asn1"
 	"time"
 
-	"github.com/digitorus/timestamp"
-
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/cms"
 	"codeberg.org/simplicer/trebaruna/src/verification/domain"
 )
@@ -22,7 +20,7 @@ var oidArchiveTimeStampV3 = cms.OIDArchiveTimeStampV3
 // the computation (cms.ArchiveTimeStampV3Input).
 func describeArchiveTimeStamps(envelope []byte, index int, unsigned asn1.RawValue, content []byte, report *domain.SignerReport) {
 	for _, tokenDER := range attributeValues(unsigned, oidArchiveTimeStampV3) {
-		token, err := timestamp.Parse(tokenDER)
+		token, err := parseTimeStamp(tokenDER)
 		if err != nil {
 			report.Findings = append(report.Findings, domain.Finding{
 				Code: "timestamp.invalid", Status: domain.StatusBad,

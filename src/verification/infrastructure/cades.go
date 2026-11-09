@@ -358,7 +358,7 @@ func (v *CadesVerifier) describeTime(content []byte, parsed *pkcs7.PKCS7, report
 // describeToken checks an RFC 3161 token against the signature value it must
 // cover and records what it proves.
 func describeToken(tokenDER, signatureValue []byte, report *domain.SignerReport) {
-	token, err := timestamp.Parse(tokenDER)
+	token, err := parseTimeStamp(tokenDER)
 	if err != nil {
 		report.Findings = append(report.Findings, domain.Finding{
 			Code:    "timestamp.invalid",
