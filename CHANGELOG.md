@@ -260,6 +260,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The seal is laid out as marks (the rubric, the accent rule, the lines of
+  text) apart from the PDF library that draws them, so trebaruna can draw
+  the same seal in a signature field the library does not create. The
+  appearance the library receives is unchanged.
+
 - `asic` packs an ASiC-S as ETSI EN 319 162-1 lays it out: the signature
   under `META-INF` (it went to the root), `.asics` by default (it was
   `.asice`). A `.p7m`, an XML signature or ASiC-E are refused, with the
