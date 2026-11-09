@@ -27,6 +27,10 @@ type Request struct {
 	// id-data, which is what a CAdES document signature carries. A timestamp
 	// token declares id-ct-TSTInfo instead, and validators check it.
 	ContentType asn1.ObjectIdentifier
+	// Unsigned are the unsigned attributes a SignerInfo made by Cosign or
+	// Countersign carries after its timestamp: validation data, such as its
+	// chain's revocation values (CAdES-LT).
+	Unsigned []Attribute
 }
 
 // Signature is the produced SignedData plus the material needed to timestamp

@@ -273,9 +273,6 @@ func (u *SignDocument) validate(request Request) error {
 	if request.Countersign != "" && request.Countersign != "leaves" && request.Countersign != "all" {
 		return fmt.Errorf("--countersign takes leaves or all, not %q", request.Countersign)
 	}
-	if (request.Cosign || request.Countersign != "") && request.Level.EmbedsRevocation() {
-		return fmt.Errorf("signatures added to an envelope support levels B and T; %s is not available for them yet", request.Level)
-	}
 	if request.Detached && request.Format != domain.Cades && !request.Format.IsXML() {
 		return fmt.Errorf("only CAdES and XML signatures can be detached; %s carries its signature inside the document", request.Format)
 	}
@@ -488,10 +485,11 @@ type SystemClock struct{}
 func (SystemClock) Now() time.Time { return time.Now() }
 
 // detachedContent reads the document a detached envelope signs, when the
-// caller named one for a co-signature. Errors surface in the adapter, which
-// then reports the missing document.
+// caller named one for a co-signature or a counter-signature (whose
+// archive timestamp seals it). Errors surface in the adapter, which then
+// reports the missing document.
 func (u *SignDocument) detachedContent(request Request) []byte {
-	if !request.Cosign || request.ContentPath == "" {
+	if (!request.Cosign && request.Countersign == "") || request.ContentPath == "" {
 		return nil
 	}
 	content, err := u.files.Read(request.ContentPath)

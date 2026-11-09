@@ -91,13 +91,14 @@ func (s *CadesSigner) SignCades(ctx context.Context, request application.CadesRe
 		return signed, nil
 	}
 	if !request.EmbedRevocation {
-		return nil, fmt.Errorf(
-			"%s needs embedded revocation and a source for it:\n"+
-				"    --level lt --online-revocation   query OCSP and attach the answers",
-			request.Level)
+		return nil, needsRevocationSource(request.Level)
 	}
 
-	withRevocation, err := s.withRevocationValues(ctx, signed, request, keyPair)
+	responses, err := s.revocationResponses(ctx, keyPair)
+	if err != nil {
+		return nil, err
+	}
+	withRevocation, err := cms.WithRevocationValuesFrom(signed, responses, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +107,7 @@ func (s *CadesSigner) SignCades(ctx context.Context, request application.CadesRe
 		return withRevocation, nil
 	}
 
-	return s.withArchiveTimeStamp(ctx, withRevocation, request)
+	return s.withArchiveTimeStamp(ctx, withRevocation, request, 0, request.Content)
 }
 
 // withArchiveTimeStamp adds the CAdES-LTA archive timestamp, an
@@ -120,11 +121,13 @@ func (s *CadesSigner) withArchiveTimeStamp(
 	ctx context.Context,
 	container []byte,
 	request application.CadesRequest,
+	signer int,
+	content []byte,
 ) ([]byte, error) {
 	if s.timestamps == nil || request.TimestampURL == "" {
 		return nil, fmt.Errorf("level %s needs a timestamp authority: pass --tsa <url>", request.Level)
 	}
-	prefix, hashIndex, err := cms.ArchiveTimeStampV3Input(container, 0, request.Content, crypto.SHA256)
+	prefix, hashIndex, err := cms.ArchiveTimeStampV3Input(container, signer, content, crypto.SHA256)
 	if err != nil {
 		return nil, err
 	}
@@ -143,21 +146,24 @@ func (s *CadesSigner) withArchiveTimeStamp(
 	if err != nil {
 		return nil, err
 	}
-	return cms.WithArchiveTimeStampV3(container, 0, tokenDER, hashIndex)
+	return cms.WithArchiveTimeStampV3(container, signer, tokenDER, hashIndex)
 }
 
-// withRevocationValues attaches the CAdES-LT revocation material.
+// needsRevocationSource refuses a level that embeds revocation without
+// the network being allowed for it.
+func needsRevocationSource(level domain.Level) error {
+	return fmt.Errorf("%s needs embedded revocation and a source for it:\n"+
+		"    --level lt --online-revocation   query OCSP and attach the answers", level)
+}
+
+// revocationResponses asks the signer's chain's OCSP responders, for the
+// CAdES-LT revocation material.
 //
 // The attribute is unsigned, which is the point: the signature covers the document
 // and the signed attributes, and the validation data rides beside them. Refusing to
 // sign a revoked certificate is the same rule as in PAdES — producing a signature
 // nobody can rely on wastes everyone's time.
-func (s *CadesSigner) withRevocationValues(
-	ctx context.Context,
-	signed []byte,
-	request application.CadesRequest,
-	keyPair KeyPair,
-) ([]byte, error) {
+func (s *CadesSigner) revocationResponses(ctx context.Context, keyPair KeyPair) ([][]byte, error) {
 	checker := verificationinfra.NewOCSPChecker()
 
 	chain := keyPair.Certificates()
@@ -192,7 +198,7 @@ func (s *CadesSigner) withRevocationValues(
 				"RevocationValues attribute:\n  %s", strings.Join(warnings, "\n  "))
 	}
 
-	return cms.WithRevocationValuesFrom(signed, responses, nil)
+	return responses, nil
 }
 
 // compile-time proof that the adapter satisfies the port.
@@ -243,9 +249,45 @@ func (s *CadesSigner) addSignature(ctx context.Context, request application.Cade
 		}
 	}
 
-	if request.Cosign {
-		return cms.Cosign(request.Content, request.DetachedContent, cmsRequest, stamp)
+	if request.Level.EmbedsRevocation() {
+		if !request.EmbedRevocation {
+			return nil, needsRevocationSource(request.Level)
+		}
+		responses, err := s.revocationResponses(ctx, keyPair)
+		if err != nil {
+			return nil, err
+		}
+		cmsRequest.Unsigned = []cms.Attribute{{Type: cms.OIDRevocationValues, Value: cms.RevocationValues(responses, nil)}}
 	}
-	signed, _, err := cms.Countersign(request.Content, cmsRequest, cms.CountersignScope(request.Countersign), stamp)
-	return signed, err
+
+	var signed []byte
+	if request.Cosign {
+		signed, err = cms.Cosign(request.Content, request.DetachedContent, cmsRequest, stamp)
+	} else {
+		signed, _, err = cms.Countersign(request.Content, cmsRequest, cms.CountersignScope(request.Countersign), stamp)
+	}
+	if err != nil || !request.Level.Archival() {
+		return signed, err
+	}
+	return s.archiveAdded(ctx, signed, request)
+}
+
+// archiveAdded seals the signatures that changed with an archive timestamp
+// (CAdES-LTA): the parallel signature added, or each signature that took
+// counter-signatures, whose archive timestamp seals them with it.
+func (s *CadesSigner) archiveAdded(ctx context.Context, signed []byte, request application.CadesRequest) ([]byte, error) {
+	count, err := cms.SignerCount(signed)
+	if err != nil {
+		return nil, err
+	}
+	first := 0
+	if request.Cosign {
+		first = count - 1
+	}
+	for signer := first; signer < count; signer++ {
+		if signed, err = s.withArchiveTimeStamp(ctx, signed, request, signer, request.DetachedContent); err != nil {
+			return nil, err
+		}
+	}
+	return signed, nil
 }

@@ -87,6 +87,16 @@ func WithArchiveTimeStampV3(contentInfoDER []byte, index int, tokenDER, hashInde
 	return appendUnsignedAttributeTo(contentInfoDER, index, OIDArchiveTimeStampV3, token)
 }
 
+// SignerCount is the number of SignerInfos of a SignedData.
+func SignerCount(contentInfoDER []byte) (int, error) {
+	parts, err := splitSignedData(contentInfoDER)
+	if err != nil {
+		return 0, err
+	}
+	signers, err := splitSequence(parts.signerInfos)
+	return len(signers), err
+}
+
 // TokenHashIndex reads the ats-hash-index-v3 an archive timestamp token
 // carries.
 func TokenHashIndex(tokenDER []byte) ([]byte, error) {

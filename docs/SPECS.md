@@ -39,7 +39,7 @@ user seeing what is signed and where anything goes.
 | PAdES invisible signature; default seal placed on the real page size | built |
 | PAdES seal in an existing empty form field: `sign --field <name>`, the seal in its box or none with `--invisible`; trebaruna's own incremental update (pdffield) and CMS envelope, cross-references of the file's kind | built (command line, `trebaruna fields`, the window's field choice, afirma:// `signatureField`) |
 | CAdES detached (`.p7s`), verified with the document beside it | built |
-| Parallel signatures (co-signing) and counter-signatures on CAdES, levels B and T | built |
+| Parallel signatures (co-signing) and counter-signatures on CAdES, levels B, T, LT (revocation values in the added SignerInfo) and LTA (archive-time-stamp-v3 on the signature added, or on each that took counter-signatures) | built |
 | Parallel signatures on XAdES enveloped: signing a signed XML adds a signature beside the others; each excludes every signature (AutoFirma's XPath filter), so none breaks another | built |
 | Counter-signatures on XAdES | planned (B5) |
 | Several documents in one run, same settings, one result per document | built |

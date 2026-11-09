@@ -355,6 +355,7 @@ func newSignerInfo(digest []byte, request Request, stamp Stamper) ([]byte, error
 		encoder.octetString(signatureValue),
 	}
 
+	var unsigned [][]byte
 	if stamp != nil {
 		response, err := stamp(signatureValue)
 		if err != nil {
@@ -364,8 +365,13 @@ func newSignerInfo(digest []byte, request Request, stamp Stamper) ([]byte, error
 		if err != nil {
 			return nil, err
 		}
-		fields = append(fields, encoder.tagged(0xa1,
-			encoder.seq(encoder.oid(OIDTimeStampToken), encoder.set(token))))
+		unsigned = append(unsigned, encoder.seq(encoder.oid(OIDTimeStampToken), encoder.set(token)))
+	}
+	for _, attribute := range request.Unsigned {
+		unsigned = append(unsigned, encoder.seq(encoder.oid(attribute.Type), encoder.set(attribute.Value)))
+	}
+	if len(unsigned) > 0 {
+		fields = append(fields, encoder.tagged(0xa1, unsigned...))
 	}
 	return encoder.seq(fields...), nil
 }

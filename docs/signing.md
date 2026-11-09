@@ -329,9 +329,12 @@ A `.p7m` or `.p7s` can receive more signatures without opening it:
 | Counter-sign every signature, already counter-signed ones included | `--countersign all` | |
 
 A counter-signature signs another signature's value, not the document (RFC
-5652 §11.4), so it carries no contentType. Levels B and T are available for
-added signatures; LT and LTA are not yet. A detached `.p7s` needs its document
-to be co-signed: `--content atto.pdf`.
+5652 §11.4), so it carries no contentType. Added signatures take every level:
+at T each carries its timestamp; at LT its chain's revocation values, in its own
+SignerInfo (a counter-signature's nested inside the signature it signs); at LTA
+an archive-time-stamp-v3 seals the parallel signature added, or each signature
+that took counter-signatures, which seals them with it. A detached `.p7s` needs
+its document to be co-signed, or counter-signed at LTA: `--content atto.pdf`.
 
 `verify` checks each signature of the tree on its own — digest, signature,
 timestamp, chain — and reports counter-signatures under the signature they

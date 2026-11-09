@@ -21,6 +21,7 @@ import (
 	signingdomain "codeberg.org/simplicer/trebaruna/src/signing/domain"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/cms"
+	verificationdomain "codeberg.org/simplicer/trebaruna/src/verification/domain"
 	verificationinfra "codeberg.org/simplicer/trebaruna/src/verification/infrastructure"
 )
 
@@ -291,4 +292,69 @@ func archiveFinding(t *testing.T, envelope []byte) string {
 		}
 	}
 	return ""
+}
+
+// TestAddedSignaturesTakeLevelsLTAndLTA: a parallel signature and
+// counter-signatures carry their chain's revocation values (LT) and, at
+// LTA, an archive timestamp seals the signature added, or each signature
+// that took counter-signatures. The verifier reads every signature intact
+// and each archive timestamp bound; openssl verifies the envelope.
+func TestAddedSignaturesTakeLevelsLTAndLTA(t *testing.T) {
+	content, signer := cadesFixture(t)
+	authority := newLocalTSA(t)
+	sign := func(request application.CadesRequest) []byte {
+		t.Helper()
+		request.Signer, request.TimestampURL, request.EmbedRevocation = signer, "http://tsa.example.invalid", true
+		signed, err := infrastructure.NewCadesSigner(authority).SignCades(context.Background(), request)
+		if err != nil {
+			t.Fatalf("%+v: %v", request.Level, err)
+		}
+		return signed
+	}
+	original := sign(application.CadesRequest{Content: content, Level: signingdomain.BES})
+	revocationValues := []byte{0x06, 0x0b, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x09, 0x10, 0x02, 0x18}
+
+	for name, request := range map[string]application.CadesRequest{
+		"a parallel signature": {Content: original, Cosign: true},
+		"counter-signatures":   {Content: original, Countersign: "leaves"},
+	} {
+		lt := request
+		lt.Level = signingdomain.LT
+		withRevocation := sign(lt)
+		if bytes.Count(withRevocation, revocationValues) != 1 {
+			t.Errorf("%s at LT: %d revocationValues, want the added signature's one", name, bytes.Count(withRevocation, revocationValues))
+		}
+
+		lta := request
+		lta.Level = signingdomain.LTA
+		archived := sign(lta)
+		path := filepath.Join(t.TempDir(), "added.p7m")
+		if err := os.WriteFile(path, archived, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		reports, err := verificationinfra.NewCadesVerifier().Extract(path)
+		if err != nil || len(reports) != 2 {
+			t.Fatalf("%s: %v %v", name, reports, err)
+		}
+		archives := 0
+		for _, report := range reports {
+			if report.Integrity != verificationdomain.StatusGood {
+				t.Errorf("%s: %s is %s", name, report.FieldName, report.Integrity)
+			}
+			for _, finding := range report.Findings {
+				switch finding.Code {
+				case "timestamp.archival":
+					archives++
+				case "timestamp.archive_unbound":
+					t.Errorf("%s: %s: %s", name, report.FieldName, finding.Detail)
+				}
+			}
+		}
+		if archives != 1 {
+			t.Errorf("%s: %d archive timestamps, want 1", name, archives)
+		}
+		if output, err := exec.Command("openssl", "cms", "-verify", "-inform", "DER", "-in", path, "-noverify", "-out", os.DevNull).CombinedOutput(); err != nil {
+			t.Errorf("%s: openssl: %v\n%s", name, err, output)
+		}
+	}
 }

@@ -73,6 +73,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Signatures added to a CAdES envelope (co-signature, counter-signatures)
+  take levels LT and LTA, refused until now. At LT the added SignerInfo
+  carries its chain's revocation values (asked before signing, so a
+  counter-signature's go in its own nested SignerInfo); at LTA an
+  archive-time-stamp-v3 seals the parallel signature added, or each
+  signature that took counter-signatures. A detached envelope's document
+  (`--content`) now also reaches a counter-signature, whose archive
+  timestamp seals it.
+
 - A form's signature field from the window and from web pages. `trebaruna
   fields <pdf> [--json]` lists a PDF form's empty signature fields (name,
   page, box). The window reads it: a PDF with fields offers them under the
