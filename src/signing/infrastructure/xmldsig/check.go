@@ -44,6 +44,18 @@ var digests = map[string]crypto.Hash{
 	"http://www.w3.org/2001/04/xmlenc#sha512":       crypto.SHA512,
 }
 
+// Digest computes data's digest with an XML-Signature DigestMethod, as an
+// ASiC manifest or a reference declares it.
+func Digest(algorithm string, data []byte) ([]byte, error) {
+	hash, known := digests[algorithm]
+	if !known {
+		return nil, fmt.Errorf("%w: digest %s", ErrUnverifiable, algorithm)
+	}
+	digest := hash.New()
+	digest.Write(data)
+	return digest.Sum(nil), nil
+}
+
 // signatureMethod is a SignatureMethod: the digest and the key it needs.
 type signatureMethod struct {
 	hash  crypto.Hash
@@ -104,8 +116,7 @@ func checkReference(document *etree.Document, signature, reference *etree.Elemen
 	if method == nil || value == nil {
 		return fmt.Errorf("%w: incomplete reference", ErrModified)
 	}
-	hash, known := digests[method.SelectAttrValue("Algorithm", "")]
-	if !known {
+	if _, known := digests[method.SelectAttrValue("Algorithm", "")]; !known {
 		return fmt.Errorf("%w: digest %s", ErrUnverifiable, method.SelectAttrValue("Algorithm", ""))
 	}
 	declared, err := decodeBase64(textOf(value))
@@ -116,9 +127,11 @@ func checkReference(document *etree.Document, signature, reference *etree.Elemen
 	if err != nil {
 		return err
 	}
-	digest := hash.New()
-	digest.Write(data)
-	if !bytes.Equal(digest.Sum(nil), declared) {
+	digest, err := Digest(method.SelectAttrValue("Algorithm", ""), data)
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(digest, declared) {
 		return fmt.Errorf("%w: the digest differs", ErrModified)
 	}
 	return nil

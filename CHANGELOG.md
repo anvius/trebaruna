@@ -8,6 +8,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `verify` reads ASiC containers (`.asics`, `.asice`, `.scs`, `.sce`; ETSI
+  EN 319 162-1).
+  - The container is unpacked into a private directory. Entries whose
+    names leave it, entries over 512 MiB, and ZIPs whose mimetype is not
+    ASiC are refused.
+  - Each signature under `META-INF` gets a report:
+    - CAdES `signature*.p7s` over the one document of an ASiC-S, or over the
+      `ASiCManifest` that names it, whose digests must match the files;
+    - XAdES `signatures*.xml` with its references resolved from the
+      container's root.
+  - New findings: `container.covers` lists the files a signature covers;
+    `container.unsigned_files` (warn) names the files no signature covers.
+  - Judged against containers built with zip, OpenSSL and xmlsec1
+    (tests/verification/asic/testdata/PROVENANCE.md). A changed or missing
+    file, an added file, a missing manifest, an entry outside the
+    container, an OpenDocument ZIP and a container without signatures are
+    each told apart.
+  - `signature.unverifiable` gets its Spanish and Italian text, missing
+    since it was added.
+
 - Plain XMLDSig.
   - `sign --format xmldsig`, and afirma:// `XMLDSig`, `XMLDSig Enveloped`,
     `XMLDSig Enveloping`, `XMLDSig Detached` (enveloping by default, as

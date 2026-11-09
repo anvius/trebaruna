@@ -68,6 +68,7 @@ type VerifyDocument struct {
 	pdf   DocumentExtractor
 	cades DocumentExtractor
 	xades DocumentExtractor
+	asic  DocumentExtractor
 	trust TrustProvider
 	clock Clock
 	// revocation is nil until the caller asks for a network check.
@@ -83,6 +84,12 @@ func NewVerifyDocument(pdf, cades DocumentExtractor, trust TrustProvider, clock 
 // checks PDFs does not need a XAdES implementation.
 func (u *VerifyDocument) WithXades(xades DocumentExtractor) *VerifyDocument {
 	u.xades = xades
+	return u
+}
+
+// WithAsic attaches the container verifier (ASiC-S, ASiC-E).
+func (u *VerifyDocument) WithAsic(asic DocumentExtractor) *VerifyDocument {
+	u.asic = asic
 	return u
 }
 
@@ -202,6 +209,8 @@ func (u *VerifyDocument) extractorFor(format string) DocumentExtractor {
 		return u.cades
 	case "xades":
 		return u.xades
+	case "asic":
+		return u.asic
 	}
 	return nil
 }
@@ -546,6 +555,8 @@ func detectFormat(path, explicit string) string {
 		return "pdf"
 	case hasSuffix(path, ".xml"), hasSuffix(path, ".xsig"):
 		return "xades"
+	case hasSuffix(path, ".asics"), hasSuffix(path, ".asice"), hasSuffix(path, ".scs"), hasSuffix(path, ".sce"):
+		return "asic"
 	}
 	return "unknown"
 }

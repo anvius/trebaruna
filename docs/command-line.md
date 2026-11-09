@@ -252,7 +252,8 @@ trebaruna verify <document> [flags]
 
 ### Recognised suffixes
 
-`.pdf` → PAdES · `.p7m`, `.p7s` → CAdES · `.xml`, `.xsig` → XAdES
+`.pdf` → PAdES · `.p7m`, `.p7s` → CAdES · `.xml`, `.xsig` → XAdES ·
+`.asics`, `.asice`, `.scs`, `.sce` → ASiC container
 
 Anything else needs `--format`.
 

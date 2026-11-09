@@ -50,7 +50,7 @@ user seeing what is signed and where anything goes.
 | XAdES detached: `<document>.xsig` beside the untouched document, which the signature names; verify finds it there or takes `--content` | built |
 | AutoFirma's "XAdES Detached" (an `AFIRMA` root holding `CONTENT` and the signature) for afirma:// pages | built |
 | Plain XMLDSig (`--format xmldsig`, afirma:// `XMLDSig…`): the same layouts without signed properties, level B only, no policy; verify names it XMLDSig | built |
-| ASiC-S / ASiC-E signed in one step | planned (E3) |
+| ASiC-S / ASiC-E signed in one step | planned (E3b, E3c) |
 | Handwritten-signature image next to the certificate data (ADR-0012) | planned (G3) |
 | ODF and OOXML signatures (ADR-0015) | planned (G1, G2) |
 
@@ -84,6 +84,8 @@ user seeing what is signed and where anything goes.
 | Verdicts: qualified, advanced, untrusted, invalid, broken, unknown — words and exit codes stable | built |
 | Detached signatures with their document; CAdES signature trees checked node by node | built |
 | Extract the signed document from `.p7m` (nested, DER/BER/PEM/Base64); ASiC through `asic --extract` | built |
+| XML signatures checked completely: every reference (document, signed properties, objects), every signature of a document; what cannot be checked is unknown, not broken | built |
+| ASiC-S and ASiC-E containers: each CAdES (over the document, or over its signed `ASiCManifest` whose digests must match) or XAdES signature against the files it covers; files no signature covers are reported | built |
 | Exportable report | planned (F2) |
 
 ### Encrypt

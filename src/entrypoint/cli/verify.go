@@ -32,7 +32,7 @@ func runVerify(args []string, stdout, stderr io.Writer) int {
 	flags.SetOutput(stderr)
 
 	var (
-		format    = flags.String("format", "", "container: pdf | cades | xades (default: from the suffix)")
+		format    = flags.String("format", "", "container: pdf | cades | xades | asic (default: from the suffix)")
 		territory = flags.String("territory", defaultTerritory(), "trust list to use, e.g. IT or ES")
 		asJSON    = flags.Bool("json", false, "machine-readable output")
 		offline   = flags.Bool("offline", true, "do not contact OCSP/CRL responders")
@@ -65,7 +65,8 @@ func runVerify(args []string, stdout, stderr io.Writer) int {
 		verificationinfra.NewCadesVerifier(),
 		verificationinfra.NewCachedTrustProvider(),
 		systemClock{},
-	).WithXades(verificationinfra.NewXadesVerifier())
+	).WithXades(verificationinfra.NewXadesVerifier()).
+		WithAsic(verificationinfra.NewAsicVerifier(verificationinfra.NewCadesVerifier(), verificationinfra.NewXadesVerifier()))
 
 	if !*offline {
 		// Our own checker replaces the library's: it distinguishes an answered

@@ -57,6 +57,18 @@ trebaruna does not implement (an XPath expression other than the
 in older files, are checked. A document with several signatures (co-signed,
 or counter-signed inside) gets one report per signature.
 
+An ASiC container (`.asics`, `.asice`, ETSI EN 319 162-1) is unpacked into a
+private directory, refusing entries whose names leave it or that exceed
+512 MiB, and each signature under `META-INF` is judged against the files it
+covers:
+- a CAdES `signature*.p7s` against the one document of an ASiC-S, or against
+  the `ASiCManifest` that names it, whose digests must match the files;
+- a XAdES `signatures*.xml`, its references resolved from the container's
+  root.
+
+Files no signature covers are reported as `container.unsigned_files`: a
+document added to a signed container is not signed.
+
 If integrity is bad, nothing else matters. A tampered document with an otherwise
 perfect certificate is worthless.
 
@@ -98,6 +110,8 @@ signature. One made in 2022 with a certificate that expired in 2020 is not.
 | `signature.modified` | bad | The document changed after signing |
 | `signature.unverifiable` | unknown | The signature uses an algorithm or transform trebaruna does not check |
 | `content.missing` | unknown | A detached signature without the document it signs |
+| `container.covers` | good | The files of an ASiC container a signature covers |
+| `container.unsigned_files` | warn | Files of the container no signature covers: they are not signed, whatever else the container says |
 | `signature.not_qualified` | warn | A valid advanced signature that is not a QES |
 | `signature.qualified` | good | The QES conditions all held |
 

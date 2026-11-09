@@ -75,6 +75,9 @@ var Spanish = Catalogue{
 		"signature.intact":                       "el contenido firmado no se ha modificado",
 		"content.detached":                       "firma separada: comprobada con el documento que tiene al lado",
 		"content.missing":                        "firma separada: hace falta el documento firmado para comparar sus bytes (ponlo al lado de la firma: el mismo nombre sin .p7s, o el que nombra la firma XML; o indícalo con --content)",
+		"signature.unverifiable":                 "la firma usa algo que trebaruna no sabe comprobar (no es lo mismo que alterada)",
+		"container.covers":                       "la firma cubre estos archivos del contenedor",
+		"container.unsigned_files":               "el contenedor lleva archivos que ninguna firma cubre",
 		"signature.modified":                     "el documento cambió después de firmarse",
 		"certificate.trusted":                    "el emisor es una autoridad reconocida",
 		"certificate.untrusted_issuer":           "el emisor no está en ninguna lista de confianza",
@@ -132,6 +135,9 @@ var Italian = Catalogue{
 		"signature.intact":                       "il contenuto firmato non è stato modificato",
 		"content.detached":                       "firma separata: verificata con il documento che le sta accanto",
 		"content.missing":                        "firma separata: serve il documento firmato per confrontarne i byte (mettilo accanto alla firma: lo stesso nome senza .p7s, o quello che la firma XML indica; oppure indicalo con --content)",
+		"signature.unverifiable":                 "la firma usa qualcosa che trebaruna non sa verificare (non vuol dire alterata)",
+		"container.covers":                       "la firma copre questi file del contenitore",
+		"container.unsigned_files":               "il contenitore contiene file che nessuna firma copre",
 		"signature.modified":                     "il documento è cambiato dopo la firma",
 		"certificate.trusted":                    "l'emittente è un'autorità riconosciuta",
 		"certificate.untrusted_issuer":           "l'emittente non è in alcun elenco di fiducia",
@@ -189,6 +195,9 @@ var English = Catalogue{
 		"signature.intact":                       "the signed content is unaltered",
 		"content.detached":                       "detached signature: checked against the document beside it",
 		"content.missing":                        "detached signature: the signed document is needed to compare its bytes (put it beside the signature: the same name without .p7s, or the name an XML signature gives; or name it with --content)",
+		"signature.unverifiable":                 "the signature uses something trebaruna cannot check (not the same as altered)",
+		"container.covers":                       "the signature covers these files of the container",
+		"container.unsigned_files":               "the container holds files no signature covers",
 		"signature.modified":                     "the document changed after it was signed",
 		"certificate.trusted":                    "the issuer is a recognised authority",
 		"certificate.untrusted_issuer":           "the issuer is not in any trust list",
@@ -284,6 +293,7 @@ func init() {
 		"timestamp.not_timestamping_certificate", "trustlist.unavailable",
 		"trustlist.stale", "format.unsupported", "verification.warning",
 		"signature.qualified", "signature.not_qualified",
+		"signature.unverifiable", "container.covers", "container.unsigned_files",
 	}
 
 	for name, catalogue := range map[string]Catalogue{

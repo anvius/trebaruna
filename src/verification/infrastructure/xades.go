@@ -45,6 +45,16 @@ type XadesVerifier struct {
 	// person names it; otherwise the file the reference names is looked for
 	// beside the signature.
 	contentPath string
+	// containerRoot, inside an ASiC container, is where references resolve:
+	// paths relative to the container's root, folders included, never out.
+	containerRoot string
+}
+
+// inContainer resolves references from the root of an unpacked container.
+func (v *XadesVerifier) inContainer(root string) *XadesVerifier {
+	clone := *v
+	clone.containerRoot = root
+	return &clone
 }
 
 // WithContent checks a detached signature against the document at path.
@@ -138,14 +148,14 @@ func (v *XadesVerifier) report(document *etree.Document, signature *etree.Elemen
 	// with a properly issued certificate would read as untrusted.
 	embedded := extractCertificates(signature)
 
-	var used string
+	var used []string
 	err := validate(document, signature, certificate, v.beside(path, &used))
-	if used != "" {
+	if len(used) > 0 {
 		report.Findings = append(report.Findings, domain.Finding{
 			Code:    "content.detached",
 			Status:  domain.StatusGood,
 			Message: "detached signature checked against the document beside it",
-			Detail:  used,
+			Detail:  strings.Join(used, ", "),
 		})
 	}
 	describeIntegrity(err, &report)
@@ -374,11 +384,20 @@ func validate(document *etree.Document, signature *etree.Element, certificate *x
 // beside resolves a detached reference: the document the person named, or
 // the file the reference names in the signature's own directory. Only a
 // plain file name is followed: no directories, no "..", no address, which
-// is never fetched. used receives the file that was read.
-func (v *XadesVerifier) beside(signaturePath string, used *string) xmldsig.Resolver {
+// is never fetched. Inside a container the name is a path from its root.
+// used receives each file that was read.
+func (v *XadesVerifier) beside(signaturePath string, used *[]string) xmldsig.Resolver {
 	return func(uri string) ([]byte, error) {
 		path := v.contentPath
-		if path == "" {
+		switch {
+		case path != "":
+		case v.containerRoot != "":
+			name, inside := containerPath(uri)
+			if !inside {
+				return nil, fmt.Errorf("%w: %s is not a file of the container", xmldsig.ErrContentMissing, uri)
+			}
+			path = filepath.Join(v.containerRoot, filepath.FromSlash(name))
+		default:
 			name, err := url.PathUnescape(uri)
 			if err != nil || name == "" || name == "." || name == ".." || strings.ContainsAny(name, `/\:`) {
 				return nil, fmt.Errorf("%w: %s is not a file beside the signature", xmldsig.ErrContentMissing, uri)
@@ -392,7 +411,7 @@ func (v *XadesVerifier) beside(signaturePath string, used *string) xmldsig.Resol
 		if err != nil {
 			return nil, fmt.Errorf("%w: %v", xmldsig.ErrContentMissing, err)
 		}
-		*used = path
+		*used = append(*used, path)
 		return content, nil
 	}
 }
