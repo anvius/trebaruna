@@ -190,6 +190,43 @@ counter-sign. Envelopes co-signed by other tools (for example
 
 ---
 
+## Signature policies (EPES)
+
+Some recipients require a signature to name the rules it was made under: the
+Spanish General State Administration (AGE) and FacturaE electronic invoices
+do. The signature then carries the policy's identifier and the digest of its
+document, and a validator compares that digest with the policy it knows.
+
+| Policy | Flag | Formats | Identifier |
+|---|---|---|---|
+| AGE 1.9 | `--policy age` | CAdES, XAdES | OID 2.16.724.1.3.1.1.2.1.9 |
+| AGE 1.8 | `--policy age18` | CAdES, XAdES | OID 2.16.724.1.3.1.1.2.1.8 (a different digest for each format) |
+| FacturaE 3.1 | `--policy facturae` | XAdES enveloped, FacturaE invoices | the policy's URL |
+| FacturaE 3.0 | `--policy facturae30` | XAdES enveloped, FacturaE invoices | the policy's URL |
+| Any other | `--policy-id`, `--policy-hash`, `--policy-hash-alg`, `--policy-qualifier` | CAdES, XAdES (a URL only in XAdES) | as given |
+
+The digests are AutoFirma 1.9's. The AGE 1.9 digest equals the SHA-1 of the
+document at its address today (checked on 2026-11-09). The FacturaE 3.1
+digest is the one validators expect: the PDF at that address was re-issued
+later and hashes differently, so recomputing it would produce signatures
+validators reject. trebaruna never downloads a policy.
+
+A FacturaE policy signs only an XML whose root is `Facturae` and that carries
+no signature yet, always enveloped, and claims the role `emisor` unless
+`--role` names another of the policy's roles (`receptor`, `tercero`).
+
+```bash
+trebaruna sign factura.xml --policy facturae --p12 k.p12
+trebaruna sign factura.xml --policy facturae --role receptor --p12 k.p12
+trebaruna sign solicitud.txt --format cades --policy age --p12 k.p12
+```
+
+PAdES refuses a policy for now: the PDF library writes the signed attributes
+itself and cannot add this one. FacturaE signatures have been checked with
+openssl and signxml, not yet with the Spanish administration's own validator.
+
+---
+
 ## Chained signatures
 
 Signing an already-signed PDF adds an **incremental update**: the earlier bytes

@@ -10,6 +10,7 @@ import (
 	"crypto/x509"
 	"encoding/asn1"
 	"encoding/base64"
+	"encoding/xml"
 	"fmt"
 	"math/big"
 	"strings"
@@ -105,6 +106,7 @@ func (s *XadesSigner) SignXades(ctx context.Context, request application.XadesRe
 		base64.StdEncoding.EncodeToString(certificateDigest[:]),
 		time.Now().UTC().Format(time.RFC3339),
 		request.Enveloping,
+		policyProperties(request.Policy)+roleProperties(request.ClaimedRoles),
 	)
 	signedInfo := buildSignedInfo(
 		placeholderDigest, placeholderDigest,
@@ -350,7 +352,7 @@ func xmldsigECDSA(key *ecdsa.PublicKey, der []byte) ([]byte, error) {
 // requires it, and validators such as the EU DSS check for it. An enveloped
 // signature signs the XML it sits in; an enveloping one carries the file as
 // base64 inside its own Object.
-func buildSignedProperties(certificateDigest, signingTime string, enveloping bool) string {
+func buildSignedProperties(certificateDigest, signingTime string, enveloping bool, declarations string) string {
 	format := `<xades:MimeType>text/xml</xades:MimeType>`
 	if enveloping {
 		format = `<xades:MimeType>application/octet-stream</xades:MimeType>` +
@@ -368,12 +370,63 @@ func buildSignedProperties(certificateDigest, signingTime string, enveloping boo
 		`</xades:CertDigest>` +
 		`</xades:Cert>` +
 		`</xades:SigningCertificateV2>` +
+		declarations +
 		`</xades:SignedSignatureProperties>` +
 		`<xades:SignedDataObjectProperties>` +
 		`<xades:DataObjectFormat ObjectReference="#` + documentReferenceID + `">` + format +
 		`</xades:DataObjectFormat>` +
 		`</xades:SignedDataObjectProperties>` +
 		`</xades:SignedProperties>`
+}
+
+// xmlDigestAlgorithms are the XMLDSig URIs of the policy digests.
+var xmlDigestAlgorithms = map[string]string{
+	"SHA1":   "http://www.w3.org/2000/09/xmldsig#sha1",
+	"SHA256": algorithmSHA256,
+	"SHA384": "http://www.w3.org/2001/04/xmldsig-more#sha384",
+	"SHA512": "http://www.w3.org/2001/04/xmlenc#sha512",
+}
+
+// policyProperties writes SignaturePolicyIdentifier (EN 319 132-1, 5.2.9):
+// an OID as "urn:oid:" qualified OIDAsURN, as AutoFirma writes it; a URL as it
+// is (FacturaE's).
+func policyProperties(policy domain.SignaturePolicy) string {
+	if policy.IsZero() {
+		return ""
+	}
+	identifier := `<xades:Identifier>` + xmlEscape(policy.Identifier()) + `</xades:Identifier>`
+	if _, isOID := policy.OID(); isOID {
+		identifier = `<xades:Identifier Qualifier="OIDAsURN">urn:oid:` + policy.Identifier() + `</xades:Identifier>`
+	}
+	qualifiers := ""
+	if policy.Qualifier() != "" {
+		qualifiers = `<xades:SigPolicyQualifiers><xades:SigPolicyQualifier><xades:SPURI>` + xmlEscape(policy.Qualifier()) +
+			`</xades:SPURI></xades:SigPolicyQualifier></xades:SigPolicyQualifiers>`
+	}
+	return `<xades:SignaturePolicyIdentifier><xades:SignaturePolicyId>` +
+		`<xades:SigPolicyId>` + identifier + `</xades:SigPolicyId>` +
+		`<xades:SigPolicyHash><ds:DigestMethod Algorithm="` + xmlDigestAlgorithms[policy.HashAlgorithm()] + `"/>` +
+		`<ds:DigestValue>` + base64.StdEncoding.EncodeToString(policy.Hash()) + `</ds:DigestValue></xades:SigPolicyHash>` +
+		qualifiers + `</xades:SignaturePolicyId></xades:SignaturePolicyIdentifier>`
+}
+
+// roleProperties writes the roles the signer claims (SignerRoleV2).
+func roleProperties(roles []string) string {
+	if len(roles) == 0 {
+		return ""
+	}
+	claimed := ""
+	for _, role := range roles {
+		claimed += `<xades:ClaimedRole>` + xmlEscape(role) + `</xades:ClaimedRole>`
+	}
+	return `<xades:SignerRoleV2><xades:ClaimedRoles>` + claimed + `</xades:ClaimedRoles></xades:SignerRoleV2>`
+}
+
+// xmlEscape escapes text for an element's content.
+func xmlEscape(text string) string {
+	var builder strings.Builder
+	_ = xml.EscapeText(&builder, []byte(text))
+	return builder.String()
 }
 
 // buildSignedInfo emits ds:SignedInfo with the two required references.

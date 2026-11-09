@@ -64,6 +64,8 @@ type CadesRequest struct {
 	// EmbedRevocation asks for CAdES-LT: revocation material attached beside the
 	// signature. It needs a live status source, so it is opt-in.
 	EmbedRevocation bool
+	// Policy is the signature policy declared in the signed attributes.
+	Policy domain.SignaturePolicy
 }
 
 // PadesSigner produces a signed PDF.
@@ -92,6 +94,8 @@ type PadesRequest struct {
 	// EmbedRevocation asks for a /DSS dictionary. It needs a live status source,
 	// so it is opt-in: signing must not reach the network unasked.
 	EmbedRevocation bool
+	// Policy is the signature policy declared in the signed attributes.
+	Policy domain.SignaturePolicy
 }
 
 // XadesSigner produces a signed XML document.
@@ -111,6 +115,10 @@ type XadesRequest struct {
 	// EmbedRevocation asks for XAdES-LT: revocation material inside the
 	// signature. It needs a live status source, so it is opt-in.
 	EmbedRevocation bool
+	// Policy is the signature policy declared in the signed properties.
+	Policy domain.SignaturePolicy
+	// ClaimedRoles are the roles the signer claims (SignerRoleV2).
+	ClaimedRoles []string
 }
 
 // FileStore writes the produced artefact.

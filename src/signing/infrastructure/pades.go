@@ -65,6 +65,12 @@ func (s *PadesSigner) SignPades(ctx context.Context, request application.PadesRe
 	}
 	defer keyPair.Close()
 
+	// The PDF library's builder cannot add signed attributes, which is where
+	// a policy goes; refusing beats signing without the policy asked for.
+	if !request.Policy.IsZero() {
+		return nil, fmt.Errorf("%w: PAdES signatures with a policy are not supported yet", domain.ErrPolicyNotForFormat)
+	}
+
 	document, err := pdfsign.Open(bytes.NewReader(request.Content), int64(len(request.Content)))
 	if err != nil {
 		return nil, fmt.Errorf("open PDF: %w", err)

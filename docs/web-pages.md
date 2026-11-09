@@ -264,10 +264,23 @@ post-signer's result goes back to the page; the person is shown every document
 of the batch first. A local batch (`localBatchProcess`) is signed document by
 document here. Formats: CAdES (implicit or explicit, co- and counter-signatures),
 PAdES (invisible unless the page places the seal), XAdES enveloped and
-enveloping. Asked for something not done yet — signature policies, XAdES
-Detached, FacturaE, ASiC, a digest the page computed, single signatures through
-the site's server (`CAdEStri` and siblings) — trebaruna
-answers with an AutoFirma error naming it, never with a different signature.
+enveloping, and FacturaE (named, or recognised by `auto`: the invoice signed
+enveloped with FacturaE 3.1, or the 3.0/3.1 policy the page gives exactly, and
+the role in `signerClaimedRoles`, `emisor` by default; an invoice already
+signed is refused with `SAF_38`, never signed again as plain XAdES). Signature policies are
+read as AutoFirma 1.9 reads them: `expPolicy=FirmaAGE` or `FirmaAGE18` expands
+to the AGE policy and fixes the packaging as AutoFirma does (CAdES implicit
+below 1 MiB unless `mode` says otherwise, XAdES detached unless the page asked
+for enveloped), `FirmaAGE19` and anything else is `SAF_23`; `policyIdentifier`
+with `policyIdentifierHash`, `policyIdentifierHashAlgorithm` and
+`policyQualifier` declares any other. AutoFirma downloads the policy when the
+page gives no digest; trebaruna answers `SAF_23` instead, because it does not
+fetch what a page points at. XAdES signatures claim the roles in
+`signerClaimedRoles` (several separated by `|`). Asked for something not done
+yet — a policy in PAdES, XAdES Detached (so `FirmaAGE` with XAdES unless the
+page asked for enveloped), ASiC, a digest the page computed, single signatures
+through the site's server (`CAdEStri` and siblings) — trebaruna answers with an
+AutoFirma error naming it, never with a different signature.
 
 ## What is missing
 

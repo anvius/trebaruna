@@ -121,6 +121,12 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 		cosign     = flags.Bool("cosign", false, "add a parallel signature to the .p7m/.p7s given as document")
 		counter    = flags.String("countersign", "", "counter-sign the envelope's signatures: leaves | all")
 		signedDoc  = flags.String("content", "", "the document a detached .p7s signs, to co-sign it")
+		policyName = flags.String("policy", "", "signature policy (EPES): age | age18 | facturae | facturae30")
+		policyID   = flags.String("policy-id", "", "a policy by its parts: identifier (OID or URL)")
+		policyHash = flags.String("policy-hash", "", "the policy document's digest, Base64")
+		policyAlg  = flags.String("policy-hash-alg", "SHA1", "the digest algorithm of --policy-hash")
+		policyURI  = flags.String("policy-qualifier", "", "the policy document's URL")
+		role       = flags.String("role", "", "role the signer claims in XAdES (FacturaE: emisor, receptor, tercero)")
 		asJSON     = flags.Bool("json", false, "machine-readable output")
 	)
 
@@ -199,7 +205,17 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 				return application.Artefact{}, err
 			}
 		}
+		policy, err := policyFor(*policyName, *policyID, *policyAlg, *policyHash, *policyURI, signatureFormat)
+		if err != nil {
+			return application.Artefact{}, err
+		}
+		var claimedRoles []string
+		if *role != "" {
+			claimedRoles = []string{*role}
+		}
 		artefact, err := useCase.Execute(context.Background(), application.Request{
+			Policy:          policy,
+			ClaimedRoles:    claimedRoles,
 			Document:        document,
 			Format:          signatureFormat,
 			Level:           signatureLevel,
@@ -258,7 +274,8 @@ func extractDocument(args []string) (documentPath string, remaining []string, er
 // signValueFlags are the sign flags that take a value, so the documents can
 // be told apart from flag values wherever the flags appear.
 var signValueFlags = valueFlagsWith("format", "level", "lang", "territory", "out", "name",
-	"reason", "location", "tsa", "tsa-user", "tsa-pass", "page", "box", "content", "countersign")
+	"reason", "location", "tsa", "tsa-user", "tsa-pass", "page", "box", "content", "countersign",
+	"policy", "policy-id", "policy-hash", "policy-hash-alg", "policy-qualifier", "role")
 
 // splitSignArguments separates the documents from the flags of `sign`.
 func splitSignArguments(args []string) (positional, remaining []string) {
@@ -481,6 +498,8 @@ flags:
   --module   PKCS#11 module                                 default: OpenSC
   --firefox  a certificate of the Firefox store, used in place
   --nss-db   a certificate of this NSS store directory
+  --policy   signature policy: age | age18 | facturae | facturae30
+  --role     role claimed in XAdES (FacturaE: emisor by default)
   --pass     passphrase for the P12 or PEM
   --pin      PIN for the token (better: $TREBARUNA_PIN, kept off the command line)
   --tsa      RFC 3161 timestamp authority URL
@@ -543,6 +562,19 @@ func cardModule(module string, store storeOptions) (string, string, error) {
 		return "", "", err
 	}
 	return nss, resolved.Parameters(), nil
+}
+
+// policyFor reads the policy flags: a known name, or the parts.
+func policyFor(name, identifier, algorithm, hash, qualifier string, format domain.Format) (domain.SignaturePolicy, error) {
+	switch {
+	case name != "" && identifier != "":
+		return domain.SignaturePolicy{}, errors.New("use --policy or --policy-id, not both")
+	case name != "":
+		return domain.NamedPolicy(name, format)
+	case identifier != "":
+		return domain.NewSignaturePolicy(identifier, algorithm, hash, qualifier)
+	}
+	return domain.SignaturePolicy{}, nil
 }
 
 // moduleOrOpenSC returns the PKCS#11 module given, or the OpenSC module

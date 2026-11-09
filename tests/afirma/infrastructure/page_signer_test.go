@@ -172,12 +172,10 @@ func TestWhatTrebarunaDoesNotDoYetIsRefusedByName(t *testing.T) {
 		data       []byte
 		want       domain.FailureCode
 	}{
-		{"CAdES", map[string]string{"expPolicy": "FirmaAGE"}, []byte("x"), domain.UnsupportedOperation},
 		{"CAdES", map[string]string{"precalculatedHashAlgorithm": "SHA-256"}, []byte("x"), domain.UnsupportedOperation},
 		{"XAdES Detached", map[string]string{}, []byte("<a/>"), domain.UnsupportedFormat},
 		{"XAdES", map[string]string{}, []byte("not xml"), domain.InvalidXML},
 		{"PAdES", map[string]string{}, []byte("not a pdf"), domain.InvalidPDF},
-		{"FacturaE", map[string]string{}, []byte("<Facturae/>"), domain.UnsupportedFormat},
 		{"CAdES-ASiC-S", map[string]string{}, []byte("x"), domain.UnsupportedFormat},
 	}
 	for _, entry := range cases {

@@ -8,6 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Signature policies (EPES): `sign --policy age|age18|facturae|facturae30`
+  declares AutoFirma 1.9's AGE and FacturaE policies with its digests, and
+  `--policy-id`, `--policy-hash`, `--policy-hash-alg`, `--policy-qualifier`
+  any other (the digest's length must match its algorithm; nothing is
+  downloaded). CAdES carries the `sigPolicyId` signed attribute, in new and
+  added signatures; XAdES carries `SignaturePolicyIdentifier` after
+  `SigningCertificateV2`, an OID as `urn:oid:` qualified `OIDAsURN`, a URL as
+  it is. PAdES refuses a policy until its signed attributes can be written.
+  `--role` claims a role in XAdES (`SignerRoleV2`). FacturaE invoices: a
+  FacturaE policy signs only unsigned `Facturae` documents, XAdES enveloped,
+  with role `emisor` by default and only the policy's roles. afirma:// pages
+  get the same: `expPolicy` (FirmaAGE, FirmaAGE18) expanded as AutoFirma
+  does, `policyIdentifier` with its digest (`SAF_23` without one),
+  `format=FacturaE` and `auto` on an invoice (a signed one is refused with
+  `SAF_38`, not signed again as plain XAdES), `signerClaimedRoles` (several
+  separated by `|`). Verified with openssl (`cms -verify -cades`,
+  `cms -print`) and signxml's XAdES verifier, which checks the policy digest.
+
 - afirma:// handler registration: the desktop entry declares
   `x-scheme-handler/afirma` and the macOS bundle the `afirma` scheme, so
   trebaruna is offered for AutoFirma's links without taking them over;

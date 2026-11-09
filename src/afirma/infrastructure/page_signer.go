@@ -39,8 +39,6 @@ func NewNativePageSigner() NativePageSigner {
 // trebaruna does not honour yet; signing without them would hand the page a
 // signature it did not ask for.
 var unsupportedProperties = map[string]string{
-	"expPolicy":                  "signature policies (plan E1)",
-	"policyIdentifier":           "signature policies (plan E1)",
 	"precalculatedHashAlgorithm": "signing a digest the page computed",
 	"useManifest":                "XAdES manifests",
 }
@@ -55,25 +53,29 @@ func (s NativePageSigner) Sign(ctx context.Context, request application.PageSign
 	family := request.Format.Family
 	if request.Format.Auto() {
 		family = detectFamily(request.Crypto, request.Data)
+		request.Format.Family = family
 	}
 	level, tsa := signing.BES, request.Properties["tsaURL"]
 	if tsa != "" {
 		level = signing.T
 	}
+	request, policy, err := withPolicy(request, family)
+	if err != nil {
+		return application.Signed{}, err
+	}
 
 	var signature []byte
-	var err error
 	switch {
 	case request.Format.Packaging == "asic-s":
 		return application.Signed{}, domain.Failure{Code: domain.UnsupportedFormat, Cause: "ASiC-S is not supported yet"}
 	case family == "cades":
-		signature, err = s.signCades(ctx, request, level, tsa)
+		signature, err = s.signCades(ctx, request, level, tsa, policy)
+	case family == "pades" && !policy.IsZero():
+		return application.Signed{}, domain.Failure{Code: domain.UnsupportedOperation, Cause: "PAdES signatures with a policy are not supported yet"}
 	case family == "pades":
 		signature, err = s.signPades(ctx, request, level, tsa)
-	case family == "xades":
-		signature, err = s.signXades(ctx, request, level, tsa)
-	case family == "facturae":
-		return application.Signed{}, domain.Failure{Code: domain.UnsupportedFormat, Cause: "FacturaE is not supported yet"}
+	case family == "xades", family == "facturae":
+		signature, err = s.signXades(ctx, request, level, tsa, policy)
 	default:
 		return application.Signed{}, domain.Failure{Code: domain.UnknownSigner}
 	}
@@ -87,13 +89,16 @@ func (s NativePageSigner) Sign(ctx context.Context, request application.PageSign
 	return application.Signed{Certificate: certificate, Signature: signature}, nil
 }
 
-// detectFamily applies auto (A.9): PDF → PAdES, XML → XAdES, anything else
-// CAdES; for co- and counter-signatures, the input signature decides.
+// detectFamily applies auto (A.9): PDF → PAdES, a FacturaE invoice →
+// FacturaE, other XML → XAdES, anything else CAdES; for co- and
+// counter-signatures, the input signature decides.
 func detectFamily(crypto domain.Operation, data []byte) string {
 	trimmed := bytes.TrimSpace(data)
 	switch {
 	case bytes.HasPrefix(data, []byte("%PDF")):
 		return "pades"
+	case crypto == domain.Sign && signing.IsFacturaEInvoice(data):
+		return "facturae"
 	case crypto == domain.Sign && bytes.HasPrefix(trimmed, []byte("<")):
 		return "xades"
 	case crypto == domain.Sign:
@@ -106,11 +111,12 @@ func detectFamily(crypto domain.Operation, data []byte) string {
 
 // signCades signs, co-signs or counter-signs CMS; mode=explicit leaves the
 // data out of the signature.
-func (s NativePageSigner) signCades(ctx context.Context, request application.PageSignature, level signing.Level, tsa string) ([]byte, error) {
+func (s NativePageSigner) signCades(ctx context.Context, request application.PageSignature, level signing.Level, tsa string,
+	policy signing.SignaturePolicy) ([]byte, error) {
 	if request.Crypto != domain.Sign && !isCMS(request.Data) {
 		return nil, domain.Failure{Code: domain.NoSignData}
 	}
-	cades := signapp.CadesRequest{Content: request.Data, Signer: request.Key, Level: level, TimestampURL: tsa}
+	cades := signapp.CadesRequest{Content: request.Data, Signer: request.Key, Level: level, TimestampURL: tsa, Policy: policy}
 	switch request.Crypto {
 	case domain.Sign:
 		cades.Detached = strings.EqualFold(request.Properties["mode"], "explicit")
@@ -184,17 +190,15 @@ func sealFrom(properties map[string]string) (signing.SealPlacement, bool, error)
 	return placement, true, nil
 }
 
-// signXades signs XML enveloped, or anything enveloping.
-func (s NativePageSigner) signXades(ctx context.Context, request application.PageSignature, level signing.Level, tsa string) ([]byte, error) {
+// signXades signs XML enveloped, or anything enveloping; a FacturaE invoice
+// always enveloped, claiming the issuer's role unless the page names another.
+func (s NativePageSigner) signXades(ctx context.Context, request application.PageSignature, level signing.Level, tsa string,
+	policy signing.SignaturePolicy) ([]byte, error) {
 	if request.Crypto != domain.Sign {
 		return nil, domain.Failure{Code: domain.UnsupportedOperation, Cause: "XAdES co- and counter-signatures are not supported yet"}
 	}
-	packaging := request.Format.Packaging
-	if packaging == "" {
-		packaging = strings.TrimPrefix(strings.ToLower(request.Properties["format"]), "xades ")
-	}
 	enveloping := false
-	switch packaging {
+	switch xadesPackaging(request) {
 	case "enveloping":
 		enveloping = true
 	case "detached":
@@ -204,12 +208,45 @@ func (s NativePageSigner) signXades(ctx context.Context, request application.Pag
 			return nil, domain.Failure{Code: domain.InvalidXML}
 		}
 	}
+	roles := claimedRoles(request.Properties)
+	if policy.IsFacturaE() {
+		if err := policy.AcceptsInvoice(request.Data); err != nil {
+			return nil, domain.Failure{Code: domain.InvalidFacturaE, Cause: err.Error()}
+		}
+		var err error
+		if roles, err = signing.FacturaERoles(roles); err != nil {
+			return nil, domain.Failure{Code: domain.InvalidPolicy, Cause: err.Error()}
+		}
+	}
 	signature, err := s.xades.SignXades(ctx, signapp.XadesRequest{Content: request.Data, Signer: request.Key, Level: level,
-		Enveloping: enveloping, TimestampURL: tsa})
+		Enveloping: enveloping, TimestampURL: tsa, Policy: policy, ClaimedRoles: roles})
 	if err != nil {
 		return nil, domain.Failure{Code: domain.SignatureFailed, Cause: err.Error()}
 	}
 	return signature, nil
+}
+
+// xadesPackaging is the XAdES variant asked for: in the format's name
+// ("XAdES Enveloping") or in the format property; FacturaE is enveloped.
+func xadesPackaging(request application.PageSignature) string {
+	if request.Format.Family == "facturae" {
+		return "enveloped"
+	}
+	if request.Format.Packaging != "" {
+		return request.Format.Packaging
+	}
+	return strings.TrimPrefix(strings.ToLower(request.Properties["format"]), "xades ")
+}
+
+// claimedRoles reads signerClaimedRoles, several separated by "|".
+func claimedRoles(properties map[string]string) []string {
+	var roles []string
+	for _, role := range strings.Split(properties["signerClaimedRoles"], "|") {
+		if role = strings.TrimSpace(role); role != "" {
+			roles = append(roles, role)
+		}
+	}
+	return roles
 }
 
 // isCMS reports a DER (or BER) SEQUENCE, the start of every CMS envelope.

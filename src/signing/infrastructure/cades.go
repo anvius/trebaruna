@@ -42,6 +42,10 @@ func (s *CadesSigner) SignCades(ctx context.Context, request application.CadesRe
 		return s.addSignature(ctx, request, keyPair)
 	}
 
+	policy, err := policyAttributes(request.Policy)
+	if err != nil {
+		return nil, err
+	}
 	signature, err := cms.Sign(cms.Request{
 		Content:            request.Content,
 		Certificate:        keyPair.Certificate,
@@ -49,6 +53,7 @@ func (s *CadesSigner) SignCades(ctx context.Context, request application.CadesRe
 		Signer:             keyPair.Signer,
 		EmbeddedContent:    !request.Detached,
 		IncludeSigningTime: true,
+		ExtraAttributes:    policy,
 	})
 	if err != nil {
 		return nil, err
@@ -195,13 +200,34 @@ func (s *CadesSigner) withRevocationValues(
 var _ application.CadesSigner = (*CadesSigner)(nil)
 var _ = domain.Cades
 
+// policyAttributes is the signed attribute declaring the policy, if any.
+func policyAttributes(policy domain.SignaturePolicy) ([]cms.Attribute, error) {
+	if policy.IsZero() {
+		return nil, nil
+	}
+	oid, ok := policy.OID()
+	if !ok {
+		return nil, fmt.Errorf("%w: %s", domain.ErrPolicyNotForFormat, policy.Identifier())
+	}
+	attribute, err := cms.PolicyAttribute(oid, policy.HashAlgorithm(), policy.Hash(), policy.Qualifier())
+	if err != nil {
+		return nil, err
+	}
+	return []cms.Attribute{attribute}, nil
+}
+
 // addSignature co-signs or counter-signs the envelope in request.Content.
 func (s *CadesSigner) addSignature(ctx context.Context, request application.CadesRequest, keyPair KeyPair) ([]byte, error) {
+	policy, err := policyAttributes(request.Policy)
+	if err != nil {
+		return nil, err
+	}
 	cmsRequest := cms.Request{
 		Certificate:        keyPair.Certificate,
 		Chain:              keyPair.Chain,
 		Signer:             keyPair.Signer,
 		IncludeSigningTime: true,
+		ExtraAttributes:    policy,
 	}
 
 	var stamp cms.Stamper

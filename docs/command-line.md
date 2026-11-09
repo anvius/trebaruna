@@ -111,6 +111,12 @@ trebaruna sign <document> [flags]
 | `--cosign` | off | Add a parallel signature to the `.p7m`/`.p7s` given as document |
 | `--countersign` | — | Counter-sign the envelope's signatures: `leaves` or `all` |
 | `--content` | — | The document a detached `.p7s` signs, to co-sign it |
+| `--policy` | — | Signature policy (EPES) by name: `age` (AGE 1.9), `age18`, `facturae` (3.1), `facturae30` |
+| `--policy-id` | — | A policy by its parts: identifier, an OID (`urn:oid:` optional) or, for XAdES, a URL |
+| `--policy-hash` | — | Its document's digest, Base64; required with `--policy-id` |
+| `--policy-hash-alg` | `SHA1` | `SHA1`, `SHA-256`, `SHA-384`, `SHA-512` or the XMLDSig URI |
+| `--policy-qualifier` | — | URL of the policy document, written into the signature |
+| `--role` | — | Role the signer claims, XAdES only (`SignerRoleV2`); FacturaE: `emisor` unless given |
 | `--json` | off | Machine-readable result |
 
 #### Connections in the result
@@ -187,6 +193,14 @@ Any file wrapped in CMS:
 trebaruna sign backup.zip --format cades --pem bundle.pem
 ```
 
+A request to the Spanish administration under the AGE policy, and a FacturaE
+invoice (XAdES enveloped, FacturaE 3.1, role `emisor`):
+
+```bash
+trebaruna sign solicitud.pdf.p7m --format cades --policy age --p12 k.p12
+trebaruna sign factura.xml --policy facturae --p12 k.p12
+```
+
 Sign from a smartcard:
 
 ```bash
@@ -208,6 +222,14 @@ OpenSC is found on its own (`--module` for a vendor driver); see
   producing a file that no XML tool can open.
 - **A self-signed certificate is accepted** and flagged. The signature is real;
   the identity is unvouched.
+- **A policy is a promise, not a lookup.** The digest goes into the signature
+  as given or as AutoFirma 1.9 declares it for the named policies; trebaruna
+  never downloads a policy document. CAdES and XAdES carry policies; PAdES
+  refuses one for now. A policy named by a URL (FacturaE's) fits only XAdES.
+- **FacturaE policies sign FacturaE invoices only**: an XML whose root is
+  `Facturae`, not signed yet, XAdES enveloped. The role must be one the policy
+  names: `emisor`, `receptor`, `tercero` (or `supplier`, `customer`,
+  `third party`).
 
 ---
 

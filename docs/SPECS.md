@@ -42,7 +42,10 @@ user seeing what is signed and where anything goes.
 | Parallel signatures (co-signing) and counter-signatures on CAdES, levels B and T | built |
 | Parallel signatures and counter-signatures on XAdES | planned (B5) |
 | Several documents in one run, same settings, one result per document | built |
-| Signature policies (EPES): AGE, FacturaE; FacturaE invoices | planned (E1) |
+| Signature policies (EPES) in CAdES and XAdES: AGE 1.9 and 1.8, FacturaE 3.1 and 3.0 by name, with AutoFirma 1.9's digests; any other by identifier, digest and qualifier, never downloaded; a policy named by a URL only in XAdES | built |
+| Claimed roles in XAdES (`SignerRoleV2`) | built |
+| FacturaE invoices: unsigned `Facturae` documents, XAdES enveloped, FacturaE's policy, role `emisor` by default and only the policy's roles | built (not yet checked with the administration's own validator) |
+| Signature policies in PAdES | planned (the PDF library cannot add signed attributes; refused meanwhile) |
 | XAdES detached and plain XMLDSig | planned (E2) |
 | ASiC-S / ASiC-E signed in one step | planned (E3) |
 | Handwritten-signature image next to the certificate data (ADR-0012) | planned (G3) |

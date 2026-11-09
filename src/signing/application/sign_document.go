@@ -56,6 +56,12 @@ type Request struct {
 	Countersign string
 	// ContentPath is the document a detached envelope signs, to co-sign it.
 	ContentPath string
+	// Policy is the signature policy an EPES signature declares; zero for
+	// none.
+	Policy domain.SignaturePolicy
+	// ClaimedRoles are the roles the signer claims (XAdES SignerRoleV2),
+	// such as FacturaE's "emisor", its default.
+	ClaimedRoles []string
 	// SignedAt is the single instant used for both the stamp and the report, so
 	// the document and the JSON cannot disagree about when it was signed.
 	SignedAt        time.Time
@@ -101,6 +107,15 @@ func (u *SignDocument) Execute(ctx context.Context, request Request) (Artefact, 
 		output = request.Document.DetachedSignatureName()
 	default:
 		output = request.Document.SignedName(request.Format)
+	}
+
+	if err := request.Policy.AcceptsInvoice(content); err != nil {
+		return Artefact{}, err
+	}
+	if request.Policy.IsFacturaE() {
+		if request.ClaimedRoles, err = domain.FacturaERoles(request.ClaimedRoles); err != nil {
+			return Artefact{}, err
+		}
 	}
 
 	// The instant is captured once and reused: two calls to the clock can land on
@@ -151,6 +166,15 @@ func (u *SignDocument) validate(request Request) error {
 	}
 	if request.Cosign && request.Countersign != "" {
 		return fmt.Errorf("co-signing and counter-signing are separate operations; choose one")
+	}
+	if request.Policy.IsFacturaE() && (request.Format != domain.Xades || request.Enveloping) {
+		return fmt.Errorf("%w: they are XAdES enveloped signatures", domain.ErrNotFacturaE)
+	}
+	if err := request.Policy.FitsFormat(request.Format); err != nil {
+		return err
+	}
+	if len(request.ClaimedRoles) > 0 && request.Format != domain.Xades {
+		return fmt.Errorf("a claimed role goes in XAdES signatures, not %s", request.Format)
 	}
 	if (request.Cosign || request.Countersign != "") && request.Format != domain.Cades {
 		return fmt.Errorf("signatures are added to CAdES envelopes (.p7m, .p7s); %s is signed again by signing the signed file", request.Format)
@@ -208,6 +232,7 @@ func (u *SignDocument) sign(ctx context.Context, request Request, content []byte
 			TimestampURL:    request.TimestampURL,
 			TimestampUser:   request.TimestampUser,
 			TimestampSecret: request.TimestampSecret,
+			Policy:          request.Policy,
 		})
 		return signed, err
 
@@ -225,6 +250,7 @@ func (u *SignDocument) sign(ctx context.Context, request Request, content []byte
 			TimestampURL:    request.TimestampURL,
 			TimestampUser:   request.TimestampUser,
 			TimestampSecret: request.TimestampSecret,
+			Policy:          request.Policy,
 		})
 		return signed, err
 
@@ -238,6 +264,8 @@ func (u *SignDocument) sign(ctx context.Context, request Request, content []byte
 			TimestampURL:    request.TimestampURL,
 			TimestampUser:   request.TimestampUser,
 			TimestampSecret: request.TimestampSecret,
+			Policy:          request.Policy,
+			ClaimedRoles:    request.ClaimedRoles,
 		})
 		return signed, err
 	}
