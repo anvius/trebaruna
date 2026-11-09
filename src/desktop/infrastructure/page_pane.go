@@ -21,6 +21,7 @@ import (
 	"codeberg.org/simplicer/trebaruna/src/desktop/application"
 	"codeberg.org/simplicer/trebaruna/src/desktop/domain"
 	"codeberg.org/simplicer/trebaruna/src/desktop/messaging"
+	signing "codeberg.org/simplicer/trebaruna/src/signing/domain"
 )
 
 // pagePane is the right half of the signing tab: the page the seal goes on.
@@ -46,6 +47,9 @@ type pagePane struct {
 	document string
 	page     int
 	identity SealIdentity
+	// rubric widens the proposed seal and is drawn in it.
+	rubric        signing.Rubric
+	rubricPicture image.Image
 	// run starts the render off the UI thread.
 	run background
 	// loading counts renders, so a slow render of a document the user has
@@ -106,6 +110,23 @@ func (p *pagePane) setIdentity(identity SealIdentity) {
 	}
 }
 
+// setRubric shows the rubric in the seal and proposes a seal wide enough
+// for it, as the signer's default is; a zero rubric takes it away.
+func (p *pagePane) setRubric(rubric signing.Rubric, picture image.Image) {
+	p.rubric, p.rubricPicture = rubric, picture
+	if p.canvas != nil {
+		p.render()
+	}
+}
+
+// sealSize is the seal the page proposes.
+func (p *pagePane) sealSize() application.SealSize {
+	if p.rubric.IsZero() {
+		return application.DefaultSealSize()
+	}
+	return application.RubricSealSize()
+}
+
 // show renders the first page of a new document.
 func (p *pagePane) show(documentPath string) {
 	p.document = documentPath
@@ -153,14 +174,14 @@ func (p *pagePane) render() {
 		return
 	}
 	p.loading++
-	ticket, document, page := p.loading, p.document, p.page
+	ticket, document, page, size := p.loading, p.document, p.page, p.sealSize()
 	p.hint.SetText(p.messages.RenderingMessage)
 
 	p.run(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 		defer cancel()
 
-		result, err := p.preview.Execute(ctx, document, page, application.DefaultSealSize())
+		result, err := p.preview.Execute(ctx, document, page, size)
 		var decoded image.Image
 		if err == nil {
 			decoded, _, err = image.Decode(bytes.NewReader(result.Preview.PNG))
@@ -195,6 +216,7 @@ func (p *pagePane) present(result application.PreviewResult, page image.Image) {
 	p.canvas = NewPageCanvas(result.Geometry, result.Preview.Ink, page, result.SealRect, p.identity, func(domain.SealRect) {
 		p.describe()
 	})
+	p.canvas.SetRubric(p.rubric, p.rubricPicture)
 	p.stage.Objects = []fyne.CanvasObject{p.canvas}
 	p.stage.Refresh()
 

@@ -8,8 +8,11 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/base64"
 	"errors"
 	"fmt"
+	"image"
+	"image/jpeg"
 	"math/big"
 	"os"
 	"os/exec"
@@ -159,6 +162,40 @@ func TestPAdESForAPageIsInvisibleUnlessPlaced(t *testing.T) {
 			t.Errorf("%s: appearance present %t", name, hasAppearance)
 		}
 	}
+}
+
+// TestAPageRubricGoesInTheSeal: signatureRubricImage, AutoFirma's Base64
+// rubric, is drawn beside the certificate data of a placed seal; a broken
+// one is refused, and without a box the signature stays invisible.
+func TestAPageRubricGoesInTheSeal(t *testing.T) {
+	maria, _ := identity(t, "MARIA GARCIA", 15)
+	signer := infrastructure.NewNativePageSigner()
+	var picture bytes.Buffer
+	if err := jpeg.Encode(&picture, image.NewRGBA(image.Rect(0, 0, 300, 100)), nil); err != nil {
+		t.Fatal(err)
+	}
+	box := map[string]string{"signaturePositionOnPageLowerLeftX": "60", "signaturePositionOnPageLowerLeftY": "60",
+		"signaturePositionOnPageUpperRightX": "260", "signaturePositionOnPageUpperRightY": "120"}
+	sign := func(rubric string, placed bool) ([]byte, error) {
+		properties := map[string]string{"signatureRubricImage": rubric}
+		if placed {
+			for key, value := range box {
+				properties[key] = value
+			}
+		}
+		signed, err := signer.Sign(context.Background(), application.PageSignature{Crypto: domain.Sign, Format: format(t, "PAdES"),
+			Algorithm: "SHA256", Properties: properties, Data: onePagePDF(), Key: maria})
+		return signed.Signature, err
+	}
+	encoded := base64.StdEncoding.EncodeToString(picture.Bytes())
+	if signed, err := sign(encoded, true); err != nil || !bytes.Contains(signed, []byte("/Subtype /Image")) {
+		t.Errorf("placed with a rubric: %v", err)
+	}
+	if signed, err := sign(encoded, false); err != nil || bytes.Contains(signed, []byte("/Subtype /Image")) {
+		t.Errorf("a rubric without a box: %v", err)
+	}
+	_, err := sign("bm90IGFuIGltYWdl", true)
+	wantFailure(t, err, domain.Params, "a rubric that is not an image")
 }
 
 // TestWhatTrebarunaDoesNotDoYetIsRefusedByName: never a different signature

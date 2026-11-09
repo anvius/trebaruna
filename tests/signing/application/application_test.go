@@ -1,10 +1,14 @@
 package application_test
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"image"
+	"image/png"
+	"strings"
 	"testing"
 	"time"
 
@@ -439,5 +443,59 @@ func TestAnInvisibleSignatureReportsNoSeal(t *testing.T) {
 	}
 	if artefact.HasSeal || artefact.SealCount != 0 {
 		t.Errorf("artefact = %+v, want no seal", artefact)
+	}
+}
+
+// rubricFixture is a small PNG rubric.
+func rubricFixture(t *testing.T) domain.Rubric {
+	t.Helper()
+	var buffer bytes.Buffer
+	if err := png.Encode(&buffer, image.NewNRGBA(image.Rect(0, 0, 300, 100))); err != nil {
+		t.Fatal(err)
+	}
+	rubric, err := domain.NewRubric(buffer.Bytes())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return rubric
+}
+
+// TestARubricReachesThePDFAndWidensTheDefaultSeal (ADR-0012), and a seal
+// the signer placed keeps its box.
+func TestARubricReachesThePDFAndWidensTheDefaultSeal(t *testing.T) {
+	store := newFakeStore(map[string][]byte{"/tmp/a.pdf": []byte("pdf")})
+	pades := &fakePades{}
+	useCase := application.NewSignDocument(store, fakeClock{time.Unix(0, 0)},
+		selfSignedIdentity(), &fakeCades{}, pades, &fakeXades{})
+	placed, _ := domain.PlaceSeal(1, 100, 100, 300, 160)
+	_, err := useCase.Execute(context.Background(), application.Request{
+		Document: newDocument(t, "/tmp/a.pdf"), Format: domain.Pades, Level: domain.BES, Signer: newSigner(t),
+		Placements: []domain.SealPlacement{domain.DefaultSeal(1), placed}, Rubric: rubricFixture(t),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pades.request.Rubric.IsZero() || len(pades.request.Placements) != 2 {
+		t.Fatalf("%+v", pades.request)
+	}
+	if corner, kept := pades.request.Placements[0], pades.request.Placements[1]; corner.Width() != 160 || kept != placed {
+		t.Errorf("default seal %v wide, placed seal %+v", corner.Width(), kept)
+	}
+}
+
+// TestARubricOutsideAVisiblePDFSealIsRefused: there is nothing to draw it
+// beside.
+func TestARubricOutsideAVisiblePDFSealIsRefused(t *testing.T) {
+	store := newFakeStore(map[string][]byte{"/tmp/a.pdf": []byte("pdf"), "/tmp/b.xml": []byte("<b/>")})
+	useCase := application.NewSignDocument(store, fakeClock{time.Unix(0, 0)},
+		selfSignedIdentity(), &fakeCades{}, &fakePades{}, &fakeXades{})
+	for name, request := range map[string]application.Request{
+		"invisible": {Document: newDocument(t, "/tmp/a.pdf"), Format: domain.Pades, Invisible: true},
+		"XAdES":     {Document: newDocument(t, "/tmp/b.xml"), Format: domain.Xades},
+	} {
+		request.Level, request.Signer, request.Rubric = domain.BES, newSigner(t), rubricFixture(t)
+		if _, err := useCase.Execute(context.Background(), request); err == nil || !strings.Contains(err.Error(), "rubric") {
+			t.Errorf("%s: %v", name, err)
+		}
 	}
 }

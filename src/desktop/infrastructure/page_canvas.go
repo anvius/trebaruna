@@ -14,6 +14,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 
 	"codeberg.org/simplicer/trebaruna/src/desktop/domain"
+	signing "codeberg.org/simplicer/trebaruna/src/signing/domain"
 )
 
 // SealIdentity is the text the seal will print, taken from the certificate.
@@ -41,8 +42,11 @@ type PageCanvas struct {
 	page     image.Image
 	rect     domain.SealRect
 	identity SealIdentity
-	moment   time.Time
-	onChange func(domain.SealRect)
+	// rubric and its picture are drawn beside the data, as the signer will.
+	rubric        signing.Rubric
+	rubricPicture image.Image
+	moment        time.Time
+	onChange      func(domain.SealRect)
 
 	// fit is recomputed on every layout; pointer events read it.
 	fit     domain.DisplayFit
@@ -126,6 +130,12 @@ func (p *PageCanvas) SetRect(rect domain.SealRect) {
 // SetIdentity updates the printed identity once the certificate is read.
 func (p *PageCanvas) SetIdentity(identity SealIdentity) {
 	p.identity = identity
+	p.Refresh()
+}
+
+// SetRubric shows the rubric the seal will carry; a zero one removes it.
+func (p *PageCanvas) SetRubric(rubric signing.Rubric, picture image.Image) {
+	p.rubric, p.rubricPicture = rubric, picture
 	p.Refresh()
 }
 
@@ -274,8 +284,13 @@ func (p *PageCanvas) CreateRenderer() fyne.WidgetRenderer {
 	handle.StrokeColor = color.White
 	handle.StrokeWidth = 1.5
 
+	rubric := canvas.NewImageFromImage(nil)
+	rubric.FillMode = canvas.ImageFillStretch
+	rubric.ScaleMode = canvas.ImageScaleSmooth
+
 	renderer := &pageCanvasRenderer{
 		canvas:    p,
+		rubric:    rubric,
 		shadow:    canvas.NewRectangle(paperShadow),
 		paper:     paper,
 		veil:      canvas.NewRectangle(sealVeil),
@@ -294,6 +309,7 @@ type pageCanvasRenderer struct {
 	shadow    *canvas.Rectangle
 	paper     *canvas.Image
 	veil      *canvas.Rectangle
+	rubric    *canvas.Image
 	bar       *canvas.Rectangle
 	frame     *canvas.Rectangle
 	focusRing *canvas.Rectangle
@@ -342,10 +358,20 @@ func (r *pageCanvasRenderer) layoutStamp(seal domain.Rectangle) {
 
 	toScreen := p.fit.Scale
 	padding := 2.6
-	textLeft := seal.X + (padding+3.2)*toScreen
-	innerWidth := (p.rect.Width() - 2*padding - 3.2) * toScreen
 
-	place(r.bar, seal.X+1.2*toScreen, seal.Y+1.2*toScreen, 1.8*toScreen, seal.Height-2.4*toScreen)
+	// The rubric goes where the signer puts it, and the data start after it.
+	left := 0.0
+	r.rubric.Hide()
+	if box, dataLeft, ok := p.rubric.Fit(p.rect.Width(), p.rect.Height(), padding); ok && p.rubricPicture != nil {
+		r.rubric.Image = p.rubricPicture
+		place(r.rubric, seal.X+box.X*toScreen, seal.Y+(p.rect.Height()-box.Y-box.Height)*toScreen, box.Width*toScreen, box.Height*toScreen)
+		r.rubric.Show()
+		left = dataLeft
+	}
+	textLeft := seal.X + (left+padding+3.2)*toScreen
+	innerWidth := (p.rect.Width() - left - 2*padding - 3.2) * toScreen
+
+	place(r.bar, seal.X+(left+1.2)*toScreen, seal.Y+1.2*toScreen, 1.8*toScreen, seal.Height-2.4*toScreen)
 
 	nameStyle, detailStyle := fyne.TextStyle{Bold: true}, fyne.TextStyle{}
 	glyph := toScreen * faceCompensation
@@ -449,7 +475,7 @@ func (r *pageCanvasRenderer) applyState() {
 
 // Objects lists what is drawn, back to front.
 func (r *pageCanvasRenderer) Objects() []fyne.CanvasObject {
-	r.objects = append(r.objects[:0], r.shadow, r.paper, r.veil, r.bar)
+	r.objects = append(r.objects[:0], r.shadow, r.paper, r.veil, r.rubric, r.bar)
 	for _, line := range r.lines {
 		r.objects = append(r.objects, line)
 	}

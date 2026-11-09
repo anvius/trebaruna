@@ -87,6 +87,8 @@ type PadesRequest struct {
 	// carry several marks (one per page, or a rubric plus a full stamp) but
 	// only holds one signing key, so they share a single cryptographic value.
 	Placements []domain.SealPlacement
+	// Rubric is drawn in each seal beside the certificate data.
+	Rubric domain.Rubric
 	// SignedAt is the single instant used for both the stamp and the report, so
 	// the document and the JSON cannot disagree about when it was signed.
 	SignedAt        time.Time

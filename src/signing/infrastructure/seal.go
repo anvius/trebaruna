@@ -24,11 +24,28 @@ package infrastructure
 //     "2026-" / "11-02", which is unreadable.
 //   - No logos. A signature mark that can carry arbitrary artwork is a mark
 //     that can be spoofed; the identity comes from the certificate.
+//   - A rubric, the image of a handwritten signature, goes to the left of the
+//     data, never alone and never over them (ADR-0012):
+//
+//	┌──────────────────────────────────────┐
+//	│  ╭~~~~~~~~~╮  ▌MARIA LOPEZ GARCIA     │
+//	│  ╰~~~~~~~~~╯   00000000X · 02/11/2026 │
+//	│                14:05:09 +01:00        │
+//	└──────────────────────────────────────┘
+//
+//     It takes at most half the width, its proportions kept; the data keep
+//     the type size they have without it, and a box too narrow for both is
+//     refused.
 
 import (
+	"bytes"
 	"fmt"
+	"image"
+	"image/color"
+	"image/png"
 	"time"
 
+	"codeberg.org/simplicer/trebaruna/src/signing/domain"
 	"codeberg.org/simplicer/trebaruna/src/signing/domain/identity"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/helvetica"
 	"github.com/digitorus/pdfsign"
@@ -92,18 +109,38 @@ func typographyFor(width, height float64) sealTypography {
 // not fit, this returns an error: a signature mark that silently drops a surname
 // is worse than a refusal, because the user cannot tell it happened.
 func DrawSeal(width, height float64, holder identity.Holder, moment time.Time) (*pdfsign.Appearance, error) {
+	return DrawSealWithRubric(width, height, holder, moment, domain.Rubric{})
+}
+
+// DrawSealWithRubric composes the stamp with a rubric to the left of the
+// certificate data; with none, it is DrawSeal.
+func DrawSealWithRubric(width, height float64, holder identity.Holder, moment time.Time, rubric domain.Rubric) (*pdfsign.Appearance, error) {
 	if width <= 0 || height <= 0 {
 		return nil, fmt.Errorf("seal dimensions must be positive, got %.1fx%.1f pt", width, height)
 	}
 
+	// The type is sized by the whole box, rubric or not: the data keep their
+	// size and the rubric takes room beside them.
 	typography := typographyFor(width, height)
 	appearance := pdfsign.NewAppearance(width, height)
+
+	// left is where the data block starts: the box's edge, or past the rubric.
+	left := 0.0
+	if !rubric.IsZero() {
+		var err error
+		if left, err = drawRubric(appearance, rubric, width, height, typography.padding); err != nil {
+			return nil, err
+		}
+	}
 
 	// The text starts after the accent rule and ends at the right padding:
 	// wrapping it to the box minus both paddings let a full line run past
 	// the edge.
-	innerWidth := width - textIndent - 2*typography.padding
-	if innerWidth < 20 {
+	innerWidth := width - left - textIndent - 2*typography.padding
+	switch {
+	case innerWidth < 20 && !rubric.IsZero():
+		return nil, fmt.Errorf("seal %.0f pt wide leaves no room for the certificate data beside the rubric: widen it", width)
+	case innerWidth < 20:
 		return nil, fmt.Errorf("seal %.0f pt wide leaves no room for text", width)
 	}
 
@@ -129,9 +166,9 @@ func DrawSeal(width, height float64, holder identity.Holder, moment time.Time) (
 		)
 	}
 
-	drawAccentBar(appearance, width, height)
-	drawName(appearance, nameLines, typography, height, totalHeight)
-	drawDetails(appearance, details, len(nameLines), typography, height, totalHeight)
+	drawAccentBar(appearance, left, height)
+	drawName(appearance, nameLines, typography, left, height, totalHeight)
+	drawDetails(appearance, details, len(nameLines), typography, left, height, totalHeight)
 
 	return appearance, nil
 }
@@ -169,11 +206,11 @@ func sealDetailLines(holder identity.Holder, moment time.Time, width float64, ty
 // DrawRect as a builder type its renderer does not draw, so the rectangle was
 // silently dropped from every seal. Width must come before Stroke, which is
 // the call that commits the line.
-func drawAccentBar(appearance *pdfsign.Appearance, width, height float64) {
+func drawAccentBar(appearance *pdfsign.Appearance, left, height float64) {
 	const barWidth = 1.8
 	const inset = 1.2
 
-	x := inset + barWidth/2
+	x := left + inset + barWidth/2
 	appearance.
 		Line(x, inset, x, height-inset).
 		Width(barWidth).
@@ -181,7 +218,7 @@ func drawAccentBar(appearance *pdfsign.Appearance, width, height float64) {
 }
 
 // drawName renders the bold name, top-aligned.
-func drawName(appearance *pdfsign.Appearance, lines []string, typography sealTypography, height, totalHeight float64) {
+func drawName(appearance *pdfsign.Appearance, lines []string, typography sealTypography, left, height, totalHeight float64) {
 	bold := pdfsign.StandardFont(pdfsign.HelveticaBold)
 
 	// The block is vertically centred, which keeps small seals from looking
@@ -195,14 +232,14 @@ func drawName(appearance *pdfsign.Appearance, lines []string, typography sealTyp
 		appearance.Text(line).
 			Font(bold, typography.nameSize).
 			SetColor(16, 20, 26).
-			Position(typography.padding+textIndent, baseline)
+			Position(left+typography.padding+textIndent, baseline)
 		baseline -= typography.leading
 	}
 }
 
 // drawDetails renders the identifier, date and time in grey, below the last
 // line of the name: a name that wraps pushes the details down with it.
-func drawDetails(appearance *pdfsign.Appearance, lines []string, nameLines int, typography sealTypography, height, totalHeight float64) {
+func drawDetails(appearance *pdfsign.Appearance, lines []string, nameLines int, typography sealTypography, left, height, totalHeight float64) {
 	regular := pdfsign.StandardFont(pdfsign.Helvetica)
 
 	top := (height - totalHeight) / 2
@@ -218,7 +255,47 @@ func drawDetails(appearance *pdfsign.Appearance, lines []string, nameLines int, 
 		appearance.Text(line).
 			Font(regular, size).
 			SetColor(78, 86, 96).
-			Position(typography.padding+textIndent, baseline)
+			Position(left+typography.padding+textIndent, baseline)
 		baseline -= typography.leading
 	}
+}
+
+// drawRubric places the rubric where the domain's rule puts it and returns
+// where the data block starts.
+func drawRubric(appearance *pdfsign.Appearance, rubric domain.Rubric, width, height, padding float64) (float64, error) {
+	box, dataLeft, ok := rubric.Fit(width, height, padding)
+	if !ok {
+		return 0, fmt.Errorf("seal %.0fx%.0f pt leaves no room for a rubric", width, height)
+	}
+	data, err := rubricForPDF(rubric.Content())
+	if err != nil {
+		return 0, err
+	}
+	appearance.Image(&pdfsign.Image{Name: "rubric", Data: data}).
+		Rect(box.X, box.Y, box.Width, box.Height).
+		ScaleStretch()
+	return dataLeft, nil
+}
+
+// rubricForPDF hands pdfsign an image it embeds correctly. It copies a JPEG
+// as is under /DeviceRGB, which only holds for a colour (YCbCr) JPEG: a
+// greyscale or CMYK one is re-encoded as PNG, which pdfsign writes pixel by
+// pixel. PNGs pass through, their transparency kept.
+func rubricForPDF(content []byte) ([]byte, error) {
+	config, format, err := image.DecodeConfig(bytes.NewReader(content))
+	if err != nil {
+		return nil, fmt.Errorf("read the rubric: %w", err)
+	}
+	if format != "jpeg" || config.ColorModel == color.YCbCrModel {
+		return content, nil
+	}
+	decoded, _, err := image.Decode(bytes.NewReader(content))
+	if err != nil {
+		return nil, fmt.Errorf("read the rubric: %w", err)
+	}
+	var converted bytes.Buffer
+	if err := png.Encode(&converted, decoded); err != nil {
+		return nil, fmt.Errorf("convert the rubric: %w", err)
+	}
+	return converted.Bytes(), nil
 }

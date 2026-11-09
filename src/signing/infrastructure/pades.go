@@ -332,7 +332,7 @@ func buildSeals(request application.PadesRequest, keyPair KeyPair) ([]stamp, err
 			return nil, fmt.Errorf("seal box on page %d is empty: %.1fx%.1f pt", placement.Page(), width, height)
 		}
 
-		appearance, err := DrawSeal(width, height, holder, moment)
+		appearance, err := DrawSealWithRubric(width, height, holder, moment, request.Rubric)
 		if err != nil {
 			return nil, fmt.Errorf("page %d: %w", placement.Page(), err)
 		}

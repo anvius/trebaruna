@@ -263,7 +263,8 @@ prepares from them (each `PRE`, hashed and signed with RSA or ECDSA), and the
 post-signer's result goes back to the page; the person is shown every document
 of the batch first. A local batch (`localBatchProcess`) is signed document by
 document here. Formats: CAdES (implicit or explicit, co- and counter-signatures),
-PAdES (invisible unless the page places the seal), XAdES (enveloping when the
+PAdES (invisible unless the page places the seal; `signatureRubricImage` draws
+its image beside the certificate data in that seal), XAdES (enveloping when the
 page names no variant, as AutoFirma; enveloped; and "XAdES Detached", the
 `AFIRMA` root holding `CONTENT` and the signature), XMLDSig in the same
 variants (no signed properties: a policy or a timestamp is refused, roles are

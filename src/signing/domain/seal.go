@@ -15,10 +15,11 @@ type SealPlacement struct {
 	lowerLeftY  float64
 	upperRightX float64
 	upperRightY float64
-	image       []byte
 	// corner marks the default seal: its coordinates assume A4 until OnPage
 	// places it on the real page.
 	corner bool
+	// wide is a default seal with room for a rubric beside the data.
+	wide bool
 }
 
 // A4 in PDF user-space points (1 pt = 1/72 inch).
@@ -63,12 +64,27 @@ func DefaultSeal(page int) SealPlacement {
 	}
 }
 
-// The default seal: 64x48 pt, 18 pt from the bottom and right edges.
+// The default seal: 64x48 pt, 18 pt from the bottom and right edges; 160 pt
+// wide when it carries a rubric, so the certificate data keep the size they
+// have without one (ADR-0012).
 const (
-	cornerWidth  = 64.0
-	cornerHeight = 48.0
-	cornerMargin = 18.0
+	cornerWidth       = 64.0
+	cornerRubricWidth = 160.0
+	cornerHeight      = 48.0
+	cornerMargin      = 18.0
 )
+
+// WithRoomForRubric widens the default seal for a rubric beside the
+// certificate data. A seal the signer placed keeps its box: if the data do
+// not fit beside the rubric there, signing is refused, never shrunk.
+func (s SealPlacement) WithRoomForRubric() SealPlacement {
+	if !s.corner {
+		return s
+	}
+	s.wide = true
+	s.lowerLeftX = a4Width - cornerMargin - cornerRubricWidth
+	return s
+}
 
 // IsCorner reports the default seal, which still has to be placed on the page.
 func (s SealPlacement) IsCorner() bool { return s.corner }
@@ -81,13 +97,17 @@ func (s SealPlacement) OnPage(left, bottom, right, top float64) SealPlacement {
 	if !s.corner {
 		return s
 	}
-	lowerLeftX := math.Max(left, right-cornerMargin-cornerWidth)
+	width := cornerWidth
+	if s.wide {
+		width = cornerRubricWidth
+	}
+	lowerLeftX := math.Max(left, right-cornerMargin-width)
 	lowerLeftY := math.Min(bottom+cornerMargin, math.Max(bottom, top-cornerHeight))
 	return SealPlacement{
 		page:        s.page,
 		lowerLeftX:  lowerLeftX,
 		lowerLeftY:  lowerLeftY,
-		upperRightX: lowerLeftX + cornerWidth,
+		upperRightX: lowerLeftX + width,
 		upperRightY: lowerLeftY + cornerHeight,
 	}
 }

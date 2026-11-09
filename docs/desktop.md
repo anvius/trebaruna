@@ -149,6 +149,13 @@ the page says so.
 The seal never leaves the page and never shrinks below 64x48 pt, the size at
 which the certificate identity still fits without truncation.
 
+**Rubric (optional)**, under the formats, adds the image of your handwritten
+signature (PNG or JPEG) to the seal, left of the certificate data. The page
+then proposes a 160x48 pt seal and shows the rubric in it; the choice is
+remembered for the next document, and **Remove the handwritten signature**
+takes it away. An image that cannot be a rubric is refused when you choose
+it.
+
 CAdES and XAdES signatures carry no visible mark; the page pane says so instead
 of showing a page you cannot use.
 

@@ -3,10 +3,12 @@
 package infrastructure
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"image"
 	"io"
 	"os"
 	"path/filepath"
@@ -23,6 +25,7 @@ import (
 	"codeberg.org/simplicer/trebaruna/src/desktop/application"
 	"codeberg.org/simplicer/trebaruna/src/desktop/domain"
 	"codeberg.org/simplicer/trebaruna/src/desktop/messaging"
+	signingdomain "codeberg.org/simplicer/trebaruna/src/signing/domain"
 
 	transparency "codeberg.org/simplicer/trebaruna/src/transparency/domain"
 )
@@ -36,6 +39,7 @@ const (
 	preferenceTimestamp   = "timestamp.url"
 	preferenceTSAUser     = "timestamp.user"
 	preferenceLevel       = "signature.level"
+	preferenceRubric      = "seal.rubric"
 )
 
 // signForm is the left half of the signing tab: three steps and one button.
@@ -89,18 +93,23 @@ type signForm struct {
 	formatChoice   *widget.RadioGroup
 	formatNote     *widget.Label
 	sealNote       *widget.Label
-	invisible      *widget.Check
-	level          *widget.Select
-	timestamp      *widget.Entry
-	tsaUser        *widget.Entry
-	tsaPassword    *widget.Entry
-	timestampBox   *fyne.Container
-	reason         *widget.Entry
-	location       *widget.Entry
-	status         *widget.Label
-	signButton     *widget.Button
-	afterSign      *fyne.Container
-	signedPath     string
+	// rubric is the handwritten signature the seal carries, from rubricPath.
+	rubricPath   string
+	rubricRow    *fileRow
+	rubricRemove *widget.Button
+	rubricBox    *fyne.Container
+	invisible    *widget.Check
+	level        *widget.Select
+	timestamp    *widget.Entry
+	tsaUser      *widget.Entry
+	tsaPassword  *widget.Entry
+	timestampBox *fyne.Container
+	reason       *widget.Entry
+	location     *widget.Entry
+	status       *widget.Label
+	signButton   *widget.Button
+	afterSign    *fyne.Container
+	signedPath   string
 }
 
 // newSignForm builds the form and restores the remembered certificate.
@@ -151,6 +160,15 @@ func newSignForm(
 	form.formatChoice.Required = true
 	form.formatNote = caption("")
 	form.sealNote = caption("")
+
+	form.rubricRow = newFileRow(m.ChooseRubric, m.ChangeButton, m.RubricHint, form.pickRubric)
+	form.rubricRemove = widget.NewButtonWithIcon(m.RemoveRubric, theme.DeleteIcon(), form.removeRubric)
+	form.rubricRemove.Hide()
+	form.rubricBox = container.NewVBox(fieldLabel(m.RubricLabel), form.rubricRow.object(), form.rubricRemove)
+	form.rubricBox.Hide()
+	if remembered := preferences.String(preferenceRubric); remembered != "" && fileExists(remembered) {
+		form.setRubric(remembered)
+	}
 
 	form.invisible = widget.NewCheck(m.InvisibleSignature, func(bool) { form.formatChanged() })
 	form.level = widget.NewSelect(form.levelLabels(), func(string) { form.levelChanged() })
@@ -221,6 +239,7 @@ func (f *signForm) object() fyne.CanvasObject {
 		f.formatChoice,
 		f.formatNote,
 		f.sealNote,
+		f.rubricBox,
 		widget.NewAccordion(widget.NewAccordionItem(m.MoreOptions, container.NewVBox(
 			f.invisible,
 			fieldLabel(m.LevelLabel), f.level,
@@ -316,6 +335,7 @@ func (f *signForm) formatChanged() {
 	}
 	f.documentRow.show(f.document, f.documentNote())
 
+	f.rubricBox.Hide()
 	switch {
 	case f.format.HasVisibleSeal() && f.invisible.Checked:
 		f.pages.empty(f.m.InvisibleExplained)
@@ -325,6 +345,7 @@ func (f *signForm) formatChanged() {
 		f.pages.show(f.document)
 		f.sealNote.SetText(f.m.SealOnPagePane)
 		f.sealNote.Show()
+		f.rubricBox.Show()
 	default:
 		f.pages.withoutVisibleSeal()
 		f.sealNote.Hide()
@@ -385,6 +406,51 @@ func (f *signForm) formatLabel(format domain.SignatureFormat) string {
 		return f.m.FormatEachLabel
 	}
 	return f.m.FormatPAdESLabel
+}
+
+// ---- rubric ----
+
+func (f *signForm) pickRubric() {
+	newFileOpen(f.window, []string{".png", ".jpg", ".jpeg"}, f.setRubric).Show()
+}
+
+// setRubric adopts the image of a handwritten signature, refusing one that
+// cannot be a rubric before anything is signed, and shows it in the seal.
+func (f *signForm) setRubric(path string) {
+	rubric, picture, err := readRubric(path)
+	if err != nil {
+		f.report(f.m.RubricInvalid, widget.DangerImportance)
+		return
+	}
+	f.rubricPath = path
+	f.rubricRow.show(path, "")
+	f.rubricRemove.Show()
+	f.preferences.SetString(preferenceRubric, path)
+	f.pages.setRubric(rubric, picture)
+}
+
+// removeRubric takes the rubric out of the seal.
+func (f *signForm) removeRubric() {
+	f.rubricPath = ""
+	f.rubricRow.clear()
+	f.rubricRemove.Hide()
+	f.preferences.SetString(preferenceRubric, "")
+	f.pages.setRubric(signingdomain.Rubric{}, nil)
+}
+
+// readRubric reads a rubric and its picture for the preview.
+func readRubric(path string) (signingdomain.Rubric, image.Image, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return signingdomain.Rubric{}, nil, err
+	}
+	defer file.Close()
+	rubric, err := signingdomain.ReadRubric(file)
+	if err != nil {
+		return signingdomain.Rubric{}, nil, err
+	}
+	picture, _, err := image.Decode(bytes.NewReader(rubric.Content()))
+	return rubric, picture, err
 }
 
 // ---- certificate ----
@@ -771,6 +837,7 @@ func (f *signForm) sign() {
 		intent.Invisible = true
 	case f.format.HasVisibleSeal():
 		intent.Seal = f.pages.choice()
+		intent.RubricPath = f.rubricPath
 	}
 	if len(f.batch) > 0 {
 		intent.Seal = domain.SealChoice{Page: 1}

@@ -29,6 +29,9 @@ type SigningIntent struct {
 	TimestampPassword string
 	Reason            string
 	Location          string
+	// RubricPath is a PNG or JPEG of a handwritten signature for the
+	// visible seal of a PDF, drawn beside the certificate data.
+	RubricPath string
 }
 
 // Validate reports what is missing, before any process is spawned.

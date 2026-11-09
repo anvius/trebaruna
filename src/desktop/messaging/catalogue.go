@@ -148,6 +148,11 @@ type Catalogue struct {
 	FormatXAdESLabel           string
 	FormatODFLabel             string
 	FormatOOXMLLabel           string
+	RubricLabel                string
+	ChooseRubric               string
+	RubricHint                 string
+	RemoveRubric               string
+	RubricInvalid              string
 	FormatOnlyCAdES            string
 	SealOnPagePane             string
 	MoreOptions                string
@@ -407,6 +412,11 @@ var spanish = Catalogue{
 	FormatXAdESLabel:           "XML firmado (XAdES)",
 	FormatODFLabel:             "Documento de LibreOffice firmado por dentro (ODF)",
 	FormatOOXMLLabel:           "Documento de Office firmado por dentro (OOXML)",
+	RubricLabel:                "Rúbrica (opcional)",
+	ChooseRubric:               "Elegir imagen de la firma…",
+	RubricHint:                 "Una imagen PNG o JPEG de tu firma manuscrita. Va en el sello junto a los datos del certificado, nunca sola.",
+	RemoveRubric:               "Quitar la rúbrica",
+	RubricInvalid:              "Esa imagen no sirve como rúbrica: tiene que ser PNG o JPEG, de hasta 4 MiB y 4096 píxeles de lado.",
 	FormatOnlyCAdES:            "Este tipo de fichero se firma dentro de un sobre .p7m (CAdES).",
 	SealOnPagePane:             "El sello irá donde lo ves en la página de la derecha.",
 	MoreOptions:                "Más opciones",
@@ -648,6 +658,11 @@ var italian = Catalogue{
 	FormatXAdESLabel:           "XML firmato (XAdES)",
 	FormatODFLabel:             "Documento LibreOffice firmato al suo interno (ODF)",
 	FormatOOXMLLabel:           "Documento Office firmato al suo interno (OOXML)",
+	RubricLabel:                "Firma autografa (facoltativa)",
+	ChooseRubric:               "Scegli l'immagine della firma…",
+	RubricHint:                 "Un'immagine PNG o JPEG della tua firma autografa. Va nel sigillo accanto ai dati del certificato, mai da sola.",
+	RemoveRubric:               "Togli la firma autografa",
+	RubricInvalid:              "Quell'immagine non può fare da firma autografa: deve essere PNG o JPEG, al massimo 4 MiB e 4096 pixel per lato.",
 	FormatOnlyCAdES:            "Questo tipo di file si firma in una busta .p7m (CAdES).",
 	SealOnPagePane:             "Il timbro andrà dove lo vedi nella pagina a destra.",
 	MoreOptions:                "Altre opzioni",
@@ -889,6 +904,11 @@ var english = Catalogue{
 	FormatXAdESLabel:           "Signed XML (XAdES)",
 	FormatODFLabel:             "LibreOffice document signed inside (ODF)",
 	FormatOOXMLLabel:           "Office document signed inside (OOXML)",
+	RubricLabel:                "Handwritten signature (optional)",
+	ChooseRubric:               "Choose the signature image…",
+	RubricHint:                 "A PNG or JPEG of your handwritten signature. It goes in the seal next to the certificate data, never alone.",
+	RemoveRubric:               "Remove the handwritten signature",
+	RubricInvalid:              "That image cannot be a handwritten signature: it must be a PNG or JPEG of at most 4 MiB and 4096 pixels a side.",
 	FormatOnlyCAdES:            "This kind of file is signed inside a .p7m envelope (CAdES).",
 	SealOnPagePane:             "The seal goes where you see it on the page to the right.",
 	MoreOptions:                "More options",

@@ -108,9 +108,29 @@ func TestOptionalFlagsStayOffWhenEmpty(t *testing.T) {
 		t.Fatalf("Sign: %v", err)
 	}
 
-	for _, flag := range []string{"--page", "--box", "--tsa", "--reason", "--location", "--pass"} {
+	for _, flag := range []string{"--page", "--box", "--tsa", "--reason", "--location", "--pass", "--rubric"} {
 		if contains(recordedArguments(t, recorded), flag) {
 			t.Errorf("%s must not be sent when the intent leaves it empty", flag)
+		}
+	}
+}
+
+// TestARubricTravelsWithAVisiblePDFSealOnly.
+func TestARubricTravelsWithAVisiblePDFSealOnly(t *testing.T) {
+	for name, change := range map[string]func(*domain.SigningIntent){
+		"visible PAdES": func(*domain.SigningIntent) {},
+		"invisible":     func(intent *domain.SigningIntent) { intent.Invisible = true },
+		"envelope":      func(intent *domain.SigningIntent) { intent.Format = domain.FormatCAdES },
+	} {
+		binary, recorded := fakeCommand(t, "echo '"+receiptJSON+"'")
+		intent := fullIntent()
+		intent.RubricPath = "/tmp/firma.png"
+		change(&intent)
+		if _, err := (infrastructure.CommandLineSigner{BinaryPath: binary}).Sign(context.Background(), intent); err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		if sent := containsPair(recordedArguments(t, recorded), "--rubric", "/tmp/firma.png"); sent != (name == "visible PAdES") {
+			t.Errorf("%s: --rubric sent %t", name, sent)
 		}
 	}
 }

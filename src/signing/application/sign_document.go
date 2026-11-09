@@ -72,6 +72,9 @@ type Request struct {
 	// Invisible signs a PDF without any mark on its pages. It excludes
 	// Placement and Placements.
 	Invisible bool
+	// Rubric is the image of a handwritten signature each seal shows beside
+	// the certificate data (ADR-0012); a default seal widens for it.
+	Rubric domain.Rubric
 	// Detached leaves the document out of the signature, beside it: a CAdES
 	// .p7s or a XAdES .xsig.
 	Detached bool
@@ -281,6 +284,9 @@ func (u *SignDocument) validate(request Request) error {
 	if request.Invisible && (len(request.Placements) > 0 || !request.Placement.IsZero()) {
 		return fmt.Errorf("an invisible signature cannot also place a seal")
 	}
+	if !request.Rubric.IsZero() && (request.Format != domain.Pades || request.Invisible) {
+		return fmt.Errorf("a rubric goes in the visible seal of a PDF signature (PAdES), beside the certificate data")
+	}
 
 	switch request.Format {
 	case domain.Cades:
@@ -362,6 +368,7 @@ func (u *SignDocument) sign(ctx context.Context, request Request, content []byte
 			EmbedRevocation: request.EmbedRevocation,
 			Placement:       request.Placement,
 			Placements:      sealPlacements(request),
+			Rubric:          request.Rubric,
 			SignedAt:        request.SignedAt,
 			Reason:          request.Reason,
 			Location:        request.Location,
@@ -483,18 +490,26 @@ func (u *SignDocument) detachedContent(request Request) []byte {
 }
 
 // sealPlacements returns the stamps to draw, folding the single-placement field
-// into the list so callers of the old shape keep working.
+// into the list so callers of the old shape keep working. With a rubric, a
+// default seal is widened for it.
 func sealPlacements(request Request) []domain.SealPlacement {
-	if request.Invisible {
+	placements := request.Placements
+	switch {
+	case request.Invisible:
 		return nil
-	}
-	if len(request.Placements) > 0 {
-		return request.Placements
-	}
-	if request.Placement.IsZero() {
+	case len(placements) == 0 && request.Placement.IsZero():
 		return nil
+	case len(placements) == 0:
+		placements = []domain.SealPlacement{request.Placement}
 	}
-	return []domain.SealPlacement{request.Placement}
+	if request.Rubric.IsZero() {
+		return placements
+	}
+	widened := make([]domain.SealPlacement, len(placements))
+	for index, placement := range placements {
+		widened[index] = placement.WithRoomForRubric()
+	}
+	return widened
 }
 
 // sealCount reports how many visible marks the artefact carries.

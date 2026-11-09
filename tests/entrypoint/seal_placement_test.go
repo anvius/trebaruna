@@ -1,7 +1,10 @@
 package cli_test
 
 import (
+	"bytes"
 	"fmt"
+	"image"
+	"image/png"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -93,5 +96,45 @@ func TestInvisibleAndABoxExcludeEachOther(t *testing.T) {
 	t.Setenv("TREBARUNA_PASSPHRASE", "segreto")
 	if _, _, code := run("sign", writeSizedPDF(t, "[0 0 595 842]", false), "--p12", key, "--invisible", "--box", "10,10,90,70"); code != 2 {
 		t.Errorf("exit %d, want 2 (usage)", code)
+	}
+}
+
+// writeRubric writes a 300x100 transparent PNG.
+func writeRubric(t *testing.T) string {
+	t.Helper()
+	var buffer bytes.Buffer
+	if err := png.Encode(&buffer, image.NewNRGBA(image.Rect(0, 0, 300, 100))); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "firma.png")
+	if err := os.WriteFile(path, buffer.Bytes(), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+// TestARubricWidensTheDefaultSeal: 160 pt in the corner, the image inside.
+func TestARubricWidensTheDefaultSeal(t *testing.T) {
+	document := writeSizedPDF(t, "[0 0 612 792]", false)
+	got := signedRect(t, document, "--rubric", writeRubric(t))
+	if strings.Join(got, " ") != "434.000000 18.000000 594.000000 66.000000" {
+		t.Errorf("seal at %v, want 160 pt wide in the corner", got)
+	}
+	signed, _ := os.ReadFile(strings.TrimSuffix(document, ".pdf") + "_signed.pdf")
+	if !strings.Contains(string(signed), "/Subtype /Image") {
+		t.Error("no image in the seal")
+	}
+}
+
+// TestARubricNeedsAVisibleSealAndAnImage.
+func TestARubricNeedsAVisibleSealAndAnImage(t *testing.T) {
+	key := writeProtectedP12(t, "segreto")
+	t.Setenv("TREBARUNA_PASSPHRASE", "segreto")
+	document := writeSizedPDF(t, "[0 0 595 842]", false)
+	if _, stderr, code := run("sign", document, "--p12", key, "--rubric", document); code != 2 || !strings.Contains(stderr, "PNG or JPEG") {
+		t.Errorf("a PDF as rubric: exit %d, %s", code, stderr)
+	}
+	if _, stderr, code := run("sign", document, "--p12", key, "--invisible", "--rubric", writeRubric(t)); code == 0 || !strings.Contains(stderr, "visible seal") {
+		t.Errorf("an invisible signature with a rubric: exit %d, %s", code, stderr)
 	}
 }

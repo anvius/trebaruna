@@ -134,12 +134,30 @@ signing failed: page 1: the identity does not fit the seal box
 A truncated name on a signature is worse than no seal at all: it looks like a
 different person.
 
+### With a handwritten signature
+
+`--rubric firma.png` draws the image of a handwritten signature in every seal,
+to the left of the certificate data, never alone (ADR-0012):
+
+```
+┌──────────────────────────────────────┐
+│  ╭~~~~~~~~~╮  ▌MARIA LOPEZ GARCIA     │
+│  ╰~~~~~~~~~╯   00000000X · 02/11/2026 │
+│                14:05:09 +01:00        │
+└──────────────────────────────────────┘
+```
+
+A PNG (its transparency is kept) or a JPEG, up to 4 MiB and 4096 pixels a
+side. It takes at most half the seal, with its proportions; the data keep the
+size they have without it, so a box too narrow for both is refused rather
+than printed smaller. The default seal widens to 160x48 pt for it.
+
 ### Without `--box`
 
-Omitting `--box` places a default seal, 64x48 pt, 18 pt from the bottom and
-right edges of the page given by `--page`, measured on the page's real visible
-box (CropBox, else MediaBox, inherited from the page tree when needed): a
-Letter or landscape page gets the seal in its own corner.
+Omitting `--box` places a default seal, 64x48 pt (160x48 with `--rubric`), 18
+pt from the bottom and right edges of the page given by `--page`, measured on
+the page's real visible box (CropBox, else MediaBox, inherited from the page
+tree when needed): a Letter or landscape page gets the seal in its own corner.
 
 ### Invisible signature
 

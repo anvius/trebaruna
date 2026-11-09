@@ -36,6 +36,12 @@ type SealSize struct {
 	Height float64
 }
 
+// RubricSealSize matches the signer's default seal with a rubric beside the
+// certificate data: 160x48 pt.
+func RubricSealSize() SealSize {
+	return SealSize{Width: 160, Height: 48}
+}
+
 // DefaultSealSize matches the compact stamp drawn by the signer: 64x48 pt.
 func DefaultSealSize() SealSize {
 	return SealSize{Width: 64, Height: 48}

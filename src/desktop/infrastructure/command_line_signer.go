@@ -106,6 +106,9 @@ func signArguments(intent domain.SigningIntent) []string {
 	case domain.FormatCountersign:
 		arguments = append(arguments, "--countersign", "leaves")
 	}
+	if intent.RubricPath != "" && intent.Format == domain.FormatPAdES && !intent.Invisible {
+		arguments = append(arguments, "--rubric", intent.RubricPath)
+	}
 
 	switch {
 	case intent.Card.Chosen() && intent.Card.Store == domain.StoreFirefox:

@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A handwritten signature in the seal (ADR-0012): `sign --rubric firma.png`,
+  afirma:// `signatureRubricImage`, and a rubric row in the desktop, which
+  remembers it and previews it in the seal.
+  - PNG (transparency kept) or JPEG, up to 4 MiB and 4096 pixels a side;
+    anything else is refused when given.
+  - Drawn left of the certificate data, at most half the width, its
+    proportions kept; the data keep their size, and a box too narrow for
+    both is refused. The default seal widens to 160x48 pt.
+  - Greyscale and CMYK JPEGs are re-encoded as PNG: pdfsign would embed
+    them as RGB and garble them.
+  - Checked with pdfsig and pages rendered by pdftoppm.
+
 - Office Open XML signatures (ADR-0015): `sign offerta.docx` (and `.xlsx`,
   `.pptx`, macro-enabled files, templates; `--format ooxml`) signs inside
   the file as Microsoft Office does.

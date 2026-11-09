@@ -5,6 +5,7 @@ package infrastructure
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -161,12 +162,34 @@ func (s NativePageSigner) signPades(ctx context.Context, request application.Pag
 	}
 	if placed {
 		pades.Placements = []signing.SealPlacement{placement}
+		if pades.Rubric, err = rubricFrom(request.Properties["signatureRubricImage"]); err != nil {
+			return nil, err
+		}
 	}
 	signature, err := s.pades.SignPades(ctx, pades)
 	if err != nil {
 		return nil, domain.Failure{Code: domain.SignatureFailed, Cause: err.Error()}
 	}
 	return signature, nil
+}
+
+// rubricFrom reads signatureRubricImage, the Base64 image AutoFirma draws
+// in the seal; trebaruna draws it beside the certificate data (ADR-0012).
+// As in AutoFirma it only counts with a seal box: without one the signature
+// is invisible.
+func rubricFrom(encoded string) (signing.Rubric, error) {
+	if strings.TrimSpace(encoded) == "" {
+		return signing.Rubric{}, nil
+	}
+	content, err := base64.StdEncoding.DecodeString(strings.Join(strings.Fields(encoded), ""))
+	if err != nil {
+		return signing.Rubric{}, domain.Failure{Code: domain.Params, Cause: "signatureRubricImage is not Base64"}
+	}
+	rubric, err := signing.NewRubric(content)
+	if err != nil {
+		return signing.Rubric{}, domain.Failure{Code: domain.Params, Cause: "signatureRubricImage: " + err.Error()}
+	}
+	return rubric, nil
 }
 
 // sealFrom reads the seal box AutoFirma's PDF parameters give.

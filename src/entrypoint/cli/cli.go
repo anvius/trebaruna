@@ -118,6 +118,7 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 		enveloping = flags.Bool("enveloping", false, "XAdES enveloping (default: enveloped)")
 		asicType   = flags.String("asic", "", "pack documents and their detached signature: s (one document, <document>.asics) or e (all the documents under one signature, <first>.asice)")
 		invisible  = flags.Bool("invisible", false, "PAdES without any visible seal (excludes --box)")
+		rubricPath = flags.String("rubric", "", "PNG or JPEG of a handwritten signature, drawn in the seal beside the certificate data")
 		detached   = flags.Bool("detached", false, "the signature beside the document, which stays untouched: <document>.p7s (CAdES) or <document>.xsig (XAdES)")
 		cosign     = flags.Bool("cosign", false, "add a parallel signature to the .p7m/.p7s given as document")
 		counter    = flags.String("countersign", "", "counter-sign the envelope's signatures: leaves | all")
@@ -179,6 +180,13 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "--invisible and --box exclude each other: an invisible signature has no seal")
 		return exitUsage
 	}
+	var rubric domain.Rubric
+	if *rubricPath != "" {
+		if rubric, err = readRubric(*rubricPath); err != nil {
+			fmt.Fprintf(stderr, "%v\n", err)
+			return exitUsage
+		}
+	}
 	var placements []domain.SealPlacement
 	if !*invisible {
 		if placements, err = buildPlacements(*page, boxes); err != nil {
@@ -229,6 +237,7 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 			OutputPath:      *output,
 			Placements:      placements,
 			Invisible:       *invisible,
+			Rubric:          rubric,
 			Detached:        *detached,
 			Cosign:          *cosign,
 			Countersign:     *counter,
@@ -284,7 +293,7 @@ func extractDocument(args []string) (documentPath string, remaining []string, er
 // be told apart from flag values wherever the flags appear.
 var signValueFlags = valueFlagsWith("format", "level", "lang", "territory", "out", "name",
 	"reason", "location", "tsa", "tsa-user", "tsa-pass", "page", "box", "content", "countersign",
-	"policy", "policy-id", "policy-hash", "policy-hash-alg", "policy-qualifier", "role", "asic", "report")
+	"policy", "policy-id", "policy-hash", "policy-hash-alg", "policy-qualifier", "role", "asic", "report", "rubric")
 
 // splitSignArguments separates the documents from the flags of `sign`.
 func splitSignArguments(args []string) (positional, remaining []string) {
@@ -367,6 +376,20 @@ func buildSigner(options signerOptions) (domain.Signer, error) {
 	return domain.NewSigner(displayName, source,
 		domain.WithKeyMaterial(content),
 		domain.WithPassphrase(secretFrom(options.passphrase, passphraseVariable)))
+}
+
+// readRubric reads the image of --rubric.
+func readRubric(path string) (domain.Rubric, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return domain.Rubric{}, fmt.Errorf("--rubric: %w", err)
+	}
+	defer file.Close()
+	rubric, err := domain.ReadRubric(file)
+	if err != nil {
+		return domain.Rubric{}, fmt.Errorf("--rubric %s: %w", path, err)
+	}
+	return rubric, nil
 }
 
 // boxList collects repeated --box flags.
@@ -535,6 +558,7 @@ flags:
   --location location of signing
   --page     page for the visible seal                           default: 1
   --box      seal box x1,y1,x2,y2 in PDF points
+  --rubric   PNG or JPEG of a handwritten signature, beside the data in the seal
   --json     machine-readable output
   --out      output path
 
@@ -542,6 +566,7 @@ examples:
   trebaruna sign contratto.pdf --p12 mario.p12 --pass secret --reason Contratto
   trebaruna sign fattura.xml --format cades --p12 mario.p12 --level t --tsa https://tsa.example/
   trebaruna sign atto.pdf --token "Carta de Ejemplo" --box 300,60,540,140
+  trebaruna sign atto.pdf --p12 mario.p12 --rubric firma.png
   trebaruna sign atto.pdf --card
   trebaruna sign atto.pdf --certificate 3f2a91c0 --format cades
   trebaruna sign doc.pdf --p12 self.p12 --json
