@@ -142,7 +142,8 @@ func (s NativePageSigner) signCades(ctx context.Context, request application.Pag
 }
 
 // signPades signs a PDF: invisibly, as AutoFirma does, unless the page gives
-// the seal's place (signaturePage, signaturePositionOnPage…).
+// the seal's place (signaturePage, signaturePositionOnPage…) or a form's
+// field to sign in (signatureField).
 func (s NativePageSigner) signPades(ctx context.Context, request application.PageSignature, level signing.Level, tsa string, policy signing.SignaturePolicy) ([]byte, error) {
 	if !bytes.HasPrefix(request.Data, []byte("%PDF")) {
 		return nil, domain.Failure{Code: domain.InvalidPDF}
@@ -155,12 +156,16 @@ func (s NativePageSigner) signPades(ctx context.Context, request application.Pag
 		Reason: request.Properties["signReason"], Location: request.Properties["signatureProductionCity"],
 		Policy: policy,
 	}
+	// signatureField names the form's empty field to sign in, the seal in
+	// its box; the position keys then do not apply.
 	placement, placed, err := sealFrom(request.Properties)
 	if err != nil {
 		return nil, err
 	}
-	if placed {
+	if pades.Field = strings.TrimSpace(request.Properties["signatureField"]); pades.Field == "" && placed {
 		pades.Placements = []signing.SealPlacement{placement}
+	}
+	if pades.Field != "" || placed {
 		if pades.Rubric, err = rubricFrom(request.Properties["signatureRubricImage"]); err != nil {
 			return nil, err
 		}

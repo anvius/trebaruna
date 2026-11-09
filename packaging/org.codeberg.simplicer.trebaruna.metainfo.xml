@@ -54,6 +54,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.50.0-unstable" date="2026-11-09">
+      <description>
+        <p>The window and web pages sign a PDF form in its signature field; trebaruna fields lists a form's empty fields.</p>
+      </description>
+    </release>
     <release version="0.49.0-unstable" date="2026-11-09">
       <description>
         <p>PDF signatures declare a signature policy, such as the AGE's, from the command line and from web pages.</p>

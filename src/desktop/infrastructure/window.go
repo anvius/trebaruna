@@ -55,6 +55,8 @@ type Window struct {
 
 	// binaryPath is the CLI the window drives.
 	binaryPath string
+	// formFields lists a PDF form's empty signature fields.
+	formFields *application.ListFormFields
 }
 
 // Options configures the window.
@@ -103,6 +105,7 @@ func newDesktop(window fyne.Window, catalogue messaging.Catalogue, binaryPath st
 		application: application.NewSignFromDesktop(CommandLineSigner{BinaryPath: binaryPath}, fileExists),
 		inspect:     application.NewInspectCertificate(CommandLineCertificateReader{BinaryPath: binaryPath}),
 		cards:       application.NewListCards(CommandLineCardReader{BinaryPath: binaryPath}),
+		formFields:  application.NewListFormFields(CommandLineFormFields{BinaryPath: binaryPath}),
 		firefox:     application.NewListCards(CommandLineCardReader{BinaryPath: binaryPath, Store: domain.StoreFirefox}),
 		pinChange:   application.NewChangeCardPIN(CommandLinePINChanger{BinaryPath: binaryPath}),
 		preview: application.NewPreviewPage(FirstAvailableRenderer{NewPopplerRenderer(), NewBuiltInRenderer()},
@@ -126,7 +129,7 @@ func (w *Window) Run() {
 func (w *Window) buildContent(initialDocument string) fyne.CanvasObject {
 	w.pages = newPagePane(w.messages, w.palette, w.preview)
 	w.form = newSignForm(w.window, w.messages, w.palette, fyne.CurrentApp().Preferences(),
-		w.application, w.inspect, w.cards, w.firefox, w.pages)
+		w.application, w.inspect, w.cards, w.firefox, w.formFields, w.pages)
 	w.form.onNetwork = w.activity.add
 	if initialDocument != "" {
 		w.form.setDocument(initialDocument)

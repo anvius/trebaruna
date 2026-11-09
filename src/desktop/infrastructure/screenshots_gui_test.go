@@ -64,6 +64,18 @@ func TestScreenshots(t *testing.T) {
 		desktop.form.report(fmt.Sprintf(desktop.messages.SignedAs, "contratto-di-locazione_signed.pdf"), widget.SuccessImportance)
 		capture(t, window, filepath.Join(directory, fmt.Sprintf("signed-%s.png", language)))
 
+		// A form with a field reserved for the signature: chosen, the seal
+		// sits in its box.
+		desktop.form.formFields = application.NewListFormFields(contractField{})
+		desktop.form.setDocument(document)
+		waitFor(t, func() bool { return desktop.form.fieldBox.Visible() })
+		desktop.form.fieldChoice.SetSelectedIndex(1)
+		waitFor(t, func() bool { return desktop.pages.canvas != nil && desktop.pages.canvas.locked })
+		capture(t, window, filepath.Join(directory, fmt.Sprintf("field-%s.png", language)))
+		desktop.form.formFields = application.NewListFormFields(contractField{none: true})
+		desktop.form.setDocument(document)
+		waitFor(t, func() bool { return desktop.pages.canvas != nil && !desktop.pages.canvas.locked })
+
 		// The card source, with a card that already refused a PIN once.
 		desktop.form.cardList = application.NewListCards(&scriptedCards{
 			listings: [][]domain.CardCertificate{identityCard(signing.PINCountLow)},
@@ -115,6 +127,17 @@ const sampleContainerReport = `{"signed":true,"verdict":"advanced","signers":[
 
 // portraitReader stands in for the certificate command with a qualified
 // Italian certificate, so the screenshots show a filled card.
+// contractField is the sample contract seen as a form with one empty
+// signature field at the foot of its page.
+type contractField struct{ none bool }
+
+func (c contractField) EmptyFields(context.Context, string) ([]domain.FormField, error) {
+	if c.none {
+		return nil, nil
+	}
+	return []domain.FormField{{Name: "FirmaConduttore", Page: 1, Rect: domain.SealRect{LowerLeftX: 330, LowerLeftY: 70, UpperRightX: 540, UpperRightY: 130}}}, nil
+}
+
 type portraitReader struct{}
 
 func (portraitReader) Read(context.Context, domain.CertificateFile) (domain.CertificateSummary, error) {

@@ -82,6 +82,8 @@ func RunIO(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return runAbout(args[1:], stdout, stderr)
 	case "extract":
 		return runExtract(args[1:], stdout, stderr)
+	case "fields":
+		return runFields(args[1:], stdout, stderr)
 	case "version", "--version", "-v":
 		fmt.Fprintln(stdout, version)
 		return exitOK
@@ -539,6 +541,7 @@ usage:
   trebaruna asic <document> <signature>        (ASiC-S / ASiC-E container)
   trebaruna serve --root <dir> --listen 127.0.0.1:0   (local HTTP API)
   trebaruna extract <document.p7m> [--out path]  (the document inside one or more envelopes)
+  trebaruna fields <document.pdf> [--json]      (a form's empty signature fields, for sign --field)
   trebaruna encrypt <file> --to <cert> [--to …]   (a .p7e only the recipients open)
   trebaruna decrypt <file.p7e> --p12|--card|…     (open a .p7e with your key)
   trebaruna afirma '<afirma://…>' [--approve]    (answer an AutoFirma request; shown first)

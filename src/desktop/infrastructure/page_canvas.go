@@ -51,6 +51,8 @@ type PageCanvas struct {
 	// description is what a screen reader says for the page: how to place
 	// the seal, or that it covers text.
 	description string
+	// locked keeps the seal where it is: in the box a form reserves.
+	locked bool
 
 	// fit is recomputed on every layout; pointer events read it.
 	fit     domain.DisplayFit
@@ -137,6 +139,13 @@ func (p *PageCanvas) SetIdentity(identity SealIdentity) {
 	p.Refresh()
 }
 
+// SetLocked keeps the seal in place, or lets it move again: a form's field
+// decides where it goes.
+func (p *PageCanvas) SetLocked(locked bool) {
+	p.locked = locked
+	p.Refresh()
+}
+
 // SetDescription sets what a screen reader says for the page.
 func (p *PageCanvas) SetDescription(description string) { p.description = description }
 
@@ -156,7 +165,7 @@ func (p *PageCanvas) SetRubric(rubric signing.Rubric, picture image.Image) {
 // Tapped centres the seal under the pointer when the click lands on paper.
 func (p *PageCanvas) Tapped(event *fyne.PointEvent) {
 	p.requestFocus()
-	if p.zoneAt(event.Position) != zonePaper {
+	if p.locked || p.zoneAt(event.Position) != zonePaper {
 		return
 	}
 	p.rect = p.fit.CentredAt(float64(event.Position.X), float64(event.Position.Y), p.rect.Width(), p.rect.Height())
@@ -165,6 +174,9 @@ func (p *PageCanvas) Tapped(event *fyne.PointEvent) {
 
 // Dragged moves or enlarges the seal; the gesture is decided where it began.
 func (p *PageCanvas) Dragged(event *fyne.DragEvent) {
+	if p.locked {
+		return
+	}
 	if p.gesture == gestureNone {
 		start := event.Position.Subtract(event.Dragged)
 		switch p.zoneAt(start) {
@@ -206,6 +218,9 @@ func (p *PageCanvas) MouseOut() { p.hover = zoneOutside }
 
 // Cursor tells the user what a press will do before they press.
 func (p *PageCanvas) Cursor() desktop.Cursor {
+	if p.locked {
+		return desktop.DefaultCursor
+	}
 	switch p.hover {
 	case zoneHandle:
 		return desktop.NWSEResizeCursor
@@ -228,6 +243,9 @@ func (p *PageCanvas) FocusLost() { p.focused = false; p.Refresh() }
 // corner handle does, for whoever cannot drag (WCAG 2.5.7).
 func (p *PageCanvas) TypedRune(typed rune) {
 	const step = 4.0
+	if p.locked {
+		return
+	}
 	var sign float64
 	switch typed {
 	case '+', '=':
@@ -245,6 +263,9 @@ func (p *PageCanvas) TypedRune(typed rune) {
 // TypedKey nudges the seal with the arrow keys.
 func (p *PageCanvas) TypedKey(event *fyne.KeyEvent) {
 	const step = 2.0
+	if p.locked {
+		return
+	}
 	var deltaX, deltaY float64
 	switch event.Name {
 	case fyne.KeyLeft:
@@ -362,6 +383,12 @@ func (r *pageCanvasRenderer) Layout(size fyne.Size) {
 	place(r.frame, seal.X, seal.Y, seal.Width, seal.Height)
 	place(r.focusRing, seal.X-4, seal.Y-4, seal.Width+8, seal.Height+8)
 	place(r.handle, seal.X+seal.Width-handleSize/2-2, seal.Y+seal.Height-handleSize/2-2, handleSize/2+2, handleSize/2+2)
+	// A seal in a form's field cannot be enlarged: no handle to suggest it.
+	if p.locked {
+		r.handle.Hide()
+	} else {
+		r.handle.Show()
+	}
 
 	r.layoutStamp(seal)
 }

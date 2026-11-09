@@ -21,7 +21,10 @@ type SigningIntent struct {
 	Level  SignatureLevel
 	Seal   SealChoice
 	// Invisible signs a PDF without any mark on its pages; Seal is ignored.
-	Invisible    bool
+	Invisible bool
+	// Field is the PDF form's empty signature field to sign in, the seal in
+	// the box the form reserves; Seal is then not placed.
+	Field        string
 	TimestampURL string
 	// TimestampUser and TimestampPassword are the account some authorities
 	// require (Aruba's and InfoCert's, among others). Both may be empty.
@@ -60,6 +63,14 @@ func (i SigningIntent) Validate() error {
 		return Problem{Code: ProblemInvalidPage}
 	}
 	return nil
+}
+
+// FormField is an empty signature field of a PDF form: the box its author
+// reserved for a signature, on a page.
+type FormField struct {
+	Name string
+	Page int
+	Rect SealRect
 }
 
 // SealChoice is where the user put the visible seal.

@@ -60,7 +60,11 @@ type signForm struct {
 	// readers, or the Firefox store.
 	cardList  *application.ListCards
 	storeList *application.ListCards
-	pages     *pagePane
+	// formFields finds the boxes a PDF form reserves for signatures; fields
+	// are the current document's.
+	formFields *application.ListFormFields
+	fields     []domain.FormField
+	pages      *pagePane
 	// onCheck hands a signed file to the verification tab.
 	onCheck func(path string)
 	// onNetwork receives the connections a signature reported.
@@ -93,6 +97,8 @@ type signForm struct {
 	formatChoice   *widget.RadioGroup
 	formatNote     *widget.Label
 	sealNote       *widget.Label
+	fieldChoice    *widget.Select
+	fieldBox       *fyne.Container
 	// rubric is the handwritten signature the seal carries, from rubricPath.
 	rubricPath   string
 	rubricRow    *fileRow
@@ -122,6 +128,7 @@ func newSignForm(
 	inspect *application.InspectCertificate,
 	cards *application.ListCards,
 	firefox *application.ListCards,
+	formFields *application.ListFormFields,
 	pages *pagePane,
 ) *signForm {
 	form := &signForm{
@@ -129,7 +136,7 @@ func newSignForm(
 		signing: signing, inspect: inspect, pages: pages,
 		format: domain.FormatPAdES,
 		run:    offThread, pause: typingPause,
-		cardList: cards, storeList: firefox,
+		cardList: cards, storeList: firefox, formFields: formFields,
 	}
 
 	form.documentRow = newFileRow(m.ChooseDocument, m.ChangeButton, m.DropHint, form.pickDocument)
@@ -160,6 +167,9 @@ func newSignForm(
 	form.formatChoice.Required = true
 	form.formatNote = caption("")
 	form.sealNote = caption("")
+	form.fieldChoice = widget.NewSelect(nil, func(string) { form.formatChanged() })
+	form.fieldBox = container.NewVBox(fieldLabel(m.FormFieldLabel), form.fieldChoice, caption(m.FormFieldsOffered))
+	form.fieldBox.Hide()
 
 	form.rubricRow = newFileRow(m.ChooseRubric, m.ChangeButton, m.RubricHint, form.pickRubric)
 	form.rubricRemove = widget.NewButtonWithIcon(m.RemoveRubric, theme.DeleteIcon(), form.removeRubric)
@@ -238,6 +248,7 @@ func (f *signForm) object() fyne.CanvasObject {
 		f.step(3, m.StepSignature),
 		f.formatChoice,
 		f.formatNote,
+		f.fieldBox,
 		f.sealNote,
 		f.rubricBox,
 		widget.NewAccordion(widget.NewAccordionItem(m.MoreOptions, container.NewVBox(
@@ -285,7 +296,18 @@ func (f *signForm) setDocument(path string) {
 	f.batch = nil
 	f.document = path
 	f.fingerprint = ""
+	f.offerFields(nil)
 	f.run(func() { f.measure(path) })
+	if domain.FormatsFor(path)[0].HasVisibleSeal() && f.formFields != nil {
+		f.run(func() {
+			fields := f.formFields.Execute(context.Background(), path)
+			fyne.Do(func() {
+				if f.document == path {
+					f.offerFields(fields)
+				}
+			})
+		})
+	}
 	f.signedPath = ""
 	f.afterSign.Hide()
 	f.status.SetText("")
@@ -327,6 +349,37 @@ func (f *signForm) chooseFormat(label string) {
 	}
 }
 
+// offerFields lists the form's empty signature fields to sign in, after
+// the choice to place the seal on the page; a document with none hides the
+// choice.
+func (f *signForm) offerFields(fields []domain.FormField) {
+	f.fields = fields
+	options := []string{f.m.FormFieldNone}
+	for _, field := range fields {
+		options = append(options, fmt.Sprintf(f.m.FormFieldOption, field.Name, field.Page))
+	}
+	f.fieldChoice.Options = options
+	// Repopulating is not a choice: the seal is redrawn once, below.
+	changed := f.fieldChoice.OnChanged
+	f.fieldChoice.OnChanged = nil
+	f.fieldChoice.SetSelectedIndex(0)
+	f.fieldChoice.OnChanged = changed
+	if len(fields) == 0 {
+		f.fieldBox.Hide()
+		return
+	}
+	f.formatChanged()
+}
+
+// chosenField is the form's field the person chose to sign in, if any.
+func (f *signForm) chosenField() (domain.FormField, bool) {
+	index := f.fieldChoice.SelectedIndex()
+	if index < 1 || index > len(f.fields) || !f.format.HasVisibleSeal() || len(f.batch) > 0 {
+		return domain.FormField{}, false
+	}
+	return f.fields[index-1], true
+}
+
 // formatChanged updates what depends on the format: where the file will be
 // written and whether there is a page to put a seal on.
 func (f *signForm) formatChanged() {
@@ -336,11 +389,21 @@ func (f *signForm) formatChanged() {
 	f.documentRow.show(f.document, f.documentNote())
 
 	f.rubricBox.Hide()
+	f.fieldBox.Hide()
+	if f.format.HasVisibleSeal() && len(f.fields) > 0 {
+		f.fieldBox.Show()
+	}
+	field, inField := f.chosenField()
 	switch {
 	case f.format.HasVisibleSeal() && f.invisible.Checked:
 		f.pages.empty(f.m.InvisibleExplained)
 		f.sealNote.SetText(f.m.InvisibleExplained)
 		f.sealNote.Show()
+	case inField:
+		f.pages.showField(f.document, field)
+		f.sealNote.SetText(f.m.FormFieldSealHint)
+		f.sealNote.Show()
+		f.rubricBox.Show()
 	case f.format.HasVisibleSeal():
 		f.pages.show(f.document)
 		f.sealNote.SetText(f.m.SealOnPagePane)
@@ -716,6 +779,8 @@ func (f *signForm) setDocuments(paths []string) {
 	f.batch = append([]string{}, paths...)
 	f.document = paths[0]
 	f.fingerprint = ""
+	// Each document of a batch takes the seal in its corner, never a field.
+	f.offerFields(nil)
 	f.signedPath = ""
 	f.afterSign.Hide()
 	f.status.SetText("")
@@ -832,6 +897,9 @@ func (f *signForm) sign() {
 		Location:          strings.TrimSpace(f.location.Text),
 	}
 	f.keyIntent(&intent)
+	if field, inField := f.chosenField(); inField {
+		intent.Field = field.Name
+	}
 	switch {
 	case f.format.HasVisibleSeal() && f.invisible.Checked:
 		intent.Invisible = true

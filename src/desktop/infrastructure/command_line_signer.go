@@ -128,9 +128,14 @@ func signArguments(intent domain.SigningIntent) []string {
 		arguments = append(arguments, "--online-revocation")
 	}
 
+	if intent.Field != "" {
+		arguments = append(arguments, "--field", intent.Field)
+	}
 	switch {
 	case intent.Invisible:
 		arguments = append(arguments, "--invisible")
+	case intent.Field != "":
+		// The seal goes in the box the form reserves.
 	default:
 		if intent.Seal.Page > 1 {
 			arguments = append(arguments, "--page", strconv.Itoa(intent.Seal.Page))

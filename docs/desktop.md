@@ -149,6 +149,14 @@ the page says so.
 The seal never leaves the page and never shrinks below 64x48 pt, the size at
 which the certificate identity still fits without truncation.
 
+**Form's signature field.** When the PDF is a form with empty signature fields
+(the boxes its author reserved for each signer), the form lists them under the
+formats, after **None: place the seal on the page**. Choosing one shows its
+page with the seal in the field's box, which cannot be moved, enlarged or
+turned to another page: the field decides where the seal goes, and the PDF is
+signed in that field (`trebaruna sign --field`). Choosing **None** places the
+seal again. A batch of documents never offers fields.
+
 **Rubric (optional)**, under the formats, adds the image of your handwritten
 signature (PNG or JPEG) to the seal, left of the certificate data. The page
 then proposes a 160x48 pt seal and shows the rubric in it; the choice is

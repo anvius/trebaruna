@@ -294,3 +294,45 @@ func TestAddedSignaturesBecomeTheCommandsOptions(t *testing.T) {
 		}
 	}
 }
+
+// TestAFormFieldIsSignedInPlaceOfAPlacedSeal: --field, no page nor box.
+func TestAFormFieldIsSignedInPlaceOfAPlacedSeal(t *testing.T) {
+	binary, recorded := fakeCommand(t, "echo '"+receiptJSON+"'")
+	intent := fullIntent()
+	intent.Field = "form.Firma1"
+	if _, err := (infrastructure.CommandLineSigner{BinaryPath: binary}).Sign(context.Background(), intent); err != nil {
+		t.Fatalf("Sign: %v", err)
+	}
+	arguments := recordedArguments(t, recorded)
+	if !containsPair(arguments, "--field", "form.Firma1") || slicesContain(arguments, "--box") || slicesContain(arguments, "--page") {
+		t.Errorf("%v", arguments)
+	}
+}
+
+func slicesContain(values []string, wanted string) bool {
+	for _, value := range values {
+		if value == wanted {
+			return true
+		}
+	}
+	return false
+}
+
+// TestTheFormFieldsAreReadFromTheFieldsCommand.
+func TestTheFormFieldsAreReadFromTheFieldsCommand(t *testing.T) {
+	binary, recorded := fakeCommand(t, `echo '{"path":"/tmp/f.pdf","fields":[{"name":"Firma1","page":2,"box":[500,160,300,100]}]}'`)
+	fields, err := (infrastructure.CommandLineFormFields{BinaryPath: binary}).EmptyFields(context.Background(), "/tmp/f.pdf")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []domain.FormField{{Name: "Firma1", Page: 2, Rect: domain.SealRect{LowerLeftX: 300, LowerLeftY: 100, UpperRightX: 500, UpperRightY: 160}}}
+	if !reflect.DeepEqual(fields, want) || !reflect.DeepEqual(recordedArguments(t, recorded), []string{"fields", "/tmp/f.pdf", "--json"}) {
+		t.Errorf("%+v", fields)
+	}
+	for _, body := range []string{"echo 'not json'", "echo 'not a PDF' >&2; exit 2"} {
+		failing, _ := fakeCommand(t, body)
+		if _, err := (infrastructure.CommandLineFormFields{BinaryPath: failing}).EmptyFields(context.Background(), "/tmp/f.pdf"); err == nil {
+			t.Errorf("%s: no error", body)
+		}
+	}
+}

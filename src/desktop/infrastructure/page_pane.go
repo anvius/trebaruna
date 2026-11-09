@@ -50,6 +50,9 @@ type pagePane struct {
 	// rubric widens the proposed seal and is drawn in it.
 	rubric        signing.Rubric
 	rubricPicture image.Image
+	// field is the form's field the seal goes in, when one is chosen: its
+	// page is shown and the seal stays in its box.
+	field *domain.FormField
 	// run starts the render off the UI thread.
 	run background
 	// loading counts renders, so a slow render of a document the user has
@@ -93,6 +96,9 @@ func (p *pagePane) object() fyne.CanvasObject { return p.root }
 
 // choice is the seal the user placed, or the signer's default without preview.
 func (p *pagePane) choice() domain.SealChoice {
+	if p.field != nil {
+		return domain.SealChoice{Page: p.field.Page}
+	}
 	if p.canvas == nil {
 		return domain.SealChoice{Page: 1}
 	}
@@ -130,7 +136,16 @@ func (p *pagePane) sealSize() application.SealSize {
 // show renders the first page of a new document.
 func (p *pagePane) show(documentPath string) {
 	p.document = documentPath
+	p.field = nil
 	p.page = 1
+	p.render()
+}
+
+// showField renders the page of a form's field with the seal in its box.
+func (p *pagePane) showField(documentPath string, field domain.FormField) {
+	p.document = documentPath
+	p.field = &field
+	p.page = field.Page
 	p.render()
 }
 
@@ -213,10 +228,15 @@ func (p *pagePane) failed(err error) {
 // present swaps in the rendered page with the proposed seal.
 func (p *pagePane) present(result application.PreviewResult, page image.Image) {
 	p.result = result
-	p.canvas = NewPageCanvas(result.Geometry, result.Preview.Ink, page, result.SealRect, p.identity, func(domain.SealRect) {
+	rect := result.SealRect
+	if p.field != nil {
+		rect = p.field.Rect
+	}
+	p.canvas = NewPageCanvas(result.Geometry, result.Preview.Ink, page, rect, p.identity, func(domain.SealRect) {
 		p.describe()
 	})
 	p.canvas.SetRubric(p.rubric, p.rubricPicture)
+	p.canvas.SetLocked(p.field != nil)
 	p.stage.Objects = []fyne.CanvasObject{p.canvas}
 	p.stage.Refresh()
 
@@ -230,6 +250,12 @@ func (p *pagePane) present(result application.PreviewResult, page image.Image) {
 		p.next.Disable()
 	}
 	p.suggest.Enable()
+	if p.field != nil {
+		// The field's page, the field's box: nothing to move or turn.
+		p.previous.Disable()
+		p.next.Disable()
+		p.suggest.Disable()
+	}
 	p.describe()
 }
 
@@ -240,6 +266,8 @@ func (p *pagePane) describe() {
 	}
 	importance, text := widget.MediumImportance, p.messages.SealHint
 	switch {
+	case p.field != nil:
+		text = p.messages.FormFieldSealHint
 	case p.canvas.CoversText():
 		importance, text = widget.WarningImportance, p.messages.SealCoversText
 	case p.result.Preview.Approximate:

@@ -171,7 +171,8 @@ A form prepared for its signers has an empty signature field for each:
 `--field <name>` signs in that one, by its fully qualified name (the partial
 names of the field and its parents joined by dots, `form.Firma1`), and draws
 the seal in the field's box. With `--invisible` the field is signed without a
-seal. A name the form lacks is refused with the empty fields it has.
+seal. A name the form lacks is refused with the empty fields it has;
+`trebaruna fields <pdf>` lists them, and the window offers them beside the page.
 
 ```bash
 trebaruna sign solicitud.pdf --field Firma1

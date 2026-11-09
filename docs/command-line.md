@@ -336,6 +336,24 @@ See [Timestamps](timestamps.md).
 
 ---
 
+## `fields`
+
+```bash
+trebaruna fields solicitud.pdf [--json]
+```
+
+Lists a PDF form's empty signature fields: the fully qualified name `sign
+--field` takes, the page and the box (lower left and upper right corners, in
+points). `--json` prints `{"path", "fields": [{"name", "page", "box"}]}`; the
+window reads it to offer the fields.
+
+```
+Firma1  page 1  box 300,100,500,160  (200x60 pt)
+form.Firma2  page 1  box 300,300,500,360  (200x60 pt)
+```
+
+---
+
 ## `verify-tsr`
 
 ```

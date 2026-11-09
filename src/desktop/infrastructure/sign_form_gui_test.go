@@ -15,6 +15,7 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -93,6 +94,7 @@ func newFormFixtureWithCards(t *testing.T, reader application.CertificateReader,
 	desktop.firefox = application.NewListCards(cards)
 	desktop.pinChange = application.NewChangeCardPIN(&scriptedPINChanger{})
 	desktop.preview = application.NewPreviewPage(blankRenderer{}, application.InkFinder{})
+	desktop.formFields = application.NewListFormFields(&scriptedFields{})
 	window.SetContent(desktop.withTabs(desktop.buildContent("")))
 	window.Resize(fyne.NewSize(1220, 800))
 	// The work the form starts runs in line: the test driver runs fyne.Do on
@@ -397,5 +399,59 @@ func TestACounterSignatureIsLabelledInTheReport(t *testing.T) {
 		{"field":"CMS #1 › countersignature 1","countersigns":"CMS #1","signer":"ANNA BIANCHI","integrity":"good"}]}`))
 	if !strings.Contains(collectTexts(tab.signers), "Contrafirma de la firma CMS #1") {
 		t.Error("the counter-signature must say which signature it counter-signs")
+	}
+}
+
+// scriptedFields answers with the fields of a form: forms.pdf has one.
+type scriptedFields struct{}
+
+func (*scriptedFields) EmptyFields(_ context.Context, path string) ([]domain.FormField, error) {
+	if !strings.HasSuffix(path, "form.pdf") {
+		return nil, nil
+	}
+	return []domain.FormField{{Name: "Firma1", Page: 1, Rect: domain.SealRect{LowerLeftX: 300, LowerLeftY: 100, UpperRightX: 500, UpperRightY: 160}}}, nil
+}
+
+// TestAFormsFieldTakesTheSeal: a PDF with an empty signature field offers
+// it; chosen, the seal sits locked in its box and the field is signed;
+// back to the page, the seal moves again. A PDF without fields offers none.
+func TestAFormsFieldTakesTheSeal(t *testing.T) {
+	fixture := newFormFixture(t, scriptedCertificate{summary: qualifiedRossi()})
+	form := fixture.desktop.form
+	form.setDocument("/tmp/contratto.pdf")
+	settle(t, func() bool { return fixture.desktop.pages.canvas != nil })
+	if form.fieldBox.Visible() {
+		t.Fatal("a PDF without fields offers none")
+	}
+
+	form.setDocument("/tmp/form.pdf")
+	settle(t, func() bool { return form.fieldBox.Visible() })
+	if want := []string{form.m.FormFieldNone, "Firma1 (página 1)"}; !reflect.DeepEqual(form.fieldChoice.Options, want) {
+		t.Fatalf("options %v", form.fieldChoice.Options)
+	}
+	form.fieldChoice.SetSelectedIndex(1)
+	settle(t, func() bool { return fixture.desktop.pages.canvas != nil && fixture.desktop.pages.canvas.locked })
+	canvas := fixture.desktop.pages.canvas
+	if canvas.Rect() != (domain.SealRect{LowerLeftX: 300, LowerLeftY: 100, UpperRightX: 500, UpperRightY: 160}) ||
+		form.sealNote.Text != form.m.FormFieldSealHint || !fixture.desktop.pages.suggest.Disabled() {
+		t.Errorf("the seal is the field's box: %+v, note %q", canvas.Rect(), form.sealNote.Text)
+	}
+	canvas.TypedKey(&fyne.KeyEvent{Name: fyne.KeyLeft})
+	if canvas.Rect().LowerLeftX != 300 {
+		t.Error("the seal in a field does not move")
+	}
+
+	form.setCertificate("/tmp/rossi.p12")
+	form.passphrase.SetText("segreto")
+	settle(t, func() bool { return form.summary != nil })
+	test.Tap(form.signButton)
+	if intent := <-fixture.signer.intents; intent.Field != "Firma1" || intent.Seal.Placed() || intent.Invisible {
+		t.Errorf("intent = %+v, want the field signed", intent)
+	}
+
+	form.fieldChoice.SetSelectedIndex(0)
+	settle(t, func() bool { return fixture.desktop.pages.canvas != nil && !fixture.desktop.pages.canvas.locked })
+	if fixture.desktop.pages.field != nil {
+		t.Error("back to the page, the seal is placed again")
 	}
 }

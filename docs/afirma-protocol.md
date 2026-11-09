@@ -384,8 +384,9 @@ Format-specific keys pass straight through to the signers; the most used by site
 `signatureSubFilter` (`adbe.pkcs7.detached` or `ETSI.CAdES.detached`),
 `signaturePage`, `signaturePositionOnPageLowerLeftX/Y`,
 `signaturePositionOnPageUpperRightX/Y`, `layer2Text`, `layer2FontFamily/Size/Style/Color`,
-`signatureRubricImage`, `visibleSignature` (`want`/`optional` opens a placement
-dialog), `signReason`, `signerContact`, `ownerPassword`, `tsaURL`, `tsaPolicy`,
+`signatureRubricImage`, `signatureField` (the form's empty signature field to
+sign in, the seal in its box; trebaruna refuses a name the form lacks),
+`visibleSignature` (`want`/`optional` opens a placement dialog), `signReason`, `signerContact`, `ownerPassword`, `tsaURL`, `tsaPolicy`,
 `tsaHashAlgorithm`, `includeOnlySignningCertificate`, `signingCertificateV2`,
 `allowShadowAttack`, `pagesToCheckShadowAttack` (default `10` when checking).
 Note the CAdES constant for the hash-algorithm key is misspelt

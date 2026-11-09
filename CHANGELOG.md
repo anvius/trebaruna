@@ -61,6 +61,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A form's signature field from the window and from web pages. `trebaruna
+  fields <pdf> [--json]` lists a PDF form's empty signature fields (name,
+  page, box). The window reads it: a PDF with fields offers them under the
+  formats, after "None: place the seal on the page"; a field chosen shows
+  its page with the seal locked in its box (no handle, no keys, no page
+  turning, no free-space search) and signs with `--field`; batches never
+  offer fields. Messages in Spanish, Italian, English, Catalan, Galician
+  and Basque. afirma:// pages name the field with AutoFirma's
+  `signatureField` (the position keys then do not apply).
+
 - PAdES signatures carry a signature policy (PAdES-EPES): `sign --policy`
   on a PDF, and afirma:// `expPolicy` (FirmaAGE) or `policyIdentifier` on
   a PAdES page, were refused. The PDF library cannot add the attribute, so

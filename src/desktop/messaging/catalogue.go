@@ -166,6 +166,11 @@ type Catalogue struct {
 	NextPage                   string
 	FormatOnlyCAdES            string
 	SealOnPagePane             string
+	FormFieldLabel             string
+	FormFieldNone              string
+	FormFieldOption            string
+	FormFieldsOffered          string
+	FormFieldSealHint          string
 	MoreOptions                string
 	LevelBasicLabel            string
 	LevelTimestampLabel        string
@@ -436,6 +441,11 @@ var spanish = Catalogue{
 	RubricInvalid:              "Esa imagen no sirve como rúbrica: tiene que ser PNG o JPEG, de hasta 4 MiB y 4096 píxeles de lado.",
 	FormatOnlyCAdES:            "Este tipo de fichero se firma dentro de un sobre .p7m (CAdES).",
 	SealOnPagePane:             "El sello irá donde lo ves en la página de la derecha.",
+	FormFieldLabel:             "Campo de firma del formulario",
+	FormFieldNone:              "Ninguno: colocar el sello en la página",
+	FormFieldOption:            "%s (página %d)",
+	FormFieldsOffered:          "Este PDF reserva campos para firmar: elige uno para que el sello vaya en él.",
+	FormFieldSealHint:          "El formulario reserva este recuadro para la firma: el sello irá aquí y no se mueve.",
 	MoreOptions:                "Más opciones",
 	LevelBasicLabel:            "Básica, sin sello de tiempo",
 	LevelTimestampLabel:        "Con sello de tiempo (T)",
@@ -685,6 +695,11 @@ var italian = Catalogue{
 	RubricInvalid:              "Quell'immagine non può fare da firma autografa: deve essere PNG o JPEG, al massimo 4 MiB e 4096 pixel per lato.",
 	FormatOnlyCAdES:            "Questo tipo di file si firma in una busta .p7m (CAdES).",
 	SealOnPagePane:             "Il timbro andrà dove lo vedi nella pagina a destra.",
+	FormFieldLabel:             "Campo firma del modulo",
+	FormFieldNone:              "Nessuno: posiziona il timbro sulla pagina",
+	FormFieldOption:            "%s (pagina %d)",
+	FormFieldsOffered:          "Questo PDF prevede campi per la firma: scegline uno perché il timbro vada lì.",
+	FormFieldSealHint:          "Il modulo riserva questo riquadro alla firma: il timbro andrà qui e non si sposta.",
 	MoreOptions:                "Altre opzioni",
 	LevelBasicLabel:            "Base, senza marca temporale",
 	LevelTimestampLabel:        "Con marca temporale (T)",
@@ -934,6 +949,11 @@ var english = Catalogue{
 	RubricInvalid:              "That image cannot be a handwritten signature: it must be a PNG or JPEG of at most 4 MiB and 4096 pixels a side.",
 	FormatOnlyCAdES:            "This kind of file is signed inside a .p7m envelope (CAdES).",
 	SealOnPagePane:             "The seal goes where you see it on the page to the right.",
+	FormFieldLabel:             "Form's signature field",
+	FormFieldNone:              "None: place the seal on the page",
+	FormFieldOption:            "%s (page %d)",
+	FormFieldsOffered:          "This PDF has fields reserved for signatures: choose one for the seal to go in it.",
+	FormFieldSealHint:          "The form reserves this box for the signature: the seal goes here and does not move.",
 	MoreOptions:                "More options",
 	LevelBasicLabel:            "Basic, no timestamp",
 	LevelTimestampLabel:        "With timestamp (T)",
