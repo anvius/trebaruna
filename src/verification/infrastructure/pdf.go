@@ -167,7 +167,11 @@ func (v *PDFVerifier) checkHere(path string, signer *verify.Signer, index int, e
 		}
 		node := envelope.tree.signers[0]
 		documentTimestamp := envelope.tree.contentType.Equal(oidTSTInfo)
-		if !documentTimestamp && !isPSS(node.SignatureAlgorithm) && !timeStampedWithPSS(node) {
+		// A signature carrying content of its own signs that, not the byte
+		// ranges: it is left to the library's verdict.
+		ownContent := len(envelope.tree.content) > 0
+		pssInside := isPSS(node.SignatureAlgorithm) || timeStampedWithPSS(node)
+		if !documentTimestamp && (ownContent || !pssInside) {
 			continue
 		}
 		taken[candidate] = true

@@ -55,6 +55,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.62.2-unstable" date="2026-11-09">
+      <description>
+        <p>A PDF whose signature envelope carries other content is left to the PDF library's verdict.</p>
+      </description>
+    </release>
     <release version="0.62.1-unstable" date="2026-11-09">
       <description>
         <p>PDF timestamps from authorities that sign with RSA-PSS are checked against the document.</p>

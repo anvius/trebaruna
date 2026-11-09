@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that for the document. A document timestamp (its content a TSTInfo) is
   now checked as one: the token's signature, then its imprint against the
   bytes its /ByteRange covers, with the same code as ASiC timestamps.
+- A PDF envelope carrying content of its own (adbe.pkcs7.sha1, or another
+  document's envelope put in /Contents) is left to the PDF library's
+  verdict: trebaruna's RSA-PSS fallback judged envelopes against their
+  content, which for these is not the PDF.
 - A PDF signature whose signature timestamp an authority signed with
   RSA-PSS was "unverifiable": the library stops at the token before
   checking the signature. Such a signature now gets the CAdES checks,
