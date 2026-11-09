@@ -67,7 +67,8 @@ between, the result says so and names the version that was signed.
 The certificate path, the level and the timestamp authority are remembered
 between sessions. The passphrase never is.
 
-**More options** holds what is rarely changed: the level (basic, with
+**More options** holds what is rarely changed: an invisible signature (signed
+PDF only; the page pane then says no seal will be drawn), the level (basic, with
 timestamp, LT, LTA — the authority fields appear only when the level needs
 them), the reason, and the place, which is prefilled from the certificate when
 it carries a locality. Next to the authority address go its user and password,

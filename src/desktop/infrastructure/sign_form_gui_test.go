@@ -317,3 +317,25 @@ func TestTheFingerprintShownIsTheOneSigned(t *testing.T) {
 		t.Errorf("a changed document must be named by the fingerprint signed, got %q", form.status.Text)
 	}
 }
+
+func TestAnInvisibleSignatureNeedsNoPage(t *testing.T) {
+	fixture := newFormFixture(t, scriptedCertificate{summary: qualifiedRossi()})
+	form := fixture.desktop.form
+	form.setDocument("/tmp/contratto.pdf")
+	settle(t, func() bool { return fixture.desktop.pages.canvas != nil })
+	form.setCertificate("/tmp/rossi.p12")
+
+	form.invisible.SetChecked(true)
+	if fixture.desktop.pages.canvas != nil || form.sealNote.Text != form.m.InvisibleExplained {
+		t.Fatal("an invisible signature must not offer a page to place a seal on")
+	}
+	test.Tap(form.signButton)
+	if intent := <-fixture.signer.intents; !intent.Invisible {
+		t.Errorf("intent = %+v, want an invisible signature", intent)
+	}
+
+	form.formatChoice.SetSelected(form.m.FormatCAdESLabel)
+	if !form.invisible.Disabled() {
+		t.Error("an envelope has no page, so the option does not apply")
+	}
+}

@@ -186,6 +186,8 @@ type Catalogue struct {
 	AboutCardsNo         string
 	AboutRevision        string
 	AboutDependencies    string
+	InvisibleSignature   string
+	InvisibleExplained   string
 }
 
 // For returns the catalogue for a language.
@@ -331,6 +333,8 @@ var spanish = Catalogue{
 	AboutCardsNo:               "Esta compilación no admite tarjetas: es la versión estática sin cgo.",
 	AboutRevision:              "Revisión del código: %s",
 	AboutDependencies:          "Dependencias y licencias (%d)",
+	InvisibleSignature:         "Firma invisible (sin sello en la página)",
+	InvisibleExplained:         "Firma invisible: el PDF queda firmado y cualquier lector lo muestra en su panel de firmas, pero no se dibuja ningún sello en la página.",
 }
 
 var italian = Catalogue{
@@ -464,6 +468,8 @@ var italian = Catalogue{
 	AboutCardsNo:               "Questa build non supporta le smart card: è la versione statica senza cgo.",
 	AboutRevision:              "Revisione del codice: %s",
 	AboutDependencies:          "Dipendenze e licenze (%d)",
+	InvisibleSignature:         "Firma invisibile (senza timbro sulla pagina)",
+	InvisibleExplained:         "Firma invisibile: il PDF è firmato e ogni lettore lo mostra nel pannello delle firme, ma sulla pagina non compare alcun timbro.",
 }
 
 var english = Catalogue{
@@ -597,6 +603,8 @@ var english = Catalogue{
 	AboutCardsNo:               "This build does not support smartcards: it is the static build without cgo.",
 	AboutRevision:              "Source revision: %s",
 	AboutDependencies:          "Dependencies and licences (%d)",
+	InvisibleSignature:         "Invisible signature (no seal on the page)",
+	InvisibleExplained:         "Invisible signature: the PDF is signed and every reader shows it in its signature panel, but no seal is drawn on the page.",
 }
 
 // LevelName renders a level name for display.

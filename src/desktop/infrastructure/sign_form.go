@@ -75,6 +75,7 @@ type signForm struct {
 	formatChoice   *widget.RadioGroup
 	formatNote     *widget.Label
 	sealNote       *widget.Label
+	invisible      *widget.Check
 	level          *widget.Select
 	timestamp      *widget.Entry
 	tsaUser        *widget.Entry
@@ -123,6 +124,7 @@ func newSignForm(
 	form.formatNote = caption("")
 	form.sealNote = caption("")
 
+	form.invisible = widget.NewCheck(m.InvisibleSignature, func(bool) { form.formatChanged() })
 	form.level = widget.NewSelect(form.levelLabels(), func(string) { form.levelChanged() })
 	form.timestamp = widget.NewEntry()
 	form.timestamp.SetPlaceHolder("https://")
@@ -182,6 +184,7 @@ func (f *signForm) object() fyne.CanvasObject {
 		f.formatNote,
 		f.sealNote,
 		widget.NewAccordion(widget.NewAccordionItem(m.MoreOptions, container.NewVBox(
+			f.invisible,
 			fieldLabel(m.LevelLabel), f.level,
 			f.timestampBox,
 			fieldLabel(m.ReasonLabel), f.reason,
@@ -265,14 +268,24 @@ func (f *signForm) formatChanged() {
 	}
 	f.documentRow.show(f.document, f.documentNote())
 
-	if f.format.HasVisibleSeal() {
+	switch {
+	case f.format.HasVisibleSeal() && f.invisible.Checked:
+		f.pages.empty(f.m.InvisibleExplained)
+		f.sealNote.SetText(f.m.InvisibleExplained)
+		f.sealNote.Show()
+	case f.format.HasVisibleSeal():
 		f.pages.show(f.document)
 		f.sealNote.SetText(f.m.SealOnPagePane)
 		f.sealNote.Show()
-		return
+	default:
+		f.pages.withoutVisibleSeal()
+		f.sealNote.Hide()
 	}
-	f.pages.withoutVisibleSeal()
-	f.sealNote.Hide()
+	if f.format.HasVisibleSeal() {
+		f.invisible.Enable()
+	} else {
+		f.invisible.Disable()
+	}
 }
 
 // documentNote says where the result goes and, once measured, what exactly
@@ -485,7 +498,10 @@ func (f *signForm) sign() {
 		Reason:            strings.TrimSpace(f.reason.Text),
 		Location:          strings.TrimSpace(f.location.Text),
 	}
-	if f.format.HasVisibleSeal() {
+	switch {
+	case f.format.HasVisibleSeal() && f.invisible.Checked:
+		intent.Invisible = true
+	case f.format.HasVisibleSeal():
 		intent.Seal = f.pages.choice()
 	}
 	if err := intent.Validate(); err != nil {

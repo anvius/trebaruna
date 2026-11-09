@@ -1,6 +1,9 @@
 package domain
 
-import "fmt"
+import (
+	"fmt"
+	"math"
+)
 
 // SealPlacement is where, and how, the visible signature appears on a page.
 //
@@ -13,6 +16,9 @@ type SealPlacement struct {
 	upperRightX float64
 	upperRightY float64
 	image       []byte
+	// corner marks the default seal: its coordinates assume A4 until OnPage
+	// places it on the real page.
+	corner bool
 }
 
 // A4 in PDF user-space points (1 pt = 1/72 inch).
@@ -47,13 +53,42 @@ func PlaceSeal(page int, lx, ly, ux, uy float64) (SealPlacement, error) {
 // a normal page. ETSI does not prescribe a seal size; it only requires that the
 // appearance not obscure the signed content.
 func DefaultSeal(page int) SealPlacement {
-	const width, height, margin = 64.0, 48.0, 18.0
 	return SealPlacement{
 		page:        page,
-		lowerLeftX:  a4Width - margin - width,
-		lowerLeftY:  margin,
-		upperRightX: a4Width - margin,
-		upperRightY: margin + height,
+		lowerLeftX:  a4Width - cornerMargin - cornerWidth,
+		lowerLeftY:  cornerMargin,
+		upperRightX: a4Width - cornerMargin,
+		upperRightY: cornerMargin + cornerHeight,
+		corner:      true,
+	}
+}
+
+// The default seal: 64x48 pt, 18 pt from the bottom and right edges.
+const (
+	cornerWidth  = 64.0
+	cornerHeight = 48.0
+	cornerMargin = 18.0
+)
+
+// IsCorner reports the default seal, which still has to be placed on the page.
+func (s SealPlacement) IsCorner() bool { return s.corner }
+
+// OnPage places the default seal in the bottom-right corner of a page whose
+// visible box spans left..right and bottom..top in PDF points. A page smaller
+// than the seal and its margins gets the seal at its lower-left origin rather
+// than at negative coordinates.
+func (s SealPlacement) OnPage(left, bottom, right, top float64) SealPlacement {
+	if !s.corner {
+		return s
+	}
+	lowerLeftX := math.Max(left, right-cornerMargin-cornerWidth)
+	lowerLeftY := math.Min(bottom+cornerMargin, math.Max(bottom, top-cornerHeight))
+	return SealPlacement{
+		page:        s.page,
+		lowerLeftX:  lowerLeftX,
+		lowerLeftY:  lowerLeftY,
+		upperRightX: lowerLeftX + cornerWidth,
+		upperRightY: lowerLeftY + cornerHeight,
 	}
 }
 

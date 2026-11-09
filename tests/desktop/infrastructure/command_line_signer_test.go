@@ -222,3 +222,17 @@ func TestTheTimestampAccountTravelsWithoutItsPasswordOnTheCommandLine(t *testing
 		t.Errorf("TREBARUNA_TSA_PASS = %q", got)
 	}
 }
+
+func TestAnInvisibleSignatureSendsNoSeal(t *testing.T) {
+	binary, recorded := fakeCommand(t, "echo '"+receiptJSON+"'")
+	intent := fullIntent()
+	intent.Invisible = true
+
+	if _, err := (infrastructure.CommandLineSigner{BinaryPath: binary}).Sign(context.Background(), intent); err != nil {
+		t.Fatalf("Sign: %v", err)
+	}
+	arguments := recordedArguments(t, recorded)
+	if !contains(arguments, "--invisible") || contains(arguments, "--box") || contains(arguments, "--page") {
+		t.Errorf("arguments = %v", arguments)
+	}
+}

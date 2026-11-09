@@ -410,3 +410,34 @@ func TestTheReceiptCarriesBothFingerprints(t *testing.T) {
 		t.Errorf("signed digest = %s, want the SHA-256 of the file written", artefact.SignedDigest)
 	}
 }
+
+func TestAnInvisibleSignatureCannotAlsoPlaceASeal(t *testing.T) {
+	store := newFakeStore(map[string][]byte{"/tmp/a.pdf": []byte("%PDF")})
+	useCase := application.NewSignDocument(store, fakeClock{time.Unix(0, 0)},
+		selfSignedIdentity(), &fakeCades{}, &fakePades{}, &fakeXades{})
+
+	_, err := useCase.Execute(context.Background(), application.Request{
+		Document: newDocument(t, "/tmp/a.pdf"), Format: domain.Pades, Level: domain.BES, Signer: newSigner(t),
+		Invisible: true, Placements: []domain.SealPlacement{domain.DefaultSeal(1)},
+	})
+	if err == nil {
+		t.Fatal("invisible plus a seal must be refused")
+	}
+}
+
+func TestAnInvisibleSignatureReportsNoSeal(t *testing.T) {
+	store := newFakeStore(map[string][]byte{"/tmp/a.pdf": []byte("%PDF")})
+	pades := &fakePades{}
+	useCase := application.NewSignDocument(store, fakeClock{time.Unix(0, 0)},
+		selfSignedIdentity(), &fakeCades{}, pades, &fakeXades{})
+
+	artefact, err := useCase.Execute(context.Background(), application.Request{
+		Document: newDocument(t, "/tmp/a.pdf"), Format: domain.Pades, Level: domain.BES, Signer: newSigner(t), Invisible: true,
+	})
+	if err != nil {
+		t.Fatalf("Execute: %v", err)
+	}
+	if artefact.HasSeal || artefact.SealCount != 0 {
+		t.Errorf("artefact = %+v, want no seal", artefact)
+	}
+}

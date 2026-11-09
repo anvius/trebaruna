@@ -2,6 +2,7 @@ package domain_test
 
 import (
 	"errors"
+	"reflect"
 	"testing"
 
 	"codeberg.org/simplicer/trebaruna/src/signing/domain"
@@ -186,5 +187,42 @@ func TestAnUnnamedSignerTakesTheCertificateHolder(t *testing.T) {
 	}
 	if got := named.NameFor("MARIO ROSSI"); got != "Studio Rossi" {
 		t.Errorf("an explicit name must win, got %q", got)
+	}
+}
+
+func TestTheDefaultSealSitsInTheCornerOfTheRealPage(t *testing.T) {
+	corner := domain.DefaultSeal(2)
+	if !corner.IsCorner() {
+		t.Fatal("the default seal must ask to be placed")
+	}
+	cases := []struct {
+		name                     string
+		left, bottom, right, top float64
+		wantX, wantY             float64
+	}{
+		{"letter", 0, 0, 612, 792, 530, 18},
+		{"landscape A4", 0, 0, 842, 595, 760, 18},
+		{"cropped page with an offset origin", 20, 30, 500, 700, 418, 48},
+		{"page smaller than the seal", 0, 0, 50, 40, 0, 0},
+	}
+	for _, testCase := range cases {
+		placed := corner.OnPage(testCase.left, testCase.bottom, testCase.right, testCase.top)
+		x, y, _, _ := placed.Box()
+		if x != testCase.wantX || y != testCase.wantY || placed.Width() != 64 || placed.Height() != 48 {
+			t.Errorf("%s: seal at %v,%v (%vx%v), want %v,%v 64x48", testCase.name, x, y, placed.Width(), placed.Height(), testCase.wantX, testCase.wantY)
+		}
+		if placed.IsCorner() || placed.Page() != 2 {
+			t.Errorf("%s: a placed seal keeps its page and is no longer a corner request", testCase.name)
+		}
+	}
+}
+
+func TestAnExplicitSealIsNotMovedByThePage(t *testing.T) {
+	explicit, err := domain.PlaceSeal(1, 10, 10, 110, 60)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if explicit.IsCorner() || !reflect.DeepEqual(explicit.OnPage(0, 0, 612, 792), explicit) {
+		t.Error("only the default seal is placed against the page")
 	}
 }

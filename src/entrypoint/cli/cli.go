@@ -106,6 +106,7 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 		page       = flags.Int("page", 1, "page for the visible seal (1-based)")
 		boxes      = boxList{}
 		enveloping = flags.Bool("enveloping", false, "XAdES enveloping (default: enveloped)")
+		invisible  = flags.Bool("invisible", false, "PAdES without any visible seal (excludes --box)")
 		asJSON     = flags.Bool("json", false, "machine-readable output")
 	)
 
@@ -163,10 +164,16 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 		return exitUsage
 	}
 
-	placements, err := buildPlacements(*page, boxes)
-	if err != nil {
-		fmt.Fprintf(stderr, "%v\n", err)
+	if *invisible && len(boxes) > 0 {
+		fmt.Fprintln(stderr, "--invisible and --box exclude each other: an invisible signature has no seal")
 		return exitUsage
+	}
+	var placements []domain.SealPlacement
+	if !*invisible {
+		if placements, err = buildPlacements(*page, boxes); err != nil {
+			fmt.Fprintf(stderr, "%v\n", err)
+			return exitUsage
+		}
 	}
 
 	timestamper := infrastructure.NewRfc3161Timestamper()
@@ -186,6 +193,7 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 		Signer:          signer,
 		OutputPath:      *output,
 		Placements:      placements,
+		Invisible:       *invisible,
 		Reason:          *reason,
 		Location:        *location,
 		TimestampURL:    *tsaURL,

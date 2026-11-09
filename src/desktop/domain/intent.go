@@ -17,6 +17,8 @@ type SigningIntent struct {
 	Format       SignatureFormat
 	Level        SignatureLevel
 	Seal         SealChoice
+	// Invisible signs a PDF without any mark on its pages; Seal is ignored.
+	Invisible    bool
 	TimestampURL string
 	// TimestampUser and TimestampPassword are the account some authorities
 	// require (Aruba's and InfoCert's, among others). Both may be empty.

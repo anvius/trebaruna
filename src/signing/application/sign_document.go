@@ -45,6 +45,9 @@ type Request struct {
 	OutputPath string
 	Placement  domain.SealPlacement
 	Placements []domain.SealPlacement
+	// Invisible signs a PDF without any mark on its pages. It excludes
+	// Placement and Placements.
+	Invisible bool
 	// SignedAt is the single instant used for both the stamp and the report, so
 	// the document and the JSON cannot disagree about when it was signed.
 	SignedAt        time.Time
@@ -130,6 +133,9 @@ func (u *SignDocument) validate(request Request) error {
 	if request.Level.NeedsTimestamp() && request.TimestampURL == "" {
 		return fmt.Errorf("level %s needs a timestamp authority: pass --tsa <url>", request.Level)
 	}
+	if request.Invisible && (len(request.Placements) > 0 || !request.Placement.IsZero()) {
+		return fmt.Errorf("an invisible signature cannot also place a seal")
+	}
 
 	switch request.Format {
 	case domain.Cades:
@@ -213,6 +219,9 @@ func (SystemClock) Now() time.Time { return time.Now() }
 // sealPlacements returns the stamps to draw, folding the single-placement field
 // into the list so callers of the old shape keep working.
 func sealPlacements(request Request) []domain.SealPlacement {
+	if request.Invisible {
+		return nil
+	}
 	if len(request.Placements) > 0 {
 		return request.Placements
 	}

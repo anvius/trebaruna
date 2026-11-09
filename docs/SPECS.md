@@ -36,7 +36,8 @@ user seeing what is signed and where anything goes.
 | Output next to the document: `<name>.<ext>.p7m`, `<name>_signed.pdf`, `<name>_signed.xml` | built |
 | Signer name: the certificate holder unless one is given | built |
 | PAdES visible seal: certificate data only (ADR-0007), placed by the user, repeatable across pages; chained signatures by incremental update | built |
-| PAdES invisible signature; seal in an existing empty field; default seal sized to the real page | planned (B1) |
+| PAdES invisible signature; default seal placed on the real page size | built |
+| PAdES seal in an existing empty form field | planned (needs an incremental writer of our own; the PDF library always adds a field) |
 | CAdES detached (`.p7s`), verified with the document beside it | planned (B2) |
 | Parallel signatures (co-signing) and counter-signatures on CAdES and XAdES | planned (B4, B5) |
 | Several documents in one run, same settings, one result per document | planned (B6) |

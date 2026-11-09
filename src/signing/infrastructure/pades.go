@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -303,6 +304,10 @@ func buildSeals(request application.PadesRequest, keyPair KeyPair) ([]stamp, err
 	if len(placements) == 0 && !request.Placement.IsZero() {
 		placements = []domain.SealPlacement{request.Placement}
 	}
+	placements, err := placeOnPages(request.Content, placements)
+	if err != nil {
+		return nil, err
+	}
 
 	holder := identity.FromCertificate(keyPair.Certificate)
 	moment := request.SignedAt
@@ -332,6 +337,59 @@ func buildSeals(request application.PadesRequest, keyPair KeyPair) ([]stamp, err
 		})
 	}
 	return stamps, nil
+}
+
+// placeOnPages resolves the default corner seal against the real size of its
+// page: an A4 assumption put the seal in the middle of a Letter page's margin
+// and off the visible area of a landscape one.
+func placeOnPages(content []byte, placements []domain.SealPlacement) ([]domain.SealPlacement, error) {
+	needed := false
+	for _, placement := range placements {
+		needed = needed || placement.IsCorner()
+	}
+	if !needed {
+		return placements, nil
+	}
+
+	reader, err := pdf.NewReader(bytes.NewReader(content), int64(len(content)))
+	if err != nil {
+		return nil, fmt.Errorf("read the PDF to place the seal: %w", err)
+	}
+	resolved := make([]domain.SealPlacement, 0, len(placements))
+	for _, placement := range placements {
+		if !placement.IsCorner() {
+			resolved = append(resolved, placement)
+			continue
+		}
+		if placement.Page() > reader.NumPage() {
+			return nil, fmt.Errorf("the document has %d pages, the seal asks for page %d", reader.NumPage(), placement.Page())
+		}
+		left, bottom, right, top, ok := visibleBox(reader.Page(placement.Page()))
+		if !ok {
+			// No usable box: keep the A4 coordinates rather than refuse.
+			resolved = append(resolved, placement)
+			continue
+		}
+		resolved = append(resolved, placement.OnPage(left, bottom, right, top))
+	}
+	return resolved, nil
+}
+
+// visibleBox returns the page's CropBox, or its MediaBox, following the page
+// tree upwards as the PDF specification allows both to be inherited.
+func visibleBox(page pdf.Page) (left, bottom, right, top float64, ok bool) {
+	for _, name := range []string{"CropBox", "MediaBox"} {
+		for node := page.V; node.Kind() == pdf.Dict; node = node.Key("Parent") {
+			box := node.Key(name)
+			if box.Kind() != pdf.Array || box.Len() != 4 {
+				continue
+			}
+			x0, y0 := box.Index(0).Float64(), box.Index(1).Float64()
+			x1, y1 := box.Index(2).Float64(), box.Index(3).Float64()
+			return math.Min(x0, x1), math.Min(y0, y1), math.Max(x0, x1), math.Max(y0, y1), true
+		}
+	}
+	return 0, 0, 0, 0, false
 }
 
 // compile-time check.

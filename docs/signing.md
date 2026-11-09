@@ -136,9 +136,19 @@ different person.
 
 ### Without `--box`
 
-Omitting `--box` does **not** make the signature invisible: a default seal is
-placed at the bottom-right corner of the page given by `--page`. An explicit
-invisible option is planned (see `SPECS.md`).
+Omitting `--box` places a default seal, 64x48 pt, 18 pt from the bottom and
+right edges of the page given by `--page`, measured on the page's real visible
+box (CropBox, else MediaBox, inherited from the page tree when needed): a
+Letter or landscape page gets the seal in its own corner.
+
+### Invisible signature
+
+`--invisible` signs without any mark on the page: the signature is complete and
+every reader lists it in its signature panel, but its widget is empty
+(`/Rect [0 0 0 0]`). It excludes `--box`.
+
+Signing into an existing empty signature field of a form is not supported yet:
+the PDF library always adds a new field.
 
 ---
 

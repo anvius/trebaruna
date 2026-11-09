@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- PAdES `--invisible`: a complete signature with an empty widget
+  (`/Rect [0 0 0 0]`); the desktop offers it under More options for signed PDFs.
+
 - Release: `make release-artifacts` builds the CLI for five platforms with a
   CycloneDX SBOM (`trebaruna about --sbom`, written by the binary itself) and
   SHA256SUMS; `make reproducible` proves two builds of a commit are identical
@@ -121,6 +124,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The default seal assumed A4: on a Letter page it sat away from the corner,
+  and on a landscape page off the visible area. It is now placed on the page's
+  real CropBox/MediaBox, inherited from the page tree when needed.
 - XAdES with ECDSA keys: the signer wrote the SignatureValue as an ASN.1
   SEQUENCE and the verifier (goxmldsig, through `x509.CheckSignature`) read only
   that form. XML-DSig requires r||s (RFC 6931). Our signatures were refused by

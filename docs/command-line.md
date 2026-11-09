@@ -102,6 +102,7 @@ trebaruna sign <document> [flags]
 | `--box` | — | Seal box `x1,y1,x2,y2` in PDF points; repeatable, `PAGE:x1,y1,x2,y2` to pick a page |
 | `--out` | convention | Output path |
 | `--enveloping` | off | XAdES enveloping rather than enveloped |
+| `--invisible` | off | PAdES without a visible seal; excludes `--box` |
 | `--json` | off | Machine-readable result |
 
 #### Connections in the result
