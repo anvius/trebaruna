@@ -9,9 +9,11 @@ import (
 	"context"
 	"encoding/base64"
 	"net/url"
+	"slices"
 	"strings"
 	"testing"
 
+	"codeberg.org/simplicer/trebaruna/src/afirma/application"
 	"codeberg.org/simplicer/trebaruna/src/afirma/domain"
 	"codeberg.org/simplicer/trebaruna/tests/support/afirmaserver"
 )
@@ -35,8 +37,16 @@ func TestATriphaseSignatureIsMadeThroughTheSitesServer(t *testing.T) {
 	maria, certificate := identity(t, "MARIA GARCIA", 51)
 	id, key := sessionID(), "24681357"
 	invocation := triphaseRequest(t, id, key, "serverUrl=http://sede.example/TriPhaseSignerServer\nmode=implicit", "expediente-77")
-	if _, err := batchUseCase(server, approving{key: maria}).Execute(context.Background(), invocation); err != nil {
+	approver := &recordingApprover{approving: approving{key: maria}}
+	if _, err := batchUseCase(server, approver).Execute(context.Background(), invocation); err != nil {
 		t.Fatal(err)
+	}
+	// The person is told, before approving, which server prepares what is
+	// signed.
+	if !slices.ContainsFunc(approver.proposal.Warnings, func(warning string) bool {
+		return strings.Contains(warning, "prepared by the site's server sede.example")
+	}) {
+		t.Errorf("the approval does not name the server: %v", approver.proposal.Warnings)
 	}
 
 	if len(outcome.Calls) != 2 || !outcome.Verified {
@@ -75,4 +85,15 @@ func TestATriphaseSignatureTheServerRefusesIsTheSitesError(t *testing.T) {
 			t.Errorf("%q: the page reads %v, want %s", properties, history, want)
 		}
 	}
+}
+
+// recordingApprover approves as approving does and keeps the proposal.
+type recordingApprover struct {
+	approving
+	proposal application.Proposal
+}
+
+func (r *recordingApprover) Approve(ctx context.Context, proposal application.Proposal) (application.Decision, error) {
+	r.proposal = proposal
+	return r.approving.Approve(ctx, proposal)
 }

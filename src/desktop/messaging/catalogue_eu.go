@@ -170,6 +170,7 @@ var basque = Catalogue{
 	PageWarnDownload:           "Onartzen duzunean, datuak hemendik deskargatuko dira: %s.",
 	PageWarnBatch:              "Dokumentuak egoitzan geratzen dira: haietatik egoitzaren zerbitzariak prestatzen duena sinatzen duzu, eta trebaruna ez da gai hori erakusteko.",
 	PageWarnFilters:            "Orriak baldintzak jartzen dizkie ziurtagiriei, eta trebaruna ez da gai baldintza horiek ulertzeko; ez dago baldintza horiek betetzen dituen ziurtagiririk.",
+	PageWarnTriphase:           "Sinadura egoitzaren zerbitzariak prestatzen du (%s): zerbitzari horrek kalkulatzen duena sinatzen duzu, eta trebarunak ezin dizu erakutsi.",
 	PageRejected:               "Orriak ez du ziurtagiri hori onartzen (%s). Aukeratu beste bat.",
 	PageApprove:                "Sinatu eta bidali",
 	PageApproveCertificate:     "Bidali ziurtagiria",

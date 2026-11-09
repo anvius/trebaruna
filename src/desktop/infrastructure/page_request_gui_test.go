@@ -169,3 +169,15 @@ func TestAFailureIsSaid(t *testing.T) {
 		t.Errorf("status %q", request.status.Text)
 	}
 }
+
+// TestAThreePhaseSignatureNamesItsServer: the person reads, in their
+// language, which server prepares what they sign.
+func TestAThreePhaseSignatureNamesItsServer(t *testing.T) {
+	proposal := signProposal()
+	proposal.Warnings = append(proposal.Warnings,
+		"the signature is prepared by the site's server firma.sede.example: you sign what that server computes, which trebaruna cannot show")
+	request, _ := pageFixture(t, proposalStep(proposal))
+	if text := detailText(request); !strings.Contains(text, "La firma la prepara el servidor de la sede (firma.sede.example)") {
+		t.Errorf("the server is not named:\n%s", text)
+	}
+}

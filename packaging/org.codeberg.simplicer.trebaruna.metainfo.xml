@@ -55,6 +55,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.64.0-unstable" date="2026-11-09">
+      <description>
+        <p>Approving a signature prepared by a site's server names that server.</p>
+      </description>
+    </release>
     <release version="0.63.5-unstable" date="2026-11-09">
       <description>
         <p>Content hidden in an element that only looks like an XML signature is reported as unsigned.</p>

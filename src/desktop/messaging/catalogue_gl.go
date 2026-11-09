@@ -166,6 +166,7 @@ var galician = Catalogue{
 	PageWarnDownload:           "Os datos descargaranse de %s cando aprobes.",
 	PageWarnBatch:              "Os documentos quedan na sede: asinas o que o seu servidor prepara a partir deles, e trebaruna non cho pode amosar.",
 	PageWarnFilters:            "A páxina pon condicións aos certificados que trebaruna non entende; ningún certificado as cumpre.",
+	PageWarnTriphase:           "A sinatura prepáraa o servidor da sede (%s): asinas o que ese servidor calcula, e trebaruna non cho pode amosar.",
 	PageRejected:               "A páxina non acepta ese certificado (%s). Escolle outro.",
 	PageApprove:                "Asinar e enviar",
 	PageApproveCertificate:     "Enviar o certificado",

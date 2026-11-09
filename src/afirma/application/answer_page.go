@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"net/url"
 	"time"
 
 	"codeberg.org/simplicer/trebaruna/src/afirma/domain"
@@ -97,6 +98,13 @@ func (u *AnswerPage) sign(ctx context.Context, request domain.SignRequest) (doma
 
 	proposal := u.proposal(request.Operation, request.Common, request.Format.Name, request.Data)
 	proposal.SuggestedName = request.FileName
+	if request.Format.Triphase {
+		// The signature is prepared and assembled by the site's server: the
+		// person learns which one before approving.
+		proposal.Warnings = append(proposal.Warnings,
+			"the signature is prepared by the site's server "+serverHost(request.Properties["serverUrl"])+
+				": you sign what that server computes, which trebaruna cannot show")
+	}
 	decision, err := u.approve(ctx, proposal)
 	if err != nil {
 		return u.fail(ctx, request.Channel, approvalFailure(err))
@@ -337,4 +345,12 @@ func channelOf(invocation domain.Invocation) domain.Channel {
 		channel.StorageURL = storage
 	}
 	return channel
+}
+
+// serverHost names a server by its host, or as given when it is no URL.
+func serverHost(address string) string {
+	if parsed, err := url.Parse(address); err == nil && parsed.Host != "" {
+		return parsed.Host
+	}
+	return address
 }

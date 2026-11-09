@@ -167,6 +167,7 @@ var catalan = Catalogue{
 	PageWarnDownload:           "Les dades es baixaran de %s quan ho aprovis.",
 	PageWarnBatch:              "Els documents es queden a la seu: signes el que el servidor de la seu prepara a partir d'aquests documents, i trebaruna no t'ho pot mostrar.",
 	PageWarnFilters:            "La pàgina posa als certificats condicions que trebaruna no entén; cap certificat no les compleix.",
+	PageWarnTriphase:           "La signatura la prepara el servidor de la seu (%s): signes el que aquest servidor calcula, i trebaruna no te'l pot mostrar.",
 	PageRejected:               "La pàgina no accepta aquest certificat (%s). Tria'n un altre.",
 	PageApprove:                "Signa i envia",
 	PageApproveCertificate:     "Envia el certificat",

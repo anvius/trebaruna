@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Approving a three-phase afirma:// signature ("…tri") names the site's
+  server that prepares and assembles it, and says that what is signed is
+  what that server computes, which trebaruna cannot show: the person
+  approved an id without knowing where it went.
+
 ### Security
 
 - An XML signature over part of a document left out of its unsigned

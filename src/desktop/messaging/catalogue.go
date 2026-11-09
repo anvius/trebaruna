@@ -230,6 +230,7 @@ type Catalogue struct {
 	PageWarnDownload       string
 	PageWarnBatch          string
 	PageWarnFilters        string
+	PageWarnTriphase       string
 	PageRejected           string
 	PageApprove            string
 	PageApproveCertificate string
@@ -540,6 +541,7 @@ var spanish = Catalogue{
 	PageWarnDownload:           "Los datos se descargarán de %s cuando apruebes.",
 	PageWarnBatch:              "Los documentos se quedan en la sede: firmas lo que su servidor prepara a partir de ellos, y trebaruna no puede enseñártelo.",
 	PageWarnFilters:            "La página pone condiciones a los certificados que trebaruna no entiende; ningún certificado las cumple.",
+	PageWarnTriphase:           "La firma la prepara el servidor de la sede (%s): firmas lo que ese servidor calcula, y trebaruna no puede enseñártelo.",
 	PageRejected:               "La página no acepta ese certificado (%s). Elige otro.",
 	PageApprove:                "Firmar y enviar",
 	PageApproveCertificate:     "Enviar el certificado",
@@ -831,6 +833,7 @@ var italian = Catalogue{
 	PageWarnDownload:           "I dati verranno scaricati da %s quando approvi.",
 	PageWarnBatch:              "I documenti restano sul sito: firmi ciò che il suo server prepara da essi, e trebaruna non può mostrartelo.",
 	PageWarnFilters:            "La pagina pone ai certificati condizioni che trebaruna non capisce; nessun certificato le soddisfa.",
+	PageWarnTriphase:           "La firma la prepara il server del sito (%s): firmi ciò che quel server calcola, e trebaruna non può mostrartelo.",
 	PageRejected:               "La pagina non accetta quel certificato (%s). Scegline un altro.",
 	PageApprove:                "Firma e invia",
 	PageApproveCertificate:     "Invia il certificato",
@@ -1122,6 +1125,7 @@ var english = Catalogue{
 	PageWarnDownload:           "The data will be downloaded from %s when you approve.",
 	PageWarnBatch:              "The documents stay on the site: you sign what its server prepares from them, which trebaruna cannot show you.",
 	PageWarnFilters:            "The page sets certificate conditions trebaruna does not understand; no certificate meets them.",
+	PageWarnTriphase:           "The signature is prepared by the site's server (%s): you sign what that server computes, which trebaruna cannot show you.",
 	PageRejected:               "The page does not accept that certificate (%s). Choose another.",
 	PageApprove:                "Sign and send",
 	PageApproveCertificate:     "Send the certificate",

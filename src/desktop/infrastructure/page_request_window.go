@@ -263,6 +263,9 @@ func (r *pageRequest) warningText(warning string, proposal domain.PageProposal) 
 		return fmt.Sprintf(r.m.PageWarnDownload, proposal.DataURL)
 	case strings.Contains(warning, "documents stay on the site"):
 		return r.m.PageWarnBatch
+	case strings.Contains(warning, "prepared by the site's server "):
+		host, _, _ := strings.Cut(strings.TrimPrefix(warning, "the signature is prepared by the site's server "), ":")
+		return fmt.Sprintf(r.m.PageWarnTriphase, host)
 	case strings.Contains(warning, "filter conditions not understood"):
 		return r.m.PageWarnFilters
 	}
