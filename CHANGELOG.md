@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- verify recomputes what a XAdES archive timestamp seals (EN 319 132-1
+  5.5.2: the references, SignedInfo, SignatureValue, KeyInfo, the unsigned
+  properties before it, the other objects, with its declared C14N) and
+  compares the token's imprint: it was reported as present, never checked.
+  One that seals something else is `timestamp.archive_unbound`. The signer
+  and the verifier share the computation (`xmldsig.ArchiveTimeStampInput`).
+
 ### Security
 
 - verify checks that the certificate a signature carries is the one it

@@ -641,7 +641,7 @@ func (s *XadesSigner) attachArchiveTimeStamp(
 		return fmt.Errorf("XAdES-A needs a timestamp authority: pass --tsa <url>")
 	}
 
-	covered, err := archiveTimestampInput(tree, signatureElement, resolve)
+	covered, err := xmldsig.ArchiveTimeStampInput(tree, signatureElement, resolve, xmldsig.C14N10, nil)
 	if err != nil {
 		return err
 	}
@@ -670,71 +670,6 @@ func (s *XadesSigner) attachArchiveTimeStamp(
 	return nil
 }
 
-// archiveTimestampInput builds the octet stream the archive token must cover.
-//
-// Steps follow §5.5.2.2 literally: the reference targets in document order, the
-// three core signature elements, the unsigned qualifying properties, and the
-// remaining ds:Object elements excluding the one that holds the signature
-// properties. Anything added later changes this stream and breaks the token,
-// which is the guarantee the level provides.
-func archiveTimestampInput(tree *etree.Document, signature *etree.Element, resolve xmldsig.Resolver) ([]byte, error) {
-	var input bytes.Buffer
-
-	// 1-3: every ds:Reference of SignedInfo, processed as XML-Signature
-	// processes it: the document (URI="", every signature left out) and the
-	// SignedProperties, by the same code that computed their digests.
-	signedInfo := signature.SelectElement("SignedInfo")
-	if signedInfo == nil {
-		return nil, fmt.Errorf("the signature has no SignedInfo")
-	}
-	for _, reference := range signedInfo.SelectElements("Reference") {
-		processed, err := xmldsig.ReferenceData(tree, signature, reference, resolve)
-		if err != nil {
-			return nil, fmt.Errorf("archive timestamp: reference %q: %w", reference.SelectAttrValue("URI", ""), err)
-		}
-		input.Write(processed)
-	}
-
-	// 4: SignedInfo, SignatureValue and KeyInfo, in that order.
-	for _, name := range []string{"SignedInfo", "SignatureValue", "KeyInfo"} {
-		element := signature.SelectElement(name)
-		if element == nil {
-			continue
-		}
-		canonical, err := canonicalise(element)
-		if err != nil {
-			return nil, err
-		}
-		input.Write(canonical)
-	}
-
-	// 5: the unsigned qualifying properties, in document order. This includes
-	// the SignatureTimeStamp written a moment ago, which is why A implies T.
-	if unsigned := findUnsignedSignatureProperties(signature); unsigned != nil {
-		for _, property := range unsigned.ChildElements() {
-			canonical, err := canonicalise(property)
-			if err != nil {
-				return nil, err
-			}
-			input.Write(canonical)
-		}
-	}
-
-	// 6: the ds:Object elements that do not hold QualifyingProperties.
-	for _, object := range signature.SelectElements("Object") {
-		if containsQualifyingProperties(object) {
-			continue
-		}
-		canonical, err := canonicalise(object)
-		if err != nil {
-			return nil, err
-		}
-		input.Write(canonical)
-	}
-
-	return input.Bytes(), nil
-}
-
 // walkElement visits an element and its descendants.
 func walkElement(element *etree.Element, visit func(*etree.Element)) {
 	if element == nil {
@@ -746,17 +681,6 @@ func walkElement(element *etree.Element, visit func(*etree.Element)) {
 	}
 }
 
-// containsQualifyingProperties reports whether an ds:Object holds them.
-func containsQualifyingProperties(object *etree.Element) bool {
-	found := false
-	walkElement(object, func(element *etree.Element) {
-		if element.Tag == "QualifyingProperties" {
-			found = true
-		}
-	})
-	return found
-}
-
 // findUnsignedSignatureProperties locates the container for unsigned properties.
 func findUnsignedSignatureProperties(signature *etree.Element) *etree.Element {
 	var found *etree.Element
@@ -766,15 +690,6 @@ func findUnsignedSignatureProperties(signature *etree.Element) *etree.Element {
 		}
 	})
 	return found
-}
-
-// canonicalise returns the inclusive c14n form of an element.
-func canonicalise(element *etree.Element) ([]byte, error) {
-	canonical, err := xmldsig.Canonicalize(element, xmldsig.C14N10, "")
-	if err != nil {
-		return nil, fmt.Errorf("canonicalise for the archive timestamp: %w", err)
-	}
-	return canonical, nil
 }
 
 // buildArchiveTimeStamp emits the qualifying property in the 1.4.1 namespace.

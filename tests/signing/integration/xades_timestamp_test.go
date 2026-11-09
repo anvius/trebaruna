@@ -650,3 +650,37 @@ func TestATimestampOverTheOldFormIsAcceptedAndTold(t *testing.T) {
 		}
 	}
 }
+
+// TestAnArchiveTimestampOverAnotherSignatureIsTold: KeyInfo is outside the
+// signature value but inside what the archive timestamp seals, so a change
+// there after archiving leaves the signature valid and the archive
+// timestamp proving nothing.
+func TestAnArchiveTimestampOverAnotherSignatureIsTold(t *testing.T) {
+	tsa := newLocalTSA(t)
+	_, signer := ltaFixture(t)
+	request := buildXadesRequest(signer, []byte(`<atto><n>5</n></atto>`), false)
+	request.Level, request.TimestampURL, request.EmbedRevocation = domain.LTA, "http://tsa.example.invalid", true
+	signed, err := infrastructure.NewXadesSigner(tsa).SignXades(context.Background(), request)
+	if err != nil {
+		t.Fatalf("sign: %v", err)
+	}
+	changed := bytes.Replace(signed, []byte("<ds:KeyInfo>"), []byte(`<ds:KeyInfo Id="added-later">`), 1)
+	if bytes.Equal(changed, signed) {
+		t.Fatal("no KeyInfo to change")
+	}
+	path := filepath.Join(t.TempDir(), "changed.xml")
+	if err := os.WriteFile(path, changed, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	reports, err := verificationinfra.NewXadesVerifier().Extract(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	codes := map[string]string{}
+	for _, finding := range reports[0].Findings {
+		codes[finding.Code] = string(finding.Status)
+	}
+	if reports[0].Integrity != "good" || codes["timestamp.archive_unbound"] == "" || codes["timestamp.archival"] != "" {
+		t.Errorf("integrity %s, findings %v", reports[0].Integrity, codes)
+	}
+}

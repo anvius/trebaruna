@@ -180,7 +180,7 @@ func (v *XadesVerifier) report(document *etree.Document, signature *etree.Elemen
 
 	v.describeSigningTime(signature, &report)
 	v.describeSignatureTimeStamp(signature, &report)
-	v.describeArchiveTimeStamp(signature, &report)
+	v.describeArchiveTimeStamp(document, signature, resolve, &report)
 
 	switch {
 	case report.Integrity == domain.StatusBad:
@@ -611,13 +611,19 @@ func (v *XadesVerifier) describeSignatureTimeStamp(signature *etree.Element, rep
 // level exists and names its authority. Verifying its imprint would mean
 // reproducing the whole §5.5.2.2 octet stream, which the signer builds; what is
 // asserted here is that the token is real and that it parses.
-func (v *XadesVerifier) describeArchiveTimeStamp(signature *etree.Element, report *domain.SignerReport) {
+func (v *XadesVerifier) describeArchiveTimeStamp(document *etree.Document, signature *etree.Element, resolve xmldsig.Resolver, report *domain.SignerReport) {
+	var archive *etree.Element
 	var tokenText string
+	algorithm := xmldsig.C14N10
 	walk(signature, func(element *etree.Element) {
-		if tokenText == "" && element.Tag == "ArchiveTimeStamp" && element.NamespaceURI() == archiveNamespace {
+		if archive == nil && element.Tag == "ArchiveTimeStamp" && element.NamespaceURI() == archiveNamespace {
+			archive = element
 			for _, child := range element.ChildElements() {
-				if child.Tag == "EncapsulatedTimeStamp" {
+				switch child.Tag {
+				case "EncapsulatedTimeStamp":
 					tokenText = child.Text()
+				case "CanonicalizationMethod":
+					algorithm = child.SelectAttrValue("Algorithm", algorithm)
 				}
 			}
 		}
@@ -648,10 +654,25 @@ func (v *XadesVerifier) describeArchiveTimeStamp(signature *etree.Element, repor
 		return
 	}
 
+	// The token must seal what EN 319 132-1 says it seals: the signature's
+	// references, its value and every property written before it.
+	input, err := xmldsig.ArchiveTimeStampInput(document, signature, resolve, algorithm, archive)
+	if err == nil {
+		err = imprintOf(token, input)
+	}
+	if err != nil {
+		report.Findings = append(report.Findings, domain.Finding{
+			Code:    "timestamp.archive_unbound",
+			Status:  domain.StatusWarn,
+			Message: "the archive timestamp does not cover this signature as EN 319 132-1 reads: it proves nothing about it",
+			Detail:  err.Error(),
+		})
+		return
+	}
 	report.Findings = append(report.Findings, domain.Finding{
 		Code:    "timestamp.archival",
 		Status:  domain.StatusGood,
-		Message: "the signature carries an archive timestamp (XAdES-A)",
+		Message: "the signature carries an archive timestamp (XAdES-A) that covers it",
 		Detail:  token.Time.UTC().Format(time.RFC3339),
 	})
 }
@@ -711,3 +732,17 @@ func serialiseElement(element *etree.Element) []byte {
 
 // compile-time check.
 var _ SignatureExtractor = (*XadesVerifier)(nil)
+
+// imprintOf checks that a token's imprint is the digest of what it must
+// seal.
+func imprintOf(token *timestamp.Timestamp, sealed []byte) error {
+	if !token.HashAlgorithm.Available() {
+		return fmt.Errorf("the token's digest algorithm is not available")
+	}
+	hasher := token.HashAlgorithm.New()
+	hasher.Write(sealed)
+	if !bytes.Equal(hasher.Sum(nil), token.HashedMessage) {
+		return fmt.Errorf("its imprint is not the digest of the signature it is attached to")
+	}
+	return nil
+}

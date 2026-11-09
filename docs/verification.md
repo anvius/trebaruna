@@ -160,6 +160,7 @@ anyone can verify it again.
 | `timestamp.not_timestamping_certificate` | warn | The token certificate lacks the time-stamping key usage |
 | `timestamp.invalid` | bad | The token does not parse, verify, or cover this signature |
 | `timestamp.archival` | good | An archive timestamp is present (XAdES-A) |
+| `timestamp.archive_unbound` | warn | The archive timestamp does not seal this signature as EN 319 132-1 5.5.2 reads (its references, value, KeyInfo and the properties before it): it proves nothing about it |
 | `timestamp.legacy_form` | warn | A trebaruna XAdES-T made before 0.38.2: the token seals the signature value as written, not its canonical form, and other validators refuse it |
 
 ### Environment
@@ -244,7 +245,8 @@ worse than none.
   timestamp exists.
 - Revocation, when `--offline=false`, with the answer recorded as checked or not.
 - The timestamp token: its signature, its imprint against this signature, its
-  key usage, and its authority against the lists.
+  key usage, and its authority against the lists. A XAdES archive timestamp's
+  imprint is recomputed from what it must seal.
 - The document structure, for PDF: `pdfsig` and `qpdf` are used as judges in the
   test suite.
 
