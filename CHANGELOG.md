@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- afirma:// `CAdES-ASiC-S-tri` and `XAdES-ASiC-S-tri`: the ASiC-S
+  container made through the site's server, which receives the format as
+  AutoFirma's ASiC triphase signers send it (`CAdES-ASiC-S`,
+  `XAdES-ASiC-S`); co- and counter-signatures are refused, as AutoFirma
+  refuses them.
+
 - afirma:// `precalculatedHashAlgorithm`: a page that sends the document's
   digest instead of the document gets a detached CAdES signature over it,
   as AutoFirma makes it. The digest's length is checked, its algorithm must

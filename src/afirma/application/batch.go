@@ -192,6 +192,10 @@ func (u *AnswerPage) triphaseSign(ctx context.Context, request domain.SignReques
 	if server == "" {
 		return nil, nil, domain.Failure{Code: domain.Params, Cause: "serverUrl"}
 	}
+	if request.Format.Packaging == "asic-s" && request.Crypto != domain.Sign {
+		return nil, nil, domain.Failure{Code: domain.UnsupportedOperation,
+			Cause: "an ASiC-S container is signed through the site's server, not co- or counter-signed"}
+	}
 	if u.batches == nil || u.raw == nil {
 		return nil, nil, domain.Failure{Code: domain.UnsupportedOperation, Cause: "signing through the site's server"}
 	}

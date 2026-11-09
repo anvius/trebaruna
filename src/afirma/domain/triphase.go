@@ -31,6 +31,15 @@ type TriphaseCall struct {
 // triphaseFormats are the names the service takes, by family.
 var triphaseFormats = map[string]string{"cades": "CAdES", "xades": "XAdES", "pades": "PAdES", "facturae": "FacturaE", "none": "NONE"}
 
+// triphaseName is the format as the service names it: the family's name,
+// with "-ASiC-S" for a container (AutoFirma's *ASiCSTriPhaseSigner).
+func (f Format) triphaseName() string {
+	if f.Packaging == "asic-s" {
+		return triphaseFormats[f.Family] + "-ASiC-S"
+	}
+	return triphaseFormats[f.Family]
+}
+
 // Body writes the form the service reads (E.8), in AutoFirma's order and,
 // as AutoFirma does, without percent-encoding (every value is URL-safe):
 // op, cop, format, algo, cert (URL-safe Base64, joined by commas; the
@@ -48,7 +57,7 @@ func (c TriphaseCall) Body() string {
 	fields := []string{
 		"op=" + c.Step,
 		"cop=" + string(c.Crypto),
-		"format=" + triphaseFormats[c.Format.Family],
+		"format=" + c.Format.triphaseName(),
 		"algo=" + url.QueryEscape(c.Algorithm),
 		"cert=" + strings.Join(certificates, ","),
 		"doc=" + base64.URLEncoding.EncodeToString(c.Document),

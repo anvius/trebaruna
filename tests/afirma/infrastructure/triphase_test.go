@@ -97,3 +97,33 @@ func (r *recordingApprover) Approve(ctx context.Context, proposal application.Pr
 	r.proposal = proposal
 	return r.approving.Approve(ctx, proposal)
 }
+
+// TestAnASiCSContainerIsSignedThroughTheSitesServer: CAdES-ASiC-S-tri and
+// XAdES-ASiC-S-tri reach the service as CAdES-ASiC-S and XAdES-ASiC-S, as
+// AutoFirma's ASiC triphase signers send them; they are never co-signed.
+func TestAnASiCSContainerIsSignedThroughTheSitesServer(t *testing.T) {
+	maria, certificate := identity(t, "MARIA GARCIA", 53)
+	properties := "serverUrl=http://sede.example/TriPhaseSignerServer"
+	for format, service := range map[string]string{"CAdES-ASiC-S-tri": "CAdES-ASiC-S", "XAdES-ASiC-S-tri": "XAdES-ASiC-S"} {
+		server := afirmaserver.New(t)
+		outcome := server.EnableTriphase()
+		id, key := sessionID(), "24681357"
+		if _, err := batchUseCase(server, approving{key: maria}).Execute(context.Background(),
+			bareRequest(t, id, key, "sign", format, "SHA256withECDSA", properties, []byte("expediente-asics"))); err != nil {
+			t.Fatalf("%s: %v", format, err)
+		}
+		if len(outcome.Calls) != 2 || !outcome.Verified || outcome.Calls[0]["format"] != service || outcome.Calls[1]["format"] != service {
+			t.Errorf("%s: %d calls, verified %v, format %q", format, len(outcome.Calls), outcome.Verified, outcome.Calls[0]["format"])
+		}
+		if elements := pageReads(t, server, id, key); len(elements) != 2 || string(elements[0]) != string(certificate.Raw) {
+			t.Errorf("%s: the page reads cert|id, got %q", format, elements)
+		}
+
+		cosigned := sessionID()
+		batchUseCase(server, approving{key: maria}).Execute(context.Background(),
+			bareRequest(t, cosigned, key, "cosign", format, "SHA256withECDSA", properties, []byte("PK\x03\x04")))
+		if history := server.History(cosigned); len(history) == 0 || !strings.HasPrefix(history[len(history)-1], "SAF_04") || len(outcome.Calls) != 2 {
+			t.Errorf("%s: a co-signature reached the server or was not refused: %v", format, history)
+		}
+	}
+}

@@ -437,6 +437,12 @@ constants in `core:signers/AOSignConstants`):
 | Raw | `NONE` (PKCS#1), `PKCS1`, `PKCS#1`, `NONEtri` |
 | Auto | `auto` |
 
+trebaruna: `CAdES-ASiC-S-tri` and `XAdES-ASiC-S-tri` go through the site's
+server with format `CAdES-ASiC-S` or `XAdES-ASiC-S`, as AutoFirma's
+`AOCAdESASiCSTriPhaseSigner` and `AOXAdESASiCSTriPhaseSigner` send them; the
+server builds the container and answers with its id; co- and
+counter-signatures are refused (`SAF_04`), as AutoFirma refuses them.
+
 trebaruna: `NONE` signs the data as AutoFirma's `AOPkcs1Signer` does (the
 algorithm's digest, PKCS#1 v1.5 for RSA, ASN.1 for ECDSA, checked against the
 certificate; no co- or counter-signature, `SAF_04`). `NONEtri` goes through the
