@@ -69,11 +69,12 @@ func TestADetachedSignatureTravelsBesideItsDocument(t *testing.T) {
 	if result := verifyJSON(t, signature, "--content", other); result.Verdict != "broken" {
 		t.Errorf("with another document: verdict %s, want broken", result.Verdict)
 	}
-	// Without any document the bytes cannot be compared: unknown, not broken.
+	// Without any document the bytes cannot be compared: unknown, neither
+	// broken nor untrusted (which would say the cryptography holds).
 	if err := os.Remove(document); err != nil {
 		t.Fatal(err)
 	}
-	if result := verifyJSON(t, signature); result.Signers[0].Integrity != "unknown" || result.Verdict == "broken" {
+	if result := verifyJSON(t, signature); result.Signers[0].Integrity != "unknown" || result.Verdict != "unknown" {
 		t.Errorf("without the document: integrity %s, verdict %s", result.Signers[0].Integrity, result.Verdict)
 	}
 }

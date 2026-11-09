@@ -44,7 +44,7 @@ most confusion about electronic signatures.
 ### 1. Integrity — did the bytes change?
 
 `signature.intact`, `signature.modified`, `signature.unverifiable`,
-`content.missing`, `certificate.missing`.
+`content.detached`, `content.missing`, `certificate.missing`.
 
 An XML signature is checked completely: every reference in `SignedInfo` —
 the document, the signed properties (signing time, signing certificate,
@@ -140,7 +140,8 @@ anyone can verify it again.
 | `signature.intact` | good | The signature matches the document |
 | `signature.modified` | bad | The document changed after signing |
 | `signature.unverifiable` | unknown | The signature uses an algorithm or transform trebaruna does not check |
-| `content.missing` | unknown | A detached signature without the document it signs |
+| `content.detached` | good | A detached signature checked against the document beside it (or the one `--content` names) |
+| `content.missing` | unknown | A detached signature without the document it signs: integrity and verdict are unknown, never "untrusted" |
 | `container.covers` | good | The files of an ASiC container a signature covers |
 | `container.unsigned_files` | warn | Files of the container no signature covers: they are not signed, whatever else the container says |
 | `content.partly_signed` | warn | An XML signature covers only some elements of the document around it (references by Id, none to the whole document): the parts named are not signed, whatever they say |

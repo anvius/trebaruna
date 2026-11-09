@@ -515,6 +515,12 @@ func trustFromReport(report domain.SignerReport) domain.TrustLevel {
 	if report.Integrity == domain.StatusBad {
 		return domain.TrustBroken
 	}
+	// Bytes that could not be compared (a detached signature without its
+	// document, an algorithm not checked) prove no cryptography: "untrusted"
+	// would say it holds.
+	if report.Integrity == domain.StatusUnknown {
+		return domain.TrustUnknown
+	}
 	if report.SelfSigned {
 		return domain.TrustUntrusted
 	}

@@ -243,6 +243,12 @@ func (v *XadesVerifier) report(document *etree.Document, signature *etree.Elemen
 		})
 		report.Trust = domain.TrustUntrusted
 	}
+	// Bytes that could not be compared (a referenced file not at hand) prove
+	// no cryptography: "untrusted" would say it holds. The certificate
+	// findings above still stand.
+	if report.Integrity == domain.StatusUnknown {
+		report.Trust = domain.TrustUnknown
+	}
 
 	return report
 }

@@ -44,7 +44,7 @@ func TestADetachedXadesTravelsBesideItsDocument(t *testing.T) {
 		t.Fatal(err)
 	}
 	result = verifyJSON(t, signature)
-	if result.Signers[0].Integrity != "unknown" || result.Verdict == "broken" || !hasCode(result.Signers[0].Findings, "content.missing") {
+	if result.Signers[0].Integrity != "unknown" || result.Verdict != "unknown" || !hasCode(result.Signers[0].Findings, "content.missing") {
 		t.Errorf("without the document: %+v, verdict %s", result.Signers[0], result.Verdict)
 	}
 }

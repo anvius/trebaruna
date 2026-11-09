@@ -920,6 +920,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A detached signature verified without its document (a `.p7s` or an
+  `.xsig` alone) said "untrusted", the word for cryptography that holds
+  under an unknown issuer, although no byte was compared. Its trust and
+  the verdict are now "unknown" (exit 3 as before); the certificate
+  findings still show. `content.detached` joins the list of finding codes
+  in the verification guide.
+
 - `verify`, for PDFs, named each signature after its signer in `field`;
   it now carries the form field's name ("Signature 1"), two signatures by
   one person keeping their own fields. The human output printed "! aviso
