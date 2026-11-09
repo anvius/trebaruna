@@ -200,10 +200,10 @@ func buildPemSigner(t *testing.T, keyPEM, certPEM []byte) domain.Signer {
 // buildXadesRequest assembles the adapter request.
 func buildXadesRequest(signer domain.Signer, content []byte, enveloping bool) application.XadesRequest {
 	return application.XadesRequest{
-		Content:    content,
-		Signer:     signer,
-		Level:      domain.BES,
-		Enveloping: enveloping,
+		Content:   content,
+		Signer:    signer,
+		Level:     domain.BES,
+		Packaging: packagingOf(enveloping),
 	}
 }
 
@@ -219,9 +219,14 @@ func TestXadesDeclaresTheFormatOfWhatItSigns(t *testing.T) {
 		t.Error("the format must point at a reference that exists")
 	}
 
+	// XML travels as XML inside the Object; other bytes in Base64, said so.
 	enveloping := signXades(t, `<fattura/>`, true)
-	if !strings.Contains(enveloping, `<xades:MimeType>application/octet-stream</xades:MimeType><xades:Encoding>http://www.w3.org/2000/09/xmldsig#base64</xades:Encoding>`) {
-		t.Error("an enveloping signature carries base64 and must say so")
+	if !strings.Contains(enveloping, `<xades:MimeType>text/xml</xades:MimeType></xades:DataObjectFormat>`) {
+		t.Error("an enveloping signature of XML declares text/xml")
+	}
+	binary := signXades(t, "%PDF-1.4\n%fixture\n", true)
+	if !strings.Contains(binary, `<xades:MimeType>application/pdf</xades:MimeType><xades:Encoding>http://www.w3.org/2000/09/xmldsig#base64</xades:Encoding>`) {
+		t.Error("an enveloping signature of a PDF carries Base64 and must say so")
 	}
 }
 
@@ -383,4 +388,12 @@ func TestASecondXadesLeavesTheFirstIntact(t *testing.T) {
 			t.Errorf("signature %d: %v", index+1, err)
 		}
 	}
+}
+
+// packagingOf is the XML packaging an enveloping flag stands for.
+func packagingOf(enveloping bool) domain.XMLPackaging {
+	if enveloping {
+		return domain.XMLEnveloping
+	}
+	return domain.XMLEnveloped
 }

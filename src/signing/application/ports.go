@@ -105,10 +105,13 @@ type XadesSigner interface {
 
 // XadesRequest carries everything an XML adapter needs.
 type XadesRequest struct {
-	Content         []byte
-	Signer          domain.Signer
-	Level           domain.Level
-	Enveloping      bool
+	Content []byte
+	Signer  domain.Signer
+	Level   domain.Level
+	// Packaging is how the signature holds Content; empty is enveloped.
+	Packaging domain.XMLPackaging
+	// DocumentName names the document a detached signature references.
+	DocumentName    string
 	TimestampURL    string
 	TimestampUser   string
 	TimestampSecret string

@@ -117,7 +117,7 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 		boxes      = boxList{}
 		enveloping = flags.Bool("enveloping", false, "XAdES enveloping (default: enveloped)")
 		invisible  = flags.Bool("invisible", false, "PAdES without any visible seal (excludes --box)")
-		detached   = flags.Bool("detached", false, "CAdES without the content: writes <document>.p7s beside it")
+		detached   = flags.Bool("detached", false, "the signature beside the document, which stays untouched: <document>.p7s (CAdES) or <document>.xsig (XAdES)")
 		cosign     = flags.Bool("cosign", false, "add a parallel signature to the .p7m/.p7s given as document")
 		counter    = flags.String("countersign", "", "counter-sign the envelope's signatures: leaves | all")
 		signedDoc  = flags.String("content", "", "the document a detached .p7s signs, to co-sign it")

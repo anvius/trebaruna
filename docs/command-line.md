@@ -105,9 +105,9 @@ trebaruna sign <document> [flags]
 | `--page` | `1` | Page for the visible seal |
 | `--box` | — | Seal box `x1,y1,x2,y2` in PDF points; repeatable, `PAGE:x1,y1,x2,y2` to pick a page |
 | `--out` | convention | Output path |
-| `--enveloping` | off | XAdES enveloping rather than enveloped |
+| `--enveloping` | off | XAdES enveloping rather than enveloped: the document inside the signature; any file |
 | `--invisible` | off | PAdES without a visible seal; excludes `--box` |
-| `--detached` | off | CAdES without the content: `<document>.p7s` beside it |
+| `--detached` | off | The signature beside the untouched document: `<document>.p7s` (CAdES) or `<document>.xsig` (XAdES) |
 | `--cosign` | off | Add a parallel signature to the `.p7m`/`.p7s` given as document |
 | `--countersign` | — | Counter-sign the envelope's signatures: `leaves` or `all` |
 | `--content` | — | The document a detached `.p7s` signs, to co-sign it |
@@ -154,6 +154,7 @@ trebaruna sign contratto.pdf --p12 mia-chiave.p12
 |---|---|
 | PAdES | `document_signed.pdf` |
 | XAdES | `document_signed.xml` |
+| CAdES or XAdES `--detached` | `document.pdf.p7s`, `document.pdf.xsig` |
 | CAdES | `document.pdf.p7m` |
 
 Override with `--out`.

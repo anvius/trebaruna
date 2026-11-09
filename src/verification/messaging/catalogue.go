@@ -74,7 +74,7 @@ var Spanish = Catalogue{
 	Findings: map[string]string{
 		"signature.intact":                       "el contenido firmado no se ha modificado",
 		"content.detached":                       "firma separada: comprobada con el documento que tiene al lado",
-		"content.missing":                        "firma separada: hace falta el documento firmado para comparar sus bytes (ponlo al lado con el mismo nombre sin .p7s)",
+		"content.missing":                        "firma separada: hace falta el documento firmado para comparar sus bytes (ponlo al lado de la firma: el mismo nombre sin .p7s, o el que nombra la firma XML; o indícalo con --content)",
 		"signature.modified":                     "el documento cambió después de firmarse",
 		"certificate.trusted":                    "el emisor es una autoridad reconocida",
 		"certificate.untrusted_issuer":           "el emisor no está en ninguna lista de confianza",
@@ -131,7 +131,7 @@ var Italian = Catalogue{
 	Findings: map[string]string{
 		"signature.intact":                       "il contenuto firmato non è stato modificato",
 		"content.detached":                       "firma separata: verificata con il documento che le sta accanto",
-		"content.missing":                        "firma separata: serve il documento firmato per confrontarne i byte (mettilo accanto con lo stesso nome senza .p7s)",
+		"content.missing":                        "firma separata: serve il documento firmato per confrontarne i byte (mettilo accanto alla firma: lo stesso nome senza .p7s, o quello che la firma XML indica; oppure indicalo con --content)",
 		"signature.modified":                     "il documento è cambiato dopo la firma",
 		"certificate.trusted":                    "l'emittente è un'autorità riconosciuta",
 		"certificate.untrusted_issuer":           "l'emittente non è in alcun elenco di fiducia",
@@ -188,7 +188,7 @@ var English = Catalogue{
 	Findings: map[string]string{
 		"signature.intact":                       "the signed content is unaltered",
 		"content.detached":                       "detached signature: checked against the document beside it",
-		"content.missing":                        "detached signature: the signed document is needed to compare its bytes (put it beside it, same name without .p7s)",
+		"content.missing":                        "detached signature: the signed document is needed to compare its bytes (put it beside the signature: the same name without .p7s, or the name an XML signature gives; or name it with --content)",
 		"signature.modified":                     "the document changed after it was signed",
 		"certificate.trusted":                    "the issuer is a recognised authority",
 		"certificate.untrusted_issuer":           "the issuer is not in any trust list",

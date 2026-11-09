@@ -285,9 +285,17 @@ func cadesRequest(fixture fixture, t *testing.T, content []byte) application.Cad
 // xadesRequest builds an XML signing request.
 func xadesRequest(fixture fixture, t *testing.T, content []byte, enveloping bool) application.XadesRequest {
 	return application.XadesRequest{
-		Content:    content,
-		Signer:     fixture.signer(t),
-		Level:      domain.BES,
-		Enveloping: enveloping,
+		Content:   content,
+		Signer:    fixture.signer(t),
+		Level:     domain.BES,
+		Packaging: packagingOf(enveloping),
 	}
+}
+
+// packagingOf is the XML packaging an enveloping flag stands for.
+func packagingOf(enveloping bool) domain.XMLPackaging {
+	if enveloping {
+		return domain.XMLEnveloping
+	}
+	return domain.XMLEnveloped
 }

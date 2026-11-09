@@ -6,6 +6,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- XAdES detached: `sign --format xades --detached` writes
+  `<document>.xsig` beside the untouched document.
+  - The reference names the file (escaped) and digests its bytes.
+  - `verify` reads the file of that name in the signature's directory, a
+    plain name only, never fetched. `--content` names another, and reports
+    `content.detached`, or `content.missing` (unknown) without it.
+  - Every level works; the archive timestamp covers the external document.
+- XAdES enveloping of any file: XML travels as XML in the `ds:Object`, other
+  files in Base64 with the Base64 transform and their sniffed media type, as
+  AutoFirma does.
+- afirma:// "XAdES Detached" is AutoFirma's layout: a new document whose
+  `AFIRMA` root holds `CONTENT` (XML as XML, other data in Base64) and the
+  signature. `expPolicy=FirmaAGE` with XAdES, detached as AutoFirma forces
+  it, now signs.
+- Judged with xmlsec1 1.3.9 and Java 25's XML-Signature on all four
+  layouts, a detached file whose name has spaces included.
+
+### Changed
+
+- afirma:// `format=XAdES` with no variant is enveloping, AutoFirma's
+  default (`XAdESSigner`); it was enveloped.
+- An enveloping XAdES of XML carries it as XML (`MimeType="text/xml"`, C14N
+  reference) instead of Base64.
+
 ### Fixed
 
 - The XAdES-A archive timestamp covers the signed document. Its input

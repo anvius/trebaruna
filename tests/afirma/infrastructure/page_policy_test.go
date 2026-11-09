@@ -77,8 +77,9 @@ func TestFirmaAGEForACAdESPage(t *testing.T) {
 	}
 }
 
-// TestFirmaAGEForAXAdESPage is detached unless the page asked for enveloped,
-// and detached is not done yet.
+// TestFirmaAGEForAXAdESPage is detached unless the page asked for enveloped:
+// AutoFirma's "XAdES Detached", the data in AFIRMA/CONTENT beside the
+// signature.
 func TestFirmaAGEForAXAdESPage(t *testing.T) {
 	signed, err := signPage(t, "XAdES", map[string]string{"expPolicy": "FirmaAGE", "format": "XAdES Enveloped"}, []byte("<solicitud/>"))
 	if err != nil {
@@ -88,10 +89,19 @@ func TestFirmaAGEForAXAdESPage(t *testing.T) {
 		t.Error("an enveloped AGE signature names the policy by its OID")
 	}
 
-	_, err = signPage(t, "XAdES", map[string]string{"expPolicy": "FirmaAGE"}, []byte("<solicitud/>"))
-	wantFailure(t, err, domain.UnsupportedFormat, "FirmaAGE turns XAdES detached")
-	_, err = signPage(t, "XAdES Enveloping", map[string]string{"expPolicy": "FirmaAGE"}, []byte("<solicitud/>"))
-	wantFailure(t, err, domain.UnsupportedFormat, "FirmaAGE turns enveloping into detached")
+	for _, format := range []string{"XAdES", "XAdES Enveloping"} {
+		signed, err := signPage(t, format, map[string]string{"expPolicy": "FirmaAGE"}, []byte("<solicitud/>"))
+		if err != nil {
+			t.Fatalf("%s: %v", format, err)
+		}
+		output := string(signed.Signature)
+		if !strings.Contains(output, "<AFIRMA Id=\"AFIRMA-Root-") || !strings.Contains(output, `<CONTENT Id="CONTENT-`) {
+			t.Errorf("%s with FirmaAGE is AutoFirma's XAdES Detached:\n%.300s", format, output)
+		}
+		if !strings.Contains(output, ageOID) {
+			t.Errorf("%s: the AGE policy is missing", format)
+		}
+	}
 }
 
 // TestPolicyRequestsTrebarunaRefuses, with AutoFirma's codes.
@@ -179,5 +189,54 @@ func TestAXAdESPageClaimsSeveralRoles(t *testing.T) {
 	}
 	if !bytes.Contains(signed.Signature, []byte("<xades:ClaimedRole>Secretaria</xades:ClaimedRole><xades:ClaimedRole>Interventora</xades:ClaimedRole>")) {
 		t.Error("both roles must be claimed")
+	}
+}
+
+// TestXAdESWithoutAVariantIsEnveloping, as AutoFirma's XAdES signer
+// defaults: the data inside the signature, even when they are XML.
+func TestXAdESWithoutAVariantIsEnveloping(t *testing.T) {
+	for _, data := range [][]byte{[]byte("<acta/>"), []byte("texto plano")} {
+		signed, err := signPage(t, "XAdES", map[string]string{}, data)
+		if err != nil {
+			t.Fatalf("%s: %v", data, err)
+		}
+		root := strings.TrimSpace(string(signed.Signature))
+		root = root[strings.Index(root, "?>")+2:]
+		if !strings.HasPrefix(strings.TrimSpace(root), "<ds:Signature") {
+			t.Errorf("%s: not enveloping:\n%.200s", data, root)
+		}
+	}
+	signed, err := signPage(t, "XAdES", map[string]string{"format": "XAdES Enveloped"}, []byte("<acta/>"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(signed.Signature), "<acta>") && !strings.Contains(string(signed.Signature), "<acta><ds:Signature") {
+		t.Error("format=XAdES Enveloped keeps the document as the root")
+	}
+}
+
+// TestXAdESDetachedIsAutoFirmasLayout: AFIRMA holds CONTENT and the
+// signature, whatever the data; the page receives one file.
+func TestXAdESDetachedIsAutoFirmasLayout(t *testing.T) {
+	for _, data := range [][]byte{[]byte("%PDF-1.4\n%solicitud\n"), []byte("<solicitud/>")} {
+		for _, request := range []struct {
+			format     string
+			properties map[string]string
+		}{
+			{"XAdES Detached", map[string]string{}},
+			{"XAdES", map[string]string{"format": "XAdES Detached"}},
+		} {
+			signed, err := signPage(t, request.format, request.properties, data)
+			if err != nil {
+				t.Fatalf("%s %v: %v", request.format, request.properties, err)
+			}
+			output := string(signed.Signature)
+			afirma := strings.Index(output, "<AFIRMA ")
+			content := strings.Index(output, "<CONTENT ")
+			signature := strings.Index(output, "<ds:Signature")
+			if afirma < 0 || content < afirma || signature < content {
+				t.Errorf("%s with %.8q: not AFIRMA/CONTENT then the signature:\n%.300s", request.format, data, output)
+			}
+		}
 	}
 }

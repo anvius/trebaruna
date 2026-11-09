@@ -81,13 +81,20 @@ func (ids signatureIDs) signedProperties() string { return "trebaruna-signed-pro
 func (ids signatureIDs) reference() string        { return "trebaruna-reference-" + ids.suffix }
 func (ids signatureIDs) payload() string          { return "trebaruna-payload-" + ids.suffix }
 
+// AutoFirma's names for the root and the content of an internally detached
+// signature.
+func (ids signatureIDs) afirmaRoot() string { return "AFIRMA-Root-" + ids.suffix }
+func (ids signatureIDs) content() string    { return "CONTENT-" + ids.suffix }
+
 // idBeside names a property added to a signature after it is made (its
 // timestamps), from the signature's own Id.
 func idBeside(signature *etree.Element, name string) string {
 	return signature.SelectAttrValue("Id", "trebaruna-signature") + "-" + name
 }
 
-// SignXades signs the document in place (enveloped) or as a payload (enveloping).
+// SignXades signs the document in place (enveloped), inside the signature
+// (enveloping), beside it (detached) or in AutoFirma's AFIRMA layout
+// (internally detached); documentLayout holds what differs.
 //
 // Two passes, because the digests must cover the tree exactly as it will be
 // read back. Pass one inserts a skeleton with placeholder values; pass two
@@ -118,39 +125,40 @@ func (s *XadesSigner) SignXades(ctx context.Context, request application.XadesRe
 	}
 	defer keyPair.Close()
 
-	tree, err := parseDocument(request.Content)
+	layout, err := layoutFor(request)
 	if err != nil {
 		return nil, err
 	}
-
 	ids, err := newSignatureIDs()
 	if err != nil {
 		return nil, err
 	}
+	tree := layout.tree(ids, request.Content)
+
 	certificateDigest := sha256.Sum256(keyPair.Certificate.Raw)
 	signedProperties := buildSignedProperties(ids,
 		base64.StdEncoding.EncodeToString(certificateDigest[:]),
 		time.Now().UTC().Format(time.RFC3339),
-		request.Enveloping,
+		layout.dataObjectFormat(),
 		policyProperties(request.Policy)+roleProperties(request.ClaimedRoles),
 	)
 	signedInfo := buildSignedInfo(ids,
 		placeholderDigest, placeholderDigest,
 		keyPair.Certificate.PublicKeyAlgorithm == x509.ECDSA,
-		documentLayout{enveloping: request.Enveloping, excludeSignatures: !request.Policy.IsFacturaE()},
+		layout,
 	)
-	payload := ""
-	if request.Enveloping {
-		payload = `<ds:Object Id="` + ids.payload() + `">` +
-			base64.StdEncoding.EncodeToString(request.Content) + `</ds:Object>`
+	payload, err := layout.payload(ids, request.Content)
+	if err != nil {
+		return nil, err
 	}
 
 	signature := buildSignature(ids, signedInfo, placeholderDigest,
 		base64.StdEncoding.EncodeToString(keyPair.Certificate.Raw), signedProperties, payload)
 
-	if err := attach(tree, signature, request.Enveloping); err != nil {
+	if err := attach(tree, signature); err != nil {
 		return nil, err
 	}
+	resolve := layout.resolver(request.Content)
 
 	// Re-parse the serialised skeleton so the tree being measured is byte-for-byte
 	// the tree that will be emitted. Measuring the in-memory tree instead gives a
@@ -185,7 +193,7 @@ func (s *XadesSigner) SignXades(ctx context.Context, request application.XadesRe
 		return nil, fmt.Errorf("SignedInfo has %d references, expected 2", len(references))
 	}
 	for _, reference := range references {
-		data, err := xmldsig.ReferenceData(tree, signatureElement, reference, nil)
+		data, err := xmldsig.ReferenceData(tree, signatureElement, reference, resolve)
 		if err != nil {
 			return nil, fmt.Errorf("digest %s: %w", reference.SelectAttrValue("URI", ""), err)
 		}
@@ -240,7 +248,7 @@ func (s *XadesSigner) SignXades(ctx context.Context, request application.XadesRe
 	// including the unsigned properties just written. It is the outermost layer,
 	// so nothing may be added to the signature afterwards.
 	if request.Level.Archival() {
-		if err := s.attachArchiveTimeStamp(ctx, tree, signatureElement, request); err != nil {
+		if err := s.attachArchiveTimeStamp(ctx, tree, signatureElement, request, resolve); err != nil {
 			return nil, err
 		}
 	}
@@ -343,15 +351,9 @@ func xmldsigECDSA(key *ecdsa.PublicKey, der []byte) ([]byte, error) {
 //
 // DataObjectFormat states the media type of what was signed, bound to the
 // document reference: the XAdES baseline profile (ETSI EN 319 132-1, B-B)
-// requires it, and validators such as the EU DSS check for it. An enveloped
-// signature signs the XML it sits in; an enveloping one carries the file as
-// base64 inside its own Object.
-func buildSignedProperties(ids signatureIDs, certificateDigest, signingTime string, enveloping bool, declarations string) string {
-	format := `<xades:MimeType>text/xml</xades:MimeType>`
-	if enveloping {
-		format = `<xades:MimeType>application/octet-stream</xades:MimeType>` +
-			`<xades:Encoding>` + encodingBase64 + `</xades:Encoding>`
-	}
+// requires it, and validators such as the EU DSS check for it. format is
+// what the layout says about the content (documentLayout.dataObjectFormat).
+func buildSignedProperties(ids signatureIDs, certificateDigest, signingTime, format, declarations string) string {
 	return `<xades:SignedProperties xmlns:xades="` + namespaceXades + `" xmlns:ds="` + namespaceDS +
 		`" Id="` + ids.signedProperties() + `">` +
 		`<xades:SignedSignatureProperties>` +
@@ -433,7 +435,7 @@ func buildSignedInfo(ids signatureIDs, documentDigest, propertiesDigest string, 
 	return `<ds:SignedInfo xmlns:ds="` + namespaceDS + `">` +
 		`<ds:CanonicalizationMethod Algorithm="` + algorithmC14N + `"/>` +
 		`<ds:SignatureMethod Algorithm="` + method + `"/>` +
-		documentReference(ids, layout) +
+		layout.documentReference(ids) +
 		`<ds:Reference Type="` + typeSignedProperties + `" URI="#` + ids.signedProperties() + `">` +
 		`<ds:Transforms>` +
 		`<ds:Transform Algorithm="` + algorithmC14N + `"/>` +
@@ -442,49 +444,6 @@ func buildSignedInfo(ids signatureIDs, documentDigest, propertiesDigest string, 
 		`<ds:DigestValue>` + propertiesDigest + `</ds:DigestValue>` +
 		`</ds:Reference>` +
 		`</ds:SignedInfo>`
-}
-
-// documentLayout says how a signature holds what it signs.
-type documentLayout struct {
-	// enveloping carries the document inside the signature, in an Object.
-	enveloping bool
-	// excludeSignatures leaves every signature out of an enveloped reference
-	// (AutoFirma's XPath filter), so a signature added later to the document
-	// does not break this one. FacturaE invoices take one signature and
-	// AutoFirma writes none.
-	excludeSignatures bool
-}
-
-// documentReference builds the reference to the signed payload.
-//
-// Enveloped signatures reference the whole document with URI="" and must declare
-// the enveloped-signature transform, or a verifier hashes the document with the
-// signature inside. Enveloping signatures reference their own Object by Id.
-func documentReference(ids signatureIDs, layout documentLayout) string {
-	if layout.enveloping {
-		return `<ds:Reference Id="` + ids.reference() + `" URI="#` + ids.payload() + `">` +
-			`<ds:Transforms>` +
-			`<ds:Transform Algorithm="` + algorithmC14N + `"/>` +
-			`</ds:Transforms>` +
-			`<ds:DigestMethod Algorithm="` + algorithmSHA256 + `"/>` +
-			`<ds:DigestValue>` + placeholderDigest + `</ds:DigestValue>` +
-			`</ds:Reference>`
-	}
-
-	filter := ""
-	if layout.excludeSignatures {
-		filter = `<ds:Transform Algorithm="` + xmldsig.XPathTransform + `">` +
-			`<ds:XPath>not(ancestor-or-self::ds:Signature)</ds:XPath></ds:Transform>`
-	}
-	return `<ds:Reference Id="` + ids.reference() + `" URI="">` +
-		`<ds:Transforms>` +
-		`<ds:Transform Algorithm="` + algorithmEnveloped + `"/>` +
-		filter +
-		`<ds:Transform Algorithm="` + algorithmC14N + `"/>` +
-		`</ds:Transforms>` +
-		`<ds:DigestMethod Algorithm="` + algorithmSHA256 + `"/>` +
-		`<ds:DigestValue>` + placeholderDigest + `</ds:DigestValue>` +
-		`</ds:Reference>`
 }
 
 // buildSignature emits ds:Signature in the order XMLDSig mandates:
@@ -501,26 +460,20 @@ func buildSignature(ids signatureIDs, signedInfo, signatureValue, certificate, s
 		`</ds:Signature>`
 }
 
-// attach inserts the signature into the tree.
+// attach puts the signature at the end of the document's root, or makes it
+// the root of an empty document (enveloping, detached).
 //
 // Indentation is deliberately left untouched: etree's Indent rewrites text
 // nodes, and a single added space inside the root changes the document digest.
-func attach(tree *etree.Document, signature string, enveloping bool) error {
+func attach(tree *etree.Document, signature string) error {
 	signatureElement, err := parseFragment(signature)
 	if err != nil {
 		return err
 	}
-
-	if enveloping {
-		document := etree.NewDocument()
-		document.SetRoot(signatureElement)
-		tree.SetRoot(document.Root().Copy())
+	if tree.Root() == nil {
+		tree.SetRoot(signatureElement)
 		return nil
 	}
-
-	// The source document keeps its own prolog. When it has none, one is added:
-	// a signature file without a declaration is still valid XML, but readers that
-	// guess the encoding from the first byte mis-handle non-ASCII text.
 	tree.Root().AddChild(signatureElement)
 	return nil
 }
@@ -697,13 +650,14 @@ func (s *XadesSigner) attachArchiveTimeStamp(
 	tree *etree.Document,
 	signatureElement *etree.Element,
 	request application.XadesRequest,
+	resolve xmldsig.Resolver,
 ) error {
 	timestamper := s.timestamps
 	if timestamper == nil {
 		return fmt.Errorf("XAdES-A needs a timestamp authority: pass --tsa <url>")
 	}
 
-	covered, err := archiveTimestampInput(tree, signatureElement)
+	covered, err := archiveTimestampInput(tree, signatureElement, resolve)
 	if err != nil {
 		return err
 	}
@@ -739,7 +693,7 @@ func (s *XadesSigner) attachArchiveTimeStamp(
 // remaining ds:Object elements excluding the one that holds the signature
 // properties. Anything added later changes this stream and breaks the token,
 // which is the guarantee the level provides.
-func archiveTimestampInput(tree *etree.Document, signature *etree.Element) ([]byte, error) {
+func archiveTimestampInput(tree *etree.Document, signature *etree.Element, resolve xmldsig.Resolver) ([]byte, error) {
 	var input bytes.Buffer
 
 	// 1-3: every ds:Reference of SignedInfo, processed as XML-Signature
@@ -750,7 +704,7 @@ func archiveTimestampInput(tree *etree.Document, signature *etree.Element) ([]by
 		return nil, fmt.Errorf("the signature has no SignedInfo")
 	}
 	for _, reference := range signedInfo.SelectElements("Reference") {
-		processed, err := xmldsig.ReferenceData(tree, signature, reference, nil)
+		processed, err := xmldsig.ReferenceData(tree, signature, reference, resolve)
 		if err != nil {
 			return nil, fmt.Errorf("archive timestamp: reference %q: %w", reference.SelectAttrValue("URI", ""), err)
 		}

@@ -48,7 +48,8 @@ type Request struct {
 	// Invisible signs a PDF without any mark on its pages. It excludes
 	// Placement and Placements.
 	Invisible bool
-	// Detached writes a CAdES signature without the content (.p7s).
+	// Detached leaves the document out of the signature, beside it: a CAdES
+	// .p7s or a XAdES .xsig.
 	Detached bool
 	// Cosign adds a parallel signature to the envelope named by Document.
 	Cosign bool
@@ -70,7 +71,8 @@ type Request struct {
 	TimestampURL    string
 	TimestampUser   string
 	TimestampSecret string
-	Enveloping      bool
+	// Enveloping carries the document inside a XAdES signature.
+	Enveloping bool
 	// EmbedRevocation asks for PAdES B-LT: the signature plus a /DSS dictionary
 	// carrying the status answers. It reaches the network, so it is opt-in.
 	EmbedRevocation bool
@@ -104,7 +106,7 @@ func (u *SignDocument) Execute(ctx context.Context, request Request) (Artefact, 
 	case request.Countersign != "":
 		output = request.Document.AddedSignatureName("countersigned")
 	case request.Detached:
-		output = request.Document.DetachedSignatureName()
+		output = request.Document.DetachedSignatureName(request.Format)
 	default:
 		output = request.Document.SignedName(request.Format)
 	}
@@ -154,9 +156,26 @@ func fingerprint(content []byte) string {
 	return hex.EncodeToString(digest[:])
 }
 
+// xmlPackaging is how a XAdES signature holds the document, from the flags.
+func (r Request) xmlPackaging() domain.XMLPackaging {
+	switch {
+	case r.Detached:
+		return domain.XMLDetached
+	case r.Enveloping:
+		return domain.XMLEnveloping
+	}
+	return domain.XMLEnveloped
+}
+
 // validate applies guard clauses so the adapters receive a coherent request.
 func (u *SignDocument) validate(request Request) error {
-	if !request.Document.Supports(request.Format) {
+	if request.Detached && request.Enveloping {
+		return fmt.Errorf("a signature is either detached or enveloping; choose one")
+	}
+	// Only an enveloped XML signature needs an XML document: detached and
+	// enveloping ones sign any file.
+	anyFile := request.Format == domain.Xades && !request.xmlPackaging().NeedsXML()
+	if !request.Document.Supports(request.Format) && !anyFile {
 		return fmt.Errorf("%w: %s cannot hold a %s signature",
 			domain.ErrUnsupportedFormat, request.Document.Extension(), request.Format)
 	}
@@ -167,7 +186,7 @@ func (u *SignDocument) validate(request Request) error {
 	if request.Cosign && request.Countersign != "" {
 		return fmt.Errorf("co-signing and counter-signing are separate operations; choose one")
 	}
-	if request.Policy.IsFacturaE() && (request.Format != domain.Xades || request.Enveloping) {
+	if request.Policy.IsFacturaE() && (request.Format != domain.Xades || request.xmlPackaging() != domain.XMLEnveloped) {
 		return fmt.Errorf("%w: they are XAdES enveloped signatures", domain.ErrNotFacturaE)
 	}
 	if err := request.Policy.FitsFormat(request.Format); err != nil {
@@ -185,8 +204,11 @@ func (u *SignDocument) validate(request Request) error {
 	if (request.Cosign || request.Countersign != "") && request.Level.EmbedsRevocation() {
 		return fmt.Errorf("signatures added to an envelope support levels B and T; %s is not available for them yet", request.Level)
 	}
-	if request.Detached && request.Format != domain.Cades {
-		return fmt.Errorf("only CAdES signatures can be detached; %s carries its signature inside the document", request.Format)
+	if request.Detached && request.Format != domain.Cades && request.Format != domain.Xades {
+		return fmt.Errorf("only CAdES and XAdES signatures can be detached; %s carries its signature inside the document", request.Format)
+	}
+	if request.Enveloping && request.Format != domain.Xades {
+		return fmt.Errorf("only XAdES signatures can be enveloping, not %s", request.Format)
 	}
 	if request.Invisible && (len(request.Placements) > 0 || !request.Placement.IsZero()) {
 		return fmt.Errorf("an invisible signature cannot also place a seal")
@@ -260,7 +282,8 @@ func (u *SignDocument) sign(ctx context.Context, request Request, content []byte
 			Signer:          request.Signer,
 			Level:           request.Level,
 			EmbedRevocation: request.EmbedRevocation,
-			Enveloping:      request.Enveloping,
+			Packaging:       request.xmlPackaging(),
+			DocumentName:    request.Document.Name(),
 			TimestampURL:    request.TimestampURL,
 			TimestampUser:   request.TimestampUser,
 			TimestampSecret: request.TimestampSecret,

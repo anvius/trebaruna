@@ -154,14 +154,25 @@ the PDF library always adds a new field.
 
 ## Detached signatures
 
-`--format cades --detached` writes `<document>.p7s` and leaves the document
-untouched: the signature travels beside it. Every level works.
+`--detached` leaves the document untouched and writes the signature beside
+it: `<document>.p7s` for CAdES, `<document>.xsig` for XAdES. A detached XAdES
+names the file it signs in its reference and digests its bytes; `verify`
+reads the file of that name in the signature's directory, never a path or
+an address. Every level works.
 
 ```bash
 trebaruna sign offerta.docx --format cades --detached --p12 k.p12   # → offerta.docx.p7s
 trebaruna verify offerta.docx.p7s                  # uses offerta.docx beside it
 trebaruna verify firma.p7s --content offerta.docx  # or name the document
+trebaruna sign offerta.docx --format xades --detached --p12 k.p12   # → offerta.docx.xsig
 ```
+
+XAdES can also carry any file inside the signature (`--enveloping`): XML as
+XML in a `ds:Object`, other files in Base64 with the Base64 transform, so the
+digest is the file's own. AutoFirma's "XAdES Detached" is a third layout: a
+new document whose `AFIRMA` root holds the content (`CONTENT`) and, beside it,
+the signature. trebaruna writes it when a page asks for it through
+afirma://, and verifies it like any other.
 
 Without the document the bytes cannot be compared: the integrity is reported as
 unknown, never as altered (ADR-0005).

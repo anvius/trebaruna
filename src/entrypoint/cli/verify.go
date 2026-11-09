@@ -37,7 +37,7 @@ func runVerify(args []string, stdout, stderr io.Writer) int {
 		asJSON    = flags.Bool("json", false, "machine-readable output")
 		offline   = flags.Bool("offline", true, "do not contact OCSP/CRL responders")
 		lang      = flags.String("lang", "", "language for messages: es | it | en")
-		content   = flags.String("content", "", "the document a detached signature (.p7s) signs (default: the same name without .p7s, if present)")
+		content   = flags.String("content", "", "the document a detached signature signs (default: beside it, the same name without .p7s, or the name a .xsig gives)")
 	)
 
 	flags.Usage = func() {

@@ -53,7 +53,7 @@ func signRSAXades(t *testing.T, request application.XadesRequest) string {
 
 // TestAnEnvelopingXadesVerifies.
 func TestAnEnvelopingXadesVerifies(t *testing.T) {
-	signed := signRSAXades(t, application.XadesRequest{Content: []byte(`<acta>1</acta>`), Level: signingdomain.BES, Enveloping: true})
+	signed := signRSAXades(t, application.XadesRequest{Content: []byte(`<acta>1</acta>`), Level: signingdomain.BES, Packaging: signingdomain.XMLEnveloping})
 	if got := integrityOf(t, signed); got != "good" {
 		t.Errorf("integrity = %s: an enveloping signature references its own Object", got)
 	}

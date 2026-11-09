@@ -66,9 +66,13 @@ func (d Document) AddedSignatureName(marker string) string {
 	return strings.TrimSuffix(d.path, extension) + "_" + marker + extension
 }
 
-// DetachedSignatureName is where a detached CAdES signature goes: the
-// document's name plus .p7s, next to the document it signs.
-func (d Document) DetachedSignatureName() string {
+// DetachedSignatureName is where a detached signature goes, next to the
+// document it signs: its name plus .p7s for CAdES, plus .xsig for XAdES (the
+// suffix AutoFirma gives XML signatures).
+func (d Document) DetachedSignatureName(format Format) string {
+	if format == Xades {
+		return d.path + ".xsig"
+	}
 	return d.path + ".p7s"
 }
 

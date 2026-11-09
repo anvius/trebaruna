@@ -197,16 +197,21 @@ func (s NativePageSigner) signXades(ctx context.Context, request application.Pag
 	if request.Crypto != domain.Sign {
 		return nil, domain.Failure{Code: domain.UnsupportedOperation, Cause: "XAdES co- and counter-signatures are not supported yet"}
 	}
-	enveloping := false
+	// AutoFirma's "XAdES Detached" keeps the data inside a new document, beside
+	// the signature (AFIRMA/CONTENT), so the page receives one file.
+	var packaging signing.XMLPackaging
 	switch xadesPackaging(request) {
 	case "enveloping":
-		enveloping = true
+		packaging = signing.XMLEnveloping
 	case "detached":
-		return nil, domain.Failure{Code: domain.UnsupportedFormat, Cause: "XAdES Detached is not supported yet"}
-	default:
+		packaging = signing.XMLInternallyDetached
+	case "enveloped":
 		if !bytes.HasPrefix(bytes.TrimSpace(request.Data), []byte("<")) {
 			return nil, domain.Failure{Code: domain.InvalidXML}
 		}
+		packaging = signing.XMLEnveloped
+	default:
+		return nil, domain.Failure{Code: domain.UnsupportedFormat, Cause: "XAdES " + xadesPackaging(request)}
 	}
 	roles := claimedRoles(request.Properties)
 	if policy.IsFacturaE() {
@@ -219,7 +224,7 @@ func (s NativePageSigner) signXades(ctx context.Context, request application.Pag
 		}
 	}
 	signature, err := s.xades.SignXades(ctx, signapp.XadesRequest{Content: request.Data, Signer: request.Key, Level: level,
-		Enveloping: enveloping, TimestampURL: tsa, Policy: policy, ClaimedRoles: roles})
+		Packaging: packaging, TimestampURL: tsa, Policy: policy, ClaimedRoles: roles})
 	if err != nil {
 		return nil, domain.Failure{Code: domain.SignatureFailed, Cause: err.Error()}
 	}
@@ -227,7 +232,8 @@ func (s NativePageSigner) signXades(ctx context.Context, request application.Pag
 }
 
 // xadesPackaging is the XAdES variant asked for: in the format's name
-// ("XAdES Enveloping") or in the format property; FacturaE is enveloped.
+// ("XAdES Enveloping") or in the format property; FacturaE is enveloped, and
+// nothing said is enveloping, AutoFirma's default (XAdESSigner).
 func xadesPackaging(request application.PageSignature) string {
 	if request.Format.Family == "facturae" {
 		return "enveloped"
@@ -235,7 +241,10 @@ func xadesPackaging(request application.PageSignature) string {
 	if request.Format.Packaging != "" {
 		return request.Format.Packaging
 	}
-	return strings.TrimPrefix(strings.ToLower(request.Properties["format"]), "xades ")
+	if variant := strings.TrimPrefix(strings.ToLower(request.Properties["format"]), "xades "); variant != "" {
+		return variant
+	}
+	return "enveloping"
 }
 
 // claimedRoles reads signerClaimedRoles, several separated by "|".

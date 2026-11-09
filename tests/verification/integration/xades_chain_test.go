@@ -53,10 +53,9 @@ func TestXadesChainsToAnExternalRoot(t *testing.T) {
 	source := []byte(`<fattura><numero>1</numero><importo>100.00</importo></fattura>`)
 	signerAdapter := signinginfra.NewXadesSigner(nil)
 	signed, err := signerAdapter.SignXades(t.Context(), application.XadesRequest{
-		Content:    source,
-		Signer:     signer,
-		Level:      signingdomain.BES,
-		Enveloping: false,
+		Content: source,
+		Signer:  signer,
+		Level:   signingdomain.BES,
 	})
 	if err != nil {
 		t.Fatalf("sign: %v", err)
@@ -113,10 +112,9 @@ func TestXadesWithoutTheChainIsUntrusted(t *testing.T) {
 	source := []byte(`<fattura><numero>1</numero></fattura>`)
 	signerAdapter := signinginfra.NewXadesSigner(nil)
 	signed, err := signerAdapter.SignXades(t.Context(), application.XadesRequest{
-		Content:    source,
-		Signer:     signer,
-		Level:      signingdomain.BES,
-		Enveloping: false,
+		Content: source,
+		Signer:  signer,
+		Level:   signingdomain.BES,
 	})
 	if err != nil {
 		t.Fatalf("sign: %v", err)

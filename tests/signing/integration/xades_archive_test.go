@@ -82,3 +82,23 @@ func TestTheArchiveTimestampCoversTheSignedDocument(t *testing.T) {
 		t.Errorf("the archive token's imprint is not the digest of EN 319 132-1's input\n  expected %x\n  token    %x", expected, tsa.imprint)
 	}
 }
+
+// TestADetachedXadesCanBeArchived: the archive input includes the document
+// beside the signature, which the signer has.
+func TestADetachedXadesCanBeArchived(t *testing.T) {
+	tsa := newLocalTSA(t)
+	_, signer := ltaFixture(t)
+	request := buildXadesRequest(signer, []byte("%PDF-1.4\n%archivo\n"), false)
+	request.Packaging = domain.XMLDetached
+	request.DocumentName = "archivo.pdf"
+	request.Level = domain.LTA
+	request.TimestampURL = "http://tsa.example.invalid"
+	request.EmbedRevocation = true
+	signed, err := infrastructure.NewXadesSigner(tsa).SignXades(context.Background(), request)
+	if err != nil {
+		t.Fatalf("sign: %v", err)
+	}
+	if !strings.Contains(string(signed), "ArchiveTimeStamp") || tsa.requests != 2 {
+		t.Errorf("a detached LTA signature carries both timestamps (%d requests)", tsa.requests)
+	}
+}

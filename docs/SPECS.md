@@ -31,7 +31,7 @@ user seeing what is signed and where anything goes.
 
 | Rule | Status |
 |---|---|
-| Formats: CAdES `.p7m` (content embedded), PAdES, XAdES enveloped and enveloping | built |
+| Formats: CAdES `.p7m` (content embedded), PAdES, XAdES enveloped, enveloping (any file: XML as XML, other files in Base64) and detached | built |
 | Levels B, T, LT, LTA for every format; T and above need a timestamp authority; LT and LTA fetch revocation evidence only when allowed (`--online-revocation`) | built |
 | Output next to the document: `<name>.<ext>.p7m`, `<name>_signed.pdf`, `<name>_signed.xml` | built |
 | Signer name: the certificate holder unless one is given | built |
@@ -47,7 +47,9 @@ user seeing what is signed and where anything goes.
 | Claimed roles in XAdES (`SignerRoleV2`) | built |
 | FacturaE invoices: unsigned `Facturae` documents, XAdES enveloped, FacturaE's policy, role `emisor` by default and only the policy's roles | built (not yet checked with the administration's own validator) |
 | Signature policies in PAdES | planned (the PDF library cannot add signed attributes; refused meanwhile) |
-| XAdES detached and plain XMLDSig | planned (E2) |
+| XAdES detached: `<document>.xsig` beside the untouched document, which the signature names; verify finds it there or takes `--content` | built |
+| AutoFirma's "XAdES Detached" (an `AFIRMA` root holding `CONTENT` and the signature) for afirma:// pages | built |
+| Plain XMLDSig (no XAdES properties) | planned (E2b) |
 | ASiC-S / ASiC-E signed in one step | planned (E3) |
 | Handwritten-signature image next to the certificate data (ADR-0012) | planned (G3) |
 | ODF and OOXML signatures (ADR-0015) | planned (G1, G2) |

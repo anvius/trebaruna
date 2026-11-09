@@ -6,7 +6,10 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/xmldsig"
@@ -38,6 +41,17 @@ type XadesVerifier struct {
 	// what lets a subordinate authority be added to the roots, the way the PDF
 	// adapter does.
 	Anchors []*x509.Certificate
+	// contentPath is the document a detached signature signs, when the
+	// person names it; otherwise the file the reference names is looked for
+	// beside the signature.
+	contentPath string
+}
+
+// WithContent checks a detached signature against the document at path.
+func (v *XadesVerifier) WithContent(path string) application.DocumentExtractor {
+	clone := *v
+	clone.contentPath = path
+	return &clone
 }
 
 // NewXadesVerifier builds the adapter.
@@ -102,13 +116,13 @@ func (v *XadesVerifier) Extract(path string) ([]domain.SignerReport, error) {
 	// reporting the first alone would vouch for the others unseen.
 	reports := make([]domain.SignerReport, 0, len(signatures))
 	for _, signature := range signatures {
-		reports = append(reports, v.report(document, signature))
+		reports = append(reports, v.report(document, signature, path))
 	}
 	return reports, nil
 }
 
 // report judges one signature of the document.
-func (v *XadesVerifier) report(document *etree.Document, signature *etree.Element) domain.SignerReport {
+func (v *XadesVerifier) report(document *etree.Document, signature *etree.Element, path string) domain.SignerReport {
 	report := domain.SignerReport{
 		FieldName: "XMLSignature",
 		Format:    "XAdES",
@@ -124,7 +138,17 @@ func (v *XadesVerifier) report(document *etree.Document, signature *etree.Elemen
 	// with a properly issued certificate would read as untrusted.
 	embedded := extractCertificates(signature)
 
-	describeIntegrity(validate(document, signature, certificate), &report)
+	var used string
+	err := validate(document, signature, certificate, v.beside(path, &used))
+	if used != "" {
+		report.Findings = append(report.Findings, domain.Finding{
+			Code:    "content.detached",
+			Status:  domain.StatusGood,
+			Message: "detached signature checked against the document beside it",
+			Detail:  used,
+		})
+	}
+	describeIntegrity(err, &report)
 
 	v.describeSigningTime(signature, &report)
 	v.describeSignatureTimeStamp(signature, &report)
@@ -328,11 +352,37 @@ func walk(element *etree.Element, visit func(*etree.Element)) {
 // embedded certificate. This answers "does the signature match this
 // certificate", not "is this certificate trusted": trust is a separate
 // question with a separate source.
-func validate(document *etree.Document, signature *etree.Element, certificate *x509.Certificate) error {
+func validate(document *etree.Document, signature *etree.Element, certificate *x509.Certificate, resolve xmldsig.Resolver) error {
 	if certificate == nil {
 		return fmt.Errorf("%w: no signing certificate to validate against", xmldsig.ErrUnverifiable)
 	}
-	return xmldsig.Check(document, signature, certificate.PublicKey, nil)
+	return xmldsig.Check(document, signature, certificate.PublicKey, resolve)
+}
+
+// beside resolves a detached reference: the document the person named, or
+// the file the reference names in the signature's own directory. Only a
+// plain file name is followed: no directories, no "..", no address, which
+// is never fetched. used receives the file that was read.
+func (v *XadesVerifier) beside(signaturePath string, used *string) xmldsig.Resolver {
+	return func(uri string) ([]byte, error) {
+		path := v.contentPath
+		if path == "" {
+			name, err := url.PathUnescape(uri)
+			if err != nil || name == "" || name == "." || name == ".." || strings.ContainsAny(name, `/\:`) {
+				return nil, fmt.Errorf("%w: %s is not a file beside the signature", xmldsig.ErrContentMissing, uri)
+			}
+			path = filepath.Join(filepath.Dir(signaturePath), name)
+		}
+		if info, err := os.Stat(path); err != nil || !info.Mode().IsRegular() {
+			return nil, fmt.Errorf("%w: %s", xmldsig.ErrContentMissing, path)
+		}
+		content, err := os.ReadFile(path)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %v", xmldsig.ErrContentMissing, err)
+		}
+		*used = path
+		return content, nil
+	}
 }
 
 // describeIntegrity reports what the check found: intact, modified, or not
