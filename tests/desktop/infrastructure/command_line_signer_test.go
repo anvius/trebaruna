@@ -250,3 +250,27 @@ func TestADetachedFormatAsksTheCommandForADetachedCAdES(t *testing.T) {
 		t.Errorf("arguments = %v", arguments)
 	}
 }
+
+func TestAddedSignaturesBecomeTheCommandsOptions(t *testing.T) {
+	cases := []struct {
+		document string
+		format   domain.SignatureFormat
+		want     []string
+	}{
+		{"/tmp/atto.pdf.p7m", domain.FormatCosign, []string{"--cosign"}},
+		{"/tmp/offerta.txt.p7s", domain.FormatCosign, []string{"--cosign", "--content", "/tmp/offerta.txt"}},
+		{"/tmp/atto.pdf.p7m", domain.FormatCountersign, []string{"--countersign", "leaves"}},
+	}
+	for _, testCase := range cases {
+		binary, recorded := fakeCommand(t, "echo '"+receiptJSON+"'")
+		intent := fullIntent()
+		intent.DocumentPath, intent.Format = testCase.document, testCase.format
+		if _, err := (infrastructure.CommandLineSigner{BinaryPath: binary}).Sign(context.Background(), intent); err != nil {
+			t.Fatalf("Sign: %v", err)
+		}
+		arguments := strings.Join(recordedArguments(t, recorded), " ")
+		if !strings.Contains(arguments, "--format cades") || !strings.Contains(arguments, strings.Join(testCase.want, " ")) {
+			t.Errorf("%s %s: arguments %q, want %v", testCase.document, testCase.format, arguments, testCase.want)
+		}
+	}
+}

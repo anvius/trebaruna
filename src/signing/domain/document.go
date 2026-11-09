@@ -57,6 +57,15 @@ func (d Document) SignedName(format Format) string {
 	return filepath.Join(dir, stem+"_signed"+format.Extension())
 }
 
+// AddedSignatureName is where an envelope goes after a signature is added
+// to it: the same name with a marker before the last extension, so the
+// original envelope is never overwritten (contratto.pdf.p7m becomes
+// contratto.pdf_cosigned.p7m).
+func (d Document) AddedSignatureName(marker string) string {
+	extension := filepath.Ext(d.path)
+	return strings.TrimSuffix(d.path, extension) + "_" + marker + extension
+}
+
 // DetachedSignatureName is where a detached CAdES signature goes: the
 // document's name plus .p7s, next to the document it signs.
 func (d Document) DetachedSignatureName() string {

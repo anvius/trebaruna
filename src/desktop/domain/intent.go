@@ -76,11 +76,21 @@ func (i SigningIntent) OutputName() string {
 		return i.DocumentPath + ".p7m"
 	case FormatCAdESDetached:
 		return i.DocumentPath + ".p7s"
+	case FormatCosign:
+		return addedSignatureName(i.DocumentPath, "cosigned")
+	case FormatCountersign:
+		return addedSignatureName(i.DocumentPath, "countersigned")
 	case FormatXAdES:
 		return trimExtension(i.DocumentPath) + "_signed.xml"
 	default:
 		return trimExtension(i.DocumentPath) + "_signed.pdf"
 	}
+}
+
+// addedSignatureName mirrors the signer's naming for an envelope that gained a
+// signature: the marker goes before the last extension.
+func addedSignatureName(path, marker string) string {
+	return trimExtension(path) + "_" + marker + path[len(trimExtension(path)):]
 }
 
 // trimExtension removes the last dot-suffix.

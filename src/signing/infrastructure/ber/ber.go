@@ -1,24 +1,27 @@
-package keybundle
+// Package ber rewrites BER encodings as DER. CMS and PKCS#12 allow BER, and
+// other tools write it (NSS for PKCS#12, many signers for .p7m), while Go's
+// encoding/asn1 and the hand-written CMS code read DER only.
+package ber
 
 import (
 	"errors"
 	"fmt"
 )
 
-// derFromBER rewrites one BER element as DER: every length becomes definite
+// ToDER rewrites one BER element as DER: every length becomes definite
 // and minimal, and constructed strings are flattened into primitive ones.
 //
 // PKCS#12 allows BER and NSS (Firefox, Thunderbird) uses it, while Go's
 // encoding/asn1 reads DER only. The contents of OCTET STRINGs are copied
 // unchanged, which matters: the integrity MAC of a PKCS#12 file is computed
 // over the bytes inside one of them.
-func derFromBER(data []byte) ([]byte, error) {
+func ToDER(data []byte) ([]byte, error) {
 	element, rest, err := convert(data, 0)
 	if err != nil {
 		return nil, err
 	}
 	if len(rest) != 0 {
-		return nil, fmt.Errorf("keybundle: %d bytes after the encoding", len(rest))
+		return nil, fmt.Errorf("ber: %d bytes after the encoding", len(rest))
 	}
 	return element, nil
 }
@@ -26,12 +29,12 @@ func derFromBER(data []byte) ([]byte, error) {
 // maxDepth bounds recursion on hostile input.
 const maxDepth = 64
 
-var errTruncated = errors.New("keybundle: truncated encoding")
+var errTruncated = errors.New("ber: truncated encoding")
 
 // convert reads one element and returns it as DER plus the bytes after it.
 func convert(data []byte, depth int) (element, rest []byte, err error) {
 	if depth > maxDepth {
-		return nil, nil, errors.New("keybundle: encoding nested too deeply")
+		return nil, nil, errors.New("ber: encoding nested too deeply")
 	}
 	tag, length, header, err := readHeader(data)
 	if err != nil {
@@ -41,7 +44,7 @@ func convert(data []byte, depth int) (element, rest []byte, err error) {
 
 	if !constructed {
 		if length < 0 {
-			return nil, nil, errors.New("keybundle: indefinite length on a primitive element")
+			return nil, nil, errors.New("ber: indefinite length on a primitive element")
 		}
 		end := header + length
 		return encode(tag, data[header:end]), data[end:], nil
@@ -123,7 +126,7 @@ func readHeader(data []byte) (tag []byte, length, header int, err error) {
 	default:
 		count := int(first & 0x7f)
 		if count > 4 || position+count > len(data) {
-			return nil, 0, 0, errors.New("keybundle: unsupported length encoding")
+			return nil, 0, 0, errors.New("ber: unsupported length encoding")
 		}
 		for _, digit := range data[position : position+count] {
 			length = length<<8 | int(digit)

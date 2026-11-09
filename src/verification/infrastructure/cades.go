@@ -119,6 +119,17 @@ func (v *CadesVerifier) Extract(path string) ([]domain.SignerReport, error) {
 		return nil, fmt.Errorf("parse CMS in %q: %w", path, err)
 	}
 
+	// Several signatures, or counter-signatures, go through the tree path,
+	// which checks each node on its own.
+	if tree, err := parseSignatureTree(content, nil); err == nil && tree.isTree() {
+		if len(tree.content) == 0 && v.contentPath != "" {
+			if tree.content, err = os.ReadFile(v.contentPath); err != nil {
+				return nil, fmt.Errorf("read the signed document %q: %w", v.contentPath, err)
+			}
+		}
+		return v.extractTree(tree)
+	}
+
 	if len(parsed.Signers) != 1 {
 		return nil, fmt.Errorf("CMS verification currently requires exactly one signer; found %d", len(parsed.Signers))
 	}
@@ -277,7 +288,12 @@ func (v *CadesVerifier) describeTime(content []byte, parsed *pkcs7.PKCS7, report
 	if tokenDER == nil {
 		return
 	}
+	describeToken(tokenDER, firstSignerSignatureValue(content), report)
+}
 
+// describeToken checks an RFC 3161 token against the signature value it must
+// cover and records what it proves.
+func describeToken(tokenDER, signatureValue []byte, report *domain.SignerReport) {
 	token, err := timestamp.Parse(tokenDER)
 	if err != nil {
 		report.Findings = append(report.Findings, domain.Finding{
@@ -292,7 +308,7 @@ func (v *CadesVerifier) describeTime(content []byte, parsed *pkcs7.PKCS7, report
 	// The binding is what turns "a token exists" into evidence: the imprint must
 	// be the digest of THIS signature value, otherwise the token covers another
 	// signature and proves nothing about this one.
-	if !tokenBindsToSignature(token, content) {
+	if !tokenCovers(token, signatureValue) {
 		report.Findings = append(report.Findings, domain.Finding{
 			Code:    "timestamp.invalid",
 			Status:  domain.StatusBad,
@@ -335,8 +351,12 @@ func (v *CadesVerifier) describeTime(content []byte, parsed *pkcs7.PKCS7, report
 // tokenBindsToSignature compares the token imprint with the digest of the
 // signature value it claims to cover.
 func tokenBindsToSignature(token *timestamp.Timestamp, cms []byte) bool {
-	signatureValue := firstSignerSignatureValue(cms)
-	if len(signatureValue) == 0 || token.HashAlgorithm.Available() == false {
+	return tokenCovers(token, firstSignerSignatureValue(cms))
+}
+
+// tokenCovers reports whether the token's imprint is the digest of signatureValue.
+func tokenCovers(token *timestamp.Timestamp, signatureValue []byte) bool {
+	if len(signatureValue) == 0 || !token.HashAlgorithm.Available() {
 		return false
 	}
 

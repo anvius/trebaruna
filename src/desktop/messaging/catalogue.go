@@ -166,31 +166,35 @@ type Catalogue struct {
 	ExplainUnknown   string
 
 	// Network activity (ADR-0010).
-	MenuNetwork          string
-	NetworkTitle         string
-	NetworkEmpty         string
-	NetworkSummary       string
-	NetworkBytes         string
-	NetworkViaLibrary    string
-	PurposeTimestamp     string
-	PurposeRevocation    string
-	PurposeTrustList     string
-	PurposeWebDelivery   string
-	PurposeLocalAPI      string
-	PurposeSigningServer string
-	PurposeRemoteSigning string
-	PurposeUnattributed  string
-	DocumentFingerprint  string
-	DocumentChanged      string
-	AboutCardsYes        string
-	AboutCardsNo         string
-	AboutRevision        string
-	AboutDependencies    string
-	InvisibleSignature   string
-	InvisibleExplained   string
-	FormatDetachedLabel  string
-	ExtractButton        string
-	ExtractedAs          string
+	MenuNetwork            string
+	NetworkTitle           string
+	NetworkEmpty           string
+	NetworkSummary         string
+	NetworkBytes           string
+	NetworkViaLibrary      string
+	PurposeTimestamp       string
+	PurposeRevocation      string
+	PurposeTrustList       string
+	PurposeWebDelivery     string
+	PurposeLocalAPI        string
+	PurposeSigningServer   string
+	PurposeRemoteSigning   string
+	PurposeUnattributed    string
+	DocumentFingerprint    string
+	DocumentChanged        string
+	AboutCardsYes          string
+	AboutCardsNo           string
+	AboutRevision          string
+	AboutDependencies      string
+	InvisibleSignature     string
+	InvisibleExplained     string
+	FormatDetachedLabel    string
+	ExtractButton          string
+	ExtractedAs            string
+	FormatCosignLabel      string
+	FormatCountersignLabel string
+	FormatWrapLabel        string
+	CountersignatureOf     string
 }
 
 // For returns the catalogue for a language.
@@ -341,6 +345,10 @@ var spanish = Catalogue{
 	FormatDetachedLabel:        "Firma separada .p7s (CAdES): el documento no se modifica",
 	ExtractButton:              "Extraer el documento firmado",
 	ExtractedAs:                "Documento extraído en %s. Extraer no comprueba nada: la comprobación es la de arriba.",
+	FormatCosignLabel:          "Añadir una firma paralela: firmas lo mismo que los demás",
+	FormatCountersignLabel:     "Contrafirmar: firmas sobre las firmas que ya tiene",
+	FormatWrapLabel:            "Envolver en otro sobre .p7m (modo antiguo)",
+	CountersignatureOf:         "Contrafirma de la firma %s",
 }
 
 var italian = Catalogue{
@@ -479,6 +487,10 @@ var italian = Catalogue{
 	FormatDetachedLabel:        "Firma separata .p7s (CAdES): il documento non viene modificato",
 	ExtractButton:              "Estrai il documento firmato",
 	ExtractedAs:                "Documento estratto in %s. L'estrazione non verifica nulla: la verifica è quella sopra.",
+	FormatCosignLabel:          "Aggiungi una firma parallela: firmi lo stesso documento degli altri",
+	FormatCountersignLabel:     "Controfirma: firmi sopra le firme già presenti",
+	FormatWrapLabel:            "Racchiudi in un'altra busta .p7m (modo tradizionale)",
+	CountersignatureOf:         "Controfirma della firma %s",
 }
 
 var english = Catalogue{
@@ -617,6 +629,10 @@ var english = Catalogue{
 	FormatDetachedLabel:        "Detached .p7s signature (CAdES): the document is left untouched",
 	ExtractButton:              "Extract the signed document",
 	ExtractedAs:                "Document extracted to %s. Extraction checks nothing: the check is the one above.",
+	FormatCosignLabel:          "Add a parallel signature: you sign what the others signed",
+	FormatCountersignLabel:     "Counter-sign: you sign over the signatures already there",
+	FormatWrapLabel:            "Wrap in another .p7m envelope (the old way)",
+	CountersignatureOf:         "Counter-signature of signature %s",
 }
 
 // LevelName renders a level name for display.

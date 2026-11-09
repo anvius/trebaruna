@@ -47,7 +47,15 @@ type CadesRequest struct {
 	Content []byte
 	// Detached leaves the content out of the container (.p7s): the signature
 	// travels beside the document instead of wrapping it.
-	Detached        bool
+	Detached bool
+	// Cosign adds a parallel signature to the envelope in Content.
+	Cosign bool
+	// Countersign, "leaves" or "all", counter-signs signatures of the envelope
+	// in Content.
+	Countersign string
+	// DetachedContent is the document a detached envelope signs, needed to
+	// co-sign it.
+	DetachedContent []byte
 	Signer          domain.Signer
 	Level           domain.Level
 	TimestampURL    string

@@ -23,6 +23,8 @@ import (
 	"unicode/utf16"
 
 	pkcs12 "software.sslmate.com/src/go-pkcs12"
+
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/ber"
 )
 
 // Decode returns the private key, the certificate that belongs to it and the
@@ -107,7 +109,7 @@ type encryptedPrivateKeyInfo struct {
 
 // decodeBER reads a PKCS#12 file that is not DER.
 func decodeBER(data []byte, password string) (crypto.PrivateKey, *x509.Certificate, []*x509.Certificate, error) {
-	normalised, err := derFromBER(data)
+	normalised, err := ber.ToDER(data)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -129,7 +131,7 @@ func decodeBER(data []byte, password string) (crypto.PrivateKey, *x509.Certifica
 		return nil, nil, nil, err
 	}
 
-	normalisedSafe, err := derFromBER(authSafe)
+	normalisedSafe, err := ber.ToDER(authSafe)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -198,7 +200,7 @@ func safeContents(part contentInfo, password string) ([]safeBag, error) {
 		return nil, nil
 	}
 
-	normalised, err := derFromBER(plain)
+	normalised, err := ber.ToDER(plain)
 	if err != nil {
 		return nil, err
 	}
@@ -228,7 +230,7 @@ func octets(value asn1.RawValue) ([]byte, error) {
 }
 
 func shroudedKey(encoded []byte, password string) (crypto.PrivateKey, error) {
-	normalised, err := derFromBER(encoded)
+	normalised, err := ber.ToDER(encoded)
 	if err != nil {
 		return nil, err
 	}
@@ -240,7 +242,7 @@ func shroudedKey(encoded []byte, password string) (crypto.PrivateKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	if plain, err = derFromBER(plain); err != nil {
+	if plain, err = ber.ToDER(plain); err != nil {
 		return nil, err
 	}
 	key, err := x509.ParsePKCS8PrivateKey(plain)

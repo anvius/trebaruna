@@ -343,3 +343,29 @@ func TestAnInvisibleSignatureNeedsNoPage(t *testing.T) {
 		t.Error("an envelope has no page, so the option does not apply")
 	}
 }
+
+func TestAnEnvelopeOffersToAddASignature(t *testing.T) {
+	fixture := newFormFixture(t, scriptedCertificate{summary: qualifiedRossi()})
+	form := fixture.desktop.form
+
+	form.setDocument("/tmp/atto.pdf.p7m")
+	if form.format != domain.FormatCosign || len(form.formatChoice.Options) != 3 {
+		t.Fatalf("format %s, options %v", form.format, form.formatChoice.Options)
+	}
+	if form.formatChoice.Options[2] != form.m.FormatWrapLabel {
+		t.Errorf("the third option is %q, want the old-style envelope", form.formatChoice.Options[2])
+	}
+	if form.documentRow.note.Text != "Se guardará como atto.pdf_cosigned.p7m" {
+		t.Errorf("note = %q", form.documentRow.note.Text)
+	}
+}
+
+func TestACounterSignatureIsLabelledInTheReport(t *testing.T) {
+	tab := verificationFor(t)
+	tab.render(decodeReport(t, `{"signed":true,"verdict":"advanced","signers":[
+		{"field":"CMS #1","signer":"MARIO ROSSI","integrity":"good"},
+		{"field":"CMS #1 › countersignature 1","countersigns":"CMS #1","signer":"ANNA BIANCHI","integrity":"good"}]}`))
+	if !strings.Contains(collectTexts(tab.signers), "Contrafirma de la firma CMS #1") {
+		t.Error("the counter-signature must say which signature it counter-signs")
+	}
+}

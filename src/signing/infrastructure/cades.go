@@ -37,6 +37,9 @@ func (s *CadesSigner) SignCades(ctx context.Context, request application.CadesRe
 	if err != nil {
 		return nil, err
 	}
+	if request.Cosign || request.Countersign != "" {
+		return s.addSignature(ctx, request, keyPair)
+	}
 
 	signature, err := cms.Sign(cms.Request{
 		Content:            request.Content,
@@ -190,3 +193,33 @@ func (s *CadesSigner) withRevocationValues(
 // compile-time proof that the adapter satisfies the port.
 var _ application.CadesSigner = (*CadesSigner)(nil)
 var _ = domain.Cades
+
+// addSignature co-signs or counter-signs the envelope in request.Content.
+func (s *CadesSigner) addSignature(ctx context.Context, request application.CadesRequest, keyPair KeyPair) ([]byte, error) {
+	cmsRequest := cms.Request{
+		Certificate:        keyPair.Certificate,
+		Chain:              keyPair.Chain,
+		Signer:             keyPair.Signer,
+		IncludeSigningTime: true,
+	}
+
+	var stamp cms.Stamper
+	if request.Level.NeedsTimestamp() {
+		if s.timestamps == nil || request.TimestampURL == "" {
+			return nil, fmt.Errorf("level %s needs a timestamp authority: pass --tsa <url>", request.Level)
+		}
+		stamp = func(signatureValue []byte) ([]byte, error) {
+			digest, err := digestFor(signatureValue, crypto.SHA256)
+			if err != nil {
+				return nil, err
+			}
+			return s.timestamps.Token(ctx, digest, request.TimestampURL, request.TimestampUser, request.TimestampSecret)
+		}
+	}
+
+	if request.Cosign {
+		return cms.Cosign(request.Content, request.DetachedContent, cmsRequest, stamp)
+	}
+	signed, _, err := cms.Countersign(request.Content, cmsRequest, cms.CountersignScope(request.Countersign), stamp)
+	return signed, err
+}

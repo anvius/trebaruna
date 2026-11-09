@@ -168,6 +168,28 @@ unknown, never as altered (ADR-0005).
 
 ---
 
+## Adding signatures to an envelope
+
+A `.p7m` or `.p7s` can receive more signatures without opening it:
+
+| Operation | Command | Result |
+|---|---|---|
+| Parallel signature (co-sign): you sign the same document as the others | `sign atto.pdf.p7m --cosign --p12 k.p12` | `atto.pdf_cosigned.p7m`, one more SignerInfo |
+| Counter-signature: you sign over the signatures already there | `sign atto.pdf.p7m --countersign leaves --p12 k.p12` | `atto.pdf_countersigned.p7m` |
+| Counter-sign every signature, already counter-signed ones included | `--countersign all` | |
+
+A counter-signature signs another signature's value, not the document (RFC
+5652 §11.4), so it carries no contentType. Levels B and T are available for
+added signatures; LT and LTA are not yet. A detached `.p7s` needs its document
+to be co-signed: `--content atto.pdf`.
+
+`verify` checks each signature of the tree on its own — digest, signature,
+timestamp, chain — and reports counter-signatures under the signature they
+counter-sign. Envelopes co-signed by other tools (for example
+`openssl cms -resign`) are read the same way.
+
+---
+
 ## Chained signatures
 
 Signing an already-signed PDF adds an **incremental update**: the earlier bytes

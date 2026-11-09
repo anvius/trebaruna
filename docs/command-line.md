@@ -104,6 +104,9 @@ trebaruna sign <document> [flags]
 | `--enveloping` | off | XAdES enveloping rather than enveloped |
 | `--invisible` | off | PAdES without a visible seal; excludes `--box` |
 | `--detached` | off | CAdES without the content: `<document>.p7s` beside it |
+| `--cosign` | off | Add a parallel signature to the `.p7m`/`.p7s` given as document |
+| `--countersign` | — | Counter-sign the envelope's signatures: `leaves` or `all` |
+| `--content` | — | The document a detached `.p7s` signs, to co-sign it |
 | `--json` | off | Machine-readable result |
 
 #### Connections in the result

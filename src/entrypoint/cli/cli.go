@@ -110,6 +110,9 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 		enveloping = flags.Bool("enveloping", false, "XAdES enveloping (default: enveloped)")
 		invisible  = flags.Bool("invisible", false, "PAdES without any visible seal (excludes --box)")
 		detached   = flags.Bool("detached", false, "CAdES without the content: writes <document>.p7s beside it")
+		cosign     = flags.Bool("cosign", false, "add a parallel signature to the .p7m/.p7s given as document")
+		counter    = flags.String("countersign", "", "counter-sign the envelope's signatures: leaves | all")
+		signedDoc  = flags.String("content", "", "the document a detached .p7s signs, to co-sign it")
 		asJSON     = flags.Bool("json", false, "machine-readable output")
 	)
 
@@ -198,6 +201,9 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 		Placements:      placements,
 		Invisible:       *invisible,
 		Detached:        *detached,
+		Cosign:          *cosign,
+		Countersign:     *counter,
+		ContentPath:     *signedDoc,
 		Reason:          *reason,
 		Location:        *location,
 		TimestampURL:    *tsaURL,
@@ -235,6 +241,7 @@ func extractDocument(args []string) (documentPath string, remaining []string, er
 		"-tsa-pass": true, "--tsa-pass": true, "-page": true, "--page": true,
 		"-box": true, "--box": true,
 		"-content": true, "--content": true,
+		"-countersign": true, "--countersign": true,
 	}
 
 	var positional []string

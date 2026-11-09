@@ -39,7 +39,8 @@ user seeing what is signed and where anything goes.
 | PAdES invisible signature; default seal placed on the real page size | built |
 | PAdES seal in an existing empty form field | planned (needs an incremental writer of our own; the PDF library always adds a field) |
 | CAdES detached (`.p7s`), verified with the document beside it | built |
-| Parallel signatures (co-signing) and counter-signatures on CAdES and XAdES | planned (B4, B5) |
+| Parallel signatures (co-signing) and counter-signatures on CAdES, levels B and T | built |
+| Parallel signatures and counter-signatures on XAdES | planned (B5) |
 | Several documents in one run, same settings, one result per document | planned (B6) |
 | Signature policies (EPES): AGE, FacturaE; FacturaE invoices | planned (E1) |
 | XAdES detached and plain XMLDSig | planned (E2) |
@@ -74,7 +75,7 @@ user seeing what is signed and where anything goes.
 |---|---|
 | PAdES, CAdES, XAdES; chain at the proven signing time; qualification from three independent conditions; offline by default, OCSP when allowed | built |
 | Verdicts: qualified, advanced, untrusted, invalid, broken, unknown — words and exit codes stable | built |
-| Detached signatures with their document; signature trees (co- and counter-signatures) | planned (B2, B4) |
+| Detached signatures with their document; CAdES signature trees checked node by node | built |
 | Extract the signed document from `.p7m` (nested, DER/BER/PEM/Base64); ASiC through `asic --extract` | built |
 | Exportable report | planned (F2) |
 

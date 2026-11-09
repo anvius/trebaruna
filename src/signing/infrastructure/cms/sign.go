@@ -20,6 +20,9 @@ type Request struct {
 	EmbeddedContent    bool
 	IncludeSigningTime bool
 	ExtraAttributes    []Attribute
+	// Countersignature omits the contentType attribute: a counter-signature
+	// signs another signature, not content (RFC 5652 §11.4).
+	Countersignature bool
 	// ContentType is the eContentType of the encapsulated content. Empty means
 	// id-data, which is what a CAdES document signature carries. A timestamp
 	// token declares id-ct-TSTInfo instead, and validators check it.
@@ -113,16 +116,17 @@ func ExtractToken(responseDER []byte) ([]byte, error) {
 func buildSignedAttributes(contentDigest []byte, request Request) ([]byte, error) {
 	encoder := &der{}
 
-	attributes := [][]byte{
-		encoder.seq(
+	var attributes [][]byte
+	if !request.Countersignature {
+		attributes = append(attributes, encoder.seq(
 			encoder.oid(OIDContentType),
 			encoder.set(encoder.oid(contentTypeFor(request))),
-		),
-		encoder.seq(
-			encoder.oid(OIDMessageDigest),
-			encoder.set(encoder.octetString(contentDigest)),
-		),
+		))
 	}
+	attributes = append(attributes, encoder.seq(
+		encoder.oid(OIDMessageDigest),
+		encoder.set(encoder.octetString(contentDigest)),
+	))
 
 	if request.IncludeSigningTime {
 		attributes = append(attributes, encoder.seq(

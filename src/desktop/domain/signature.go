@@ -21,6 +21,12 @@ const (
 	// FormatCAdESDetached writes a .p7s beside the document, which stays
 	// untouched.
 	FormatCAdESDetached SignatureFormat = "cades-detached"
+
+	// FormatCosign adds a parallel signature to an existing envelope.
+	FormatCosign SignatureFormat = "cosign"
+
+	// FormatCountersign counter-signs the signatures of an existing envelope.
+	FormatCountersign SignatureFormat = "countersign"
 )
 
 // FormatsFor lists the formats that make sense for a document, the
@@ -28,6 +34,12 @@ const (
 // which some Italian offices still require; anything else only fits there.
 func FormatsFor(documentPath string) []SignatureFormat {
 	switch strings.ToLower(filepath.Ext(documentPath)) {
+	case ".p7m":
+		// An envelope gets one more signature beside the others, a signature
+		// over theirs, or — the old way — another envelope around it.
+		return []SignatureFormat{FormatCosign, FormatCountersign, FormatCAdES}
+	case ".p7s":
+		return []SignatureFormat{FormatCosign, FormatCountersign}
 	case ".pdf":
 		return []SignatureFormat{FormatPAdES, FormatCAdES, FormatCAdESDetached}
 	case ".xml":

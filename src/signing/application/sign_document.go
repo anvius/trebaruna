@@ -50,6 +50,12 @@ type Request struct {
 	Invisible bool
 	// Detached writes a CAdES signature without the content (.p7s).
 	Detached bool
+	// Cosign adds a parallel signature to the envelope named by Document.
+	Cosign bool
+	// Countersign ("leaves" or "all") counter-signs the envelope's signatures.
+	Countersign string
+	// ContentPath is the document a detached envelope signs, to co-sign it.
+	ContentPath string
 	// SignedAt is the single instant used for both the stamp and the report, so
 	// the document and the JSON cannot disagree about when it was signed.
 	SignedAt        time.Time
@@ -87,6 +93,10 @@ func (u *SignDocument) Execute(ctx context.Context, request Request) (Artefact, 
 	output := request.OutputPath
 	switch {
 	case output != "":
+	case request.Cosign:
+		output = request.Document.AddedSignatureName("cosigned")
+	case request.Countersign != "":
+		output = request.Document.AddedSignatureName("countersigned")
 	case request.Detached:
 		output = request.Document.DetachedSignatureName()
 	default:
@@ -139,6 +149,18 @@ func (u *SignDocument) validate(request Request) error {
 	if request.Level.NeedsTimestamp() && request.TimestampURL == "" {
 		return fmt.Errorf("level %s needs a timestamp authority: pass --tsa <url>", request.Level)
 	}
+	if request.Cosign && request.Countersign != "" {
+		return fmt.Errorf("co-signing and counter-signing are separate operations; choose one")
+	}
+	if (request.Cosign || request.Countersign != "") && request.Format != domain.Cades {
+		return fmt.Errorf("signatures are added to CAdES envelopes (.p7m, .p7s); %s is signed again by signing the signed file", request.Format)
+	}
+	if request.Countersign != "" && request.Countersign != "leaves" && request.Countersign != "all" {
+		return fmt.Errorf("--countersign takes leaves or all, not %q", request.Countersign)
+	}
+	if (request.Cosign || request.Countersign != "") && request.Level.EmbedsRevocation() {
+		return fmt.Errorf("signatures added to an envelope support levels B and T; %s is not available for them yet", request.Level)
+	}
 	if request.Detached && request.Format != domain.Cades {
 		return fmt.Errorf("only CAdES signatures can be detached; %s carries its signature inside the document", request.Format)
 	}
@@ -177,6 +199,9 @@ func (u *SignDocument) sign(ctx context.Context, request Request, content []byte
 		signed, err := u.cades.SignCades(ctx, CadesRequest{
 			Content:         content,
 			Detached:        request.Detached,
+			Cosign:          request.Cosign,
+			Countersign:     request.Countersign,
+			DetachedContent: u.detachedContent(request),
 			Signer:          request.Signer,
 			Level:           request.Level,
 			EmbedRevocation: request.EmbedRevocation,
@@ -225,6 +250,20 @@ type SystemClock struct{}
 
 // Now returns the current local time.
 func (SystemClock) Now() time.Time { return time.Now() }
+
+// detachedContent reads the document a detached envelope signs, when the
+// caller named one for a co-signature. Errors surface in the adapter, which
+// then reports the missing document.
+func (u *SignDocument) detachedContent(request Request) []byte {
+	if !request.Cosign || request.ContentPath == "" {
+		return nil
+	}
+	content, err := u.files.Read(request.ContentPath)
+	if err != nil {
+		return nil
+	}
+	return content
+}
 
 // sealPlacements returns the stamps to draw, folding the single-placement field
 // into the list so callers of the old shape keep working.

@@ -48,7 +48,7 @@ Nothing the document or the certificate already says is asked for.
 |---|---|---|
 | **1 Document** | Choose any file, or drop it on the window | The formats that fit it, and the name the signed file will get |
 | **2 Certificate** | Choose a `.p12`, `.pfx` or `.pem`; type its passphrase | Holder, identifier, issuer, expiry, and whether a trusted list vouches for it |
-| **3 Signature** | Pick signed PDF or `.p7m` envelope, when both make sense | The seal position, from where it sits on the page |
+| **3 Signature** | Pick signed PDF, `.p7m` envelope or detached `.p7s`; for a `.p7m`/`.p7s`, add a parallel signature, counter-sign, or wrap it again | The seal position, from where it sits on the page |
 
 The certificate is read as soon as the passphrase is typed, so a wrong
 passphrase, an expired certificate or an issuer no trusted list knows is said

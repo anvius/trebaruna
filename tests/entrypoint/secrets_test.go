@@ -23,13 +23,20 @@ import (
 // writeProtectedP12 creates a self-signed P12 locked with the given passphrase.
 func writeProtectedP12(t *testing.T, passphrase string) string {
 	t.Helper()
+	return writeIdentityP12(t, passphrase, "MARIO ROSSI", 1)
+}
+
+// writeIdentityP12 creates a self-signed P12 for a given holder and serial, so
+// tests with several signers have distinct certificates, as real ones are.
+func writeIdentityP12(t *testing.T, passphrase, holder string, serial int64) string {
+	t.Helper()
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		t.Fatal(err)
 	}
 	template := &x509.Certificate{
-		SerialNumber: big.NewInt(1),
-		Subject:      pkix.Name{CommonName: "MARIO ROSSI"},
+		SerialNumber: big.NewInt(serial),
+		Subject:      pkix.Name{CommonName: holder},
 		NotBefore:    time.Now().Add(-time.Hour),
 		NotAfter:     time.Now().Add(24 * time.Hour),
 	}

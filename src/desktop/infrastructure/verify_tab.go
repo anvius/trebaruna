@@ -37,19 +37,20 @@ type verifyReport struct {
 	Signed  bool   `json:"signed"`
 	Verdict string `json:"verdict"`
 	Signers []struct {
-		Field     string `json:"field"`
-		Signer    string `json:"signer"`
-		ID        string `json:"identifier"`
-		Issuer    string `json:"issuer"`
-		Format    string `json:"format"`
-		SignedAt  string `json:"signed_at"`
-		Timestamp bool   `json:"timestamped"`
-		TSA       string `json:"timestamp_authority"`
-		Integrity string `json:"integrity"`
-		Trust     string `json:"trust"`
-		Expired   bool   `json:"certificate_expired_now"`
-		SelfSign  bool   `json:"self_signed"`
-		Findings  []struct {
+		Field        string `json:"field"`
+		Countersigns string `json:"countersigns"`
+		Signer       string `json:"signer"`
+		ID           string `json:"identifier"`
+		Issuer       string `json:"issuer"`
+		Format       string `json:"format"`
+		SignedAt     string `json:"signed_at"`
+		Timestamp    bool   `json:"timestamped"`
+		TSA          string `json:"timestamp_authority"`
+		Integrity    string `json:"integrity"`
+		Trust        string `json:"trust"`
+		Expired      bool   `json:"certificate_expired_now"`
+		SelfSign     bool   `json:"self_signed"`
+		Findings     []struct {
 			Code    string `json:"code"`
 			Status  string `json:"status"`
 			Message string `json:"message"`
@@ -224,6 +225,9 @@ func (v *verificationTab) render(report verifyReport) {
 		name.Wrapping = fyne.TextWrapWord
 
 		var facts []string
+		if signer.Countersigns != "" {
+			facts = append(facts, fmt.Sprintf(v.ui.CountersignatureOf, signer.Countersigns))
+		}
 		if signer.ID != "" {
 			facts = append(facts, m.LabelIdentifier+": "+signer.ID)
 		}

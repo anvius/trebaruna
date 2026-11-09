@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- CAdES parallel signatures and counter-signatures: `sign --cosign` adds a
+  SignerInfo over the same content, `sign --countersign leaves|all` nests
+  counter-signatures (no contentType, RFC 5652 §11.4), at levels B and T; a
+  detached `.p7s` is co-signed with `--content`. `verify` checks envelopes with
+  several signatures node by node and reports each counter-signature under the
+  signature it counter-signs; envelopes co-signed by OpenSSL are read too. The
+  desktop offers co-sign, counter-sign and wrap when the document is an envelope.
+
 - `trebaruna extract`: the document inside a `.p7m`, through nested envelopes,
   from DER, BER, PEM or Base64, never overwriting; the desktop Check tab offers
   it for `.p7m` files. `verify` now also reads PEM and Base64 `.p7m` files.

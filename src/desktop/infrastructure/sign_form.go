@@ -317,11 +317,18 @@ func (f *signForm) measure(path string) {
 func (f *signForm) formatLabel(format domain.SignatureFormat) string {
 	switch format {
 	case domain.FormatCAdES:
+		if strings.HasSuffix(strings.ToLower(f.document), ".p7m") {
+			return f.m.FormatWrapLabel
+		}
 		return f.m.FormatCAdESLabel
 	case domain.FormatXAdES:
 		return f.m.FormatXAdESLabel
 	case domain.FormatCAdESDetached:
 		return f.m.FormatDetachedLabel
+	case domain.FormatCosign:
+		return f.m.FormatCosignLabel
+	case domain.FormatCountersign:
+		return f.m.FormatCountersignLabel
 	}
 	return f.m.FormatPAdESLabel
 }

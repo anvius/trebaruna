@@ -238,6 +238,9 @@ type RevocationEvidence struct {
 type SignerReport struct {
 	// FieldName is the signature field, e.g. "F38a".
 	FieldName string
+	// Countersigns names the signature this one counter-signs, when it is a
+	// counter-signature; empty for a signature over the document.
+	Countersigns string
 	// SignerName is the subject common name.
 	SignerName string
 	// Identifier is the national identifier from the certificate.

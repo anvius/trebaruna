@@ -79,7 +79,8 @@ func (s CommandLineSigner) Sign(ctx context.Context, intent domain.SigningIntent
 // signArguments translates the intent into the command's flags.
 func signArguments(intent domain.SigningIntent) []string {
 	format := string(intent.Format)
-	if intent.Format == domain.FormatCAdESDetached {
+	switch intent.Format {
+	case domain.FormatCAdESDetached, domain.FormatCosign, domain.FormatCountersign:
 		format = string(domain.FormatCAdES)
 	}
 	arguments := []string{
@@ -88,8 +89,17 @@ func signArguments(intent domain.SigningIntent) []string {
 		"--level", string(intent.Level),
 		"--json",
 	}
-	if intent.Format == domain.FormatCAdESDetached {
+	switch intent.Format {
+	case domain.FormatCAdESDetached:
 		arguments = append(arguments, "--detached")
+	case domain.FormatCosign:
+		arguments = append(arguments, "--cosign")
+		// A .p7s does not carry its document: the one beside it is signed.
+		if document := strings.TrimSuffix(intent.DocumentPath, ".p7s"); document != intent.DocumentPath {
+			arguments = append(arguments, "--content", document)
+		}
+	case domain.FormatCountersign:
+		arguments = append(arguments, "--countersign", "leaves")
 	}
 
 	if strings.HasSuffix(strings.ToLower(intent.Key.Path), ".pem") {

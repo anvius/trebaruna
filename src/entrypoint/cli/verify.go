@@ -167,17 +167,19 @@ type verificationJSON struct {
 
 // signerJSON is one signature in the JSON output.
 type signerJSON struct {
-	Field     string `json:"field"`
-	Signer    string `json:"signer"`
-	ID        string `json:"identifier,omitempty"`
-	Issuer    string `json:"issuer,omitempty"`
-	Format    string `json:"format"`
-	SignedAt  string `json:"signed_at,omitempty"`
-	Timestamp bool   `json:"timestamped"`
-	TSA       string `json:"timestamp_authority,omitempty"`
-	Integrity string `json:"integrity"`
-	Trust     string `json:"trust"`
-	Qualified bool   `json:"qualified"`
+	Field string `json:"field"`
+	// Countersigns is the field of the signature this one counter-signs.
+	Countersigns string `json:"countersigns,omitempty"`
+	Signer       string `json:"signer"`
+	ID           string `json:"identifier,omitempty"`
+	Issuer       string `json:"issuer,omitempty"`
+	Format       string `json:"format"`
+	SignedAt     string `json:"signed_at,omitempty"`
+	Timestamp    bool   `json:"timestamped"`
+	TSA          string `json:"timestamp_authority,omitempty"`
+	Integrity    string `json:"integrity"`
+	Trust        string `json:"trust"`
+	Qualified    bool   `json:"qualified"`
 	// Qualification explains the QES verdict: which condition held and which
 	// did not. A boolean alone cannot be audited.
 	Qualification *qualificationJSON `json:"qualification,omitempty"`
@@ -247,18 +249,19 @@ func encodeVerificationJSON(writer io.Writer, report verification.DocumentReport
 
 	for _, signer := range report.Signers {
 		entry := signerJSON{
-			Field:     signer.FieldName,
-			Signer:    signer.SignerName,
-			ID:        signer.Identifier,
-			Issuer:    signer.Issuer,
-			Format:    signer.Format,
-			Timestamp: signer.Timestamped,
-			TSA:       signer.TimestampAuthority,
-			Integrity: string(signer.Integrity),
-			Trust:     string(signer.Trust),
-			Qualified: signer.Qualified,
-			Expired:   signer.ExpiredNow,
-			SelfSign:  signer.SelfSigned,
+			Field:        signer.FieldName,
+			Countersigns: signer.Countersigns,
+			Signer:       signer.SignerName,
+			ID:           signer.Identifier,
+			Issuer:       signer.Issuer,
+			Format:       signer.Format,
+			Timestamp:    signer.Timestamped,
+			TSA:          signer.TimestampAuthority,
+			Integrity:    string(signer.Integrity),
+			Trust:        string(signer.Trust),
+			Qualified:    signer.Qualified,
+			Expired:      signer.ExpiredNow,
+			SelfSign:     signer.SelfSigned,
 		}
 		if evidence := signer.Qualification; evidence.CertificateQualified || evidence.ServiceListed || evidence.DeviceQualified {
 			entry.Qualification = &qualificationJSON{
