@@ -182,3 +182,127 @@ func (rect SealRect) Width() float64 { return rect.UpperRightX - rect.LowerLeftX
 
 // Height is the rectangle height in points.
 func (rect SealRect) Height() float64 { return rect.UpperRightY - rect.LowerLeftY }
+
+// The smallest seal the window lets a user draw. It is the default stamp: the
+// signer scales the type to the box, and below this the certificate identity
+// no longer fits without truncation, which the signer refuses.
+const (
+	MinimumSealWidth  = 64.0
+	MinimumSealHeight = 48.0
+)
+
+// coveringInk is the average density above which a box is said to sit on top
+// of text. It is the same threshold the free-space search rejects.
+const coveringInk = 0.08
+
+// Covers reports whether the seal would sit on top of printed content.
+func (g PageGeometry) Covers(ink InkMap, rect SealRect) bool {
+	cell := g.ToCandidate(rect)
+	return ink.InkIn(cell.X, cell.Y, cell.Width, cell.Height) > coveringInk
+}
+
+// Contains reports whether a point lies inside the rectangle, edges included.
+func (r Rectangle) Contains(x, y float64) bool {
+	return x >= r.X && y >= r.Y && x <= r.X+r.Width && y <= r.Y+r.Height
+}
+
+// DisplayFit is how a page is drawn inside a frame on screen: scaled to fit
+// whole, and centred along the axis that has room to spare.
+//
+// Every pointer event goes through it. Drawing the page with one scale and
+// reading the pointer with another is what made the old overlay drift away
+// from the cursor, so both directions live here and are tested together.
+type DisplayFit struct {
+	// Scale is screen units per PDF point.
+	Scale   float64
+	OffsetX float64
+	OffsetY float64
+	page    PageGeometry
+}
+
+// FitInto computes the fit of the page inside a frame of the given size.
+func (g PageGeometry) FitInto(frameWidth, frameHeight float64) DisplayFit {
+	if frameWidth <= 0 || frameHeight <= 0 {
+		return DisplayFit{page: g}
+	}
+	scale := math.Min(frameWidth/g.WidthPoints, frameHeight/g.HeightPoints)
+	return DisplayFit{
+		Scale:   scale,
+		OffsetX: (frameWidth - g.WidthPoints*scale) / 2,
+		OffsetY: (frameHeight - g.HeightPoints*scale) / 2,
+		page:    g,
+	}
+}
+
+// PageArea is the rectangle the page occupies on screen.
+func (f DisplayFit) PageArea() Rectangle {
+	return Rectangle{
+		X: f.OffsetX, Y: f.OffsetY,
+		Width: f.page.WidthPoints * f.Scale, Height: f.page.HeightPoints * f.Scale,
+	}
+}
+
+// ToScreen converts a seal into screen units with a top-left origin.
+func (f DisplayFit) ToScreen(rect SealRect) Rectangle {
+	return Rectangle{
+		X:      f.OffsetX + rect.LowerLeftX*f.Scale,
+		Y:      f.OffsetY + (f.page.HeightPoints-rect.UpperRightY)*f.Scale,
+		Width:  rect.Width() * f.Scale,
+		Height: rect.Height() * f.Scale,
+	}
+}
+
+// ToPage converts a screen point into PDF points. Inside is false when the
+// point falls on the frame around the page rather than on the paper.
+func (f DisplayFit) ToPage(x, y float64) (pointX, pointY float64, inside bool) {
+	if f.Scale <= 0 {
+		return 0, 0, false
+	}
+	pointX = (x - f.OffsetX) / f.Scale
+	pointY = f.page.HeightPoints - (y-f.OffsetY)/f.Scale
+	inside = pointX >= 0 && pointY >= 0 && pointX <= f.page.WidthPoints && pointY <= f.page.HeightPoints
+	return pointX, pointY, inside
+}
+
+// CentredAt places a seal of the given size with its centre under a screen
+// point, kept whole on the page. This is what a click on the page does.
+func (f DisplayFit) CentredAt(x, y, width, height float64) SealRect {
+	pointX, pointY, _ := f.ToPage(x, y)
+	return f.page.Clamp(SealRect{
+		LowerLeftX:  pointX - width/2,
+		LowerLeftY:  pointY - height/2,
+		UpperRightX: pointX + width/2,
+		UpperRightY: pointY + height/2,
+	})
+}
+
+// Move translates a seal by a screen-space delta and keeps it on the page.
+//
+// Screen Y grows downwards and PDF Y grows upwards, so the vertical delta is
+// inverted; without that the seal runs away from the pointer.
+func (f DisplayFit) Move(rect SealRect, deltaX, deltaY float64) SealRect {
+	if f.Scale <= 0 {
+		return rect
+	}
+	return f.page.Clamp(rect.MoveBy(deltaX/f.Scale, -deltaY/f.Scale))
+}
+
+// Grow resizes a seal from its bottom-right corner on screen, which is where
+// the handle sits: the top-left corner stays put, and the seal never shrinks
+// below the minimum or grows past the page edge.
+func (f DisplayFit) Grow(rect SealRect, deltaX, deltaY float64) SealRect {
+	if f.Scale <= 0 {
+		return rect
+	}
+	width := math.Max(MinimumSealWidth, rect.Width()+deltaX/f.Scale)
+	height := math.Max(MinimumSealHeight, rect.Height()+deltaY/f.Scale)
+	width = math.Min(width, f.page.WidthPoints-rect.LowerLeftX)
+	height = math.Min(height, rect.UpperRightY)
+
+	return SealRect{
+		LowerLeftX:  rect.LowerLeftX,
+		LowerLeftY:  rect.UpperRightY - height,
+		UpperRightX: rect.LowerLeftX + width,
+		UpperRightY: rect.UpperRightY,
+	}
+}

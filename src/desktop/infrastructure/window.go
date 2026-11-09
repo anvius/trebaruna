@@ -3,14 +3,10 @@
 package infrastructure
 
 import (
-	"bytes"
 	"context"
 	_ "embed"
-	"errors"
 	"fmt"
-	"image"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -40,17 +36,9 @@ type Window struct {
 	messages    messaging.Catalogue
 	palette     Palette
 
-	// pageImage draws the rendered page and the seal overlay on top of it.
-	pageImage  *canvas.Image
-	pageHolder *fyne.Container
-	overlay    *SealOverlay
+	// pages is the right pane, where the seal is placed.
+	pages *pagePane
 
-	// currentPage is the page being previewed, 1-based.
-	currentPage int
-	// result caches the last preview so moving the seal does not re-render.
-	result application.PreviewResult
-	// hasPreview reports whether a document has been rendered.
-	hasPreview bool
 	// binaryPath is the CLI the window drives.
 	binaryPath string
 }
@@ -80,12 +68,11 @@ func NewWindow(options Options) *Window {
 			CommandLineSigner{BinaryPath: options.BinaryPath},
 			fileExists,
 		),
-		preview:     application.NewPreviewPage(NewPopplerRenderer(), application.InkFinder{}),
-		binaryPath:  options.BinaryPath,
-		window:      window,
-		messages:    catalogue,
-		palette:     DefaultPalette(),
-		currentPage: 1,
+		preview:    application.NewPreviewPage(NewPopplerRenderer(), application.InkFinder{}),
+		binaryPath: options.BinaryPath,
+		window:     window,
+		messages:   catalogue,
+		palette:    DefaultPalette(),
 	}
 
 	// TREBARUNA_SKIP_WELCOME opens the form directly, for the diagnostic runs and
@@ -158,12 +145,6 @@ func (w *Window) buildContent(initialDocument string) fyne.CanvasObject {
 	level := widget.NewSelect([]string{"bes", "t"}, nil)
 	level.SetSelected("bes")
 
-	pageEntry := widget.NewEntry()
-	pageEntry.SetText("1")
-
-	boxEntry := widget.NewEntry()
-	boxEntry.SetPlaceHolder("100,600,300,700")
-
 	timestampURL := widget.NewEntry()
 	timestampURL.SetPlaceHolder("https://tsa.example/tsa")
 
@@ -176,55 +157,37 @@ func (w *Window) buildContent(initialDocument string) fyne.CanvasObject {
 	output.SetMinRowsVisible(6)
 	output.Wrapping = fyne.TextWrapWord
 
+	w.pages = newPagePane(m, w.palette, w.preview)
+
+	// The page follows the document and the format: a PDF signed as PAdES has
+	// a page to put the seal on; CAdES and XAdES carry no visible mark.
+	refreshPage := func() {
+		switch {
+		case signatureFormat.Selected != "pades":
+			w.pages.withoutVisibleSeal()
+		case strings.TrimSpace(documentPath.Text) != "":
+			w.pages.show(documentPath.Text)
+		}
+	}
+	signatureFormat.OnChanged = func(string) { refreshPage() }
+
 	documentButton := widget.NewButtonWithIcon(m.ChooseButton, theme.FolderOpenIcon(), func() {
-		pickFile(w.window, []string{".pdf"}, documentPath, func(path string) {
-			w.loadPreview(documentPath, pageEntry, boxEntry, statusLine, signatureFormat)
-		})
+		pickFile(w.window, []string{".pdf"}, documentPath, func(string) { refreshPage() })
 	})
 
 	keyButton := widget.NewButtonWithIcon(m.ChooseButton, theme.FolderOpenIcon(), func() {
 		pickFile(w.window, []string{".p12", ".pfx", ".pem"}, keyPath, nil)
 	})
 
-	previewButton := widget.NewButtonWithIcon(m.PreviewButton, theme.ViewFullScreenIcon(), func() {
-		w.loadPreview(documentPath, pageEntry, boxEntry, statusLine, signatureFormat)
-	})
-
-	// Suggesting again re-runs the search with the current seal size, which is
-	// what a user expects after noticing the proposal covers a logo.
-	suggestButton := widget.NewButtonWithIcon(m.SuggestButton, theme.SearchIcon(), func() {
-		w.suggestAnother(boxEntry, statusLine)
-	})
-
-	previousPage := widget.NewButtonWithIcon("", theme.NavigateBackIcon(), func() {
-		w.changePage(-1, documentPath, pageEntry, boxEntry, statusLine, signatureFormat)
-	})
-	nextPage := widget.NewButtonWithIcon("", theme.NavigateNextIcon(), func() {
-		w.changePage(+1, documentPath, pageEntry, boxEntry, statusLine, signatureFormat)
-	})
-
-	pageEntry.OnSubmitted = func(text string) {
-		if parsed, err := strconv.Atoi(strings.TrimSpace(text)); err == nil && parsed > 0 {
-			w.currentPage = parsed
-			w.loadPreview(documentPath, pageEntry, boxEntry, statusLine, signatureFormat)
-		}
-	}
-
 	var signButton *widget.Button
 	signButton = widget.NewButtonWithIcon(m.SignButton, theme.ConfirmIcon(), func() {
-		pageNumber, _ := strconv.Atoi(pageEntry.Text)
-		if pageNumber < 1 {
-			pageNumber = 1
-		}
-
 		intent := domain.SigningIntent{
 			DocumentPath: documentPath.Text,
 			KeyPath:      keyPath.Text,
 			Passphrase:   passphrase.Text,
 			Format:       signatureFormat.Selected,
 			Level:        level.Selected,
-			Page:         pageNumber,
-			Box:          boxEntry.Text,
+			Seal:         w.pages.choice(),
 			TimestampURL: timestampURL.Text,
 			Reason:       reason.Text,
 		}
@@ -283,22 +246,6 @@ func (w *Window) buildContent(initialDocument string) fyne.CanvasObject {
 		w.label(m.ReasonLabel),
 		reason,
 
-		w.sectionTitle(m.SealSection),
-		container.NewGridWithColumns(2,
-			container.NewVBox(w.label(m.PageLabel), pageEntry),
-			container.NewVBox(w.label(m.BoxLabel), boxEntry),
-		),
-		// Page navigation gets a full-width row: three items in three columns
-		// pushed the "next page" arrow outside the pane.
-		container.NewHBox(previousPage, nextPage),
-		// No caption field: the stamp prints the certificate identity, so there
-		// is nothing for the user to type inside a signature mark.
-		// Stacked, not side by side: half of a 430 pt pane is not enough for
-		// "Sugerir espacio" at the default font, and the label was clipped.
-		// Full-width buttons also give a much larger click target.
-		previewButton,
-		suggestButton,
-
 		widget.NewSeparator(),
 		signButton,
 		statusLine,
@@ -310,29 +257,13 @@ func (w *Window) buildContent(initialDocument string) fyne.CanvasObject {
 	left := container.NewPadded(container.NewVScroll(form))
 	left.Resize(fyne.NewSize(460, 780))
 
-	// ---- right pane: the page ----
-	w.pageImage = canvas.NewImageFromImage(nil)
-	w.pageImage.FillMode = canvas.ImageFillContain
-	w.pageImage.SetMinSize(fyne.NewSize(360, 500))
-
-	placeholder := widget.NewLabel(m.NoPreviewYet)
-	placeholder.Alignment = fyne.TextAlignCenter
-	placeholder.Wrapping = fyne.TextWrapWord
-
-	// The stack needs a definitive minimum size, otherwise the right pane starts
-	// collapsed and the preview never gets room to appear. A canvas.Rectangle
-	// gives the container something with an explicit size to lay out against.
-	frameBackground := canvas.NewRectangle(w.palette.Surface)
-	frameBackground.SetMinSize(fyne.NewSize(380, 520))
-	w.pageHolder = container.NewStack(frameBackground, container.NewCenter(placeholder))
-
-	// A plain Stack, not a Border: Border with all nil edges only centres its
-	// content and never grows, which is what left the preview pane empty.
-	right := container.NewStack(w.pageHolder)
+	if initialDocument != "" {
+		refreshPage()
+	}
 
 	// The window is deliberately wide: a signature tool is used while reading the
 	// document, so the page must always be visible next to the controls.
-	split := container.NewHSplit(left, right)
+	split := container.NewHSplit(left, w.pages.object())
 	// Without an explicit offset Fyne gives the left pane its minimum width, which
 	// on a wide window renders as an almost empty strip.
 	split.SetOffset(0.42)
@@ -352,124 +283,6 @@ func (w *Window) label(text string) fyne.CanvasObject {
 	label := canvas.NewText(text, w.palette.TextMuted)
 	label.TextSize = 12
 	return label
-}
-
-// loadPreview renders the current page and places the seal.
-func (w *Window) loadPreview(
-	documentPath *widget.Entry,
-	pageEntry, boxEntry *widget.Entry,
-	statusLine *widget.Label,
-	signatureFormat *widget.Select,
-) {
-	if strings.TrimSpace(documentPath.Text) == "" {
-		return
-	}
-	if signatureFormat.Selected != "pades" {
-		statusLine.SetText(w.messages.PreviewOnlyForPDF)
-		return
-	}
-
-	statusLine.SetText(w.messages.RenderingMessage)
-
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
-		defer cancel()
-
-		result, err := w.preview.Execute(ctx, documentPath.Text, w.currentPage, application.DefaultSealSize())
-		if err != nil {
-			// A missing rasteriser is a degraded experience, not a failure: the
-			// document can still be signed by typing the box coordinates.
-			message := fmt.Sprintf("%v", err)
-			if errors.Is(err, ErrRendererMissing) {
-				message = w.messages.PreviewUnavailable
-			}
-			fyne.Do(func() { statusLine.SetText(message) })
-			return
-		}
-
-		w.result = result
-		w.hasPreview = true
-
-		decoded, _, decodeErr := image.Decode(bytes.NewReader(result.Preview.PNG))
-		if decodeErr != nil {
-			statusLine.SetText(fmt.Sprintf("%v", decodeErr))
-			return
-		}
-
-		// Update the widgets on the UI goroutine.
-		fyne.Do(func() {
-			w.pageImage.Image = decoded
-			w.pageImage.Refresh()
-
-			w.overlay = NewSealOverlay(
-				result.Geometry, result.SealRect, 1.0,
-				func(rect domain.SealRect) {
-					boxEntry.SetText(rect.BoxString())
-				},
-			)
-
-			// The image and the overlay share a stack, so the seal follows the
-			// page as it scales inside the available space.
-			w.pageHolder.Objects = []fyne.CanvasObject{
-				container.NewStack(w.pageImage, w.overlay),
-			}
-			w.pageHolder.Refresh()
-
-			boxEntry.SetText(result.SealRect.BoxString())
-			pageEntry.SetText(strconv.Itoa(w.currentPage))
-
-			statusLine.SetText(fmt.Sprintf(
-				w.messages.PreviewReady, result.Preview.PageCount, w.currentPage, result.Suggestions[0].Zone,
-			))
-		})
-	}()
-}
-
-// changePage moves to the previous or next page.
-func (w *Window) changePage(
-	delta int,
-	documentPath *widget.Entry,
-	pageEntry, boxEntry *widget.Entry,
-	statusLine *widget.Label,
-	signatureFormat *widget.Select,
-) {
-	if !w.hasPreview {
-		return
-	}
-	target := w.currentPage + delta
-	if target < 1 || target > w.result.Preview.PageCount {
-		return
-	}
-	w.currentPage = target
-	w.loadPreview(documentPath, pageEntry, boxEntry, statusLine, signatureFormat)
-}
-
-// suggestAnother asks for the next free-space proposal.
-func (w *Window) suggestAnother(boxEntry *widget.Entry, statusLine *widget.Label) {
-	if !w.hasPreview || w.overlay == nil {
-		return
-	}
-
-	// Cycle through the suggestions already computed, then search again with the
-	// same size: cheap, and the first three are usually enough.
-	rects, err := w.preview.Suggest(w.result, application.DefaultSealSize())
-	if err != nil || len(rects) == 0 {
-		statusLine.SetText(w.messages.NoSuggestion)
-		return
-	}
-
-	current := w.overlay.Rect().BoxString()
-	for _, rect := range rects {
-		if rect.BoxString() != current {
-			w.overlay.SetRect(rect)
-			boxEntry.SetText(rect.BoxString())
-			statusLine.SetText(w.messages.SuggestionApplied)
-			return
-		}
-	}
-
-	w.overlay.SetRect(rects[0])
-	boxEntry.SetText(rects[0].BoxString())
 }
 
 // pickFile opens a filtered file dialog and writes the choice into target.
@@ -562,12 +375,11 @@ func NewTestWindow(options Options) fyne.Window {
 			CommandLineSigner{BinaryPath: options.BinaryPath},
 			fileExists,
 		),
-		preview:     application.NewPreviewPage(NewPopplerRenderer(), application.InkFinder{}),
-		binaryPath:  options.BinaryPath,
-		window:      window,
-		messages:    catalogue,
-		palette:     DefaultPalette(),
-		currentPage: 1,
+		preview:    application.NewPreviewPage(NewPopplerRenderer(), application.InkFinder{}),
+		binaryPath: options.BinaryPath,
+		window:     window,
+		messages:   catalogue,
+		palette:    DefaultPalette(),
 	}
 	window.SetContent(desktop.withTabs(desktop.buildContent(options.DocumentPath)))
 	return window

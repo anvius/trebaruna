@@ -51,8 +51,6 @@ type Catalogue struct {
 	PassphraseLabel      string
 	FormatLabel          string
 	LevelLabel           string
-	PageLabel            string
-	BoxLabel             string
 	CaptionLabel         string
 	TSALabel             string
 	ReasonLabel          string
@@ -100,17 +98,18 @@ type Catalogue struct {
 	VerifyButton           string
 	VerificationUnreadable string
 
-	// Preview and free-space messages.
-	PreviewButton     string
-	SuggestButton     string
-	NoPreviewYet      string
-	PreviewOnlyForPDF string
-	RenderingMessage  string
+	// The page pane, where the seal is placed.
+	SuggestButton    string
+	NoPreviewYet     string
+	NoVisibleSeal    string
+	RenderingMessage string
 	// PreviewUnavailable explains a missing renderer without blocking signing.
-	PreviewUnavailable string
-	PreviewReady       string
-	NoSuggestion       string
-	SuggestionApplied  string
+	PreviewUnavailable    string
+	PageOf                string
+	SealHint              string
+	SealCoversText        string
+	SealHolderPlaceholder string
+	NoSuggestion          string
 }
 
 // For returns the catalogue for a language.
@@ -149,8 +148,6 @@ var spanish = Catalogue{
 	PassphraseLabel:        "Contraseña",
 	FormatLabel:            "Formato",
 	LevelLabel:             "Nivel",
-	PageLabel:              "Página del sello",
-	BoxLabel:               "Hueco (x1,y1,x2,y2)",
 	CaptionLabel:           "Texto del sello",
 	TSALabel:               "Autoridad de sellado (TSA)",
 	ReasonLabel:            "Motivo",
@@ -179,15 +176,16 @@ var spanish = Catalogue{
 	OptionsSection:  "Formato y sello de tiempo",
 	SealSection:     "Sello visible",
 
-	PreviewButton:      "Ver página",
-	SuggestButton:      "Sugerir hueco",
-	NoPreviewYet:       "Elige un PDF y pulsa «Ver página»\npara verlo y arrastrar el sello.",
-	PreviewOnlyForPDF:  "La vista previa solo está disponible para PAdES (PDF).",
-	RenderingMessage:   "Renderizando la página…",
-	PreviewUnavailable: "Vista previa no disponible: falta poppler.\nPuedes firmar igualmente indicando el hueco a mano.",
-	PreviewReady:       "Documento de %d páginas · mostrando la %d · hueco propuesto: %s",
-	NoSuggestion:       "No encontré otro hueco: coloca el sello manualmente.",
-	SuggestionApplied:  "Hueco aplicado. Arrástralo con el ratón para ajustarlo.",
+	SuggestButton:         "Buscar hueco libre",
+	NoPreviewYet:          "Elige un PDF para ver la página y colocar el sello.",
+	NoVisibleSeal:         "Este formato no lleva sello visible: la firma viaja en el fichero .p7m o dentro del XML.",
+	RenderingMessage:      "Preparando la página…",
+	PreviewUnavailable:    "No se puede mostrar la página porque falta poppler (pdftoppm). La firma funciona igual: el sello irá en la esquina inferior derecha de la página 1.",
+	PageOf:                "Página %d de %d",
+	SealHint:              "Haz clic en la página para colocar el sello, arrástralo para moverlo y tira de la esquina para ampliarlo. Con el teclado, las flechas lo desplazan.",
+	SealCoversText:        "El sello tapa texto del documento. Muévelo a un hueco o pulsa «Buscar hueco libre».",
+	SealHolderPlaceholder: "Titular del certificado",
+	NoSuggestion:          "No hay otro hueco libre en esta página: coloca el sello a mano o cambia de página.",
 }
 
 var italian = Catalogue{
@@ -214,8 +212,6 @@ var italian = Catalogue{
 	PassphraseLabel:        "Password",
 	FormatLabel:            "Formato",
 	LevelLabel:             "Livello",
-	PageLabel:              "Pagina del timbro",
-	BoxLabel:               "Riquadro (x1,y1,x2,y2)",
 	CaptionLabel:           "Testo del timbro",
 	TSALabel:               "Autorità di marca temporale (TSA)",
 	ReasonLabel:            "Motivo",
@@ -244,15 +240,16 @@ var italian = Catalogue{
 	OptionsSection:  "Formato e marca temporale",
 	SealSection:     "Timbro visibile",
 
-	PreviewButton:      "Mostra pagina",
-	SuggestButton:      "Suggerisci spazio",
-	NoPreviewYet:       "Scegli un PDF e premi «Mostra pagina»\nper vederlo e trascinare il timbro.",
-	PreviewOnlyForPDF:  "L'anteprima è disponibile solo per PAdES (PDF).",
-	RenderingMessage:   "Rendering della pagina…",
-	PreviewUnavailable: "Anteprima non disponibile: manca poppler.\nPuoi firmare comunque indicando il riquadro a mano.",
-	PreviewReady:       "Documento di %d pagine · pagina %d · spazio proposto: %s",
-	NoSuggestion:       "Nessun altro spazio trovato: posiziona il timbro a mano.",
-	SuggestionApplied:  "Spazio applicato. Trascinalo col mouse per regolarlo.",
+	SuggestButton:         "Trova uno spazio libero",
+	NoPreviewYet:          "Scegli un PDF per vedere la pagina e posizionare il timbro.",
+	NoVisibleSeal:         "Questo formato non ha un timbro visibile: la firma è nel file .p7m o dentro l'XML.",
+	RenderingMessage:      "Preparazione della pagina…",
+	PreviewUnavailable:    "Impossibile mostrare la pagina: manca poppler (pdftoppm). La firma funziona comunque: il timbro andrà nell'angolo in basso a destra della pagina 1.",
+	PageOf:                "Pagina %d di %d",
+	SealHint:              "Fai clic sulla pagina per posizionare il timbro, trascinalo per spostarlo e tira l'angolo per ingrandirlo. Da tastiera, le frecce lo spostano.",
+	SealCoversText:        "Il timbro copre del testo. Spostalo in uno spazio vuoto o premi «Trova uno spazio libero».",
+	SealHolderPlaceholder: "Titolare del certificato",
+	NoSuggestion:          "Nessun altro spazio libero in questa pagina: posiziona il timbro a mano o cambia pagina.",
 }
 
 var english = Catalogue{
@@ -279,8 +276,6 @@ var english = Catalogue{
 	PassphraseLabel:        "Passphrase",
 	FormatLabel:            "Format",
 	LevelLabel:             "Level",
-	PageLabel:              "Seal page",
-	BoxLabel:               "Box (x1,y1,x2,y2)",
 	CaptionLabel:           "Seal caption",
 	TSALabel:               "Timestamp authority (TSA)",
 	ReasonLabel:            "Reason",
@@ -309,15 +304,16 @@ var english = Catalogue{
 	OptionsSection:  "Format and timestamp",
 	SealSection:     "Visible seal",
 
-	PreviewButton:      "Show page",
-	SuggestButton:      "Suggest space",
-	NoPreviewYet:       "Choose a PDF and press \"Show page\"\nto see it and drag the seal.",
-	PreviewOnlyForPDF:  "Preview is only available for PAdES (PDF).",
-	RenderingMessage:   "Rendering the page…",
-	PreviewUnavailable: "Preview unavailable: poppler is missing.\nYou can still sign by entering the box manually.",
-	PreviewReady:       "%d-page document · showing %d · suggested space: %s",
-	NoSuggestion:       "No other space found: place the seal manually.",
-	SuggestionApplied:  "Space applied. Drag it with the mouse to adjust.",
+	SuggestButton:         "Find free space",
+	NoPreviewYet:          "Choose a PDF to see the page and place the seal.",
+	NoVisibleSeal:         "This format has no visible seal: the signature travels in the .p7m file or inside the XML.",
+	RenderingMessage:      "Preparing the page…",
+	PreviewUnavailable:    "The page cannot be shown because poppler (pdftoppm) is missing. Signing still works: the seal goes in the bottom-right corner of page 1.",
+	PageOf:                "Page %d of %d",
+	SealHint:              "Click the page to place the seal, drag it to move it and pull its corner to enlarge it. With the keyboard, the arrow keys nudge it.",
+	SealCoversText:        "The seal covers text in the document. Move it to an empty area or press \"Find free space\".",
+	SealHolderPlaceholder: "Certificate holder",
+	NoSuggestion:          "No other free space on this page: place the seal by hand or change page.",
 }
 
 // LevelName renders a level name for display.

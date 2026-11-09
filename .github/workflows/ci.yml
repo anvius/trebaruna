@@ -123,8 +123,8 @@ jobs:
       # The translation tests only exist behind the gui tag, because the file
       # they test imports Fyne. This job is the only one that can run them, and
       # the Spanish shadowing defect survived precisely because no CI did.
-      - name: Translation tests
-        run: CGO_ENABLED=1 go test -tags gui ./src/desktop/... -count=1
+      - name: Translation and window tests
+        run: CGO_ENABLED=1 go test -tags gui ./src/desktop/... ./tests/desktop/... -count=1
       - name: Build
         run: CGO_ENABLED=1 go build -tags gui -trimpath -o bin/trebaruna-desktop ./src/entrypoint/desktop
       # The packaging script and the install target both broke silently once

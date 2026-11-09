@@ -41,8 +41,9 @@ func fullIntent() domain.SigningIntent {
 		Passphrase:   "secret",
 		Format:       "pades",
 		Level:        "t",
-		Page:         2,
-		Box:          "100,600,300,700",
+		Seal: domain.SealChoice{Page: 2, Rect: domain.SealRect{
+			LowerLeftX: 100, LowerLeftY: 600, UpperRightX: 300, UpperRightY: 700,
+		}},
 		TimestampURL: "https://tsa.example/tsa",
 		Reason:       "Contratto",
 		Location:     "Roma",
@@ -66,7 +67,7 @@ func TestTheIntentBecomesTheCommandsFlags(t *testing.T) {
 		"--level":    "t",
 		"--p12":      "/tmp/mario.p12",
 		"--page":     "2",
-		"--box":      "100,600,300,700",
+		"--box":      "100.0,600.0,300.0,700.0",
 		"--tsa":      "https://tsa.example/tsa",
 		"--reason":   "Contratto",
 		"--location": "Roma",
@@ -98,7 +99,7 @@ func TestAPemKeyUsesThePemFlag(t *testing.T) {
 
 func TestOptionalFlagsStayOffWhenEmpty(t *testing.T) {
 	binary, recorded := fakeCommand(t, "echo '"+receiptJSON+"'")
-	intent := domain.SigningIntent{DocumentPath: "/tmp/a.pdf", KeyPath: "/tmp/k.p12", Format: "pades", Level: "bes", Page: 1}
+	intent := domain.SigningIntent{DocumentPath: "/tmp/a.pdf", KeyPath: "/tmp/k.p12", Format: "pades", Level: "bes", Seal: domain.SealChoice{Page: 1}}
 
 	if _, err := (infrastructure.CommandLineSigner{BinaryPath: binary}).Sign(context.Background(), intent); err != nil {
 		t.Fatalf("Sign: %v", err)

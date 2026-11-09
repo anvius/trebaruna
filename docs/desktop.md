@@ -50,8 +50,6 @@ The form, in order:
 | **Passphrase** | For the P12 or an encrypted key |
 | **Format** | `cades`, `pades`, `xades`; preselected from the suffix |
 | **Level** | `bes`, `t`, `lt`, `lta` |
-| **Page** | Which page gets the visible seal |
-| **Box** | `x1,y1,x2,y2` in PDF points |
 | **TSA** | Timestamp authority URL, when the level needs one |
 
 Press **Sign**. The signing runs off the UI thread, so the window stays
@@ -59,13 +57,32 @@ responsive; a slow smartcard or a distant TSA will not freeze it.
 
 When it finishes you can open the result directly in the system viewer.
 
-### The seal overlay
+### Placing the seal
 
-For PDFs the window shows a preview of the page with a **draggable rectangle** for
-the seal. Drag it where you want it, and the coordinates are filled in.
+For a PDF signed as PAdES the right half of the window shows the page, with the
+seal already in the emptiest conventional spot (bottom right first). There are
+no coordinate or page-number fields: the seal goes where you put it, on the page
+you are looking at.
 
-The rectangle is clamped to the page: it cannot be dragged off the edge, which
-would produce a seal nobody can see.
+| To | Do |
+|---|---|
+| Put the seal somewhere | Click the page: the seal centres under the pointer |
+| Move it | Drag it, or drag from any empty spot on the paper |
+| Make it larger | Drag the square handle in its bottom-right corner |
+| Nudge it | Click the page, then use the arrow keys (2 pt per press) |
+| Try another gap | **Find free space** cycles through the empty areas of the page |
+| Change page | The arrows above the page; the seal follows the page shown |
+
+The seal is drawn the way it will be printed: the certificate holder's name in
+bold, the identifier and date, the time with its offset, and the blue rule on
+the left. If it sits on top of text, its frame turns amber and the line under
+the page says so.
+
+The seal never leaves the page and never shrinks below 64x48 pt, the size at
+which the certificate identity still fits without truncation.
+
+CAdES and XAdES signatures carry no visible mark; the page pane says so instead
+of showing a page you cannot use.
 
 ---
 
@@ -126,8 +143,8 @@ The page preview and the automatic free-space detection use **poppler**
 
 Without it:
 
-- the preview shows a placeholder;
-- the seal box must be typed by hand;
+- the page pane explains that poppler is missing;
+- the seal goes in the signer's default place, the bottom-right corner of page 1;
 - **signing still works**.
 
 The window says this explicitly rather than showing a blank preview that looks
@@ -163,7 +180,6 @@ Stated rather than hidden:
   not ship.
 - **Keyboard navigation is partial.** Tab order follows the form and the buttons
   are reachable, but it has not been audited against a screen reader.
-- **The preview renders the first page only** when poppler is present.
 
 ---
 

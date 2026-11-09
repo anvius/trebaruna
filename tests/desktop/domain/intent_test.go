@@ -12,7 +12,7 @@ func validIntent() domain.SigningIntent {
 		KeyPath:      "/tmp/mario.p12",
 		Format:       "pades",
 		Level:        "bes",
-		Page:         1,
+		Seal:         domain.SealChoice{Page: 1},
 	}
 }
 
@@ -67,7 +67,7 @@ func TestValidateAcceptsLevelTWithTSA(t *testing.T) {
 
 func TestValidateRejectsZeroPage(t *testing.T) {
 	intent := validIntent()
-	intent.Page = 0
+	intent.Seal.Page = 0
 
 	err := intent.Validate()
 	problem, ok := err.(domain.Problem)
@@ -76,21 +76,13 @@ func TestValidateRejectsZeroPage(t *testing.T) {
 	}
 }
 
-func TestParseBox(t *testing.T) {
-	box, err := domain.ParseBox("100,200,300,400")
-	if err != nil {
-		t.Fatalf("valid box rejected: %v", err)
+func TestASealWithoutRectangleIsLeftToTheSigner(t *testing.T) {
+	if (domain.SealChoice{Page: 1}).Placed() {
+		t.Error("a choice without a rectangle must not claim a placement")
 	}
-	if box.LowerLeftX != 100 || box.UpperRightY != 400 {
-		t.Errorf("box = %+v", box)
-	}
-}
-
-func TestParseBoxRejectsMalformed(t *testing.T) {
-	for _, raw := range []string{"", "1,2,3", "a,b,c,d", "300,200,100,400", "100,400,300,200"} {
-		if _, err := domain.ParseBox(raw); err == nil {
-			t.Errorf("ParseBox(%q) must fail", raw)
-		}
+	placed := domain.SealChoice{Page: 2, Rect: domain.SealRect{LowerLeftX: 10, LowerLeftY: 10, UpperRightX: 74, UpperRightY: 58}}
+	if !placed.Placed() {
+		t.Error("a choice with an area is a placement")
 	}
 }
 

@@ -4,10 +4,7 @@
 // of the signing slice, so its model must stay independent of the toolkit.
 package domain
 
-import (
-	"fmt"
-	"strings"
-)
+import "strings"
 
 // SigningIntent is everything the user filled in before pressing Sign.
 type SigningIntent struct {
@@ -16,8 +13,7 @@ type SigningIntent struct {
 	Passphrase   string
 	Format       string
 	Level        string
-	Page         int
-	Box          string
+	Seal         SealChoice
 	TimestampURL string
 	Reason       string
 	Location     string
@@ -41,48 +37,25 @@ func (i SigningIntent) Validate() error {
 	if (i.Level == "t" || i.Level == "lt") && strings.TrimSpace(i.TimestampURL) == "" {
 		return Problem{Code: ProblemMissingTSA, Detail: i.Level}
 	}
-	if i.Box != "" {
-		if _, err := ParseBox(i.Box); err != nil {
-			return err
-		}
-	}
-	if i.Page < 1 {
+	if i.Seal.Page < 1 {
 		return Problem{Code: ProblemInvalidPage}
 	}
 	return nil
 }
 
-// Box is a seal rectangle in PDF points.
-type Box struct {
-	LowerLeftX  float64
-	LowerLeftY  float64
-	UpperRightX float64
-	UpperRightY float64
+// SealChoice is where the user put the visible seal.
+//
+// A choice without a rectangle is legitimate: with no preview (poppler is
+// missing, or the format is not PDF) the signer applies its default corner.
+type SealChoice struct {
+	// Page is 1-based.
+	Page int
+	Rect SealRect
 }
 
-// ParseBox reads the "x1,y1,x2,y2" syntax used by the CLI, so both surfaces
-// accept exactly the same input.
-func ParseBox(raw string) (Box, error) {
-	parts := strings.Split(raw, ",")
-	if len(parts) != 4 {
-		return Box{}, fmt.Errorf("el hueco necesita cuatro números: x1,y1,x2,y2")
-	}
-	var values [4]float64
-	for index, part := range parts {
-		trimmed := strings.TrimSpace(part)
-		var value float64
-		if _, err := fmt.Sscanf(trimmed, "%f", &value); err != nil {
-			return Box{}, fmt.Errorf("%q no es un número", trimmed)
-		}
-		values[index] = value
-	}
-	if values[2] <= values[0] {
-		return Box{}, fmt.Errorf("el borde derecho debe ser mayor que el izquierdo")
-	}
-	if values[3] <= values[1] {
-		return Box{}, fmt.Errorf("el borde superior debe ser mayor que el inferior")
-	}
-	return Box{values[0], values[1], values[2], values[3]}, nil
+// Placed reports whether the user chose a rectangle on the page.
+func (c SealChoice) Placed() bool {
+	return c.Rect.Width() > 0 && c.Rect.Height() > 0
 }
 
 // OutputName predicts the signed file name, using the same convention as the
@@ -137,9 +110,6 @@ const (
 
 	// ProblemInvalidPage means the page number is below one.
 	ProblemInvalidPage ProblemCode = "invalid_page"
-
-	// ProblemInvalidBox means the seal rectangle is malformed.
-	ProblemInvalidBox ProblemCode = "invalid_box"
 
 	// ProblemNoOutput means the signer reported success but the signed file is
 	// not on disk.

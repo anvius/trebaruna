@@ -178,8 +178,8 @@ func (m InkMap) FindFreeSpace(sealWidth, sealHeight, limit int) ([]Candidate, er
 	for y := edgeY; y+sealHeight <= m.height-edgeY; y += step {
 		for x := edgeX; x+sealWidth <= m.width-edgeX; x += step {
 			ink := m.InkIn(x, y, sealWidth, sealHeight)
-			if ink > 0.08 {
-				// More than 8% ink inside the box means it covers text.
+			if ink > coveringInk {
+				// More ink than this inside the box means it covers text.
 				continue
 			}
 
@@ -262,10 +262,7 @@ func (m InkMap) zoneFor(x, y, width, height int) SealZone {
 // searchStep keeps the exhaustive scan bounded: at most ~60 positions per axis,
 // which is finer than the margin and still instant.
 func searchStep(sealWidth, sealHeight int) int {
-	step := max(4, min(sealWidth, sealHeight)/6)
-	_ = sealWidth
-	_ = sealHeight
-	return step
+	return max(4, min(sealWidth, sealHeight)/6)
 }
 
 // sortCandidates orders by score with a deterministic tie-break, so the same

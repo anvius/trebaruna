@@ -28,7 +28,7 @@ func completeIntent() domain.SigningIntent {
 		KeyPath:      "/tmp/mario.p12",
 		Format:       "pades",
 		Level:        "bes",
-		Page:         1,
+		Seal:         domain.SealChoice{Page: 1},
 	}
 }
 

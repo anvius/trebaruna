@@ -6,6 +6,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Desktop: the seal is placed with the mouse. A click on the page centres it
+  under the pointer, dragging moves it, the corner handle enlarges it, and the
+  arrow keys nudge it. The page and the pointer share one `DisplayFit`, which
+  fixes the old overlay drifting away from the cursor (it was drawn at a fixed
+  scale of 1.0 over a page scaled to fit).
+- Desktop: the seal preview is drawn as the signer prints it (name, identifier,
+  date, time, accent rule), with the same line breaks. Its frame turns amber
+  when it covers text.
+- Desktop: page navigation shows "Page N of M" above the page; the seal goes on
+  the page shown. "Find free space" cycles through the empty areas.
+- Desktop: screenshot harness (`TREBARUNA_SCREENSHOTS=dir go test -tags gui`)
+  and interaction tests for the page canvas, run in CI.
+
+### Removed
+
+- Desktop: the page number and `x1,y1,x2,y2` box fields, and the "Show page"
+  button. The page renders as soon as a PDF is chosen.
+
 ### Fixed
 
 - The verification tab showed an empty heading, hint and button in every

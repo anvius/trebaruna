@@ -77,11 +77,11 @@ func signArguments(intent domain.SigningIntent) []string {
 		arguments = append(arguments, "--p12", intent.KeyPath)
 	}
 
-	if intent.Page > 1 {
-		arguments = append(arguments, "--page", strconv.Itoa(intent.Page))
+	if intent.Seal.Page > 1 {
+		arguments = append(arguments, "--page", strconv.Itoa(intent.Seal.Page))
 	}
-	if intent.Box != "" {
-		arguments = append(arguments, "--box", intent.Box)
+	if intent.Seal.Placed() {
+		arguments = append(arguments, "--box", intent.Seal.Rect.BoxString())
 	}
 	if intent.TimestampURL != "" {
 		arguments = append(arguments, "--tsa", intent.TimestampURL)

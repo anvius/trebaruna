@@ -1,6 +1,7 @@
 package messaging_test
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -46,6 +47,15 @@ func TestEveryCatalogueIsComplete(t *testing.T) {
 		}
 		if catalogue.Language != language {
 			t.Errorf("catalogue for %q reports language %q", language, catalogue.Language)
+		}
+	}
+}
+
+func TestFormatStringsKeepTheirPlaceholders(t *testing.T) {
+	for _, language := range []messaging.Language{messaging.Spanish, messaging.Italian, messaging.English} {
+		catalogue := messaging.For(language)
+		if got := fmt.Sprintf(catalogue.PageOf, 2, 5); !contains(got, "2") || !contains(got, "5") {
+			t.Errorf("%s PageOf renders %q, want both numbers", language, got)
 		}
 	}
 }
