@@ -35,7 +35,7 @@ func (s CommandLineSigner) Sign(ctx context.Context, intent domain.SigningIntent
 	command := exec.CommandContext(ctx, s.BinaryPath, signArguments(intent)...)
 	// Secrets travel in the environment, never as --pass or --tsa-pass.
 	command.Env = append(append(os.Environ(), keyEnvironment(intent.Key, intent.Card)...),
-		"TREBARUNA_TSA_PASS="+intent.TimestampPassword)
+		"TREBARUNA_TSA_PASS="+intent.TimestampPassword, "TREBARUNA_PDF_PASSWORD="+intent.PDFPassword)
 	command.Stdout = &stdout
 	command.Stderr = &stderr
 

@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"image"
 	"io"
@@ -22,6 +23,7 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	pdflib "github.com/digitorus/pdf"
 
 	"codeberg.org/simplicer/trebaruna/src/desktop/application"
 	"codeberg.org/simplicer/trebaruna/src/desktop/domain"
@@ -106,6 +108,10 @@ type signForm struct {
 	standing       *widget.Label
 	formatChoice   *widget.RadioGroup
 	formatNote     *widget.Label
+	// pdfPasswordBox asks for the password of a PDF that opens only with
+	// one.
+	pdfPassword    *widget.Entry
+	pdfPasswordBox *fyne.Container
 	// invoiceBox asks a FacturaE invoice's role and policy version;
 	// policyBox, under More options, the policy other signatures declare.
 	invoiceBox    *fyne.Container
@@ -188,6 +194,9 @@ func newSignForm(
 	form.formatChoice = widget.NewRadioGroup(nil, func(label string) { form.chooseFormat(label) })
 	form.formatChoice.Required = true
 	form.formatNote = caption("")
+	form.pdfPassword = widget.NewPasswordEntry()
+	form.pdfPasswordBox = container.NewVBox(fieldLabel(m.PDFPasswordLabel), form.pdfPassword, caption(m.PDFPasswordHint))
+	form.pdfPasswordBox.Hide()
 	form.invoiceRole = widget.NewRadioGroup([]string{m.InvoiceRoleIssuer, m.InvoiceRoleReceiver, m.InvoiceRoleThird}, nil)
 	form.invoiceRole.Required = true
 	form.invoiceRole.SetSelected(m.InvoiceRoleIssuer)
@@ -276,6 +285,7 @@ func (f *signForm) object() fyne.CanvasObject {
 	steps := container.NewVBox(
 		f.step(1, m.StepDocument),
 		f.documentRow.object(),
+		f.pdfPasswordBox,
 		f.step(2, m.StepCertificate),
 		f.keySource,
 		f.fileSource,
@@ -352,6 +362,20 @@ func (f *signForm) setDocument(path string) {
 	f.status.SetText("")
 
 	f.offerFormats(domain.FormatsFor(path))
+	f.pdfPassword.SetText("")
+	f.pdfPasswordBox.Hide()
+	if strings.EqualFold(filepath.Ext(path), ".pdf") {
+		// A PDF that opens only with a password asks for it; one that only
+		// restricts permissions opens without.
+		f.run(func() {
+			locked := pdfNeedsPassword(path)
+			fyne.Do(func() {
+				if f.document == path && locked {
+					f.pdfPasswordBox.Show()
+				}
+			})
+		})
+	}
 	if strings.EqualFold(filepath.Ext(path), ".xml") {
 		// A FacturaE invoice is signed as one: its root says so.
 		f.run(func() {
@@ -1076,6 +1100,7 @@ func (f *signForm) sign() {
 		Location:          strings.TrimSpace(f.location.Text),
 		Policy:            f.chosenPolicy(),
 		Role:              f.chosenRole(),
+		PDFPassword:       f.pdfPassword.Text,
 	}
 	f.keyIntent(&intent)
 	if field, inField := f.chosenField(); inField {
@@ -1152,6 +1177,22 @@ func (f *signForm) signOne(intent domain.SigningIntent) {
 func (f *signForm) report(text string, importance widget.Importance) {
 	f.status.Importance = importance
 	f.status.SetText(text)
+}
+
+// pdfNeedsPassword reports a PDF that does not open with the empty user
+// password.
+func pdfNeedsPassword(path string) bool {
+	file, err := os.Open(path)
+	if err != nil {
+		return false
+	}
+	defer file.Close()
+	info, err := file.Stat()
+	if err != nil {
+		return false
+	}
+	_, err = pdflib.NewReader(file, info.Size())
+	return errors.Is(err, pdflib.ErrInvalidPassword)
 }
 
 // fileExists reports whether a regular file exists at path.

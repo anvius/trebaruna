@@ -62,6 +62,8 @@ var basque = Catalogue{
 	CertificateHint:            ".p12, .pfx edo .pem fitxategia, zure ziurtagiriarekin eta haren gakoarekin.",
 	DocumentSavedAs:            "Honela gordeko da: %s",
 	PassphrasePlaceholder:      "Ziurtagiriaren pasahitza",
+	PDFPasswordLabel:           "PDFaren pasahitza",
+	PDFPasswordHint:            "PDF hau babestuta dago: idatzi irekitzen duen pasahitza. Ez da gordetzen, eta orria ezin da aurreikusi: zigilua bere lekura joango da lehenetsita, edo sinatu modu ikusezinean.",
 	CertificateReading:         "Ziurtagiria irakurtzen…",
 	CertificateNeedsPassphrase: "Idatzi pasahitza ziurtagiria irakurtzeko.",
 	CertificateLocked:          "Pasahitzak ez du ziurtagiri hau irekitzen.",

@@ -115,6 +115,8 @@ type Catalogue struct {
 	CertificateHint            string
 	DocumentSavedAs            string
 	PassphrasePlaceholder      string
+	PDFPasswordLabel           string
+	PDFPasswordHint            string
 	CertificateReading         string
 	CertificateNeedsPassphrase string
 	CertificateLocked          string
@@ -483,6 +485,8 @@ var spanish = Catalogue{
 	CertificateHint:            "Fichero .p12, .pfx o .pem con tu certificado y su clave.",
 	DocumentSavedAs:            "Se guardará como %s",
 	PassphrasePlaceholder:      "Contraseña del certificado",
+	PDFPasswordLabel:           "Contraseña del PDF",
+	PDFPasswordHint:            "Este PDF está protegido: escribe la contraseña que lo abre. No se guarda, y la página no se puede previsualizar: el sello irá a su sitio por defecto, o firma de forma invisible.",
 	CertificateReading:         "Leyendo el certificado…",
 	CertificateNeedsPassphrase: "Escribe la contraseña para leer el certificado.",
 	CertificateLocked:          "La contraseña no abre este certificado.",
@@ -825,6 +829,8 @@ var italian = Catalogue{
 	CertificateHint:            "File .p12, .pfx o .pem con il tuo certificato e la sua chiave.",
 	DocumentSavedAs:            "Verrà salvato come %s",
 	PassphrasePlaceholder:      "Password del certificato",
+	PDFPasswordLabel:           "Password del PDF",
+	PDFPasswordHint:            "Questo PDF è protetto: scrivi la password che lo apre. Non viene salvata, e la pagina non si può mostrare in anteprima: il sigillo andrà nella posizione predefinita, oppure firma in modo invisibile.",
 	CertificateReading:         "Lettura del certificato…",
 	CertificateNeedsPassphrase: "Scrivi la password per leggere il certificato.",
 	CertificateLocked:          "La password non apre questo certificato.",
@@ -1167,6 +1173,8 @@ var english = Catalogue{
 	CertificateHint:            "A .p12, .pfx or .pem file with your certificate and its key.",
 	DocumentSavedAs:            "Will be saved as %s",
 	PassphrasePlaceholder:      "Certificate passphrase",
+	PDFPasswordLabel:           "PDF password",
+	PDFPasswordHint:            "This PDF is protected: type the password that opens it. It is not stored, and the page cannot be previewed: the seal goes in its default place, or sign invisibly.",
 	CertificateReading:         "Reading the certificate…",
 	CertificateNeedsPassphrase: "Type the passphrase to read the certificate.",
 	CertificateLocked:          "The passphrase does not open this certificate.",

@@ -14,6 +14,7 @@ import (
 	"image"
 	"image/png"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -536,5 +537,46 @@ func TestABatchGoesInOneASiCEContainer(t *testing.T) {
 	defer signer.mu.Unlock()
 	if len(signer.intents) != 1 || signer.intents[0].DocumentPath != "/tmp/a.pdf" || len(signer.intents[0].MoreDocuments) != 2 {
 		t.Errorf("one command over the three documents: %+v", signer.intents)
+	}
+}
+
+// TestAPDFThatOpensOnlyWithAPasswordAsksForIt: qpdf locks one with a user
+// password, another with permissions only; only the first asks, and the
+// password goes with the signature.
+func TestAPDFThatOpensOnlyWithAPasswordAsksForIt(t *testing.T) {
+	if _, err := exec.LookPath("qpdf"); err != nil {
+		t.Skip("qpdf is not available")
+	}
+	directory := t.TempDir()
+	plain := writeSampleContract(t)
+	locked, permissions := filepath.Join(directory, "locked.pdf"), filepath.Join(directory, "permissions.pdf")
+	for path, user := range map[string]string{locked: "abierto", permissions: ""} {
+		if output, err := exec.Command("qpdf", "--encrypt", user, "propietario", "256", "--", plain, path).CombinedOutput(); err != nil {
+			t.Fatalf("qpdf: %v\n%s", err, output)
+		}
+	}
+	fixture := newFormFixture(t, scriptedCertificate{summary: qualifiedRossi()})
+	form := fixture.desktop.form
+	signer := &collectingSigner{}
+	form.signing = application.NewSignFromDesktop(signer, func(string) bool { return true })
+	form.setCertificate("/tmp/rossi.p12")
+
+	form.setDocument(permissions)
+	settle(t, func() bool { return form.fingerprint != "" })
+	if form.pdfPasswordBox.Visible() {
+		t.Error("a PDF that only restricts permissions opens without a password")
+	}
+	form.setDocument(locked)
+	settle(t, func() bool { return form.pdfPasswordBox.Visible() })
+	form.pdfPassword.SetText("abierto")
+	form.invisible.SetChecked(true)
+	test.Tap(form.signButton)
+	settle(t, func() bool { signer.mu.Lock(); defer signer.mu.Unlock(); return len(signer.intents) == 1 })
+	if signer.intents[0].PDFPassword != "abierto" {
+		t.Errorf("password %q", signer.intents[0].PDFPassword)
+	}
+	form.setDocument(plain)
+	if form.pdfPasswordBox.Visible() || form.pdfPassword.Text != "" {
+		t.Error("another document forgets the password")
 	}
 }

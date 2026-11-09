@@ -209,7 +209,8 @@ the document's own `/Encrypt`. The author's permissions are honoured: a
 document that allows neither filling in forms nor changing annotations is not
 signed. Levels B and T; LT and LTA are refused on an encrypted PDF (their
 update is not encrypted), so sign at T or decrypt it first. afirma:// pages
-give the password as `ownerPassword` or `userPassword`. Checked with qpdf
+give the password as `ownerPassword` or `userPassword`; the window asks for it
+under the document when the PDF opens only with one. Checked with qpdf
 (AES-256 R6, AES-128 R4, RC4-128), invisible and with a seal: pdfsig verifies
 each with the password, `qpdf --check` finds the file sound, and after `qpdf
 --decrypt` the signature's strings read as written.

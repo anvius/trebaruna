@@ -370,3 +370,20 @@ func TestContainersInvoicesAndPoliciesBecomeFlags(t *testing.T) {
 		}
 	}
 }
+
+// TestThePDFPasswordTravelsInTheEnvironment, never on the command line.
+func TestThePDFPasswordTravelsInTheEnvironment(t *testing.T) {
+	seen := filepath.Join(t.TempDir(), "environment")
+	binary, recorded := fakeCommand(t, "printf '%s' \"$TREBARUNA_PDF_PASSWORD\" > "+seen+"; echo '"+receiptJSON+"'")
+	intent := fullIntent()
+	intent.PDFPassword = "abierto"
+	if _, err := (infrastructure.CommandLineSigner{BinaryPath: binary}).Sign(context.Background(), intent); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := os.ReadFile(seen); string(got) != "abierto" {
+		t.Errorf("environment carried %q", got)
+	}
+	if contains(recordedArguments(t, recorded), "abierto") {
+		t.Error("the password reached the command line")
+	}
+}

@@ -59,6 +59,8 @@ var catalan = Catalogue{
 	CertificateHint:            "Fitxer .p12, .pfx o .pem amb el teu certificat i la seva clau.",
 	DocumentSavedAs:            "Es desarà com a %s",
 	PassphrasePlaceholder:      "Contrasenya del certificat",
+	PDFPasswordLabel:           "Contrasenya del PDF",
+	PDFPasswordHint:            "Aquest PDF està protegit: escriu la contrasenya que l'obre. No es desa, i la pàgina no es pot previsualitzar: el segell anirà al lloc per defecte, o signa de manera invisible.",
 	CertificateReading:         "S'està llegint el certificat…",
 	CertificateNeedsPassphrase: "Escriu la contrasenya per llegir el certificat.",
 	CertificateLocked:          "La contrasenya no obre aquest certificat.",

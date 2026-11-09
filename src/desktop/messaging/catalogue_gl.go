@@ -58,6 +58,8 @@ var galician = Catalogue{
 	CertificateHint:            "Ficheiro .p12, .pfx ou .pem co teu certificado e a súa clave.",
 	DocumentSavedAs:            "Gardarase como %s",
 	PassphrasePlaceholder:      "Contrasinal do certificado",
+	PDFPasswordLabel:           "Contrasinal do PDF",
+	PDFPasswordHint:            "Este PDF está protexido: escribe o contrasinal que o abre. Non se garda, e a páxina non se pode previsualizar: o selo irá ao seu sitio por defecto, ou asina de xeito invisible.",
 	CertificateReading:         "Lendo o certificado…",
 	CertificateNeedsPassphrase: "Escribe o contrasinal para ler o certificado.",
 	CertificateLocked:          "O contrasinal non abre este certificado.",

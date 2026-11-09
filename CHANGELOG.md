@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Window: a PDF that opens only with a password asks for it under the
+  document (detected by opening it, so one that only restricts
+  permissions asks nothing); it travels to the signer in its environment
+  and is forgotten with the document. The page is not previewed, since
+  that would put the password on pdftoppm's command line.
+
 - Signing encrypted PDFs (RC4, AES-128, AES-256): the password, user or
   owner, comes from TREBARUNA_PDF_PASSWORD (never a flag) or afirma://
   `ownerPassword`/`userPassword`; a document that only restricts

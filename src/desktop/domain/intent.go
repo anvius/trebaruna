@@ -43,6 +43,9 @@ type SigningIntent struct {
 	// XML signature (a FacturaE invoice's: emisor, receptor, tercero).
 	Policy PolicyName
 	Role   string
+	// PDFPassword opens an encrypted PDF; it travels in the command's
+	// environment and is never stored.
+	PDFPassword string
 }
 
 // Validate reports what is missing, before any process is spawned.
