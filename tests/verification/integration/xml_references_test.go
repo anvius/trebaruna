@@ -87,3 +87,29 @@ func TestSignaturesOfOtherProducersAreJudgedFully(t *testing.T) {
 		t.Error("the fixtures must say where they come from")
 	}
 }
+
+// TestEverySignatureOfAnXMLIsReported: a co-signed document reported its
+// first signature only, vouching for the second unseen. AutoFirma's
+// enveloped transforms (C14N, then the XPath filter) verify.
+func TestEverySignatureOfAnXMLIsReported(t *testing.T) {
+	fixtures := filepath.Join("..", "..", "signing", "xmldsig", "testdata")
+	reports, err := verificationinfra.NewXadesVerifier().Extract(filepath.Join(fixtures, "xmlsec-cosigned.xml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(reports) != 2 {
+		t.Fatalf("%d reports, want one per signature", len(reports))
+	}
+	for index, report := range reports {
+		if report.Integrity != "good" {
+			t.Errorf("signature %d: %s %v", index+1, report.Integrity, report.Findings)
+		}
+	}
+	if reports[0].SignerName == reports[1].SignerName {
+		t.Errorf("both reports name %q: the second must be read from its own KeyInfo", reports[0].SignerName)
+	}
+	report := extractOne(t, verificationinfra.NewXadesVerifier(), filepath.Join(fixtures, "xmlsec-autofirma-order.xml"))
+	if report.Integrity != "good" {
+		t.Errorf("AutoFirma's enveloped order: %s %v", report.Integrity, report.Findings)
+	}
+}

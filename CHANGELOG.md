@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- XML verification reads AutoFirma's enveloped signatures and every
+  signature of a document.
+  - AutoFirma writes the XPath filter after C14N, on the canonical octets.
+    That read as unverifiable; the octets are now read back into nodes and
+    filtered, as XML-Signature does.
+  - A co-signed XML reported its first signature only, vouching for the
+    others unseen. Each signature gets its own report now.
+  - Judged against xmlsec1 1.3.9 fixtures: AutoFirma's order, and a document
+    signed twice (RSA, then ECDSA) where both signatures hold.
+
 - XAdES enveloped keeps what surrounds the root. The signed file was
   rebuilt from the root element alone, so the processing instructions and
   comments outside it were dropped: a FatturaPA lost its

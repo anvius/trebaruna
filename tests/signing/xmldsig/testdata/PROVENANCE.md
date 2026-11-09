@@ -15,10 +15,21 @@ command) before being kept.
 | `xmlsec-detached-base64.xml` | xmlsec1 1.3.9 | AutoFirma's "XAdES Detached" layout: `AFIRMA/CONTENT` in Base64, Base64 transform |
 | `xmlsec-detached-xml.xml` | xmlsec1 1.3.9 | the same with XML content, C14N |
 | `xmlsec-external.xml` | xmlsec1 1.3.9 | a reference to `documento.txt` beside it, exclusive C14N of `SignedInfo` |
+| `xmlsec-autofirma-order.xml` | xmlsec1 1.3.9 | AutoFirma's enveloped transforms in its order: enveloped signature, C14N, then the XPath filter on the canonical octets; RSA-SHA512 |
+| `xmlsec-cosigned.xml` | xmlsec1 1.3.9 | the same document signed again with ECDSA (`--node-id Signature-B`): both signatures exclude every signature, so both hold |
 | `xmlsec-xpath-other.xml` | xmlsec1 1.3.9 | an XPath expression trebaruna does not evaluate: must read as unverifiable, not modified |
 
 `rsa.pem` and `ec.pem` are the self-signed test certificates (their keys were
 thrown away). The xmlsec1 files come from the templates in `templates/`:
+
+The co-signed file adds the second template to the signed first file and
+signs that node alone:
+
+```bash
+xmlsec1 --sign --lax-key-search --privkey-pem ec.key,ec.pem \
+    --id-attr:Id "http://www.w3.org/2000/09/xmldsig#:Signature" --node-id Signature-B \
+    --output xmlsec-cosigned.xml templates/t-cosigned.xml
+```
 
 ```bash
 xmlsec1 --sign --lax-key-search --privkey-pem rsa.key,rsa.pem --id-attr:Id CONTENT \

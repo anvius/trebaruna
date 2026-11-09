@@ -193,3 +193,34 @@ func TestTheCanonicalDocumentKeepsItsInstructions(t *testing.T) {
 		t.Errorf("with comments %q", withComments)
 	}
 }
+
+// TestAutoFirmasEnvelopedOrderVerifies: enveloped, C14N, then the XPath
+// filter on the canonical octets, as AutoFirma writes every enveloped XAdES.
+func TestAutoFirmasEnvelopedOrderVerifies(t *testing.T) {
+	if err := check(t, "xmlsec-autofirma-order.xml", nil, nil); err != nil {
+		t.Errorf("AutoFirma's order: %v", err)
+	}
+	if err := check(t, "xmlsec-autofirma-order.xml", replace("Subvención", "Subvencion"), nil); !errors.Is(err, xmldsig.ErrModified) {
+		t.Errorf("a changed document: %v", err)
+	}
+}
+
+// TestEverySignatureOfACosignedDocumentHolds: each excludes all signatures,
+// so adding the second did not break the first.
+func TestEverySignatureOfACosignedDocumentHolds(t *testing.T) {
+	document := etree.NewDocument()
+	if err := document.ReadFromBytes(read(t, "xmlsec-cosigned.xml")); err != nil {
+		t.Fatal(err)
+	}
+	keys := map[string]crypto.PublicKey{"Signature-A": publicKey(t, "rsa.pem"), "Signature-B": publicKey(t, "ec.pem")}
+	signatures := xmldsig.Signatures(document)
+	if len(signatures) != 2 {
+		t.Fatalf("%d signatures found, want 2", len(signatures))
+	}
+	for _, signature := range signatures {
+		id := signature.SelectAttrValue("Id", "")
+		if err := xmldsig.Check(document, signature, keys[id], nil); err != nil {
+			t.Errorf("%s: %v", id, err)
+		}
+	}
+}

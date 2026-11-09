@@ -54,7 +54,8 @@ then the signature value over `SignedInfo`. A change to any of them is
 trebaruna does not implement (an XPath expression other than the
 `not(ancestor-or-self::ds:Signature)` filter, XPointer, XSLT) is
 `signature.unverifiable`: unknown, not broken. SHA-1 signatures, still found
-in older files, are checked.
+in older files, are checked. A document with several signatures (co-signed,
+or counter-signed inside) gets one report per signature.
 
 If integrity is bad, nothing else matters. A tampered document with an otherwise
 perfect certificate is worthless.

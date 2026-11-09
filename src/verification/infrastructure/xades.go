@@ -94,11 +94,21 @@ func (v *XadesVerifier) Extract(path string) ([]domain.SignerReport, error) {
 		return nil, fmt.Errorf("parse XML in %q: %w", path, err)
 	}
 
-	signature := findSignature(document.Root())
-	if signature == nil {
+	signatures := xmldsig.Signatures(document)
+	if len(signatures) == 0 {
 		return nil, fmt.Errorf("%q carries no XML signature", path)
 	}
+	// Every signature is judged: a co-signed document carries several, and
+	// reporting the first alone would vouch for the others unseen.
+	reports := make([]domain.SignerReport, 0, len(signatures))
+	for _, signature := range signatures {
+		reports = append(reports, v.report(document, signature))
+	}
+	return reports, nil
+}
 
+// report judges one signature of the document.
+func (v *XadesVerifier) report(document *etree.Document, signature *etree.Element) domain.SignerReport {
 	report := domain.SignerReport{
 		FieldName: "XMLSignature",
 		Format:    "XAdES",
@@ -163,7 +173,7 @@ func (v *XadesVerifier) Extract(path string) ([]domain.SignerReport, error) {
 		report.Trust = domain.TrustUntrusted
 	}
 
-	return []domain.SignerReport{report}, nil
+	return report
 }
 
 // chainTrusted reports whether the certificate chains to the supplied anchors.
@@ -241,22 +251,6 @@ func (v *XadesVerifier) rootsWithAnchors() *x509.CertPool {
 		return v.Roots
 	}
 	return pool
-}
-
-// findSignature walks the tree looking for a ds:Signature element.
-func findSignature(root *etree.Element) *etree.Element {
-	if root == nil {
-		return nil
-	}
-	if root.Tag == "Signature" && root.NamespaceURI() == "http://www.w3.org/2000/09/xmldsig#" {
-		return root
-	}
-	for _, child := range root.ChildElements() {
-		if found := findSignature(child); found != nil {
-			return found
-		}
-	}
-	return nil
 }
 
 // localName returns the tag without its namespace prefix.

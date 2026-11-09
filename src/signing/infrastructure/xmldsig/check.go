@@ -176,7 +176,7 @@ func ReferenceData(document *etree.Document, signature, reference *etree.Element
 			}
 		case algorithm == XPathTransform:
 			if !excludesSignatures(transform) {
-				return nil, fmt.Errorf("%w: XPath expression %q", ErrUnverifiable, strings.TrimSpace(textOf(child(transform, "XPath"))))
+				return nil, unsupportedXPath(transform)
 			}
 			removeSignatures(set.scope())
 		case algorithm == Base64Transform:
@@ -225,11 +225,26 @@ func external(uri string, transforms []*etree.Element, resolve Resolver) ([]byte
 }
 
 // octetTransforms applies the transforms that take octets: Base64 decoding,
-// and canonicalisation of octets that are an XML document.
+// and canonicalisation or the signature filter on octets that are an XML
+// document, read back into nodes (AutoFirma filters after canonicalising).
 func octetTransforms(octets []byte, transforms []*etree.Element) ([]byte, error) {
 	for _, transform := range transforms {
 		algorithm := transform.SelectAttrValue("Algorithm", "")
 		switch {
+		case algorithm == XPathTransform:
+			if !excludesSignatures(transform) {
+				return nil, unsupportedXPath(transform)
+			}
+			parsed := etree.NewDocument()
+			if err := parsed.ReadFromBytes(octets); err != nil {
+				return nil, fmt.Errorf("%w: the signed content is not XML", ErrModified)
+			}
+			removeSignatures(parsed.Root())
+			canonical, err := CanonicalizeDocument(parsed, C14N10, "")
+			if err != nil {
+				return nil, err
+			}
+			octets = canonical
 		case algorithm == Base64Transform:
 			decoded, err := decodeBase64(string(octets))
 			if err != nil {
@@ -301,23 +316,42 @@ func checkSignatureValue(signature, signedInfo *etree.Element, key crypto.Public
 	return nil
 }
 
+// Signatures are the XML signatures of a document, in document order: a
+// co-signed document carries several side by side, and a counter-signature
+// sits inside the signature it signs.
+func Signatures(document *etree.Document) []*etree.Element {
+	var found []*etree.Element
+	walkElements(document.Root(), func(element *etree.Element) {
+		if element.Tag == "Signature" && element.NamespaceURI() == Namespace {
+			found = append(found, element)
+		}
+	})
+	return found
+}
+
+// walkElements visits an element and its descendants in document order.
+func walkElements(element *etree.Element, visit func(*etree.Element)) {
+	if element == nil {
+		return
+	}
+	visit(element)
+	for _, childElement := range element.ChildElements() {
+		walkElements(childElement, visit)
+	}
+}
+
 // elementByID finds the one element whose Id (or ID, or id) is id; two
 // carrying it is how wrapping attacks start, and is refused.
 func elementByID(root *etree.Element, id string) (*etree.Element, error) {
 	var found []*etree.Element
-	var visit func(*etree.Element)
-	visit = func(element *etree.Element) {
+	walkElements(root, func(element *etree.Element) {
 		for _, name := range []string{"Id", "ID", "id"} {
 			if element.SelectAttrValue(name, "\x00") == id {
 				found = append(found, element)
 				break
 			}
 		}
-		for _, childElement := range element.ChildElements() {
-			visit(childElement)
-		}
-	}
-	visit(root)
+	})
 	switch len(found) {
 	case 0:
 		return nil, fmt.Errorf("%w: nothing carries Id %q", ErrModified, id)
@@ -340,6 +374,12 @@ func excludesSignatures(transform *etree.Element) bool {
 	}
 	match := signatureFilter.FindStringSubmatch(strings.Join(strings.Fields(textOf(expression)), ""))
 	return match != nil && lookupNamespace(expression, match[1]) == Namespace
+}
+
+// unsupportedXPath is the answer to an XPath expression other than the
+// signature filter.
+func unsupportedXPath(transform *etree.Element) error {
+	return fmt.Errorf("%w: XPath expression %q", ErrUnverifiable, strings.TrimSpace(textOf(child(transform, "XPath"))))
 }
 
 // removeSignatures removes every XML signature within element.
