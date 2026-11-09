@@ -28,6 +28,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The PDF seal printed the identifier and the date on top of the second line
+  of a name that wrapped (any long name: "MARIA DEL CARMEN LOPEZ GARCIA
+  MARTINEZ" overprinted "MARTINEZ"). The details now start below the last name
+  line; a layout test checks that no line overprints another.
 - The verification tab showed an empty heading, hint and button in every
   language: four catalogue entries had never been written. The catalogue test
   now walks every string field by reflection instead of a hand-kept list, which

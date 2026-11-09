@@ -123,7 +123,7 @@ func DrawSeal(width, height float64, holder identity.Holder, moment time.Time) (
 
 	drawAccentBar(appearance, width, height)
 	drawName(appearance, nameLines, typography, height, totalHeight)
-	drawDetails(appearance, details, typography, height, totalHeight)
+	drawDetails(appearance, details, len(nameLines), typography, height, totalHeight)
 
 	return appearance, nil
 }
@@ -183,12 +183,14 @@ func drawName(appearance *pdfsign.Appearance, lines []string, typography sealTyp
 	}
 }
 
-// drawDetails renders the identifier, date and time in grey.
-func drawDetails(appearance *pdfsign.Appearance, lines []string, typography sealTypography, height, totalHeight float64) {
+// drawDetails renders the identifier, date and time in grey, below the last
+// line of the name: a name that wraps pushes the details down with it.
+func drawDetails(appearance *pdfsign.Appearance, lines []string, nameLines int, typography sealTypography, height, totalHeight float64) {
 	regular := pdfsign.StandardFont(pdfsign.Helvetica)
 
 	top := (height - totalHeight) / 2
-	baseline := height - top - typography.nameSize - typography.gapAfterName - typography.detailSize
+	lastName := height - top - typography.nameSize - float64(nameLines-1)*typography.leading
+	baseline := lastName - typography.gapAfterName - typography.detailSize
 
 	for index, line := range lines {
 		size := typography.detailSize
