@@ -110,6 +110,15 @@ func (a *commandLineApprover) Approve(_ context.Context, proposal application.Pr
 	if proposal.Format != "" {
 		fmt.Fprintf(a.stderr, "  format     %s\n", proposal.Format)
 	}
+	if proposal.Policy != "" {
+		fmt.Fprintf(a.stderr, "  policy     %s (the signature will declare it)\n", proposal.Policy)
+	}
+	if len(proposal.Roles) > 0 {
+		fmt.Fprintf(a.stderr, "  role       %s (the signature will claim it)\n", strings.Join(proposal.Roles, ", "))
+	}
+	if proposal.Place != "" {
+		fmt.Fprintf(a.stderr, "  place      %s (the signature will declare it)\n", proposal.Place)
+	}
 	switch {
 	case proposal.DataSize > 0:
 		fmt.Fprintf(a.stderr, "  data       %d bytes, SHA-256 %s\n", proposal.DataSize, proposal.DataSHA256)
@@ -165,6 +174,9 @@ type proposalLine struct {
 	Filters       []string   `json:"filters"`
 	Warnings      []string   `json:"warnings"`
 	Rejected      string     `json:"rejected,omitempty"`
+	Policy        string     `json:"policy,omitempty"`
+	Roles         []string   `json:"roles,omitempty"`
+	Place         string     `json:"place,omitempty"`
 }
 
 type itemLine struct {
@@ -198,7 +210,8 @@ func (a *interactiveApprover) Approve(_ context.Context, proposal application.Pr
 	line := proposalLine{Type: "proposal", Operation: string(proposal.Operation), Site: proposal.Site, AppName: proposal.AppName,
 		Format: proposal.Format, DataSize: proposal.DataSize, DataSHA256: proposal.DataSHA256, DataURL: proposal.DataURL,
 		ChooseFile: proposal.ChooseFile, SuggestedName: proposal.SuggestedName, Filters: proposal.Filter.Expressions(),
-		Warnings: proposal.Warnings, Rejected: proposal.Rejected, Items: []itemLine{}}
+		Warnings: proposal.Warnings, Rejected: proposal.Rejected, Items: []itemLine{},
+		Policy: proposal.Policy, Roles: proposal.Roles, Place: proposal.Place}
 	for _, item := range proposal.Items {
 		line.Items = append(line.Items, itemLine{ID: item.ID, Format: item.Format, Suboperation: item.Suboperation})
 	}

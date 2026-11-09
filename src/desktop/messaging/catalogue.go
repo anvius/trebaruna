@@ -207,6 +207,9 @@ type Catalogue struct {
 	PageOpBatch            string
 	PageOpBatchOne         string
 	PageFormat             string
+	PagePolicy             string
+	PageRoles              string
+	PagePlace              string
 	PageData               string
 	PageDataURL            string
 	PageChooseFile         string
@@ -480,6 +483,9 @@ var spanish = Catalogue{
 	PageOpBatch:                "Firmar %d documentos",
 	PageOpBatchOne:             "Firmar 1 documento",
 	PageFormat:                 "Formato: %s",
+	PagePolicy:                 "La firma declarará la política %s",
+	PageRoles:                  "La firma declarará el rol %s",
+	PagePlace:                  "La firma declarará el lugar %s",
 	PageData:                   "Datos: %d bytes, huella SHA-256 %s",
 	PageDataURL:                "Los datos se descargarán de %s si apruebas.",
 	PageChooseFile:             "La página no envía el documento: elige cuál firmar.",
@@ -734,6 +740,9 @@ var italian = Catalogue{
 	PageOpBatch:                "Firmare %d documenti",
 	PageOpBatchOne:             "Firmare 1 documento",
 	PageFormat:                 "Formato: %s",
+	PagePolicy:                 "La firma dichiarerà la politica %s",
+	PageRoles:                  "La firma dichiarerà il ruolo %s",
+	PagePlace:                  "La firma dichiarerà il luogo %s",
 	PageData:                   "Dati: %d byte, impronta SHA-256 %s",
 	PageDataURL:                "I dati verranno scaricati da %s se approvi.",
 	PageChooseFile:             "La pagina non invia il documento: scegli quale firmare.",
@@ -988,6 +997,9 @@ var english = Catalogue{
 	PageOpBatch:                "Sign %d documents",
 	PageOpBatchOne:             "Sign 1 document",
 	PageFormat:                 "Format: %s",
+	PagePolicy:                 "The signature will declare the policy %s",
+	PageRoles:                  "The signature will claim the role %s",
+	PagePlace:                  "The signature will declare the place %s",
 	PageData:                   "Data: %d bytes, SHA-256 fingerprint %s",
 	PageDataURL:                "The data will be downloaded from %s if you approve.",
 	PageChooseFile:             "The page sends no document: choose which one to sign.",

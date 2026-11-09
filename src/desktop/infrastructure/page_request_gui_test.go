@@ -44,6 +44,7 @@ func (r scriptedRequests) Open(context.Context, string) (application.PageSession
 func signProposal() domain.PageProposal {
 	return domain.PageProposal{Operation: "sign", Site: "sede.example", AppName: "SistemaRED", Format: "CAdES",
 		DataSize: 4, DataSHA256: "b221d9db", Filters: []string{"subject.rfc2254:(cn=MARIA*)"},
+		Policy: "AGE 1.9", Roles: []string{"Apoderado"}, Place: "Sevilla, ES",
 		Warnings: []string{"the answer travels to the site encrypted with single DES and an 8-digit key: anyone who sees it can read it"}}
 }
 
@@ -85,7 +86,8 @@ func TestThePageRequestIsShownBeforeAnything(t *testing.T) {
 	request, session := pageFixture(t, proposalStep(signProposal()))
 	text := detailText(request)
 	for _, shown := range []string{"Una página web pide tu firma", "Firmar un documento", "sede.example", "SistemaRED",
-		"4 bytes", "subject.rfc2254:(cn=MARIA*)", "DES simple"} {
+		"4 bytes", "subject.rfc2254:(cn=MARIA*)", "DES simple",
+		"La firma declarará la política AGE 1.9", "el rol Apoderado", "el lugar Sevilla, ES"} {
 		if !strings.Contains(text, shown) {
 			t.Errorf("the request must show %q:\n%s", shown, text)
 		}

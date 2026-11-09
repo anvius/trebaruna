@@ -144,7 +144,7 @@ func (s *XadesSigner) SignXades(ctx context.Context, request application.XadesRe
 			base64.StdEncoding.EncodeToString(certificateDigest[:]),
 			time.Now().UTC().Format(time.RFC3339),
 			layout.dataObjectFormats(ids),
-			policyProperties(request.Policy)+roleProperties(request.ClaimedRoles),
+			policyProperties(request.Policy)+placeProperties(request.Place)+roleProperties(request.ClaimedRoles),
 		)
 	}
 	signedInfo := buildSignedInfo(ids,
@@ -425,6 +425,24 @@ func policyProperties(policy domain.SignaturePolicy) string {
 		`<xades:SigPolicyHash><ds:DigestMethod Algorithm="` + xmlDigestAlgorithms[policy.HashAlgorithm()] + `"/>` +
 		`<ds:DigestValue>` + base64.StdEncoding.EncodeToString(policy.Hash()) + `</ds:DigestValue></xades:SigPolicyHash>` +
 		qualifiers + `</xades:SignaturePolicyId></xades:SignaturePolicyIdentifier>`
+}
+
+// placeProperties declares where the signature was made
+// (SignatureProductionPlaceV2, EN 319 132-1 5.2.5), between the policy and
+// the roles as the schema orders them.
+func placeProperties(place domain.ProductionPlace) string {
+	if place.IsZero() {
+		return ""
+	}
+	var parts string
+	for _, part := range []struct{ name, value string }{
+		{"City", place.City}, {"StateOrProvince", place.Province}, {"PostalCode", place.PostalCode}, {"CountryName", place.Country},
+	} {
+		if part.value != "" {
+			parts += `<xades:` + part.name + `>` + xmlEscape(part.value) + `</xades:` + part.name + `>`
+		}
+	}
+	return `<xades:SignatureProductionPlaceV2>` + parts + `</xades:SignatureProductionPlaceV2>`
 }
 
 // roleProperties writes the roles the signer claims (SignerRoleV2).

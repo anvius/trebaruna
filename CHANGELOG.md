@@ -73,6 +73,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- XAdES signatures declare where they were made: SignatureProductionPlaceV2
+  (city, province, postal code, country) between the policy and the roles,
+  from `--location` (the city) and from afirma:// pages
+  (`signatureProductionCity`, `…Province`, `…PostalCode`, `…Country`), in
+  new signatures and in counter-signatures. The afirma:// approval, in the
+  terminal and in the window, shows the policy, the roles and the place the
+  page asks the signature to declare, before anything is signed; messages
+  in six languages.
+
 - verify shows what a signature declares of itself: its signature policy
   (CAdES and PAdES signature-policy-identifier, XAdES
   SignaturePolicyIdentifier; AGE 1.9, AGE 1.8, FacturaE 3.1 and 3.0 by

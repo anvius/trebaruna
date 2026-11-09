@@ -63,7 +63,7 @@ func (s *XadesSigner) countersignXades(ctx context.Context, request application.
 		signedProperties := buildSignedProperties(ids,
 			base64.StdEncoding.EncodeToString(certificateDigest[:]),
 			time.Now().UTC().Format(time.RFC3339), "",
-			policyProperties(request.Policy)+roleProperties(request.ClaimedRoles))
+			policyProperties(request.Policy)+placeProperties(request.Place)+roleProperties(request.ClaimedRoles))
 		signature := buildSignature(ids,
 			buildCounterSignedInfo(ids, valueID, keyPair.Certificate.PublicKeyAlgorithm == x509.ECDSA),
 			placeholderDigest, base64.StdEncoding.EncodeToString(keyPair.Certificate.Raw), signedProperties, "", false)

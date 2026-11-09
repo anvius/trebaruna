@@ -242,7 +242,8 @@ func (s NativePageSigner) signXades(ctx context.Context, request application.Pag
 			return nil, domain.Failure{Code: domain.UnsupportedOperation, Cause: "an XMLDSig signature has no properties to hold a counter-signature"}
 		}
 		signature, err := s.xades.SignXades(ctx, signapp.XadesRequest{Content: request.Data, Signer: request.Key, Level: level,
-			TimestampURL: tsa, Policy: policy, ClaimedRoles: claimedRoles(request.Properties), Countersign: domain.CounterTarget(request.Properties)})
+			TimestampURL: tsa, Policy: policy, ClaimedRoles: domain.ClaimedRoles(request.Properties), Countersign: domain.CounterTarget(request.Properties),
+			Place: productionPlace(request.Properties)})
 		if err != nil {
 			return nil, domain.Failure{Code: domain.SignatureFailed, Cause: err.Error()}
 		}
@@ -275,7 +276,7 @@ func (s NativePageSigner) signXades(ctx context.Context, request application.Pag
 	if plain && level != signing.BES {
 		return nil, domain.Failure{Code: domain.UnsupportedOperation, Cause: "XMLDSig signatures carry no timestamp; ask for XAdES"}
 	}
-	roles := claimedRoles(request.Properties)
+	roles := domain.ClaimedRoles(request.Properties)
 	if plain {
 		roles = nil
 	}
@@ -288,8 +289,12 @@ func (s NativePageSigner) signXades(ctx context.Context, request application.Pag
 			return nil, domain.Failure{Code: domain.InvalidPolicy, Cause: err.Error()}
 		}
 	}
+	place := productionPlace(request.Properties)
+	if plain {
+		place = signing.ProductionPlace{}
+	}
 	signature, err := s.xades.SignXades(ctx, signapp.XadesRequest{Content: request.Data, Signer: request.Key, Level: level,
-		Packaging: packaging, Plain: plain, TimestampURL: tsa, Policy: policy, ClaimedRoles: roles})
+		Packaging: packaging, Plain: plain, TimestampURL: tsa, Policy: policy, ClaimedRoles: roles, Place: place})
 	if err != nil {
 		return nil, domain.Failure{Code: domain.SignatureFailed, Cause: err.Error()}
 	}
@@ -316,15 +321,10 @@ func xadesPackaging(request application.PageSignature) string {
 	return "enveloping"
 }
 
-// claimedRoles reads signerClaimedRoles, several separated by "|".
-func claimedRoles(properties map[string]string) []string {
-	var roles []string
-	for _, role := range strings.Split(properties["signerClaimedRoles"], "|") {
-		if role = strings.TrimSpace(role); role != "" {
-			roles = append(roles, role)
-		}
-	}
-	return roles
+// productionPlace is the place the page asks the signature to declare.
+func productionPlace(properties map[string]string) signing.ProductionPlace {
+	city, province, postalCode, country := domain.ProductionPlace(properties)
+	return signing.ProductionPlace{City: city, Province: province, PostalCode: postalCode, Country: country}
 }
 
 // signOffice signs an office document inside itself, as AutoFirma's ODF
@@ -335,7 +335,7 @@ func (s NativePageSigner) signOffice(ctx context.Context, request application.Pa
 		return nil, domain.Failure{Code: domain.UnsupportedOperation, Cause: "an office document takes more signatures by being signed again"}
 	}
 	xadesRequest := signapp.XadesRequest{Content: request.Data, Signer: request.Key, Level: level,
-		TimestampURL: tsa, Policy: policy, ClaimedRoles: claimedRoles(request.Properties)}
+		TimestampURL: tsa, Policy: policy, ClaimedRoles: domain.ClaimedRoles(request.Properties)}
 	sign := s.odf.SignOdf
 	if family == "ooxml" {
 		sign = s.ooxml.SignOoxml
@@ -377,7 +377,7 @@ func (s NativePageSigner) signASiCS(ctx context.Context, request application.Pag
 		format = signing.Xades
 		signature, err = s.xades.SignXades(ctx, signapp.XadesRequest{Content: request.Data, Signer: request.Key, Level: level,
 			TimestampURL: tsa, Packaging: signing.XMLDetached, DocumentName: name, InASiC: true, Policy: policy,
-			ClaimedRoles: claimedRoles(request.Properties)})
+			ClaimedRoles: domain.ClaimedRoles(request.Properties)})
 	default:
 		return nil, domain.Failure{Code: domain.UnsupportedFormat, Cause: request.Format.Name}
 	}

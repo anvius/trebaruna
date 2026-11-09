@@ -100,7 +100,7 @@ trebaruna sign <document> [flags]
 | `--pass` | — | Passphrase for the P12 or PEM |
 | `--name` | from the certificate | Signer name recorded in the signature |
 | `--reason` | — | Reason for signing, shown in PDF viewers |
-| `--location` | — | Location of signing, shown in PDF viewers |
+| `--location` | — | Location of signing: a PDF's /Location, shown in PDF viewers; the city an XML signature declares (`SignatureProductionPlaceV2`) |
 | `--tsa` | — | RFC 3161 timestamp authority URL |
 | `--tsa-user`, `--tsa-pass` | — | Basic auth for the TSA, when it needs an account |
 | `--online-revocation` | off | Query OCSP and embed the answers in `/DSS`; required for `--level lt` and `lta` |

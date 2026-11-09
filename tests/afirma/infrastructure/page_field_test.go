@@ -6,7 +6,9 @@ package infrastructure_test
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -14,6 +16,7 @@ import (
 	"codeberg.org/simplicer/trebaruna/src/afirma/domain"
 	"codeberg.org/simplicer/trebaruna/src/afirma/infrastructure"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/pdffield"
+	"codeberg.org/simplicer/trebaruna/tests/support/afirmaserver"
 )
 
 // formWithField is onePagePDF with an empty signature field, Firma1.
@@ -73,5 +76,34 @@ func TestAnXAdESPageIsCoSignedAndCounterSigned(t *testing.T) {
 	output := string(countersigned.Signature)
 	if strings.Count(output, "<ds:Signature ") != 4 || strings.Count(output, "<xades:CounterSignature") != 2 {
 		t.Errorf("two signatures, each counter-signed:\n%.400s", output)
+	}
+}
+
+// TestThePersonSeesWhatTheSignatureWillDeclare: the policy, the roles and
+// the place the page asks for are in the proposal, and the XAdES signature
+// declares the place.
+func TestThePersonSeesWhatTheSignatureWillDeclare(t *testing.T) {
+	server := afirmaserver.New(t)
+	maria, _ := identity(t, "MARIA GARCIA", 61)
+	id, key := sessionID(), "11223344"
+	properties := base64.StdEncoding.EncodeToString([]byte("expPolicy=FirmaAGE\nsignerClaimedRoles=Apoderado|Notario\n" +
+		"signatureProductionCity=Sevilla\nsignatureProductionCountry=ES\nformat=XAdES Enveloped"))
+	uri := "afirma://sign?jvc=3&ver=3&op=sign&id=" + id + "&key=" + key + "&stservlet=" + url.QueryEscape(storage) +
+		"&format=XAdES&algorithm=SHA256withECDSA&properties=" + url.QueryEscape(properties) +
+		"&dat=" + url.QueryEscape(base64.StdEncoding.EncodeToString([]byte("<solicitud/>")))
+	invocation, err := domain.ParseInvocation(uri)
+	if err != nil {
+		t.Fatal(err)
+	}
+	recorder := &proposalRecorder{approving: approving{key: maria}}
+	if _, err := useCase(server, recorder).Execute(context.Background(), invocation); err != nil {
+		t.Fatal(err)
+	}
+	if proposal := recorder.proposal; proposal.Policy != "AGE 1.9" || strings.Join(proposal.Roles, "|") != "Apoderado|Notario" || proposal.Place != "Sevilla, ES" {
+		t.Errorf("the proposal: %+v", proposal)
+	}
+	signed := pageReads(t, server, id, key)[1]
+	if !strings.Contains(string(signed), "<xades:City>Sevilla</xades:City><xades:CountryName>ES</xades:CountryName>") {
+		t.Error("the signature declares the place")
 	}
 }

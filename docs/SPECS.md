@@ -45,6 +45,8 @@ user seeing what is signed and where anything goes.
 | Several documents in one run, same settings, one result per document | built |
 | Signature policies (EPES) in CAdES and XAdES: AGE 1.9 and 1.8, FacturaE 3.1 and 3.0 by name, with AutoFirma 1.9's digests; any other by identifier, digest and qualifier, never downloaded; a policy named by a URL only in XAdES | built |
 | Claimed roles in XAdES (`SignerRoleV2`) | built |
+| Production place in XAdES (`SignatureProductionPlaceV2`: `--location` as the city; afirma:// `signatureProductionCity`, `…Province`, `…PostalCode`, `…Country`) | built |
+| What a signature declares (policy, roles, place) shown by `verify`, the reports and the Check tab, and in the afirma:// approval before signing | built |
 | FacturaE invoices: unsigned `Facturae` documents, XAdES enveloped, FacturaE's policy, role `emisor` by default and only the policy's roles | built (not yet checked with the administration's own validator) |
 | Signature policies in PAdES (EPES), from the command line and afirma:// `expPolicy`: trebaruna's own incremental update and CMS envelope, in a new field with a seal per placement or none, or in a form's field | built |
 | XAdES detached: `<document>.xsig` beside the untouched document, which the signature names; verify finds it there or takes `--content` | built |

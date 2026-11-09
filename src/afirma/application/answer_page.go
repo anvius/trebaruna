@@ -220,6 +220,8 @@ func (u *AnswerPage) proposal(operation domain.Operation, common domain.Common, 
 	proposal := Proposal{
 		Operation: operation, Site: common.Site(), AppName: common.AppName, Format: format,
 		DataURL: payload.URL, ChooseFile: payload.Absent(), Filter: domain.FilterFrom(common.Properties),
+		Policy: domain.DeclaredPolicy(common.Properties), Roles: domain.ClaimedRoles(common.Properties),
+		Place: domain.DeclaredPlace(common.Properties),
 	}
 	if len(payload.Bytes) > 0 {
 		sum := sha256.Sum256(payload.Bytes)

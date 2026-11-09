@@ -437,6 +437,8 @@ func (u *SignDocument) xadesRequest(request Request, content []byte) XadesReques
 		Policy:          request.Policy,
 		ClaimedRoles:    request.ClaimedRoles,
 		Countersign:     request.Countersign,
+		// --location is the city an XML signature declares.
+		Place: domain.ProductionPlace{City: request.Location},
 	}
 }
 

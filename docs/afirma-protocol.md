@@ -378,7 +378,10 @@ Format-specific keys pass straight through to the signers; the most used by site
 (names from `PdfExtraParams`, `XAdESExtraParams`, `CAdESExtraParams`):
 `mode`, `policyIdentifier`, `policyIdentifierHash`, `policyIdentifierHashAlgorithm`,
 `policyQualifier`, `policyDescription`, `signerClaimedRoles`,
-`signatureProductionCity` / `…Province` / `…PostalCode` / `…Country`,
+`signatureProductionCity` / `…Province` / `…PostalCode` / `…Country` (trebaruna:
+a PDF's /Location takes the city, an XML signature declares all four in
+`SignatureProductionPlaceV2`; the approval shows them, with the policy and the
+roles, before anything is signed),
 `precalculatedHashAlgorithm` (data is already a digest), `format` (XAdES variant:
 `XAdES Detached`, `XAdES Enveloped`, `XAdES Enveloping`),
 `signatureSubFilter` (`adbe.pkcs7.detached` or `ETSI.CAdES.detached`),

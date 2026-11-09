@@ -289,3 +289,36 @@ func lastEnvelope(t *testing.T, signed []byte) ([]byte, []byte) {
 	}
 	return envelope, append(append([]byte{}, signed[:start]...), signed[end:end+length]...)
 }
+
+// TestXadesDeclaresWhereItWasMade: SignatureProductionPlaceV2 between the
+// policy and the roles, as the schema orders them; verify reads it back.
+func TestXadesDeclaresWhereItWasMade(t *testing.T) {
+	fixture := newFixture(t)
+	signer := buildPemSigner(t, readFile(t, fixture.keyPath), readFile(t, fixture.certPath))
+	age, _ := domain.NamedPolicy("age", domain.Xades)
+	request := buildXadesRequest(signer, []byte(`<solicitud/>`), false)
+	request.Policy, request.ClaimedRoles = age, []string{"Apoderado"}
+	request.Place = domain.ProductionPlace{City: "Alcalá de Henares", Province: "Madrid", PostalCode: "28801", Country: "ES"}
+	output, err := infrastructure.NewXadesSigner(nil).SignXades(t.Context(), request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	signed := string(output)
+	policyAt, placeAt, roleAt := strings.Index(signed, "<xades:SignaturePolicyIdentifier>"),
+		strings.Index(signed, "<xades:SignatureProductionPlaceV2><xades:City>Alcalá de Henares</xades:City>"+
+			"<xades:StateOrProvince>Madrid</xades:StateOrProvince><xades:PostalCode>28801</xades:PostalCode>"+
+			"<xades:CountryName>ES</xades:CountryName></xades:SignatureProductionPlaceV2>"),
+		strings.Index(signed, "<xades:SignerRoleV2>")
+	if policyAt < 0 || placeAt < policyAt || roleAt < placeAt {
+		t.Fatalf("policy %d, place %d, role %d", policyAt, placeAt, roleAt)
+	}
+	path := filepath.Join(t.TempDir(), "solicitud.xml")
+	if err := os.WriteFile(path, output, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	reports, err := verificationinfra.NewXadesVerifier().Extract(path)
+	if err != nil || len(reports) != 1 || reports[0].Integrity != verificationdomain.StatusGood ||
+		reports[0].Declared.Place != "Alcalá de Henares, Madrid, 28801, ES" {
+		t.Errorf("%+v %v", reports, err)
+	}
+}

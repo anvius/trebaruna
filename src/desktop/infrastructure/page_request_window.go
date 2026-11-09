@@ -175,6 +175,15 @@ func (r *pageRequest) present(proposal domain.PageProposal) {
 	if proposal.Format != "" && proposal.Operation != "batch" {
 		lines = append(lines, caption(fmt.Sprintf(m.PageFormat, proposal.Format)))
 	}
+	if proposal.Policy != "" {
+		lines = append(lines, caption(fmt.Sprintf(m.PagePolicy, proposal.Policy)))
+	}
+	if len(proposal.Roles) > 0 {
+		lines = append(lines, caption(fmt.Sprintf(m.PageRoles, strings.Join(proposal.Roles, ", "))))
+	}
+	if proposal.Place != "" {
+		lines = append(lines, caption(fmt.Sprintf(m.PagePlace, proposal.Place)))
+	}
 	switch {
 	case proposal.DataSize > 0:
 		data := selectableCaption()

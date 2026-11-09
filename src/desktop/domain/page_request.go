@@ -20,6 +20,10 @@ type PageProposal struct {
 	Warnings      []string
 	// Rejected says why the certificate chosen last was refused.
 	Rejected string
+	// Policy, Roles and Place are what the signature will declare.
+	Policy string
+	Roles  []string
+	Place  string
 }
 
 // PageItem is one document of a batch.

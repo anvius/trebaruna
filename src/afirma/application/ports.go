@@ -36,6 +36,11 @@ type Proposal struct {
 	Rejected string
 	Filter   domain.CertificateFilter
 	Warnings []string
+	// Policy, Roles and Place are what the page asks the signature to
+	// declare of itself.
+	Policy string
+	Roles  []string
+	Place  string
 }
 
 // Decision is the person's answer: approved, with the key to use.

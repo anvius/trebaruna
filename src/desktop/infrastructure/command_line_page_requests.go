@@ -69,6 +69,9 @@ type stepLine struct {
 	Filters       []string `json:"filters"`
 	Warnings      []string `json:"warnings"`
 	Rejected      string   `json:"rejected"`
+	Policy        string   `json:"policy"`
+	Roles         []string `json:"roles"`
+	Place         string   `json:"place"`
 	Items         []struct {
 		ID           string `json:"id"`
 		Format       string `json:"format"`
@@ -93,7 +96,8 @@ func (s *commandSession) Next() (domain.PageStep, error) {
 	}
 	proposal := domain.PageProposal{Operation: line.Operation, Site: line.Site, AppName: line.AppName, Format: line.Format,
 		DataSize: line.DataSize, DataSHA256: line.DataSHA256, DataURL: line.DataURL, ChooseFile: line.ChooseFile,
-		SuggestedName: line.SuggestedName, Filters: line.Filters, Warnings: line.Warnings, Rejected: line.Rejected}
+		SuggestedName: line.SuggestedName, Filters: line.Filters, Warnings: line.Warnings, Rejected: line.Rejected,
+		Policy: line.Policy, Roles: line.Roles, Place: line.Place}
 	for _, item := range line.Items {
 		proposal.Items = append(proposal.Items, domain.PageItem{ID: item.ID, Format: item.Format, Suboperation: item.Suboperation})
 	}

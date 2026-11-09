@@ -116,6 +116,8 @@ type XadesSigner interface {
 
 // XadesRequest carries everything an XML adapter needs.
 type XadesRequest struct {
+	// Place is the production place the signature declares.
+	Place domain.ProductionPlace
 	// Countersign ("leaves" or "all") counter-signs the XAdES signatures of
 	// the signed document in Content instead of signing it.
 	Countersign string
