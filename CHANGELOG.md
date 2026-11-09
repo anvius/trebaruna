@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Batch signing: `sign` takes several documents, signs each with the same
+  settings in its own format (or a forced one), reports one result per
+  document (`{"signed", "failed", "results", "network"}`) and exits 1 on a
+  partial batch. The desktop signs batches from several dropped files or a
+  folder (File → Sign a folder…).
+
 - CAdES parallel signatures and counter-signatures: `sign --cosign` adds a
   SignerInfo over the same content, `sign --countersign leaves|all` nests
   counter-signatures (no contentType, RFC 5652 §11.4), at levels B and T; a

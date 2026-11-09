@@ -106,3 +106,20 @@ func TestAnApproachingExpiryIsWorthMentioning(t *testing.T) {
 		t.Error("an expired certificate is expired, not expiring")
 	}
 }
+
+func TestABatchResolvesItsFormatPerDocument(t *testing.T) {
+	if formats := domain.BatchFormats(); len(formats) != 3 || formats[0] != domain.FormatEach {
+		t.Fatalf("BatchFormats = %v", formats)
+	}
+	cases := map[string]domain.SignatureFormat{
+		"/tmp/a.pdf": domain.FormatPAdES, "/tmp/b.xml": domain.FormatXAdES, "/tmp/c.docx": domain.FormatCAdES,
+	}
+	for path, want := range cases {
+		if got := domain.FormatEach.For(path); got != want {
+			t.Errorf("each.For(%s) = %s, want %s", path, got, want)
+		}
+		if got := domain.FormatCAdESDetached.For(path); got != domain.FormatCAdESDetached {
+			t.Errorf("a forced format stays as it is, got %s", got)
+		}
+	}
+}

@@ -5,9 +5,11 @@ package infrastructure
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"fyne.io/fyne/v2"
@@ -293,5 +295,61 @@ func TestExtractingReportsWhereTheDocumentWent(t *testing.T) {
 	}
 	if opened != filepath.Join(directory, "atto.pdf") {
 		t.Errorf("opened %q, want the extracted document", opened)
+	}
+}
+
+type collectingSigner struct {
+	mu      sync.Mutex
+	intents []domain.SigningIntent
+}
+
+func (s *collectingSigner) Sign(_ context.Context, intent domain.SigningIntent) (domain.Receipt, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.intents = append(s.intents, intent)
+	if strings.HasSuffix(intent.DocumentPath, "rotto.txt") {
+		return domain.Receipt{}, errors.New("unreadable")
+	}
+	return domain.Receipt{SignedPath: intent.OutputName()}, nil
+}
+
+func TestABatchSignsEachDocumentInItsFormat(t *testing.T) {
+	fixture := newFormFixture(t, scriptedCertificate{summary: qualifiedRossi()})
+	form := fixture.desktop.form
+	signer := &collectingSigner{}
+	form.signing = application.NewSignFromDesktop(signer, func(string) bool { return true })
+	form.setCertificate("/tmp/rossi.p12")
+
+	form.setDocuments([]string{"/tmp/a.pdf", "/tmp/b.xml", "/tmp/rotto.txt"})
+	if form.format != domain.FormatEach || len(form.formatChoice.Options) != 3 {
+		t.Fatalf("format %s, options %v", form.format, form.formatChoice.Options)
+	}
+	test.Tap(form.signButton)
+	settle(t, func() bool { return strings.HasPrefix(form.status.Text, "Firmados") })
+
+	signer.mu.Lock()
+	defer signer.mu.Unlock()
+	formats := []domain.SignatureFormat{}
+	for _, intent := range signer.intents {
+		formats = append(formats, intent.Format)
+	}
+	if len(formats) != 3 || formats[0] != domain.FormatPAdES || formats[1] != domain.FormatXAdES || formats[2] != domain.FormatCAdES {
+		t.Errorf("formats = %v", formats)
+	}
+	if !strings.Contains(form.status.Text, "Firmados 2 de 3") || !strings.Contains(form.status.Text, "rotto.txt") || form.status.Importance != widget.WarningImportance {
+		t.Errorf("status = %q", form.status.Text)
+	}
+}
+
+func TestAFolderOffersWhatIsWorthSigning(t *testing.T) {
+	directory := t.TempDir()
+	for _, name := range []string{"contratto.pdf", "fattura.xml", "contratto_signed.pdf", "vecchio.pdf.p7m", "chiave.p12", ".nascosto"} {
+		if err := os.WriteFile(filepath.Join(directory, name), []byte("x"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	got := documentsIn(directory)
+	if len(got) != 2 || filepath.Base(got[0]) != "contratto.pdf" || filepath.Base(got[1]) != "fattura.xml" {
+		t.Errorf("documentsIn = %v", got)
 	}
 }

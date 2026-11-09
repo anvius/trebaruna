@@ -179,6 +179,12 @@ Linux and Windows, `Cmd` on macOS):
 | Tools | Requests from web pages… | — |
 | Help | Manual, About trebaruna | — |
 
+Dropping several files on the signing tab, or **File → Sign a folder…**, starts
+a batch: every document with the same settings, each in its own format unless
+an envelope or a detached signature is chosen for all; PDFs get the seal in the
+corner of their first page (or none, with the invisible option); the result
+lists what failed and why.
+
 Dropping a file on the window does what the file suggests: a `.p12`, `.pfx` or
 `.pem` becomes the certificate; on the Check tab any file is checked; anywhere
 else it becomes the document to sign.

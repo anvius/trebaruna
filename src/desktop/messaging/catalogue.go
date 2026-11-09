@@ -195,6 +195,12 @@ type Catalogue struct {
 	FormatCountersignLabel string
 	FormatWrapLabel        string
 	CountersignatureOf     string
+	FormatEachLabel        string
+	BatchTitle             string
+	BatchSeal              string
+	BatchProgress          string
+	BatchDone              string
+	MenuSignFolder         string
 }
 
 // For returns the catalogue for a language.
@@ -349,6 +355,12 @@ var spanish = Catalogue{
 	FormatCountersignLabel:     "Contrafirmar: firmas sobre las firmas que ya tiene",
 	FormatWrapLabel:            "Envolver en otro sobre .p7m (modo antiguo)",
 	CountersignatureOf:         "Contrafirma de la firma %s",
+	FormatEachLabel:            "Cada uno en su formato: PDF firmado, XML firmado, .p7m para el resto",
+	BatchTitle:                 "%d documentos",
+	BatchSeal:                  "En un lote, cada PDF lleva el sello en la esquina inferior derecha de su primera página.",
+	BatchProgress:              "Firmando %d de %d…",
+	BatchDone:                  "Firmados %d de %d.",
+	MenuSignFolder:             "Firmar una carpeta…",
 }
 
 var italian = Catalogue{
@@ -491,6 +503,12 @@ var italian = Catalogue{
 	FormatCountersignLabel:     "Controfirma: firmi sopra le firme già presenti",
 	FormatWrapLabel:            "Racchiudi in un'altra busta .p7m (modo tradizionale)",
 	CountersignatureOf:         "Controfirma della firma %s",
+	FormatEachLabel:            "Ognuno nel suo formato: PDF firmato, XML firmato, .p7m per gli altri",
+	BatchTitle:                 "%d documenti",
+	BatchSeal:                  "In un lotto, ogni PDF riceve il timbro nell'angolo in basso a destra della prima pagina.",
+	BatchProgress:              "Firma %d di %d…",
+	BatchDone:                  "Firmati %d di %d.",
+	MenuSignFolder:             "Firma una cartella…",
 }
 
 var english = Catalogue{
@@ -633,6 +651,12 @@ var english = Catalogue{
 	FormatCountersignLabel:     "Counter-sign: you sign over the signatures already there",
 	FormatWrapLabel:            "Wrap in another .p7m envelope (the old way)",
 	CountersignatureOf:         "Counter-signature of signature %s",
+	FormatEachLabel:            "Each in its own format: signed PDF, signed XML, .p7m for the rest",
+	BatchTitle:                 "%d documents",
+	BatchSeal:                  "In a batch, every PDF gets the seal in the bottom-right corner of its first page.",
+	BatchProgress:              "Signing %d of %d…",
+	BatchDone:                  "Signed %d of %d.",
+	MenuSignFolder:             "Sign a folder…",
 }
 
 // LevelName renders a level name for display.

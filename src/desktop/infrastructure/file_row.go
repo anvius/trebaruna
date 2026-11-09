@@ -70,6 +70,17 @@ func (r *fileRow) show(path, note string) {
 	r.root.Refresh()
 }
 
+// showMany displays several files: a title and their names.
+func (r *fileRow) showMany(title, names string) {
+	r.name.SetText(title)
+	r.folder.SetText(names)
+	details := container.New(layout.NewCustomPaddedVBoxLayout(0), r.name, r.folder)
+	r.root.Objects = []fyne.CanvasObject{
+		container.NewBorder(nil, nil, nil, container.NewVBox(r.change), details),
+	}
+	r.root.Refresh()
+}
+
 // caption is a small, quiet, wrapping line of supporting text.
 func caption(text string) *widget.Label {
 	label := widget.NewLabel(text)

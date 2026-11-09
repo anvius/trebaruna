@@ -293,13 +293,17 @@ trebaruna sign mutuo.pdf --p12 k.p12 --pass x \
 
 ### Sign in bulk
 
+Name several documents: each is signed with the same settings and in its own
+format (signed PDF, signed XML, `.p7m` for the rest) unless `--format` forces
+one. One failure does not stop the others; the exit code is 1 when any failed.
+
 ```bash
-for f in *.pdf; do
-    trebaruna sign "$f" --p12 k.p12 --pass x --json || echo "FAILED: $f" >&2
-done
+trebaruna sign *.pdf fattura.xml --p12 k.p12 --json   # {"signed":…, "failed":…, "results":[…]}
+trebaruna sign *.docx --format cades --detached --p12 k.p12
 ```
 
-Each run is independent, so one failure does not stop the rest.
+`--out` names one file, so it is refused with several documents. In the desktop
+app, drop several files on the window, or use **File → Sign a folder…**.
 
 ### Sign and check in one go
 

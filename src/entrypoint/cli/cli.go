@@ -13,7 +13,6 @@ import (
 	"runtime/debug"
 	"strconv"
 	"strings"
-	"time"
 
 	"codeberg.org/simplicer/trebaruna/src/signing/application"
 	"codeberg.org/simplicer/trebaruna/src/signing/domain"
@@ -129,32 +128,20 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 	// convention (and every AI caller) writes `trebaruna sign FILE --flag`.
 	// The document is therefore extracted first and the flags are parsed from
 	// what remains, keeping both orders working.
-	documentPath, remaining, err := extractDocument(args)
-	if err != nil {
-		fmt.Fprintf(stderr, "%v\n", err)
+	documents, remaining := splitSignArguments(args)
+	if len(documents) == 0 {
+		fmt.Fprintln(stderr, "sign needs at least one document")
 		flags.Usage()
 		return exitUsage
 	}
 	if err := flags.Parse(remaining); err != nil {
 		return exitUsage
 	}
-
-	document, err := domain.OpenDocument(documentPath)
-	if err != nil {
-		fmt.Fprintf(stderr, "invalid document: %v\n", err)
+	if len(documents) > 1 && *output != "" {
+		fmt.Fprintln(stderr, "--out names one file; it cannot be used when signing several documents")
 		return exitUsage
 	}
 
-	// An explicit --format wins; otherwise the suffix decides, so `sign doc.xml`
-	// produces XAdES instead of failing because the default was PAdES.
-	signatureFormat := document.InferFormat()
-	if *format != "" {
-		signatureFormat, err = domain.ParseFormat(*format)
-		if err != nil {
-			fmt.Fprintf(stderr, "%v\n", err)
-			return exitUsage
-		}
-	}
 	signatureLevel, err := domain.ParseLevel(*level)
 	if err != nil {
 		fmt.Fprintf(stderr, "%v\n", err)
@@ -192,73 +179,66 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 		infrastructure.NewXadesSigner(timestamper),
 	)
 
-	artefact, err := useCase.Execute(context.Background(), application.Request{
-		Document:        document,
-		Format:          signatureFormat,
-		Level:           signatureLevel,
-		Signer:          signer,
-		OutputPath:      *output,
-		Placements:      placements,
-		Invisible:       *invisible,
-		Detached:        *detached,
-		Cosign:          *cosign,
-		Countersign:     *counter,
-		ContentPath:     *signedDoc,
-		Reason:          *reason,
-		Location:        *location,
-		TimestampURL:    *tsaURL,
-		TimestampUser:   *tsaUser,
-		TimestampSecret: secretFrom(*tsaSecret, tsaSecretVariable),
-		Enveloping:      *enveloping,
-		EmbedRevocation: *onlineRev,
-	})
-	if err != nil {
-		fmt.Fprintf(stderr, "signing failed: %v\n", err)
-		return exitInvalid
+	// Every document gets the same settings; each format is still inferred from
+	// its own suffix unless --format names one. One failure does not stop the
+	// others: a batch reports what happened to each document.
+	signOne := func(documentPath string) (application.Artefact, error) {
+		document, err := domain.OpenDocument(documentPath)
+		if err != nil {
+			return application.Artefact{}, fmt.Errorf("invalid document: %w", err)
+		}
+		signatureFormat := document.InferFormat()
+		if *format != "" {
+			if signatureFormat, err = domain.ParseFormat(*format); err != nil {
+				return application.Artefact{}, err
+			}
+		}
+		artefact, err := useCase.Execute(context.Background(), application.Request{
+			Document:        document,
+			Format:          signatureFormat,
+			Level:           signatureLevel,
+			Signer:          signer,
+			OutputPath:      *output,
+			Placements:      placements,
+			Invisible:       *invisible,
+			Detached:        *detached,
+			Cosign:          *cosign,
+			Countersign:     *counter,
+			ContentPath:     *signedDoc,
+			Reason:          *reason,
+			Location:        *location,
+			TimestampURL:    *tsaURL,
+			TimestampUser:   *tsaUser,
+			TimestampSecret: secretFrom(*tsaSecret, tsaSecretVariable),
+			Enveloping:      *enveloping,
+			EmbedRevocation: *onlineRev,
+		})
+		if err != nil {
+			return application.Artefact{}, fmt.Errorf("signing failed: %w", err)
+		}
+		return artefact, nil
 	}
 
-	if *asJSON {
-		encodeJSON(stdout, artefact)
+	if len(documents) == 1 {
+		artefact, err := signOne(documents[0])
+		if err != nil {
+			fmt.Fprintf(stderr, "%v\n", err)
+			return exitInvalid
+		}
+		if *asJSON {
+			encodeJSON(stdout, artefact)
+			return exitOK
+		}
+		printArtefact(stdout, artefact)
 		return exitOK
 	}
-
-	printArtefact(stdout, artefact)
-	return exitOK
+	return signBatch(documents, signOne, *asJSON, stdout, stderr)
 }
 
 // extractDocument pulls the single positional argument out of the argument
 // list, wherever it appears, and returns the flags around it.
 func extractDocument(args []string) (documentPath string, remaining []string, err error) {
-	valueFlags := map[string]bool{
-		"-format": true, "--format": true, "-level": true, "--level": true,
-		"-lang": true, "--lang": true, "-territory": true, "--territory": true,
-		"-out": true, "--out": true, "-p12": true, "--p12": true,
-		"-pem": true, "--pem": true, "-pass": true, "--pass": true,
-		"-pin": true, "--pin": true, "-token": true, "--token": true,
-		"-module": true, "--module": true, "-name": true, "--name": true,
-		"-reason": true, "--reason": true, "-location": true, "--location": true,
-		"-tsa": true, "--tsa": true, "-tsa-user": true, "--tsa-user": true,
-		"-tsa-pass": true, "--tsa-pass": true, "-page": true, "--page": true,
-		"-box": true, "--box": true,
-		"-content": true, "--content": true,
-		"-countersign": true, "--countersign": true,
-	}
-
-	var positional []string
-	for index := 0; index < len(args); index++ {
-		argument := args[index]
-		if valueFlags[argument] && index+1 < len(args) {
-			remaining = append(remaining, argument, args[index+1])
-			index++
-			continue
-		}
-		if len(argument) > 0 && argument[0] == '-' {
-			remaining = append(remaining, argument)
-			continue
-		}
-		positional = append(positional, argument)
-	}
-
+	positional, remaining := splitSignArguments(args)
 	switch len(positional) {
 	case 0:
 		return "", remaining, fmt.Errorf("sign needs a document path")
@@ -267,6 +247,29 @@ func extractDocument(args []string) (documentPath string, remaining []string, er
 	default:
 		return "", remaining, fmt.Errorf("sign takes one document, got %d: %v", len(positional), positional)
 	}
+}
+
+// signValueFlags are the sign flags that take a value, so the documents can
+// be told apart from flag values wherever the flags appear.
+var signValueFlags = map[string]bool{
+	"-format": true, "--format": true, "-level": true, "--level": true,
+	"-lang": true, "--lang": true, "-territory": true, "--territory": true,
+	"-out": true, "--out": true, "-p12": true, "--p12": true,
+	"-pem": true, "--pem": true, "-pass": true, "--pass": true,
+	"-pin": true, "--pin": true, "-token": true, "--token": true,
+	"-module": true, "--module": true, "-name": true, "--name": true,
+	"-reason": true, "--reason": true, "-location": true, "--location": true,
+	"-tsa": true, "--tsa": true, "-tsa-user": true, "--tsa-user": true,
+	"-tsa-pass": true, "--tsa-pass": true, "-page": true, "--page": true,
+	"-box": true, "--box": true,
+	"-content": true, "--content": true,
+	"-countersign": true, "--countersign": true,
+}
+
+// splitSignArguments separates the documents from the flags of `sign`.
+func splitSignArguments(args []string) (positional, remaining []string) {
+	remaining, positional = splitArguments(args, signValueFlags)
+	return positional, remaining
 }
 
 // signerOptions groups the key-source flags.
@@ -417,21 +420,8 @@ type artefactJSON struct {
 }
 
 func encodeJSON(writer io.Writer, artefact application.Artefact) {
-	payload := artefactJSON{
-		Path:           artefact.Path,
-		Format:         string(artefact.Format),
-		Standard:       artefact.Format.Standard(),
-		Level:          string(artefact.Level),
-		Size:           artefact.Size,
-		SignedAt:       artefact.SignedAt.Format(time.RFC3339),
-		Signer:         artefact.SignerName,
-		HasSeal:        artefact.HasSeal,
-		SealCount:      artefact.SealCount,
-		SelfSigned:     artefact.SelfSigned,
-		DocumentSHA256: artefact.DocumentDigest,
-		SignedSHA256:   artefact.SignedDigest,
-		Network:        connections(),
-	}
+	payload := receiptOf(artefact)
+	payload.Network = connections()
 	encoder := json.NewEncoder(writer)
 	encoder.SetIndent("", "  ")
 	encoder.SetEscapeHTML(false)

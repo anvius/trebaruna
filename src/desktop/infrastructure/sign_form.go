@@ -57,6 +57,8 @@ type signForm struct {
 	onNetwork func([]transparency.Connection)
 
 	document string
+	// batch holds the documents of a batch; empty when one document is signed.
+	batch []string
 	// fingerprint is the SHA-256 shown for the document; the receipt must
 	// report the same one, or the file changed between choosing and signing.
 	fingerprint string
@@ -225,6 +227,7 @@ func (f *signForm) pickDocument() {
 
 // setDocument adopts a document: its type decides the formats on offer.
 func (f *signForm) setDocument(path string) {
+	f.batch = nil
 	f.document = path
 	f.fingerprint = ""
 	go f.measure(path)
@@ -252,6 +255,15 @@ func (f *signForm) setDocument(path string) {
 }
 
 func (f *signForm) chooseFormat(label string) {
+	if len(f.batch) > 0 {
+		for _, format := range domain.BatchFormats() {
+			if f.formatLabel(format) == label {
+				f.format = format
+				f.batchChanged()
+			}
+		}
+		return
+	}
 	for _, format := range domain.FormatsFor(f.document) {
 		if f.formatLabel(format) == label && format != f.format {
 			f.format = format
@@ -329,6 +341,8 @@ func (f *signForm) formatLabel(format domain.SignatureFormat) string {
 		return f.m.FormatCosignLabel
 	case domain.FormatCountersign:
 		return f.m.FormatCountersignLabel
+	case domain.FormatEach:
+		return f.m.FormatEachLabel
 	}
 	return f.m.FormatPAdESLabel
 }
@@ -491,10 +505,108 @@ func (f *signForm) levelChanged() {
 	f.timestampBox.Hide()
 }
 
+// ---- batch ----
+
+// setDocuments adopts several documents at once; one is a normal document.
+func (f *signForm) setDocuments(paths []string) {
+	if len(paths) == 1 {
+		f.setDocument(paths[0])
+		return
+	}
+	f.batch = append([]string{}, paths...)
+	f.document = paths[0]
+	f.fingerprint = ""
+	f.signedPath = ""
+	f.afterSign.Hide()
+	f.status.SetText("")
+
+	f.format = domain.FormatEach
+	labels := make([]string, 0, 3)
+	for _, format := range domain.BatchFormats() {
+		labels = append(labels, f.formatLabel(format))
+	}
+	f.formatChoice.Options = labels
+	f.formatChoice.SetSelected(labels[0])
+	f.formatChoice.Show()
+	f.formatNote.Hide()
+	f.batchChanged()
+}
+
+// batchChanged lists the documents and says where the seals go.
+func (f *signForm) batchChanged() {
+	names := make([]string, 0, len(f.batch))
+	for _, path := range f.batch {
+		names = append(names, filepath.Base(path))
+	}
+	f.documentRow.showMany(fmt.Sprintf(f.m.BatchTitle, len(f.batch)), strings.Join(names, "\n"))
+	message := f.m.BatchSeal
+	if f.invisible.Checked {
+		message = f.m.InvisibleExplained
+	}
+	f.pages.empty(message)
+	f.sealNote.SetText(message)
+	f.sealNote.Show()
+	f.invisible.Enable()
+}
+
+// signBatch signs every document with the same settings, one after another,
+// and reports each one.
+func (f *signForm) signBatch(base domain.SigningIntent) {
+	documents := append([]string{}, f.batch...)
+	format := f.format
+	f.signButton.Disable()
+	f.afterSign.Hide()
+
+	go func() {
+		var failures []string
+		var signed []domain.Receipt
+		for index, document := range documents {
+			fyne.Do(func() { f.report(fmt.Sprintf(f.m.BatchProgress, index+1, len(documents)), widget.LowImportance) })
+			intent := base
+			intent.DocumentPath = document
+			intent.Format = format.For(document)
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+			receipt, err := f.signing.Execute(ctx, intent)
+			cancel()
+			if err != nil {
+				failures = append(failures, filepath.Base(document)+": "+translate(err, f.m))
+				continue
+			}
+			signed = append(signed, receipt)
+		}
+
+		fyne.Do(func() {
+			f.signButton.Enable()
+			var network []transparency.Connection
+			for _, receipt := range signed {
+				network = append(network, receipt.Network...)
+			}
+			if f.onNetwork != nil && len(network) > 0 {
+				f.onNetwork(network)
+			}
+			message := fmt.Sprintf(f.m.BatchDone, len(signed), len(documents))
+			importance := widget.SuccessImportance
+			if len(failures) > 0 {
+				message += "\n" + strings.Join(failures, "\n")
+				importance = widget.WarningImportance
+			}
+			if summary := summarise(network, f.m); summary != "" {
+				message += "\n" + summary
+			}
+			if len(signed) > 0 {
+				f.signedPath = signed[0].SignedPath
+				f.afterSign.Show()
+			}
+			f.report(message, importance)
+		})
+	}()
+}
+
 // ---- signing ----
 
 // sign validates, signs off the UI thread, and reports in place.
 func (f *signForm) sign() {
+
 	intent := domain.SigningIntent{
 		DocumentPath:      f.document,
 		Key:               domain.CertificateFile{Path: f.certificate, Passphrase: f.passphrase.Text},
@@ -512,6 +624,17 @@ func (f *signForm) sign() {
 		intent.Invisible = true
 	case f.format.HasVisibleSeal():
 		intent.Seal = f.pages.choice()
+	}
+	if len(f.batch) > 0 {
+		intent.Seal = domain.SealChoice{Page: 1}
+		intent.Invisible = f.invisible.Checked
+		intent.Format = f.format.For(f.batch[0])
+		if err := intent.Validate(); err != nil {
+			f.report(translate(err, f.m), widget.DangerImportance)
+			return
+		}
+		f.signBatch(intent)
+		return
 	}
 	if err := intent.Validate(); err != nil {
 		f.report(translate(err, f.m), widget.DangerImportance)

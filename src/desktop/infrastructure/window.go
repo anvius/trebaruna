@@ -161,6 +161,18 @@ func (w *Window) withTabs(signingContent fyne.CanvasObject) fyne.CanvasObject {
 		if len(items) == 0 || w.form == nil {
 			return
 		}
+		if len(items) > 1 && tabs.SelectedIndex() == 0 {
+			paths := make([]string, 0, len(items))
+			for _, item := range items {
+				if !isCertificateFile(item.Path()) {
+					paths = append(paths, item.Path())
+				}
+			}
+			if len(paths) > 0 {
+				w.form.setDocuments(paths)
+				return
+			}
+		}
 		w.dropped(items[0].Path(), tabs.SelectedIndex() == 1, checkFile)
 	})
 	return tabs
@@ -177,6 +189,28 @@ func (w *Window) dropped(path string, verifying bool, checkFile func(string)) {
 	default:
 		w.form.setDocument(path)
 	}
+}
+
+// documentsIn lists the files of a folder worth signing: not hidden, not a
+// key bundle, and not something this program already produced.
+func documentsIn(folder string) []string {
+	entries, err := os.ReadDir(folder)
+	if err != nil {
+		return nil
+	}
+	var documents []string
+	for _, entry := range entries {
+		name := entry.Name()
+		lower := strings.ToLower(name)
+		switch {
+		case entry.IsDir(), strings.HasPrefix(name, "."), isCertificateFile(name),
+			strings.HasSuffix(lower, ".p7m"), strings.HasSuffix(lower, ".p7s"),
+			strings.Contains(lower, "_signed."):
+			continue
+		}
+		documents = append(documents, filepath.Join(folder, name))
+	}
+	return documents
 }
 
 // isCertificateFile recognises a key bundle by its suffix.
@@ -199,6 +233,18 @@ func (w *Window) mainMenu(tabs *container.AppTabs, checkFile func(string)) *fyne
 		w.form.pickDocument()
 	})
 	openDocument.Shortcut = &desktop.CustomShortcut{KeyName: fyne.KeyO, Modifier: control}
+
+	signFolder := fyne.NewMenuItem(m.MenuSignFolder, func() {
+		tabs.SelectIndex(0)
+		dialog.ShowFolderOpen(func(folder fyne.ListableURI, err error) {
+			if err != nil || folder == nil {
+				return
+			}
+			if documents := documentsIn(folder.Path()); len(documents) > 0 {
+				w.form.setDocuments(documents)
+			}
+		}, w.window)
+	})
 
 	chooseCertificate := fyne.NewMenuItem(m.MenuChooseCertificate, func() {
 		tabs.SelectIndex(0)
@@ -225,7 +271,7 @@ func (w *Window) mainMenu(tabs *container.AppTabs, checkFile func(string)) *fyne
 	freeSpace.Shortcut = &desktop.CustomShortcut{KeyName: fyne.KeyF, Modifier: control}
 
 	return fyne.NewMainMenu(
-		fyne.NewMenu(m.MenuFile, openDocument, chooseCertificate, fyne.NewMenuItemSeparator(), checkDocument),
+		fyne.NewMenu(m.MenuFile, openDocument, signFolder, chooseCertificate, fyne.NewMenuItemSeparator(), checkDocument),
 		fyne.NewMenu(m.MenuSignature, sign, fyne.NewMenuItemSeparator(), previous, next, freeSpace),
 		fyne.NewMenu(m.MenuTools,
 			fyne.NewMenuItem(m.MenuNetwork, w.showNetworkActivity),

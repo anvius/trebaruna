@@ -27,7 +27,24 @@ const (
 
 	// FormatCountersign counter-signs the signatures of an existing envelope.
 	FormatCountersign SignatureFormat = "countersign"
+
+	// FormatEach signs every document of a batch in its own conventional
+	// format: signed PDF, signed XML, .p7m for anything else.
+	FormatEach SignatureFormat = "each"
 )
+
+// BatchFormats lists what a batch can be signed as.
+func BatchFormats() []SignatureFormat {
+	return []SignatureFormat{FormatEach, FormatCAdES, FormatCAdESDetached}
+}
+
+// For resolves the batch choice for one document.
+func (f SignatureFormat) For(documentPath string) SignatureFormat {
+	if f == FormatEach {
+		return FormatsFor(documentPath)[0]
+	}
+	return f
+}
 
 // FormatsFor lists the formats that make sense for a document, the
 // conventional one first. A PDF or an XML may also go in a .p7m envelope,

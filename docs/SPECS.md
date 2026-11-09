@@ -41,7 +41,7 @@ user seeing what is signed and where anything goes.
 | CAdES detached (`.p7s`), verified with the document beside it | built |
 | Parallel signatures (co-signing) and counter-signatures on CAdES, levels B and T | built |
 | Parallel signatures and counter-signatures on XAdES | planned (B5) |
-| Several documents in one run, same settings, one result per document | planned (B6) |
+| Several documents in one run, same settings, one result per document | built |
 | Signature policies (EPES): AGE, FacturaE; FacturaE invoices | planned (E1) |
 | XAdES detached and plain XMLDSig | planned (E2) |
 | ASiC-S / ASiC-E signed in one step | planned (E3) |
