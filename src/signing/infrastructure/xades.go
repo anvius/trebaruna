@@ -121,6 +121,9 @@ func (s *XadesSigner) SignXades(ctx context.Context, request application.XadesRe
 	}
 	defer keyPair.Close()
 
+	if request.Countersign != "" {
+		return s.countersignXades(ctx, request, keyPair)
+	}
 	if request.Plain && (request.Level != domain.BES || !request.Policy.IsZero() || len(request.ClaimedRoles) > 0) {
 		return nil, fmt.Errorf("XMLDSig signatures carry no signed properties: no timestamp, policy or role; use XAdES")
 	}

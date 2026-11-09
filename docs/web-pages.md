@@ -262,7 +262,8 @@ post-signers: the documents stay on the site, the key signs what its server
 prepares from them (each `PRE`, hashed and signed with RSA or ECDSA), and the
 post-signer's result goes back to the page; the person is shown every document
 of the batch first. A local batch (`localBatchProcess`) is signed document by
-document here. Formats: CAdES (implicit or explicit, co- and counter-signatures),
+document here. Formats: CAdES and XAdES (implicit or explicit, co- and
+counter-signatures; an XML co-signature signs the signed file again, enveloped),
 PAdES (invisible unless the page places the seal; `signatureRubricImage` draws
 its image beside the certificate data in that seal), XAdES (enveloping when the
 page names no variant, as AutoFirma; enveloped; and "XAdES Detached", the

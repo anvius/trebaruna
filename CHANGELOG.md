@@ -73,6 +73,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- XAdES counter-signatures inside the document: `sign doc_signed.xml
+  --countersign leaves|all` adds, in each chosen signature's
+  UnsignedSignatureProperties, an xades:CounterSignature: a XAdES signature
+  whose reference (type CountersignedSignature) is that signature's
+  SignatureValue, given an Id when it had none. Levels B and T; plain
+  XMLDSig signatures are skipped. The signatures that verified before must
+  verify after, or nothing is written. afirma:// pages co-sign a signed XML
+  (signed again, enveloped) and counter-sign it (`target` tree → all), where
+  both were refused; `auto` recognises a signed XML. verify names each XML
+  signature (XMLSignature #n when several), says what a counter-signature
+  counter-signs, and no longer reads it as a partial signature.
+
 - Signatures added to a CAdES envelope (co-signature, counter-signatures)
   take levels LT and LTA, refused until now. At LT the added SignerInfo
   carries its chain's revocation values (asked before signing, so a

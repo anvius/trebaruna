@@ -17,7 +17,7 @@ import (
 // the signature itself (detached and enveloping signatures).
 func describeCoverage(document *etree.Document, signature *etree.Element, report *domain.SignerReport) {
 	root := document.Root()
-	if root == nil || root == signature {
+	if root == nil || root == signature || countersigned(document, signature) != nil {
 		return
 	}
 	covered := map[*etree.Element]bool{}
@@ -78,4 +78,34 @@ func qualifiedTag(element *etree.Element) string {
 		return element.Tag
 	}
 	return element.Space + ":" + element.Tag
+}
+
+// typeCountersignedSignature marks a counter-signature's reference.
+const typeCountersignedSignature = "http://uri.etsi.org/01903#CountersignedSignature"
+
+// countersigned is the signature a counter-signature signs: the one holding
+// it, whose SignatureValue its CountersignedSignature reference names.
+// Anything else is not a counter-signature.
+func countersigned(document *etree.Document, signature *etree.Element) *etree.Element {
+	var holder *etree.Element
+	for parent := signature.Parent(); parent != nil; parent = parent.Parent() {
+		if isSignature(parent) {
+			holder = parent
+			break
+		}
+	}
+	if holder == nil {
+		return nil
+	}
+	for _, reference := range signature.FindElements("./SignedInfo/Reference") {
+		uri := reference.SelectAttrValue("URI", "")
+		if reference.SelectAttrValue("Type", "") != typeCountersignedSignature || !strings.HasPrefix(uri, "#") {
+			continue
+		}
+		value, err := xmldsig.ElementByID(document.Root(), uri[1:])
+		if err == nil && value.Tag == "SignatureValue" && value.Parent() == holder {
+			return holder
+		}
+	}
+	return nil
 }

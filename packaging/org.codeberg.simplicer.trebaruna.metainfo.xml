@@ -54,6 +54,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.52.0-unstable" date="2026-11-09">
+      <description>
+        <p>XAdES signatures are counter-signed inside the document, from the command line and from web pages.</p>
+      </description>
+    </release>
     <release version="0.51.0-unstable" date="2026-11-09">
       <description>
         <p>Signatures added to a CAdES envelope take levels LT and LTA.</p>

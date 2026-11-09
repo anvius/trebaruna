@@ -116,9 +116,12 @@ type XadesSigner interface {
 
 // XadesRequest carries everything an XML adapter needs.
 type XadesRequest struct {
-	Content []byte
-	Signer  domain.Signer
-	Level   domain.Level
+	// Countersign ("leaves" or "all") counter-signs the XAdES signatures of
+	// the signed document in Content instead of signing it.
+	Countersign string
+	Content     []byte
+	Signer      domain.Signer
+	Level       domain.Level
 	// Packaging is how the signature holds Content; empty is enveloped.
 	Packaging domain.XMLPackaging
 	// Plain writes an XMLDSig signature: no XAdES properties, so level B

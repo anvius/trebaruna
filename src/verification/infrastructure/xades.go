@@ -137,9 +137,21 @@ func (v *XadesVerifier) Extract(path string) ([]domain.SignerReport, error) {
 	}
 	// Every signature is judged: a co-signed document carries several, and
 	// reporting the first alone would vouch for the others unseen.
+	names := map[*etree.Element]string{}
+	for index, signature := range signatures {
+		names[signature] = "XMLSignature"
+		if len(signatures) > 1 {
+			names[signature] = fmt.Sprintf("XMLSignature #%d", index+1)
+		}
+	}
 	reports := make([]domain.SignerReport, 0, len(signatures))
 	for _, signature := range signatures {
-		reports = append(reports, v.report(document, signature, path))
+		report := v.report(document, signature, path)
+		report.FieldName = names[signature]
+		if target := countersigned(document, signature); target != nil {
+			report.Countersigns = names[target]
+		}
+		reports = append(reports, report)
 	}
 	return reports, nil
 }

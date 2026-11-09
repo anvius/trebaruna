@@ -267,8 +267,11 @@ func (u *SignDocument) validate(request Request) error {
 	if len(request.ClaimedRoles) > 0 && request.Format != domain.Xades && !request.Format.IsOfficePackage() {
 		return fmt.Errorf("a claimed role goes in XAdES signatures, not %s", request.Format)
 	}
-	if (request.Cosign || request.Countersign != "") && request.Format != domain.Cades {
+	if request.Cosign && request.Format != domain.Cades {
 		return fmt.Errorf("signatures are added to CAdES envelopes (.p7m, .p7s); %s is signed again by signing the signed file", request.Format)
+	}
+	if request.Countersign != "" && request.Format != domain.Cades && request.Format != domain.Xades {
+		return fmt.Errorf("counter-signatures go in CAdES envelopes and XAdES signatures, not in %s", request.Format)
 	}
 	if request.Countersign != "" && request.Countersign != "leaves" && request.Countersign != "all" {
 		return fmt.Errorf("--countersign takes leaves or all, not %q", request.Countersign)
@@ -433,6 +436,7 @@ func (u *SignDocument) xadesRequest(request Request, content []byte) XadesReques
 		TimestampSecret: request.TimestampSecret,
 		Policy:          request.Policy,
 		ClaimedRoles:    request.ClaimedRoles,
+		Countersign:     request.Countersign,
 	}
 }
 

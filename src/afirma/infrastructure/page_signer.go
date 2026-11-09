@@ -18,6 +18,7 @@ import (
 	signapp "codeberg.org/simplicer/trebaruna/src/signing/application"
 	signing "codeberg.org/simplicer/trebaruna/src/signing/domain"
 	signinfra "codeberg.org/simplicer/trebaruna/src/signing/infrastructure"
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/xmldsig"
 )
 
 // NativePageSigner signs with trebaruna's own CAdES, PAdES and XAdES signers,
@@ -100,7 +101,8 @@ func (s NativePageSigner) Sign(ctx context.Context, request application.PageSign
 
 // detectFamily applies auto (A.9): PDF → PAdES, a FacturaE invoice →
 // FacturaE, other XML → XAdES, anything else CAdES; for co- and
-// counter-signatures, the input signature decides.
+// counter-signatures, the input signature decides: a CMS envelope, or a
+// signed XML.
 func detectFamily(crypto domain.Operation, data []byte) string {
 	trimmed := bytes.TrimSpace(data)
 	switch {
@@ -114,6 +116,9 @@ func detectFamily(crypto domain.Operation, data []byte) string {
 		return "cades"
 	case len(trimmed) > 0 && trimmed[0] == 0x30:
 		return "cades"
+	case bytes.HasPrefix(trimmed, []byte("<")) && bytes.Contains(data, []byte(xmldsig.Namespace)):
+		// A signed XML: its signatures are co- or counter-signed in XAdES.
+		return "xades"
 	}
 	return ""
 }
@@ -231,13 +236,28 @@ func sealFrom(properties map[string]string) (signing.SealPlacement, bool, error)
 // always enveloped, claiming the issuer's role unless the page names another.
 func (s NativePageSigner) signXades(ctx context.Context, request application.PageSignature, level signing.Level, tsa string,
 	policy signing.SignaturePolicy) ([]byte, error) {
-	if request.Crypto != domain.Sign {
-		return nil, domain.Failure{Code: domain.UnsupportedOperation, Cause: "XAdES co- and counter-signatures are not supported yet"}
+	plain := request.Format.Family == "xmldsig"
+	if request.Crypto == domain.Countersign {
+		if plain {
+			return nil, domain.Failure{Code: domain.UnsupportedOperation, Cause: "an XMLDSig signature has no properties to hold a counter-signature"}
+		}
+		signature, err := s.xades.SignXades(ctx, signapp.XadesRequest{Content: request.Data, Signer: request.Key, Level: level,
+			TimestampURL: tsa, Policy: policy, ClaimedRoles: claimedRoles(request.Properties), Countersign: domain.CounterTarget(request.Properties)})
+		if err != nil {
+			return nil, domain.Failure{Code: domain.SignatureFailed, Cause: err.Error()}
+		}
+		return signature, nil
 	}
 	// AutoFirma's "XAdES Detached" keeps the data inside a new document, beside
-	// the signature (AFIRMA/CONTENT), so the page receives one file.
+	// the signature (AFIRMA/CONTENT), so the page receives one file. A
+	// co-signature is the signed document signed again, enveloped: the new
+	// signature leaves the others out.
+	variant := xadesPackaging(request)
+	if request.Crypto == domain.Cosign {
+		variant = "enveloped"
+	}
 	var packaging signing.XMLPackaging
-	switch xadesPackaging(request) {
+	switch variant {
 	case "enveloping":
 		packaging = signing.XMLEnveloping
 	case "detached":
@@ -248,11 +268,10 @@ func (s NativePageSigner) signXades(ctx context.Context, request application.Pag
 		}
 		packaging = signing.XMLEnveloped
 	default:
-		return nil, domain.Failure{Code: domain.UnsupportedFormat, Cause: "XAdES " + xadesPackaging(request)}
+		return nil, domain.Failure{Code: domain.UnsupportedFormat, Cause: "XAdES " + variant}
 	}
 	// XMLDSig has no signed properties: AutoFirma leaves the roles out, and so
 	// does this. A policy was refused before, a timestamp is refused here.
-	plain := request.Format.Family == "xmldsig"
 	if plain && level != signing.BES {
 		return nil, domain.Failure{Code: domain.UnsupportedOperation, Cause: "XMLDSig signatures carry no timestamp; ask for XAdES"}
 	}

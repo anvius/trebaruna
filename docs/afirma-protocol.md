@@ -427,7 +427,8 @@ constants in `core:signers/AOSignConstants`):
 
 Unknown name → `SAF_06`. `auto` for `sign`: PDF → PAdES, FacturaE → FacturaE,
 other XML → XAdES, anything else → CAdES; for `cosign`/`countersign`: the format
-of the input signature, or `SAF_17` if not recognised
+of the input signature (a CMS envelope → CAdES, a signed XML → XAdES), or `SAF_17`
+if not recognised
 (`launch:ProtocolInvocationLauncherUtil#identifyFormatFromData`).
 
 Algorithm: the digest part of `algorithm` is kept and the suffix is **recomputed

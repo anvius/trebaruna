@@ -336,6 +336,17 @@ an archive-time-stamp-v3 seals the parallel signature added, or each signature
 that took counter-signatures, which seals them with it. A detached `.p7s` needs
 its document to be co-signed, or counter-signed at LTA: `--content atto.pdf`.
 
+A signed XML document is counter-signed in place too: `sign acta_signed.xml
+--countersign leaves` (or `all`) adds a XAdES signature over each chosen
+signature's `SignatureValue` (a reference of type
+`http://uri.etsi.org/01903#CountersignedSignature`), inside that signature's
+`UnsignedSignatureProperties` as `xades:CounterSignature`; the countersigned
+`SignatureValue` gets an `Id` if it had none. Levels B and T; plain XMLDSig
+signatures, which have no properties to hold one, are left alone. Every
+signature that verified before must verify after, or nothing is written: a
+signature whose enveloped transform removes only itself covers the others and
+would break. A parallel XML signature is the signed file signed again.
+
 `verify` checks each signature of the tree on its own — digest, signature,
 timestamp, chain — and reports counter-signatures under the signature they
 counter-sign. Envelopes co-signed by other tools (for example

@@ -5,11 +5,14 @@ package infrastructure_test
 // lacks is refused.
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
 
+	"codeberg.org/simplicer/trebaruna/src/afirma/application"
 	"codeberg.org/simplicer/trebaruna/src/afirma/domain"
+	"codeberg.org/simplicer/trebaruna/src/afirma/infrastructure"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/pdffield"
 )
 
@@ -44,4 +47,31 @@ func TestAPageSignsInTheFormsField(t *testing.T) {
 
 	_, err = signPage(t, "PAdES", map[string]string{"signatureField": "Firma9"}, formWithField())
 	wantFailure(t, err, domain.SignatureFailed, "a field the form lacks")
+}
+
+// TestAnXAdESPageIsCoSignedAndCounterSigned: a co-signature signs the
+// signed XML again, a counter-signature (target "tree": all) goes inside
+// the signatures it signs.
+func TestAnXAdESPageIsCoSignedAndCounterSigned(t *testing.T) {
+	maria, _ := identity(t, "MARIA GARCIA", 31)
+	signer := infrastructure.NewNativePageSigner()
+	signed, err := signer.Sign(context.Background(), application.PageSignature{Crypto: domain.Sign, Format: format(t, "XAdES Enveloped"),
+		Algorithm: "SHA256", Properties: map[string]string{}, Data: []byte("<solicitud/>"), Key: maria})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cosigned, err := signer.Sign(context.Background(), application.PageSignature{Crypto: domain.Cosign, Format: format(t, "auto"),
+		Algorithm: "SHA256", Properties: map[string]string{}, Data: signed.Signature, Key: maria})
+	if err != nil {
+		t.Fatal(err)
+	}
+	countersigned, err := signer.Sign(context.Background(), application.PageSignature{Crypto: domain.Countersign, Format: format(t, "auto"),
+		Algorithm: "SHA256", Properties: map[string]string{"target": "tree"}, Data: cosigned.Signature, Key: maria})
+	if err != nil {
+		t.Fatal(err)
+	}
+	output := string(countersigned.Signature)
+	if strings.Count(output, "<ds:Signature ") != 4 || strings.Count(output, "<xades:CounterSignature") != 2 {
+		t.Errorf("two signatures, each counter-signed:\n%.400s", output)
+	}
 }
