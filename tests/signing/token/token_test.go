@@ -1,3 +1,5 @@
+//go:build cgo
+
 package infrastructure_test
 
 // The PKCS#11 path was never exercised: it compiled and nothing else. These tests
@@ -245,6 +247,15 @@ func TestTokenSignsWhenTheSessionStaysOpen(t *testing.T) {
 // throwaway CA sign it.
 func issueCertificateForToken(t *testing.T, token softHSM, identifier string) []byte {
 	t.Helper()
+	return issueCertificateWithUsage(t, token, identifier, "")
+}
+
+// issueCertificateWithUsage is issueCertificateForToken with a key usage
+// extension ("nonRepudiation", "digitalSignature", ...), so a card can carry an
+// authentication and a signature certificate like a real one. Every
+// certificate of a token is issued by the same CA, with its own serial.
+func issueCertificateWithUsage(t *testing.T, token softHSM, identifier, keyUsage string) []byte {
+	t.Helper()
 
 	openssl, err := exec.LookPath("openssl")
 	if err != nil {
@@ -256,14 +267,14 @@ func issueCertificateForToken(t *testing.T, token softHSM, identifier string) []
 	}
 
 	// The public key, as DER and PEM.
-	publicPath := filepath.Join(token.directory, "public.der")
+	publicPath := filepath.Join(token.directory, "public-"+identifier+".der")
 	command := exec.Command(tool, "--module", token.module, "--token-label", token.label, "--login", "--pin", token.pin,
 		"--id", identifier, "--read-object", "--type", "pubkey", "--output-file", publicPath)
 	if output, err := command.CombinedOutput(); err != nil {
 		t.Fatalf("read public key: %v\n%s", err, output)
 	}
 
-	publicPEM := filepath.Join(token.directory, "public.pem")
+	publicPEM := filepath.Join(token.directory, "public-"+identifier+".pem")
 	der, err := os.ReadFile(publicPath)
 	if err != nil {
 		t.Fatalf("read public key: %v", err)
@@ -275,19 +286,21 @@ func issueCertificateForToken(t *testing.T, token softHSM, identifier string) []
 	// A CA to sign it.
 	caKey := filepath.Join(token.directory, "ca.key")
 	caCert := filepath.Join(token.directory, "ca.pem")
-	generate := exec.Command(openssl, "req", "-x509", "-newkey", "rsa:2048", "-nodes",
-		"-keyout", caKey, "-out", caCert, "-days", "2", "-subj", "/CN=Token Test CA")
-	if output, err := generate.CombinedOutput(); err != nil {
-		t.Fatalf("create CA: %v\n%s", err, output)
+	if _, err := os.Stat(caCert); err != nil {
+		generate := exec.Command(openssl, "req", "-x509", "-newkey", "rsa:2048", "-nodes",
+			"-keyout", caKey, "-out", caCert, "-days", "2", "-subj", "/CN=Token Test CA")
+		if output, err := generate.CombinedOutput(); err != nil {
+			t.Fatalf("create CA: %v\n%s", err, output)
+		}
 	}
 
 	// The CSR is built and signed by the token itself, so the certificate binds
 	// the key that will actually sign. Fetching a certificate for a different key
 	// is the mistake that produced "Signature is Invalid" the first time.
-	request := filepath.Join(token.directory, "request.der")
+	request := filepath.Join(token.directory, "request-"+identifier+".der")
 	buildCertificationRequest(t, token, identifier, request)
 
-	signature := filepath.Join(token.directory, "request.sig")
+	signature := filepath.Join(token.directory, "request-"+identifier+".sig")
 	sign := exec.Command(tool, "--module", token.module, "--token-label", token.label, "--login", "--pin", token.pin,
 		"--id", identifier, "--sign", "--mechanism", "SHA256-RSA-PKCS",
 		"--input-file", request, "--output-file", signature)
@@ -295,12 +308,20 @@ func issueCertificateForToken(t *testing.T, token softHSM, identifier string) []
 		t.Fatalf("sign the request: %v\n%s", err, output)
 	}
 
-	csr := filepath.Join(token.directory, "request.csr")
+	csr := filepath.Join(token.directory, "request-"+identifier+".csr")
 	assembleCertificationRequest(t, request, signature, csr)
 
-	certificate := filepath.Join(token.directory, "certificate.pem")
-	issue := exec.Command(openssl, "x509", "-req", "-in", csr, "-CA", caCert,
-		"-CAkey", caKey, "-CAcreateserial", "-days", "2", "-out", certificate)
+	certificate := filepath.Join(token.directory, "certificate-"+identifier+".pem")
+	arguments := []string{"x509", "-req", "-in", csr, "-CA", caCert,
+		"-CAkey", caKey, "-CAcreateserial", "-days", "2", "-out", certificate}
+	if keyUsage != "" {
+		extensions := filepath.Join(token.directory, "usage-"+identifier+".cnf")
+		if err := os.WriteFile(extensions, []byte("keyUsage = critical, "+keyUsage+"\n"), 0o600); err != nil {
+			t.Fatalf("write extensions: %v", err)
+		}
+		arguments = append(arguments, "-extfile", extensions)
+	}
+	issue := exec.Command(openssl, arguments...)
 	if output, err := issue.CombinedOutput(); err != nil {
 		t.Fatalf("issue certificate: %v\n%s", err, output)
 	}
@@ -315,7 +336,7 @@ func issueCertificateForToken(t *testing.T, token softHSM, identifier string) []
 func buildCertificationRequest(t *testing.T, token softHSM, identifier, path string) {
 	t.Helper()
 
-	publicPath := filepath.Join(token.directory, "public.der")
+	publicPath := filepath.Join(token.directory, "public-"+identifier+".der")
 	spki, err := os.ReadFile(publicPath)
 	if err != nil {
 		t.Fatalf("read public key: %v", err)
@@ -364,7 +385,7 @@ func importCertificate(t *testing.T, token softHSM, identifier, label string, ce
 		t.Skip("pkcs11-tool is not available")
 	}
 
-	path := filepath.Join(token.directory, "import.pem")
+	path := filepath.Join(token.directory, "import-"+identifier+".pem")
 	if err := os.WriteFile(path, certificate, 0o600); err != nil {
 		t.Fatalf("write certificate: %v", err)
 	}

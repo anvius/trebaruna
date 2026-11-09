@@ -24,6 +24,20 @@ type KeyPair struct {
 	Name        string
 	SelfSigned  bool
 	KeySource   domain.KeySource
+
+	// release ends the card session the Signer works through; nil for keys
+	// read from a file.
+	release func() error
+}
+
+// Close ends the card session once the signature is made. A process that
+// signs more than once, such as the local API, would otherwise hold every
+// session open and keep seeing the readers as they were the first time.
+func (k KeyPair) Close() error {
+	if k.release == nil {
+		return nil
+	}
+	return k.release()
 }
 
 // Certificates returns the leaf first, then the issuers.

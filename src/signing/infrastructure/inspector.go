@@ -19,8 +19,9 @@ type CertificateInspector struct{}
 func (CertificateInspector) Resolve(signer domain.Signer) (application.Identity, error) {
 	keyPair, err := LoadKeyPair(signer)
 	if err != nil {
-		return application.Identity{}, fmt.Errorf("inspect signer %q: %w", signer.Name(), err)
+		return application.Identity{}, fmt.Errorf("read the signing certificate: %w", err)
 	}
+	defer keyPair.Close()
 
 	return application.Identity{
 		Holder:     keyPair.Name,

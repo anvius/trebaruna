@@ -89,7 +89,8 @@ trebaruna sign <document> [flags]
 | `--p12` | — | PKCS#12 file with the certificate and key |
 | `--pem` | — | PEM bundle containing certificate and key |
 | `--token` | — | PKCS#11 token label (needs `trebaruna-token`) |
-| `--module` | system | PKCS#11 module path |
+| `--certificate` | the signing one | Certificate of the card: serial or SHA-256 fingerprint (8+ digits); finds the card without `--token` |
+| `--module` | OpenSC, found on the system | PKCS#11 module path |
 | `--pin` | — | Smartcard PIN |
 | `--pass` | — | Passphrase for the P12 or PEM |
 | `--name` | from the certificate | Signer name recorded in the signature |
@@ -186,9 +187,12 @@ trebaruna sign backup.zip --format cades --pem bundle.pem
 Sign from a smartcard:
 
 ```bash
-trebaruna-token sign atto.pdf --token "Carta Nazionale" --pin 123456 \
-    --module /usr/lib/x86_64-linux-gnu/opensc-pkcs11.so
+trebaruna-token sign atto.pdf --token "Carta Nazionale"     # PIN from $TREBARUNA_PIN
+trebaruna-token sign atto.pdf --certificate 4a2b1d          # the card holding it
 ```
+
+OpenSC is found on its own (`--module` for a vendor driver); see
+[smartcards](smartcards.md) for how the card and the certificate are chosen.
 
 ### Notes
 

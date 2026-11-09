@@ -63,6 +63,7 @@ func (s *PadesSigner) SignPades(ctx context.Context, request application.PadesRe
 	if err != nil {
 		return nil, err
 	}
+	defer keyPair.Close()
 
 	document, err := pdfsign.Open(bytes.NewReader(request.Content), int64(len(request.Content)))
 	if err != nil {

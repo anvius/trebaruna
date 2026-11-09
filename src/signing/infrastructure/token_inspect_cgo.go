@@ -83,6 +83,7 @@ func inspectToken(module, pin string) ([]TokenSlot, error) {
 		entry.Manufacturer = strings.TrimSpace(token.ManufacturerID)
 		entry.LoginState = describeLoginState(token)
 		entry.Certificates = readCertificates(context, slot, pin)
+		markDefault(entry.Certificates)
 
 		result = append(result, entry)
 	}

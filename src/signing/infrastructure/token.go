@@ -3,7 +3,9 @@ package infrastructure
 import (
 	"crypto"
 	"crypto/x509"
+	"errors"
 	"fmt"
+	"strings"
 
 	"codeberg.org/simplicer/trebaruna/src/signing/domain"
 	"codeberg.org/simplicer/trebaruna/src/signing/domain/identity"
@@ -36,26 +38,37 @@ func loadToken(signer domain.Signer) (KeyPair, error) {
 
 	// The session must stay open: the crypto.Signer returned below signs through
 	// it, and closing here produced "context is closed" on every signature. The
-	// context is released only on the error paths, where no key escapes.
+	// caller ends it with KeyPair.Close once the signature is made; here it is
+	// released only on the error paths, where no key escapes.
 	pairs, err := context.Pairs()
 	if err != nil {
 		_ = context.Close()
-		return KeyPair{}, fmt.Errorf("list certificates on token %q: %w", signer.PKCS11Token(), err)
+		return KeyPair{}, fmt.Errorf("list certificates on %s: %w", tokenName(signer), err)
 	}
 	if len(pairs) == 0 {
 		_ = context.Close()
 		return KeyPair{}, fmt.Errorf(
-			"token %q exposes no certificate paired with a private key.\n"+
+			"%s exposes no certificate paired with a private key.\n"+
 				"  list it with: pkcs11-tool --module %s -O",
-			signer.PKCS11Token(), signer.PKCS11Module(),
+			tokenName(signer), signer.PKCS11Module(),
 		)
 	}
 
-	pair := pairs[0]
-	leaf, err := x509.ParseCertificate(pair.Certificate)
+	leaves := make([]*x509.Certificate, len(pairs))
+	for index, pair := range pairs {
+		// An unreadable certificate stays nil: it cannot be chosen, and it must
+		// not shift the position of the others.
+		leaves[index], _ = x509.ParseCertificate(pair.Certificate)
+	}
+	index, err := signer.CertificateChoice().Pick(leaves)
 	if err != nil {
 		_ = context.Close()
-		return KeyPair{}, fmt.Errorf("parse token certificate: %w", err)
+		return KeyPair{}, choiceFailure(signer, leaves, err)
+	}
+	pair, leaf := pairs[index], leaves[index]
+	if leaf == nil {
+		_ = context.Close()
+		return KeyPair{}, fmt.Errorf("%s holds a certificate that cannot be read", tokenName(signer))
 	}
 
 	var chain []*x509.Certificate
@@ -74,5 +87,35 @@ func loadToken(signer domain.Signer) (KeyPair, error) {
 		Name:        signer.NameFor(identity.FromCertificate(leaf).Name),
 		SelfSigned:  isSelfSigned(leaf),
 		KeySource:   domain.FromToken,
+		release:     context.Close,
 	}, nil
+}
+
+// tokenName names the token in messages: by its label, or as the card found in
+// the readers when no label was given.
+func tokenName(signer domain.Signer) string {
+	if signer.PKCS11Token() == "" {
+		return "the card in the reader"
+	}
+	return fmt.Sprintf("token %q", signer.PKCS11Token())
+}
+
+// choiceFailure explains why no certificate was chosen and lists the ones the
+// card holds, with what names each of them.
+func choiceFailure(signer domain.Signer, leaves []*x509.Certificate, cause error) error {
+	var listing strings.Builder
+	for _, leaf := range leaves {
+		if leaf == nil {
+			continue
+		}
+		fmt.Fprintf(&listing, "\n  - %s  serial %s  fingerprint %s  usage %s",
+			identity.FromCertificate(leaf).Name, leaf.SerialNumber.Text(16),
+			domain.Fingerprint(leaf), strings.Join(usageNames(leaf), ","))
+	}
+	if errors.Is(cause, domain.ErrNoCertificateMatches) {
+		return fmt.Errorf("%w %q (%s); it holds:%s",
+			cause, signer.CertificateChoice().String(), tokenName(signer), listing.String())
+	}
+	return fmt.Errorf("%w (%s); choose one by its serial or fingerprint:%s",
+		cause, tokenName(signer), listing.String())
 }

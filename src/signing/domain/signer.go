@@ -15,6 +15,7 @@ type Signer struct {
 	pkcs11Module string
 	pkcs11Token  string
 	pkcs11PIN    string
+	choice       CertificateChoice
 }
 
 // KeySource says where the private key lives.
@@ -104,6 +105,12 @@ func WithToken(module, tokenLabel, pin string) SignerOption {
 	}
 }
 
+// WithCertificateChoice says which certificate of the card signs. Without it
+// the card decides, and only when it leaves no doubt (CertificateChoice).
+func WithCertificateChoice(choice CertificateChoice) SignerOption {
+	return func(s *Signer) { s.choice = choice }
+}
+
 // Name returns the human-readable signer name.
 func (s Signer) Name() string { return s.name }
 
@@ -124,3 +131,6 @@ func (s Signer) PKCS11Token() string { return s.pkcs11Token }
 
 // PKCS11PIN returns the token PIN.
 func (s Signer) PKCS11PIN() string { return s.pkcs11PIN }
+
+// CertificateChoice returns how the certificate of the card is chosen.
+func (s Signer) CertificateChoice() CertificateChoice { return s.choice }

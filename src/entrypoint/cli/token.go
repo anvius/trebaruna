@@ -21,7 +21,7 @@ func runToken(args []string, stdout, stderr io.Writer) int {
 	flags.SetOutput(stderr)
 
 	var (
-		module = flags.String("module", "", "path of the PKCS#11 module")
+		module = flags.String("module", "", "path of the PKCS#11 module (default: OpenSC, found on this system)")
 		pin    = flags.String("pin", "", "PIN of the token, optional for listing (or $TREBARUNA_PIN)")
 		asJSON = flags.Bool("json", false, "machine-readable output")
 	)
@@ -30,8 +30,14 @@ func runToken(args []string, stdout, stderr io.Writer) int {
 		return exitUsage
 	}
 
+	path, err := moduleOrOpenSC(*module)
+	if err != nil {
+		fmt.Fprintf(stderr, "%v\n", err)
+		return exitInvalid
+	}
+
 	inspector := infrastructure.TokenInspector{
-		Module: *module,
+		Module: path,
 		PIN:    secretFrom(*pin, pinVariable),
 	}
 
@@ -76,11 +82,14 @@ func printTokenJSON(stdout io.Writer, slots []infrastructure.TokenSlot) int {
 			if position == len(slot.Certificates)-1 {
 				separator = ""
 			}
-			fmt.Fprintf(stdout, "        {\"subject\": %s, \"issuer\": %s, \"serial\": %s, "+
+			fmt.Fprintf(stdout, "        {\"subject\": %s, \"issuer\": %s, \"serial\": %s, \"fingerprint\": %s, "+
+				"\"signs_by_default\": %t, "+
 				"\"not_before\": %s, \"not_after\": %s, \"self_signed\": %t, \"key_usage\": %s}%s\n",
 				quoteJSON(certificate.Subject),
 				quoteJSON(certificate.Issuer),
 				quoteJSON(certificate.Serial),
+				quoteJSON(certificate.Fingerprint),
+				certificate.SignsByDefault,
 				quoteJSON(certificate.NotBefore.UTC().Format("2006-01-02T15:04:05Z07:00")),
 				quoteJSON(certificate.NotAfter.UTC().Format("2006-01-02T15:04:05Z07:00")),
 				certificate.SelfSigned,
@@ -102,7 +111,8 @@ func printTokenJSON(stdout io.Writer, slots []infrastructure.TokenSlot) int {
 // formatTokenSlot renders one slot for the terminal.
 //
 // The lines say what the user needs in order to act: the label goes in
-// --token, and the key usage says whether the card can sign a document at all.
+// --token, the serial or the fingerprint in --certificate, and the key usage
+// says whether the certificate can sign a document at all.
 func formatTokenSlot(slot infrastructure.TokenSlot) string {
 	out := fmt.Sprintf("slot %d: %s\n", slot.Index, slot.Description)
 	if slot.TokenLabel == "" {
@@ -127,6 +137,10 @@ func formatTokenSlot(slot infrastructure.TokenSlot) string {
 		out += fmt.Sprintf("  certificate: %s\n", certificate.Subject)
 		out += fmt.Sprintf("    issuer:    %s\n", certificate.Issuer)
 		out += fmt.Sprintf("    serial:    %s\n", certificate.Serial)
+		out += fmt.Sprintf("    sha-256:   %s\n", certificate.Fingerprint)
+		if certificate.SignsByDefault {
+			out += "    signs:     by default, when no --certificate is given\n"
+		}
 		out += fmt.Sprintf("    valid:     %s .. %s\n",
 			certificate.NotBefore.UTC().Format("2006-01-02 15:04:05Z"),
 			certificate.NotAfter.UTC().Format("2006-01-02 15:04:05Z"))

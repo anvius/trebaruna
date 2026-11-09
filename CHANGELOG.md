@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Card certificate choice: `sign --certificate <serial|fingerprint>` picks the
+  certificate of a card and finds the reader that holds it without `--token`.
+  Without it, the only certificate or the only one declaring non-repudiation
+  signs (the DNIe signature certificate, not the authentication one); any doubt
+  stops the signature and lists the certificates. `trebaruna token` prints the
+  SHA-256 fingerprint and which certificate signs by default (`fingerprint`,
+  `signs_by_default` in `--json`). The OpenSC module is found where each system
+  installs it (Debian multiarch, Fedora, Arch, macOS, Windows), so `--module`
+  is only needed for a vendor driver.
+
 - Batch signing: `sign` takes several documents, signs each with the same
   settings in its own format (or a forced one), reports one result per
   document (`{"signed", "failed", "results", "network"}`) and exits 1 on a
@@ -146,6 +156,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   button. The page renders as soon as a PDF is chosen.
 
 ### Fixed
+
+- The card session is closed after each signature. A process that signs more
+  than once, such as the local API, kept every session open and went on seeing
+  the readers as they were at its first signature.
 
 - The default seal assumed A4: on a Letter page it sat away from the corner,
   and on a landscape page off the visible area. It is now placed on the page's

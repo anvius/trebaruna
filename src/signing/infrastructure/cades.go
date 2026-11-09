@@ -37,6 +37,7 @@ func (s *CadesSigner) SignCades(ctx context.Context, request application.CadesRe
 	if err != nil {
 		return nil, err
 	}
+	defer keyPair.Close()
 	if request.Cosign || request.Countersign != "" {
 		return s.addSignature(ctx, request, keyPair)
 	}

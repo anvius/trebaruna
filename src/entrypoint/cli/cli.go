@@ -95,7 +95,8 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 		passphrase = flags.String("pass", "", "passphrase for the P12 or PEM file (or $TREBARUNA_PASSPHRASE)")
 		pin        = flags.String("pin", "", "PIN for PKCS#11 tokens (or $TREBARUNA_PIN)")
 		tokenLabel = flags.String("token", "", "PKCS#11 token label (smartcard)")
-		module     = flags.String("module", defaultPKCS11Module, "PKCS#11 module path")
+		cardCert   = flags.String("certificate", "", "certificate of the card to sign with: serial or SHA-256 fingerprint (see `trebaruna token`)")
+		module     = flags.String("module", "", "PKCS#11 module path (default: OpenSC, found on this system)")
 		name       = flags.String("name", "", "signer display name (default: the holder printed on the certificate)")
 		reason     = flags.String("reason", "", "reason for signing")
 		location   = flags.String("location", "", "location of signing")
@@ -150,7 +151,7 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 
 	signer, err := buildSigner(signerOptions{
 		name: *name, p12Path: *p12Path, pemPath: *pemPath, passphrase: *passphrase,
-		pin: *pin, tokenLabel: *tokenLabel, module: *module,
+		pin: *pin, tokenLabel: *tokenLabel, certificate: *cardCert, module: *module,
 	})
 	if err != nil {
 		fmt.Fprintf(stderr, "%v\n", err)
@@ -258,6 +259,7 @@ var signValueFlags = map[string]bool{
 	"-pem": true, "--pem": true, "-pass": true, "--pass": true,
 	"-pin": true, "--pin": true, "-token": true, "--token": true,
 	"-module": true, "--module": true, "-name": true, "--name": true,
+	"-certificate": true, "--certificate": true,
 	"-reason": true, "--reason": true, "-location": true, "--location": true,
 	"-tsa": true, "--tsa": true, "-tsa-user": true, "--tsa-user": true,
 	"-tsa-pass": true, "--tsa-pass": true, "-page": true, "--page": true,
@@ -274,28 +276,30 @@ func splitSignArguments(args []string) (positional, remaining []string) {
 
 // signerOptions groups the key-source flags.
 type signerOptions struct {
-	name       string
-	p12Path    string
-	pemPath    string
-	passphrase string
-	pin        string
-	tokenLabel string
-	module     string
+	name        string
+	p12Path     string
+	pemPath     string
+	passphrase  string
+	pin         string
+	tokenLabel  string
+	certificate string
+	module      string
 }
 
 // buildSigner resolves the key source from the flags, enforcing exactly one.
 func buildSigner(options signerOptions) (domain.Signer, error) {
+	card := options.tokenLabel != "" || options.certificate != ""
 	sources := 0
-	for _, value := range []string{options.p12Path, options.pemPath, options.tokenLabel} {
-		if value != "" {
+	for _, chosen := range []bool{options.p12Path != "", options.pemPath != "", card} {
+		if chosen {
 			sources++
 		}
 	}
 	if sources == 0 {
-		return domain.Signer{}, errors.New("no key source: use --p12, --pem or --token")
+		return domain.Signer{}, errors.New("no key source: use --p12, --pem, or --token / --certificate for a card")
 	}
 	if sources > 1 {
-		return domain.Signer{}, errors.New("ambiguous key source: use only one of --p12, --pem, --token")
+		return domain.Signer{}, errors.New("ambiguous key source: use only one of --p12, --pem, or a card (--token / --certificate)")
 	}
 
 	displayName := options.name
@@ -303,9 +307,14 @@ func buildSigner(options signerOptions) (domain.Signer, error) {
 		displayName = domain.NameFromCertificate
 	}
 
-	if options.tokenLabel != "" {
+	if card {
+		module, err := moduleOrOpenSC(options.module)
+		if err != nil {
+			return domain.Signer{}, err
+		}
 		return domain.NewSigner(displayName, domain.FromToken,
-			domain.WithToken(options.module, options.tokenLabel, secretFrom(options.pin, pinVariable)))
+			domain.WithToken(module, options.tokenLabel, secretFrom(options.pin, pinVariable)),
+			domain.WithCertificateChoice(domain.ChooseCertificateBy(options.certificate)))
 	}
 
 	path := options.p12Path
@@ -454,7 +463,7 @@ usage:
   trebaruna timestamp <file> --tsa <url>      (or --hash <hex>)
   trebaruna verify-tsr <token.tsr> [file]
   trebaruna certificate <file.p12|.pem|.crt>   (or: cert)
-  trebaruna token --module <pkcs11.so>       (list cards and their certificates)
+  trebaruna token [--module <pkcs11.so>]     (list cards and their certificates)
   trebaruna asic <document> <signature>        (ASiC-S / ASiC-E container)
   trebaruna serve --root <dir> --listen 127.0.0.1:0   (local HTTP API)
   trebaruna extract <document.p7m> [--out path]  (the document inside one or more envelopes)
@@ -466,8 +475,10 @@ flags:
   --p12      PKCS#12 file (any authority, or self-signed)
   --pem      PEM bundle with certificate and private key
   --token    PKCS#11 token label (smartcard)
+  --certificate  certificate of the card: serial or fingerprint  default: the signing one
+  --module   PKCS#11 module                                 default: OpenSC
   --pass     passphrase for the P12 or PEM
-  --pin      PIN for the token
+  --pin      PIN for the token (better: $TREBARUNA_PIN, kept off the command line)
   --tsa      RFC 3161 timestamp authority URL
   --reason   reason for signing
   --location location of signing
@@ -479,7 +490,8 @@ flags:
 examples:
   trebaruna sign contratto.pdf --p12 mario.p12 --pass secret --reason Contratto
   trebaruna sign fattura.xml --format cades --p12 mario.p12 --level t --tsa https://tsa.example/
-  trebaruna sign atto.pdf --token "Carta de Ejemplo" --pin 000000 --box 300,60,540,140
+  trebaruna sign atto.pdf --token "Carta de Ejemplo" --box 300,60,540,140
+  trebaruna sign atto.pdf --certificate 3f2a91c0 --format cades
   trebaruna sign doc.pdf --p12 self.p12 --json
 `)
 }
@@ -511,5 +523,15 @@ func resolveVersion() string {
 	return "0.0.0-dev"
 }
 
-// defaultPKCS11Module points at the OpenSC module on Linux.
-var defaultPKCS11Module = "/usr/lib/x86_64-linux-gnu/opensc-pkcs11.so"
+// moduleOrOpenSC returns the PKCS#11 module given, or the OpenSC module
+// installed on this system when none was.
+func moduleOrOpenSC(module string) (string, error) {
+	if module != "" {
+		return module, nil
+	}
+	if found := infrastructure.OpenSCModule(); found != "" {
+		return found, nil
+	}
+	return "", errors.New("OpenSC was not found on this system: install it (https://github.com/OpenSC/OpenSC) " +
+		"or give the card's PKCS#11 module with --module <path>")
+}

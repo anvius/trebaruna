@@ -2,7 +2,6 @@ package infrastructure
 
 import (
 	"crypto/x509"
-	"fmt"
 	"time"
 
 	"codeberg.org/simplicer/trebaruna/src/signing/domain"
@@ -43,6 +42,14 @@ type TokenCertificate struct {
 	SelfSigned bool
 	// KeyUsages lists the key usage bits the certificate declares.
 	KeyUsages []string
+	// Fingerprint is the SHA-256 digest in hexadecimal; with the serial, it is
+	// what names the certificate to sign with.
+	Fingerprint string
+	// SignsByDefault marks the certificate a signature uses when none is named
+	// (domain.CertificateChoice).
+	SignsByDefault bool
+
+	certificate *x509.Certificate
 }
 
 // TokenInspector enumerates what a PKCS#11 module exposes.
@@ -76,14 +83,35 @@ func describeCertificate(certificate *x509.Certificate) TokenCertificate {
 		return TokenCertificate{}
 	}
 	return TokenCertificate{
-		Subject:    certificate.Subject.String(),
-		Issuer:     certificate.Issuer.String(),
-		Serial:     certificate.SerialNumber.Text(16),
-		NotBefore:  certificate.NotBefore,
-		NotAfter:   certificate.NotAfter,
-		SelfSigned: certificate.Subject.String() == certificate.Issuer.String(),
-		KeyUsages:  usageNames(certificate),
+		Subject:     certificate.Subject.String(),
+		Issuer:      certificate.Issuer.String(),
+		Serial:      certificate.SerialNumber.Text(16),
+		NotBefore:   certificate.NotBefore,
+		NotAfter:    certificate.NotAfter,
+		SelfSigned:  certificate.Subject.String() == certificate.Issuer.String(),
+		KeyUsages:   usageNames(certificate),
+		Fingerprint: domain.Fingerprint(certificate),
+		certificate: certificate,
 	}
+}
+
+// markDefault flags the certificate the card would sign with when none is
+// named, so the listing shows the choice before anything is signed.
+func markDefault(certificates []TokenCertificate) {
+	index, err := domain.ChooseCertificateBy("").Pick(parsedCertificates(certificates))
+	if err != nil {
+		return
+	}
+	certificates[index].SignsByDefault = true
+}
+
+// parsedCertificates returns the certificates behind the descriptions.
+func parsedCertificates(certificates []TokenCertificate) []*x509.Certificate {
+	parsed := make([]*x509.Certificate, len(certificates))
+	for index, certificate := range certificates {
+		parsed[index] = certificate.certificate
+	}
+	return parsed
 }
 
 // usageNames renders the key usage bits as short names.
@@ -118,57 +146,3 @@ func usageNames(certificate *x509.Certificate) []string {
 	}
 	return names
 }
-
-// tokenLabelOrDefault returns the label to look for, or a hint.
-func tokenLabelOrDefault(label string) string {
-	if label == "" {
-		return "(no label given)"
-	}
-	return label
-}
-
-// formatSlot renders one slot for the terminal.
-func formatSlot(slot TokenSlot) string {
-	out := fmt.Sprintf("slot %d: %s\n", slot.Index, slot.Description)
-	if slot.TokenLabel == "" {
-		return out + "  (no token present)\n"
-	}
-	out += fmt.Sprintf("  token:      %s\n", slot.TokenLabel)
-	if slot.Manufacturer != "" {
-		out += fmt.Sprintf("  maker:      %s\n", slot.Manufacturer)
-	}
-	if slot.TokenSerial != "" {
-		out += fmt.Sprintf("  serial:     %s\n", slot.TokenSerial)
-	}
-	out += fmt.Sprintf("  login:      %s\n", slot.LoginState)
-	for _, certificate := range slot.Certificates {
-		out += fmt.Sprintf("  certificate: %s\n", certificate.Subject)
-		out += fmt.Sprintf("    issuer:    %s\n", certificate.Issuer)
-		out += fmt.Sprintf("    serial:    %s\n", certificate.Serial)
-		out += fmt.Sprintf("    valid:     %s .. %s\n",
-			certificate.NotBefore.UTC().Format(time.RFC3339),
-			certificate.NotAfter.UTC().Format(time.RFC3339))
-		if certificate.SelfSigned {
-			out += "    note:      self-signed, no third-party trust\n"
-		}
-		if len(certificate.KeyUsages) > 0 {
-			out += fmt.Sprintf("    key usage: %s\n", joinNames(certificate.KeyUsages))
-		}
-	}
-	return out
-}
-
-// joinNames renders a list with commas.
-func joinNames(names []string) string {
-	out := ""
-	for index, name := range names {
-		if index > 0 {
-			out += ", "
-		}
-		out += name
-	}
-	return out
-}
-
-// compile-time check.
-var _ = domain.BES

@@ -93,6 +93,7 @@ func (s *XadesSigner) SignXades(ctx context.Context, request application.XadesRe
 	if err != nil {
 		return nil, err
 	}
+	defer keyPair.Close()
 
 	tree, err := parseDocument(request.Content)
 	if err != nil {

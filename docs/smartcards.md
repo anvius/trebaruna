@@ -67,19 +67,22 @@ problem is below this tool: reader, driver, or card.
 
 ### macOS
 
-Built in; no daemon to install. The module is usually
-`/usr/local/lib/opensc-pkcs11.so` after `brew install opensc`.
+Built in; no daemon to install. Install OpenSC with its package or
+`brew install opensc`; trebaruna finds the module in `/Library/OpenSC/lib`,
+`/opt/homebrew/lib` or `/usr/local/lib`.
 
 ### Windows
 
-Install the vendor's middleware, which registers its own module DLL. Pass its path
-explicitly with `--module`.
+Install OpenSC (its installer puts `opensc-pkcs11.dll` in `System32`, where
+trebaruna finds it), or the vendor's middleware and pass its DLL with `--module`.
 
 ---
 
 ## Finding the module and the label
 
-Two things are needed: the **module path** and the **token label**.
+trebaruna finds the free OpenSC module by itself, and picks the card and the
+certificate when there is no doubt. `--module`, `--token` and `--certificate`
+are only needed when there is.
 
 ### List the tokens
 
@@ -87,7 +90,8 @@ The tool can do this itself, and its answer is more useful than the generic one
 because it says what this tool needs and what is wrong:
 
 ```bash
-trebaruna token --module /usr/lib/x86_64-linux-gnu/opensc-pkcs11.so
+trebaruna token                      # OpenSC, found on this system
+trebaruna token --module /path/to/vendor-pkcs11.so
 ```
 
 ```
@@ -96,17 +100,27 @@ slot 0: Identifies Slot 0
   maker:      Example Manufacturer
   serial:     0123456789
   login:      login required
-  certificate: CN=MARIA LOPEZ GARCIA MARTINEZ,C=ES
+  certificate: CN=MARIA LOPEZ GARCIA MARTINEZ (FIRMA),C=ES
+    issuer:    CN=Example Issuing CA,C=ES
+    serial:    4a2b1d
+    sha-256:   a18a885526bbb04eea216f1135dd2f858f89ffe3471a52d606e785e08c144beb
+    signs:     by default, when no --certificate is given
+    valid:     2026-01-14 09:22:00Z .. 2029-01-14 09:22:00Z
+    key usage: contentCommitment
+  certificate: CN=MARIA LOPEZ GARCIA MARTINEZ (AUTENTICACION),C=ES
     issuer:    CN=Example Issuing CA,C=ES
     serial:    4a2b1c
+    sha-256:   40be7f7afc580abb743542a9827a37b54686ea29b82ada037b3de84933e60890
     valid:     2026-01-14 09:22:00Z .. 2029-01-14 09:22:00Z
-    key usage: digitalSignature, contentCommitment
+    key usage: digitalSignature
 ```
 
-The **token label** is what goes in `--token`. The **certificate** block tells
-you whether the card can sign a document at all: a certificate that declares no
-signing usage cannot, and a missing certificate means the card holds a key with
-nothing to identify it.
+The **token label** is what goes in `--token`; the **serial** or the
+**sha-256** fingerprint (or its first eight digits or more) is what goes in
+`--certificate`. The **signs** line says which certificate a signature uses
+when none is named. The **key usage** tells you whether a certificate can sign a
+document at all: one that declares no signing usage cannot, and a missing
+certificate means the card holds a key with nothing to identify it.
 
 Add `--json` for machine-readable output.
 
@@ -133,14 +147,19 @@ The `Label` is what goes in `--token`.
 
 ### Find the module
 
-| Distribution | Module |
-|---|---|
-| Debian/Ubuntu | `/usr/lib/x86_64-linux-gnu/opensc-pkcs11.so` |
-| Fedora | `/usr/lib64/opensc-pkcs11.so` |
-| macOS (Homebrew) | `/usr/local/lib/opensc-pkcs11.so` |
-| Vendor middleware | its own path; check the documentation |
+Without `--module`, trebaruna looks for OpenSC where each system installs it,
+in this order, and uses the first one present:
 
-On Debian/Ubuntu that path is the **default**, so `--module` is optional there.
+| System | Locations tried |
+|---|---|
+| Debian/Ubuntu | `/usr/lib/<triplet>/opensc-pkcs11.so`, `/usr/lib/<triplet>/pkcs11/opensc-pkcs11.so` (`x86_64-linux-gnu`, `aarch64-linux-gnu`, …) |
+| Fedora, openSUSE | `/usr/lib64/opensc-pkcs11.so`, `/usr/lib64/pkcs11/opensc-pkcs11.so` |
+| Arch, others, BSD | `/usr/lib/opensc-pkcs11.so`, `/usr/lib/pkcs11/opensc-pkcs11.so`, `/usr/local/lib/opensc-pkcs11.so` |
+| macOS | `/Library/OpenSC/lib/opensc-pkcs11.so`, `/opt/homebrew/lib/opensc-pkcs11.so`, `/usr/local/lib/opensc-pkcs11.so` |
+| Windows | `C:\Windows\System32\opensc-pkcs11.dll`, `C:\Program Files\OpenSC Project\OpenSC\pkcs11\opensc-pkcs11.dll` |
+
+A vendor module is used only when you give it with `--module`. When OpenSC is
+not found and no module is given, the command says so instead of guessing.
 
 ### Check what is inside
 
@@ -157,25 +176,43 @@ fail with "no certificate paired with a private key".
 
 ## Signing
 
-```bash
-trebaruna-token sign atto.pdf --format pades \
-    --token "Carta Nazionale" --pin 123456
-```
-
-With an explicit module:
+The PIN is read from `TREBARUNA_PIN` (or `--pin`, which leaves it in the shell
+history; ADR-0006).
 
 ```bash
-trebaruna-token sign atto.pdf \
-    --token "Carta Nazionale" --pin 123456 \
-    --module /usr/lib/x86_64-linux-gnu/opensc-pkcs11.so
+export TREBARUNA_PIN   # set it without echoing, e.g. read -rs TREBARUNA_PIN
+trebaruna-token sign atto.pdf --token "Carta Nazionale"
 ```
 
-The PIN may be demanded by the card instead of the tool, depending on the reader.
-If `--pin` is omitted, the middleware will usually prompt.
+Naming the certificate is enough; the reader that holds it is found:
 
-The certificate used is the one on the card. There is no way to point at a
-different certificate, which means the signature cannot claim a name that does not
-belong to the key that produced it.
+```bash
+trebaruna-token sign atto.pdf --certificate 4a2b1d
+trebaruna-token sign atto.pdf --certificate a18a8855
+```
+
+With a vendor module:
+
+```bash
+trebaruna-token sign atto.pdf --token "Carta Nazionale" \
+    --module /path/to/vendor-pkcs11.so
+```
+
+**Which certificate signs.** A card often holds two: the Spanish DNIe and most
+Italian signature cards carry one certificate to authenticate and one to sign,
+and only the second declares non-repudiation (`contentCommitment`). Without
+`--certificate`, the only certificate of the card signs, or the only one that
+declares non-repudiation. When that leaves a doubt — two signing certificates,
+or none that declares it — nothing is signed and the error lists the
+certificates with their serial and fingerprint. A `--certificate` that matches
+nothing on the card is refused: the signature never goes out under another
+certificate than the one asked for.
+
+**Which card.** With `--token`, the card with that label. Without it, the card
+that holds the named certificate, or the only card present. The readers are
+read without the PIN, so the PIN is never tried on a card that is not the one
+meant. With two cards that both fit, nothing is signed and the error names their
+labels.
 
 ### Verify your own output
 

@@ -54,7 +54,7 @@ user seeing what is signed and where anything goes.
 |---|---|
 | PKCS#12 in DER and BER (ADR-0009), PEM bundles | built |
 | PKCS#11 cards and tokens from the CLI; certificate listing without PIN | built |
-| Pick a certificate on a card; OpenSC found automatically on each system | planned (C1) |
+| Pick a certificate on a card by serial or fingerprint; without one, the only certificate or the only non-repudiation one signs, never a guess; the card holding it is found without a label and without trying the PIN; OpenSC found automatically on each system | built |
 | Cards and tokens in the desktop window, with PIN attempts and locked cards stated | planned (C2) |
 | Firefox / NSS store used in place, without exporting | planned (C3) |
 | Change PIN, unlock with PUK | planned (C4) |
