@@ -111,7 +111,7 @@ trebaruna sign <document> [flags]
 | `--cosign` | off | Add a parallel signature to the `.p7m`/`.p7s` given as document |
 | `--countersign` | — | Counter-sign the envelope's signatures: `leaves` or `all` |
 | `--content` | — | The document a detached `.p7s` signs, to co-sign it |
-| `--asic` | — | `s`: the document and its detached signature in an ASiC-S container, `<document>.asics` |
+| `--asic` | — | `s`: the document and its detached signature in an ASiC-S container, `<document>.asics`; `e`: every document given under one signature, an ASiC-E container, `<first document>.asice` or `--out` |
 | `--policy` | — | Signature policy (EPES) by name: `age` (AGE 1.9), `age18`, `facturae` (3.1), `facturae30` |
 | `--policy-id` | — | A policy by its parts: identifier, an OID (`urn:oid:` optional) or, for XAdES, a URL |
 | `--policy-hash` | — | Its document's digest, Base64; required with `--policy-id` |

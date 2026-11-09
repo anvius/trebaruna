@@ -200,6 +200,17 @@ trebaruna sign atto.pdf --format cades --asic s --p12 k.p12   # → atto.pdf.asi
 trebaruna verify atto.pdf.asics
 ```
 
+Several documents go under one signature in an ASiC-E container:
+
+```bash
+trebaruna sign acta.txt plano.pdf presupuesto.xml --format xades --asic e --out expediente.asice
+trebaruna sign acta.txt plano.pdf --format cades --asic e --out expediente.asice
+```
+
+XAdES writes one signature with a reference to each document. CAdES signs
+`META-INF/ASiCManifest.xml`, which lists every document with its digest.
+Documents are stored by their name, so two with the same name are refused.
+
 `verify` judges every signature of a container against the files it covers,
 and names any file no signature covers.
 

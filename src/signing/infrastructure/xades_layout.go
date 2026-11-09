@@ -35,10 +35,18 @@ type documentLayout struct {
 	mimeType string
 	// uri is the reference to the document beside a detached signature.
 	uri string
+	// files are the documents a detached signature references, in order.
+	files []detachedFile
 	// inASiC roots a detached signature in asic:XAdESSignatures. It must be
 	// there before signing: the namespace it declares is part of the
 	// canonical forms the signature covers.
 	inASiC bool
+}
+
+// detachedFile is a document a detached signature references by name.
+type detachedFile struct {
+	uri, mimeType string
+	content       []byte
 }
 
 // asicNamespace is ASiC's namespace (ETSI EN 319 162-1).
@@ -70,6 +78,23 @@ func layoutFor(request application.XadesRequest) (documentLayout, error) {
 		return documentLayout{}, fmt.Errorf("a detached XML signature names its document, and none was given")
 	case layout.inASiC && layout.packaging != domain.XMLDetached:
 		return documentLayout{}, fmt.Errorf("an ASiC container holds detached XML signatures, not %s ones", layout.packaging)
+	case len(request.MoreDocuments) > 0 && layout.packaging != domain.XMLDetached:
+		return documentLayout{}, fmt.Errorf("only a detached XML signature signs several documents")
+	}
+	if layout.packaging == domain.XMLDetached {
+		layout.files = []detachedFile{{uri: layout.uri, mimeType: layout.mimeType, content: request.Content}}
+		for _, document := range request.MoreDocuments {
+			file := detachedFile{uri: url.PathEscape(document.Name), mimeType: mediaType(document.Content), content: document.Content}
+			if _, err := parseDocument(document.Content); err == nil {
+				file.mimeType = "text/xml"
+			}
+			for _, earlier := range layout.files {
+				if earlier.uri == file.uri {
+					return documentLayout{}, fmt.Errorf("two documents are named %s", document.Name)
+				}
+			}
+			layout.files = append(layout.files, file)
+		}
 	}
 	return layout, nil
 }
@@ -86,10 +111,14 @@ func mediaType(content []byte) string {
 // referenceCount is how many references SignedInfo holds: the document,
 // and the signed properties unless the signature is plain XMLDSig.
 func (l documentLayout) referenceCount() int {
-	if l.plain {
-		return 1
+	documents := 1
+	if l.packaging == domain.XMLDetached {
+		documents = len(l.files)
 	}
-	return 2
+	if l.plain {
+		return documents
+	}
+	return documents + 1
 }
 
 // inBase64 reports content that travels in Base64 inside the signature.
@@ -156,14 +185,22 @@ func (l documentLayout) payload(ids signatureIDs, content []byte) (string, error
 // digest is the document's own, XML is canonicalised. A detached signature
 // names the file beside it and digests its bytes.
 func (l documentLayout) documentReference(ids signatureIDs) string {
+	if l.packaging == domain.XMLDetached {
+		var references strings.Builder
+		for index, file := range l.files {
+			references.WriteString(`<ds:Reference Id="` + ids.referenceAt(index) + `" URI="` + xmlEscape(file.uri) + `">` +
+				`<ds:DigestMethod Algorithm="` + algorithmSHA256 + `"/>` +
+				`<ds:DigestValue>` + placeholderDigest + `</ds:DigestValue>` +
+				`</ds:Reference>`)
+		}
+		return references.String()
+	}
 	var uri, referenceType, transforms string
 	switch l.packaging {
 	case domain.XMLEnveloping:
 		uri, referenceType, transforms = "#"+ids.payload(), objectType, l.contentTransform()
 	case domain.XMLInternallyDetached:
 		uri, transforms = "#"+ids.content(), l.contentTransform()
-	case domain.XMLDetached:
-		uri = l.uri
 	default:
 		filter := ""
 		if l.excludeSignatures {
@@ -196,24 +233,35 @@ func (l documentLayout) contentTransform() string {
 	return `<ds:Transform Algorithm="` + algorithmC14N + `"/>`
 }
 
-// dataObjectFormat describes the signed content (EN 319 132-1, B-B).
-func (l documentLayout) dataObjectFormat() string {
+// dataObjectFormats describe the signed documents (EN 319 132-1, B-B), one
+// DataObjectFormat bound to each document reference.
+func (l documentLayout) dataObjectFormats(ids signatureIDs) string {
+	if l.packaging == domain.XMLDetached {
+		var formats strings.Builder
+		for index, file := range l.files {
+			formats.WriteString(`<xades:DataObjectFormat ObjectReference="#` + ids.referenceAt(index) + `">` +
+				`<xades:MimeType>` + xmlEscape(file.mimeType) + `</xades:MimeType></xades:DataObjectFormat>`)
+		}
+		return formats.String()
+	}
 	format := `<xades:MimeType>` + xmlEscape(l.mimeType) + `</xades:MimeType>`
 	if l.inBase64() {
 		format += `<xades:Encoding>` + encodingBase64 + `</xades:Encoding>`
 	}
-	return format
+	return `<xades:DataObjectFormat ObjectReference="#` + ids.reference() + `">` + format + `</xades:DataObjectFormat>`
 }
 
-// resolver hands the content to the reference of a detached signature.
-func (l documentLayout) resolver(content []byte) xmldsig.Resolver {
+// resolver hands each document to its reference in a detached signature.
+func (l documentLayout) resolver() xmldsig.Resolver {
 	if l.packaging != domain.XMLDetached {
 		return nil
 	}
 	return func(uri string) ([]byte, error) {
-		if uri != l.uri {
-			return nil, fmt.Errorf("%w: %s", xmldsig.ErrContentMissing, uri)
+		for _, file := range l.files {
+			if file.uri == uri {
+				return file.content, nil
+			}
 		}
-		return content, nil
+		return nil, fmt.Errorf("%w: %s", xmldsig.ErrContentMissing, uri)
 	}
 }

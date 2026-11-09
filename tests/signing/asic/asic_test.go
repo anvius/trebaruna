@@ -46,3 +46,26 @@ func TestNamesThatLeaveTheContainerAreRefused(t *testing.T) {
 		t.Error("a name twice accepted")
 	}
 }
+
+// TestTheManifestListsEveryDocumentWithItsDigest, the signature it belongs
+// to first.
+func TestTheManifestListsEveryDocumentWithItsDigest(t *testing.T) {
+	manifest, err := asic.Manifest("META-INF/signature.p7s", []asic.Entry{
+		{Name: "acta.txt", Content: []byte("acta\n")},
+		{Name: "plano de obra.pdf", Content: []byte("%PDF-1.4\n")},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(manifest)
+	for _, expected := range []string{
+		`<asic:SigReference URI="META-INF/signature.p7s" MimeType="application/pkcs7-signature"/>`,
+		`<asic:DataObjectReference URI="acta.txt" MimeType="text/plain">`,
+		`<asic:DataObjectReference URI="plano%20de%20obra.pdf" MimeType="application/pdf">`,
+		`<ds:DigestValue>` + "XsU+tThjwjNG+k4uF2H3QVlDPcA/c0hx3GTYdZYabvs=" + `</ds:DigestValue>`,
+	} {
+		if !bytes.Contains(manifest, []byte(expected)) {
+			t.Errorf("the manifest lacks %s:\n%s", expected, text)
+		}
+	}
+}

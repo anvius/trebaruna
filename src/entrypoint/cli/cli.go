@@ -116,7 +116,7 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 		page       = flags.Int("page", 1, "page for the visible seal (1-based)")
 		boxes      = boxList{}
 		enveloping = flags.Bool("enveloping", false, "XAdES enveloping (default: enveloped)")
-		asicType   = flags.String("asic", "", "pack the document and its detached signature: s (ASiC-S, <document>.asics)")
+		asicType   = flags.String("asic", "", "pack documents and their detached signature: s (one document, <document>.asics) or e (all the documents under one signature, <first>.asice)")
 		invisible  = flags.Bool("invisible", false, "PAdES without any visible seal (excludes --box)")
 		detached   = flags.Bool("detached", false, "the signature beside the document, which stays untouched: <document>.p7s (CAdES) or <document>.xsig (XAdES)")
 		cosign     = flags.Bool("cosign", false, "add a parallel signature to the .p7m/.p7s given as document")
@@ -153,7 +153,12 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 	if err := flags.Parse(remaining); err != nil {
 		return exitUsage
 	}
-	if len(documents) > 1 && *output != "" {
+	container, err := domain.ParseContainer(*asicType)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return exitUsage
+	}
+	if len(documents) > 1 && *output != "" && container != domain.ASiCE {
 		fmt.Fprintln(stderr, "--out names one file; it cannot be used when signing several documents")
 		return exitUsage
 	}
@@ -195,10 +200,18 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 	// Every document gets the same settings; each format is still inferred from
 	// its own suffix unless --format names one. One failure does not stop the
 	// others: a batch reports what happened to each document.
-	signOne := func(documentPath string) (application.Artefact, error) {
+	signOne := func(documentPath string, morePaths ...string) (application.Artefact, error) {
 		document, err := domain.OpenDocument(documentPath)
 		if err != nil {
 			return application.Artefact{}, fmt.Errorf("invalid document: %w", err)
+		}
+		var more []domain.Document
+		for _, path := range morePaths {
+			other, err := domain.OpenDocument(path)
+			if err != nil {
+				return application.Artefact{}, fmt.Errorf("invalid document: %w", err)
+			}
+			more = append(more, other)
 		}
 		signatureFormat := document.InferFormat()
 		if *format != "" {
@@ -207,10 +220,6 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 			}
 		}
 		policy, err := policyFor(*policyName, *policyID, *policyAlg, *policyHash, *policyURI, signatureFormat)
-		if err != nil {
-			return application.Artefact{}, err
-		}
-		container, err := domain.ParseContainer(*asicType)
 		if err != nil {
 			return application.Artefact{}, err
 		}
@@ -239,6 +248,7 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 			TimestampSecret: secretFrom(*tsaSecret, tsaSecretVariable),
 			Enveloping:      *enveloping,
 			Container:       container,
+			MoreDocuments:   more,
 			EmbedRevocation: *onlineRev,
 		})
 		if err != nil {
@@ -247,8 +257,9 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 		return artefact, nil
 	}
 
-	if len(documents) == 1 {
-		artefact, err := signOne(documents[0])
+	// An ASiC-E container holds every document under one signature.
+	if len(documents) == 1 || container == domain.ASiCE {
+		artefact, err := signOne(documents[0], documents[1:]...)
 		if err != nil {
 			fmt.Fprintf(stderr, "%v\n", err)
 			return exitInvalid
@@ -260,7 +271,7 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 		printArtefact(stdout, artefact)
 		return exitOK
 	}
-	return signBatch(documents, signOne, *asJSON, stdout, stderr)
+	return signBatch(documents, func(path string) (application.Artefact, error) { return signOne(path) }, *asJSON, stdout, stderr)
 }
 
 // extractDocument pulls the single positional argument out of the argument

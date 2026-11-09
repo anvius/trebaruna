@@ -3,6 +3,7 @@ package application_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -160,6 +161,14 @@ func (f *fakeContainers) WriteContainer(container domain.Container, entries []ap
 	return []byte("zip"), nil
 }
 
+func (f *fakeContainers) Manifest(signatureEntry string, documents []application.ContainerEntry) ([]byte, error) {
+	manifest := "manifest " + signatureEntry
+	for _, document := range documents {
+		manifest += " " + document.Name
+	}
+	return []byte(manifest), nil
+}
+
 // TestAnASiCSHoldsTheDocumentAndItsDetachedSignature.
 func TestAnASiCSHoldsTheDocumentAndItsDetachedSignature(t *testing.T) {
 	store := newFakeStore(map[string][]byte{"/tmp/informe.pdf": []byte("%PDF")})
@@ -206,6 +215,62 @@ func TestAnASiCSHoldsTheDocumentAndItsDetachedSignature(t *testing.T) {
 	} {
 		if refused() == nil {
 			t.Errorf("%s into a container was accepted", what)
+		}
+	}
+}
+
+// TestAnASiCEHoldsEveryDocumentUnderOneSignature: XAdES references each,
+// CAdES signs a manifest of them.
+func TestAnASiCEHoldsEveryDocumentUnderOneSignature(t *testing.T) {
+	store := newFakeStore(map[string][]byte{"/tmp/acta.txt": []byte("acta"), "/tmp/anexos/plano.pdf": []byte("%PDF")})
+	cades, xades, containers := &fakeCades{}, &fakeXades{}, &fakeContainers{}
+	useCase := application.NewSignDocument(store, fakeClock{time.Unix(0, 0)}, selfSignedIdentity(), cades, &fakePades{}, xades).
+		WithContainers(containers)
+	execute := func(format domain.Format, container domain.Container, more ...string) (application.Artefact, error) {
+		var others []domain.Document
+		for _, path := range more {
+			others = append(others, newDocument(t, path))
+		}
+		return useCase.Execute(context.Background(), application.Request{Document: newDocument(t, "/tmp/acta.txt"), Format: format,
+			Level: domain.BES, Signer: newSigner(t), Container: container, MoreDocuments: others})
+	}
+
+	artefact, err := execute(domain.Xades, domain.ASiCE, "/tmp/anexos/plano.pdf")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if artefact.Path != "/tmp/acta.txt.asice" || len(xades.request.MoreDocuments) != 1 || xades.request.MoreDocuments[0].Name != "plano.pdf" {
+		t.Errorf("XAdES ASiC-E: %s %+v", artefact.Path, xades.request.MoreDocuments)
+	}
+	names := func() string {
+		var list []string
+		for _, entry := range containers.entries {
+			list = append(list, entry.Name)
+		}
+		return fmt.Sprint(list)
+	}
+	if names() != "[acta.txt plano.pdf META-INF/signatures.xml]" {
+		t.Errorf("XAdES entries %s", names())
+	}
+
+	if _, err := execute(domain.Cades, domain.ASiCE, "/tmp/anexos/plano.pdf"); err != nil {
+		t.Fatal(err)
+	}
+	if string(cades.request.Content) != "manifest META-INF/signature.p7s acta.txt plano.pdf" || !cades.request.Detached {
+		t.Errorf("CAdES signs the manifest: %q", cades.request.Content)
+	}
+	if names() != "[acta.txt plano.pdf META-INF/ASiCManifest.xml META-INF/signature.p7s]" {
+		t.Errorf("CAdES entries %s", names())
+	}
+
+	store.files["/tmp/otra/acta.txt"] = []byte("otra")
+	for what, refused := range map[string]func() error{
+		"a name twice":            func() error { _, err := execute(domain.Cades, domain.ASiCE, "/tmp/otra/acta.txt"); return err },
+		"two documents in ASiC-S": func() error { _, err := execute(domain.Cades, domain.ASiCS, "/tmp/anexos/plano.pdf"); return err },
+		"two without a container": func() error { _, err := execute(domain.Cades, domain.NoContainer, "/tmp/anexos/plano.pdf"); return err },
+	} {
+		if refused() == nil {
+			t.Errorf("%s was accepted", what)
 		}
 	}
 }

@@ -7,7 +7,12 @@ package asic
 import (
 	"archive/zip"
 	"bytes"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/xml"
 	"fmt"
+	"net/http"
+	"net/url"
 	"path"
 	"strings"
 )
@@ -58,4 +63,54 @@ func Write(mediaType string, entries []Entry) ([]byte, error) {
 		return nil, err
 	}
 	return output.Bytes(), nil
+}
+
+// Manifest writes the ASiCManifest a CAdES signature of an ASiC-E container
+// covers (ETSI EN 319 162-1, A.4): the signature it belongs to, then each
+// document with its media type and SHA-256 digest. The signature over the
+// manifest proves the documents through those digests.
+func Manifest(signatureEntry string, documents []Entry) ([]byte, error) {
+	var manifest strings.Builder
+	manifest.WriteString(`<?xml version="1.0" encoding="UTF-8" standalone="no"?>` + "\n")
+	manifest.WriteString(`<asic:ASiCManifest xmlns:asic="http://uri.etsi.org/02918/v1.2.1#" xmlns:ds="http://www.w3.org/2000/09/xmldsig#">`)
+	manifest.WriteString(`<asic:SigReference URI="` + attribute(escapePath(signatureEntry)) + `" MimeType="application/pkcs7-signature"/>`)
+	for _, document := range documents {
+		if document.Name == "" {
+			return nil, fmt.Errorf("a document of the manifest has no name")
+		}
+		digest := sha256.Sum256(document.Content)
+		manifest.WriteString(`<asic:DataObjectReference URI="` + attribute(escapePath(document.Name)) +
+			`" MimeType="` + attribute(mediaType(document.Content)) + `">` +
+			`<ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>` +
+			`<ds:DigestValue>` + base64.StdEncoding.EncodeToString(digest[:]) + `</ds:DigestValue>` +
+			`</asic:DataObjectReference>`)
+	}
+	manifest.WriteString(`</asic:ASiCManifest>`)
+	return []byte(manifest.String()), nil
+}
+
+// escapePath escapes each segment of a path in the container, keeping the
+// slashes between them.
+func escapePath(name string) string {
+	segments := strings.Split(name, "/")
+	for index, segment := range segments {
+		segments[index] = url.PathEscape(segment)
+	}
+	return strings.Join(segments, "/")
+}
+
+// mediaType sniffs a document's media type, without parameters.
+func mediaType(content []byte) string {
+	detected := http.DetectContentType(content)
+	if semicolon := strings.Index(detected, ";"); semicolon >= 0 {
+		detected = detected[:semicolon]
+	}
+	return strings.TrimSpace(detected)
+}
+
+// attribute escapes text for an attribute value.
+func attribute(text string) string {
+	var escaped strings.Builder
+	_ = xml.EscapeText(&escaped, []byte(text))
+	return strings.ReplaceAll(escaped.String(), `"`, "&quot;")
 }

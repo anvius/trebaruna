@@ -179,3 +179,45 @@ func TestPlainXMLDSigHasNoSignedProperties(t *testing.T) {
 		}
 	}
 }
+
+// TestADetachedXadesSignsSeveralDocuments: a reference and a
+// DataObjectFormat for each, and every document must match.
+func TestADetachedXadesSignsSeveralDocuments(t *testing.T) {
+	fixture := newFixture(t)
+	signer := buildPemSigner(t, readFile(t, fixture.keyPath), readFile(t, fixture.certPath))
+	documents := map[string][]byte{"acta.txt": []byte("acta\n"), "plano.pdf": []byte(pdfBytes), "presupuesto.xml": []byte("<p/>")}
+	output, err := infrastructure.NewXadesSigner(nil).SignXades(t.Context(), application.XadesRequest{
+		Content: documents["acta.txt"], DocumentName: "acta.txt", Signer: signer, Level: domain.BES, Packaging: domain.XMLDetached,
+		MoreDocuments: []application.DetachedDocument{{Name: "plano.pdf", Content: documents["plano.pdf"]}, {Name: "presupuesto.xml", Content: documents["presupuesto.xml"]}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	signed := string(output)
+	if strings.Count(signed, "<xades:DataObjectFormat ") != 3 || strings.Count(signed, "<ds:Reference ") != 4 {
+		t.Errorf("three documents need three references, three formats and the properties:\n%.900s", signed)
+	}
+	for _, format := range []string{"text/plain", "application/pdf", "text/xml"} {
+		if !strings.Contains(signed, "<xades:MimeType>"+format+"</xades:MimeType>") {
+			t.Errorf("no %s format", format)
+		}
+	}
+	resolve := func(changed string) xmldsig.Resolver {
+		return func(uri string) ([]byte, error) {
+			content, known := documents[uri]
+			if !known {
+				return nil, fmt.Errorf("%w: %s", xmldsig.ErrContentMissing, uri)
+			}
+			if uri == changed {
+				return append(append([]byte{}, content...), 'x'), nil
+			}
+			return content, nil
+		}
+	}
+	if err := checkPackaged(t, signed, resolve("")); err != nil {
+		t.Errorf("the three documents: %v", err)
+	}
+	if err := checkPackaged(t, signed, resolve("presupuesto.xml")); err == nil {
+		t.Error("a changed third document must not verify")
+	}
+}

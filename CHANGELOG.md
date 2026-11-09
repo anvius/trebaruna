@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- ASiC-E signed in one step: `sign a b c --asic e [--out x.asice]` puts
+  every document under one signature.
+  - XAdES and XMLDSig: one detached signature with a reference and a
+    DataObjectFormat per document, inside `asic:XAdESSignatures`.
+  - CAdES: a detached signature over `META-INF/ASiCManifest.xml`, which
+    names the signature and lists each document with its media type and
+    SHA-256 digest.
+  - Documents are stored by name; two with the same name are refused.
+  - Checked with OpenSSL (the signature over the manifest, the manifest's
+    digests recomputed), xmlsec1 1.3.9 and Java 25 (the three references,
+    a name with spaces included), and trebaruna's ASiC verifier, which
+    catches a changed document inside.
+
 - ASiC-S signed in one step.
   - `sign --asic s` writes `<document>.asics`: the document and its
     detached signature, `META-INF/signature.p7s` (CAdES) or

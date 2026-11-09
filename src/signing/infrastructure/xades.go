@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"math/big"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -79,7 +80,16 @@ func newSignatureIDs() (signatureIDs, error) {
 func (ids signatureIDs) signature() string        { return "trebaruna-signature-" + ids.suffix }
 func (ids signatureIDs) signedProperties() string { return "trebaruna-signed-properties-" + ids.suffix }
 func (ids signatureIDs) reference() string        { return "trebaruna-reference-" + ids.suffix }
-func (ids signatureIDs) payload() string          { return "trebaruna-payload-" + ids.suffix }
+
+// referenceAt names the reference to the index-th document of a detached
+// signature that signs several.
+func (ids signatureIDs) referenceAt(index int) string {
+	if index == 0 {
+		return ids.reference()
+	}
+	return ids.reference() + "-" + strconv.Itoa(index+1)
+}
+func (ids signatureIDs) payload() string { return "trebaruna-payload-" + ids.suffix }
 
 // AutoFirma's names for the root and the content of an internally detached
 // signature.
@@ -144,7 +154,7 @@ func (s *XadesSigner) SignXades(ctx context.Context, request application.XadesRe
 		signedProperties = buildSignedProperties(ids,
 			base64.StdEncoding.EncodeToString(certificateDigest[:]),
 			time.Now().UTC().Format(time.RFC3339),
-			layout.dataObjectFormat(),
+			layout.dataObjectFormats(ids),
 			policyProperties(request.Policy)+roleProperties(request.ClaimedRoles),
 		)
 	}
@@ -164,7 +174,7 @@ func (s *XadesSigner) SignXades(ctx context.Context, request application.XadesRe
 	if err := attach(tree, signature); err != nil {
 		return nil, err
 	}
-	resolve := layout.resolver(request.Content)
+	resolve := layout.resolver()
 
 	// Re-parse the serialised skeleton so the tree being measured is byte-for-byte
 	// the tree that will be emitted. Measuring the in-memory tree instead gives a
@@ -357,9 +367,9 @@ func xmldsigECDSA(key *ecdsa.PublicKey, der []byte) ([]byte, error) {
 //
 // DataObjectFormat states the media type of what was signed, bound to the
 // document reference: the XAdES baseline profile (ETSI EN 319 132-1, B-B)
-// requires it, and validators such as the EU DSS check for it. format is
-// what the layout says about the content (documentLayout.dataObjectFormat).
-func buildSignedProperties(ids signatureIDs, certificateDigest, signingTime, format, declarations string) string {
+// requires it, and validators such as the EU DSS check for it. formats are
+// the DataObjectFormat elements the layout writes, one per signed document.
+func buildSignedProperties(ids signatureIDs, certificateDigest, signingTime, formats, declarations string) string {
 	return `<xades:SignedProperties xmlns:xades="` + namespaceXades + `" xmlns:ds="` + namespaceDS +
 		`" Id="` + ids.signedProperties() + `">` +
 		`<xades:SignedSignatureProperties>` +
@@ -374,9 +384,7 @@ func buildSignedProperties(ids signatureIDs, certificateDigest, signingTime, for
 		`</xades:SigningCertificateV2>` +
 		declarations +
 		`</xades:SignedSignatureProperties>` +
-		`<xades:SignedDataObjectProperties>` +
-		`<xades:DataObjectFormat ObjectReference="#` + ids.reference() + `">` + format +
-		`</xades:DataObjectFormat>` +
+		`<xades:SignedDataObjectProperties>` + formats +
 		`</xades:SignedDataObjectProperties>` +
 		`</xades:SignedProperties>`
 }

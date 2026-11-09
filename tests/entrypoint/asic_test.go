@@ -2,6 +2,7 @@ package cli_test
 
 import (
 	"archive/zip"
+	"io"
 	"os"
 	"strings"
 	"testing"
@@ -77,4 +78,56 @@ func TestTheAsicCommandPacksADetachedSignatureUnderMETAINF(t *testing.T) {
 			t.Errorf("%v: exit %d, %q", arguments, code, stderr)
 		}
 	}
+}
+
+// TestSignSeveralDocumentsIntoAnASiCE: one signature over all of them, and a
+// changed one inside the container is caught.
+func TestSignSeveralDocumentsIntoAnASiCE(t *testing.T) {
+	key := writeProtectedP12(t, "segreto")
+	t.Setenv("TREBARUNA_PASSPHRASE", "segreto")
+	first := writeDocument(t, "acta.txt", "acta\n")
+	second := writeDocument(t, "plano.pdf", "%PDF-1.4\n%plano\n")
+	for _, format := range []string{"cades", "xades"} {
+		output := first + "." + format + ".asice"
+		if _, stderr, code := run("sign", first, second, "--p12", key, "--format", format, "--asic", "e", "--out", output); code != 0 {
+			t.Fatalf("%s: exit %d: %s", format, code, stderr)
+		}
+		stdout, _, _ := run("verify", output, "--json")
+		if !strings.Contains(stdout, `"integrity": "good"`) || !strings.Contains(stdout, `"detail": "acta.txt, plano.pdf"`) {
+			t.Errorf("%s: %s", format, stdout)
+		}
+		changed := rewriteEntry(t, output, "plano.pdf", []byte("%PDF-1.4\n%otro plano\n"))
+		if result := verifyJSON(t, changed); result.Verdict != "broken" {
+			t.Errorf("%s with a changed document: %s", format, result.Verdict)
+		}
+	}
+}
+
+// rewriteEntry copies a container with one entry's content replaced.
+func rewriteEntry(t *testing.T, path, name string, content []byte) string {
+	t.Helper()
+	source, err := zip.OpenReader(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer source.Close()
+	target := path + ".changed.asice"
+	file, err := os.Create(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writer := zip.NewWriter(file)
+	for _, entry := range source.File {
+		data := content
+		if entry.Name != name {
+			reader, _ := entry.Open()
+			data, _ = io.ReadAll(reader)
+			reader.Close()
+		}
+		out, _ := writer.CreateHeader(&zip.FileHeader{Name: entry.Name, Method: entry.Method})
+		out.Write(data)
+	}
+	writer.Close()
+	file.Close()
+	return target
 }

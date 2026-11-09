@@ -53,6 +53,10 @@ func (c Container) SignatureEntry(format Format) string {
 	return "META-INF/signature.p7s"
 }
 
+// ManifestEntry is the ASiCManifest a CAdES signature of an ASiC-E covers:
+// it lists every document with its digest.
+const ManifestEntry = "META-INF/ASiCManifest.xml"
+
 // Holds reports whether the container can carry signatures of the format:
 // PAdES signs inside the PDF and needs none.
 func (c Container) Holds(format Format) bool {

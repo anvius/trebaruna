@@ -117,7 +117,10 @@ type XadesRequest struct {
 	DocumentName string
 	// InASiC writes a detached signature inside asic:XAdESSignatures, as an
 	// ASiC container's META-INF/signatures.xml holds it.
-	InASiC          bool
+	InASiC bool
+	// MoreDocuments are other documents a detached signature references,
+	// after Content (ASiC-E).
+	MoreDocuments   []DetachedDocument
 	TimestampURL    string
 	TimestampUser   string
 	TimestampSecret string
@@ -131,13 +134,21 @@ type XadesRequest struct {
 }
 
 // ContainerWriter packs documents and their signatures into an ASiC
-// container.
+// container, and writes the ASiCManifest a CAdES signature of an ASiC-E
+// covers.
 type ContainerWriter interface {
 	WriteContainer(container domain.Container, entries []ContainerEntry) ([]byte, error)
+	Manifest(signatureEntry string, documents []ContainerEntry) ([]byte, error)
 }
 
 // ContainerEntry is a file of a container, by its path inside it.
 type ContainerEntry struct {
+	Name    string
+	Content []byte
+}
+
+// DetachedDocument is a document a detached signature references by name.
+type DetachedDocument struct {
 	Name    string
 	Content []byte
 }

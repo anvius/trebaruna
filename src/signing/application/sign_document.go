@@ -84,6 +84,9 @@ type Request struct {
 	// Container packs the document and its detached signature into an ASiC
 	// container; NoContainer writes the signature alone.
 	Container domain.Container
+	// MoreDocuments are the other documents of an ASiC-E container, signed
+	// with Document by one signature.
+	MoreDocuments []domain.Document
 	// EmbedRevocation asks for PAdES B-LT: the signature plus a /DSS dictionary
 	// carrying the status answers. It reaches the network, so it is opt-in.
 	EmbedRevocation bool
@@ -137,11 +140,16 @@ func (u *SignDocument) Execute(ctx context.Context, request Request) (Artefact, 
 	// different seconds, which makes the report disagree with the stamp.
 	signedAt := u.clock.Now()
 
-	signed, err := u.sign(ctx, request.WithSignedAt(signedAt), content)
+	var signed []byte
+	if request.Container == domain.ASiCE {
+		signed, err = u.signExtended(ctx, request.WithSignedAt(signedAt), content)
+	} else {
+		signed, err = u.sign(ctx, request.WithSignedAt(signedAt), content)
+	}
 	if err != nil {
 		return Artefact{}, err
 	}
-	if request.Container != domain.NoContainer {
+	if request.Container == domain.ASiCS {
 		signed, err = u.containers.WriteContainer(request.Container, []ContainerEntry{
 			{Name: request.Document.Name(), Content: content},
 			{Name: request.Container.SignatureEntry(request.Format), Content: signed},
@@ -273,16 +281,25 @@ func (u *SignDocument) validate(request Request) error {
 // by signing its document again).
 func (u *SignDocument) validateContainer(request Request) error {
 	switch {
+	case request.Container == domain.NoContainer && len(request.MoreDocuments) > 0:
+		return fmt.Errorf("several documents under one signature go into an ASiC-E container")
 	case request.Container == domain.NoContainer:
 		return nil
-	case request.Container == domain.ASiCE:
-		return fmt.Errorf("ASiC-E containers with several documents are not supported yet; use ASiC-S")
+	case request.Container == domain.ASiCS && len(request.MoreDocuments) > 0:
+		return fmt.Errorf("an ASiC-S container holds one document; several go into ASiC-E")
 	case u.containers == nil:
 		return fmt.Errorf("no container writer configured")
 	case !request.Container.Holds(request.Format):
 		return fmt.Errorf("an ASiC container holds CAdES or XML signatures; %s signs inside the document", request.Format)
 	case request.Cosign || request.Countersign != "":
 		return fmt.Errorf("signatures are added to a container's document by signing it again, not by --cosign or --countersign")
+	}
+	names := map[string]bool{request.Document.Name(): true}
+	for _, other := range request.MoreDocuments {
+		if names[other.Name()] {
+			return fmt.Errorf("two documents are named %s; a container holds each name once", other.Name())
+		}
+		names[other.Name()] = true
 	}
 	return nil
 }
@@ -295,21 +312,7 @@ func (u *SignDocument) validateContainer(request Request) error {
 func (u *SignDocument) sign(ctx context.Context, request Request, content []byte) ([]byte, error) {
 	switch request.Format {
 	case domain.Cades:
-		signed, err := u.cades.SignCades(ctx, CadesRequest{
-			Content:         content,
-			Detached:        request.detached(),
-			Cosign:          request.Cosign,
-			Countersign:     request.Countersign,
-			DetachedContent: u.detachedContent(request),
-			Signer:          request.Signer,
-			Level:           request.Level,
-			EmbedRevocation: request.EmbedRevocation,
-			TimestampURL:    request.TimestampURL,
-			TimestampUser:   request.TimestampUser,
-			TimestampSecret: request.TimestampSecret,
-			Policy:          request.Policy,
-		})
-		return signed, err
+		return u.cades.SignCades(ctx, u.cadesRequest(request, content))
 
 	case domain.Pades:
 		signed, err := u.pades.SignPades(ctx, PadesRequest{
@@ -330,25 +333,89 @@ func (u *SignDocument) sign(ctx context.Context, request Request, content []byte
 		return signed, err
 
 	case domain.Xades, domain.Xmldsig:
-		signed, err := u.xades.SignXades(ctx, XadesRequest{
-			Plain:           request.Format == domain.Xmldsig,
-			Content:         content,
-			Signer:          request.Signer,
-			Level:           request.Level,
-			EmbedRevocation: request.EmbedRevocation,
-			Packaging:       request.xmlPackaging(),
-			DocumentName:    request.Document.Name(),
-			InASiC:          request.Container != domain.NoContainer,
-			TimestampURL:    request.TimestampURL,
-			TimestampUser:   request.TimestampUser,
-			TimestampSecret: request.TimestampSecret,
-			Policy:          request.Policy,
-			ClaimedRoles:    request.ClaimedRoles,
-		})
-		return signed, err
+		return u.xades.SignXades(ctx, u.xadesRequest(request, content))
 	}
 
 	return nil, fmt.Errorf("%w: %q", domain.ErrUnsupportedFormat, request.Format)
+}
+
+// cadesRequest is what the CAdES adapter needs to sign content.
+func (u *SignDocument) cadesRequest(request Request, content []byte) CadesRequest {
+	return CadesRequest{
+		Content:         content,
+		Detached:        request.detached(),
+		Cosign:          request.Cosign,
+		Countersign:     request.Countersign,
+		DetachedContent: u.detachedContent(request),
+		Signer:          request.Signer,
+		Level:           request.Level,
+		EmbedRevocation: request.EmbedRevocation,
+		TimestampURL:    request.TimestampURL,
+		TimestampUser:   request.TimestampUser,
+		TimestampSecret: request.TimestampSecret,
+		Policy:          request.Policy,
+	}
+}
+
+// xadesRequest is what the XML adapter needs to sign content.
+func (u *SignDocument) xadesRequest(request Request, content []byte) XadesRequest {
+	return XadesRequest{
+		Plain:           request.Format == domain.Xmldsig,
+		Content:         content,
+		Signer:          request.Signer,
+		Level:           request.Level,
+		EmbedRevocation: request.EmbedRevocation,
+		Packaging:       request.xmlPackaging(),
+		DocumentName:    request.Document.Name(),
+		InASiC:          request.Container != domain.NoContainer,
+		TimestampURL:    request.TimestampURL,
+		TimestampUser:   request.TimestampUser,
+		TimestampSecret: request.TimestampSecret,
+		Policy:          request.Policy,
+		ClaimedRoles:    request.ClaimedRoles,
+	}
+}
+
+// signExtended signs several documents into an ASiC-E container (ETSI EN
+// 319 162-1): one XML signature that references each of them, or a CAdES
+// signature over an ASiCManifest listing their digests.
+func (u *SignDocument) signExtended(ctx context.Context, request Request, content []byte) ([]byte, error) {
+	documents := []ContainerEntry{{Name: request.Document.Name(), Content: content}}
+	for _, other := range request.MoreDocuments {
+		data, err := u.files.Read(other.Path())
+		if err != nil {
+			return nil, fmt.Errorf("read document %s: %w", other.Path(), err)
+		}
+		documents = append(documents, ContainerEntry{Name: other.Name(), Content: data})
+	}
+	entries := append([]ContainerEntry{}, documents...)
+	signatureEntry := request.Container.SignatureEntry(request.Format)
+
+	if request.Format.IsXML() {
+		signing := u.xadesRequest(request, content)
+		for _, other := range documents[1:] {
+			signing.MoreDocuments = append(signing.MoreDocuments, DetachedDocument{Name: other.Name, Content: other.Content})
+		}
+		signed, err := u.xades.SignXades(ctx, signing)
+		if err != nil {
+			return nil, err
+		}
+		entries = append(entries, ContainerEntry{Name: signatureEntry, Content: signed})
+		return u.containers.WriteContainer(request.Container, entries)
+	}
+
+	manifest, err := u.containers.Manifest(signatureEntry, documents)
+	if err != nil {
+		return nil, err
+	}
+	signed, err := u.cades.SignCades(ctx, u.cadesRequest(request, manifest))
+	if err != nil {
+		return nil, err
+	}
+	entries = append(entries,
+		ContainerEntry{Name: domain.ManifestEntry, Content: manifest},
+		ContainerEntry{Name: signatureEntry, Content: signed})
+	return u.containers.WriteContainer(request.Container, entries)
 }
 
 // SystemClock is the production Clock.
