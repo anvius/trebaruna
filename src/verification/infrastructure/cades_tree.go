@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/ber"
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/brainpool"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/publickey"
 	"codeberg.org/simplicer/trebaruna/src/verification/domain"
 )
@@ -105,7 +106,9 @@ func parseSignatureTree(envelope, detached []byte) (signatureTree, error) {
 		if rest, err = asn1.Unmarshal(rest, &element); err != nil {
 			return signatureTree{}, err
 		}
-		if certificate, err := x509.ParseCertificate(element.FullBytes); err == nil {
+		// Brainpool keys, which Go cannot read, come through the brainpool
+		// package.
+		if certificate, err := brainpool.ParseCertificate(element.FullBytes); err == nil {
 			publickey.Complete(certificate)
 			tree.certificates = append(tree.certificates, certificate)
 		}
@@ -272,7 +275,52 @@ func (v *CadesVerifier) chainOf(certificate *x509.Certificate, carried []*x509.C
 		Roots: v.rootsWithAnchors(), Intermediates: intermediates, CurrentTime: at,
 		KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
 	})
+	if err != nil && involvesBrainpool(append(append([]*x509.Certificate{certificate}, carried...), v.Anchors...)) {
+		return brainpoolChainOf(certificate, carried, v.Anchors, at)
+	}
 	return err
+}
+
+// involvesBrainpool reports a Brainpool key among the certificates: Go's
+// chain builder cannot check what such a key signs.
+func involvesBrainpool(certificates []*x509.Certificate) bool {
+	for _, certificate := range certificates {
+		if _, ok := certificate.PublicKey.(*brainpool.PublicKey); ok {
+			return true
+		}
+	}
+	return false
+}
+
+// brainpoolChainOf walks from the certificate up through the carried ones
+// to an anchor, each issuer's signature checked by the brainpool package
+// and each certificate valid at the instant.
+func brainpoolChainOf(certificate *x509.Certificate, carried, anchors []*x509.Certificate, at time.Time) error {
+	current := certificate
+	for depth := 0; depth < 10; depth++ {
+		if at.Before(current.NotBefore) || at.After(current.NotAfter) {
+			return fmt.Errorf("%s is not valid at %s", current.Subject.CommonName, at.Format(time.RFC3339))
+		}
+		for _, anchor := range anchors {
+			if bytes.Equal(anchor.Raw, current.Raw) ||
+				(bytes.Equal(anchor.RawSubject, current.RawIssuer) && brainpool.CheckSignatureFrom(current, anchor) == nil) {
+				return nil
+			}
+		}
+		var next *x509.Certificate
+		for _, candidate := range carried {
+			if !bytes.Equal(candidate.Raw, current.Raw) && bytes.Equal(candidate.RawSubject, current.RawIssuer) &&
+				brainpool.CheckSignatureFrom(current, candidate) == nil {
+				next = candidate
+				break
+			}
+		}
+		if next == nil {
+			return fmt.Errorf("no chain from %s to a trusted authority", certificate.Subject.CommonName)
+		}
+		current = next
+	}
+	return fmt.Errorf("the chain from %s is too long", certificate.Subject.CommonName)
 }
 
 // certificatesFor finds the certificates a SignerInfo names.

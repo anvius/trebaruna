@@ -156,6 +156,16 @@ func (v *CadesVerifier) detachedContent() ([]byte, error) {
 func (v *CadesVerifier) extractEnvelope(content []byte) ([]domain.SignerReport, error) {
 	parsed, err := pkcs7.Parse(content)
 	if err != nil {
+		// The CMS library reads no certificate it cannot parse, such as a
+		// Brainpool one; the tree path reads those.
+		if tree, treeErr := parseSignatureTree(content, nil); treeErr == nil && len(tree.signers) > 0 {
+			if len(tree.content) == 0 && v.hasDetached() {
+				if tree.content, err = v.detachedContent(); err != nil {
+					return nil, err
+				}
+			}
+			return v.extractTree(tree)
+		}
 		return nil, fmt.Errorf("parse CMS: %w", err)
 	}
 

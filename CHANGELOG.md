@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- CAdES signatures made with brainpool keys (brainpoolP256r1, P384r1,
+  P512r1; German health professionals' cards) are read and checked. Go has
+  no such curves: trebaruna reads their certificates itself (Go reads the
+  rest while the key is set aside, then the certificate gets its own bytes
+  and key back), verifies ECDSA on them (RFC 5639 curves, FIPS 186-4
+  verification, s and r below the order), and walks the chain to an
+  anchor, checking each issuer's signature and that it may issue, as Go
+  does. openssl makes keys, certificates and envelopes on the three
+  curves: their signatures verify, an altered prescription or signature is
+  caught, an impostor authority anchors nothing.
+
 - PDF/A documents stay PDF/A when signed with a seal: the part their
   metadata claims is read, and the seal is set in the Go fonts, embedded
   whole as TrueType with the widths read from the font program (ISO

@@ -55,6 +55,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.80.0-unstable" date="2026-11-10">
+      <description>
+        <p>CAdES signatures made with brainpool keys, as German health professionals' cards make them, are read and checked.</p>
+      </description>
+    </release>
     <release version="0.79.0-unstable" date="2026-11-10">
       <description>
         <p>PDF/A documents stay PDF/A when you sign them with a seal.</p>

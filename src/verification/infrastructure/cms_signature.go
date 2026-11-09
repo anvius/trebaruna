@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"strings"
 
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/brainpool"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/publickey"
 )
 
@@ -47,6 +48,12 @@ func checkSignerSignature(certificate *x509.Certificate, algorithm pkix.Algorith
 	known, ok := signatureAlgorithm(algorithm.Algorithm, digest)
 	if !ok {
 		return fmt.Errorf("%w: %v", errUnsupportedSignature, algorithm.Algorithm)
+	}
+	if key, isBrainpool := certificate.PublicKey.(*brainpool.PublicKey); isBrainpool {
+		if err := key.CheckSignature(known, attributes, signature); err != nil {
+			return fmt.Errorf("the %s signature does not verify", key.Curve.Name)
+		}
+		return nil
 	}
 	err := certificate.CheckSignature(known, attributes, signature)
 	if errors.Is(err, x509.ErrUnsupportedAlgorithm) {

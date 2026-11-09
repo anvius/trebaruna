@@ -288,9 +288,15 @@ worse than none.
 
 - **The signer's identity.** A qualified signature means the CA verified a
   document; it does not mean the person who pressed the button was that person.
-- **Keys on brainpool curves**, which some German health-professional cards
-  carry: Go's certificate parser refuses their certificates, so such
-  signatures cannot be read at all.
+- **Keys on brainpool curves** (brainpoolP256r1, P384r1, P512r1), which
+  German health-professional cards and their authorities use, are read and
+  checked in CAdES: Go has no such curves, so trebaruna reads their
+  certificates itself (Go reads the rest while the key is set aside),
+  verifies ECDSA on them with its own arithmetic, and walks their chain to an
+  anchor, each issuer's signature checked. A trusted list whose own
+  authorities have brainpool keys is not read yet, so such signatures are
+  shown with their issuer unrecognised unless that authority is given as an
+  anchor.
 
 ### A note on the key-usage check
 
