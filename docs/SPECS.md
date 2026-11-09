@@ -67,7 +67,7 @@ user seeing what is signed and where anything goes.
 | Rule | Status |
 |---|---|
 | RFC 3161 tokens (`.tsr`) and their verification; authorities with an account | built |
-| Time-stamped data `.tsd` (RFC 5544): create, verify, extract | planned (E4) |
+| Time-stamped data `.tsd` (RFC 5544): create, verify (renewals included, DER or BER), extract (nested `.p7m.tsd`) | built |
 | Choose a qualified authority from the trusted list | planned (F1) |
 
 ### Verify

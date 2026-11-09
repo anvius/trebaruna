@@ -9,6 +9,8 @@ import (
 
 	"github.com/digitorus/pkcs7"
 
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/tsd"
+
 	"codeberg.org/simplicer/trebaruna/src/verification/application"
 )
 
@@ -19,8 +21,19 @@ var ErrDetachedEnvelope = errors.New("this is a detached signature: the document
 // forms .p7m files actually arrive in.
 type CMSEnvelopes struct{}
 
-// Open returns the content of the envelope.
+// Open returns the content of the envelope: a signed one, or time-stamped
+// data (.tsd), whose document sits beside its tokens.
 func (CMSEnvelopes) Open(envelope []byte) ([]byte, error) {
+	if raw := CMSBytes(envelope); tsd.Is(raw) {
+		document, err := tsd.Decode(raw)
+		if err != nil {
+			return nil, err
+		}
+		if len(document.Content) == 0 {
+			return nil, ErrDetachedEnvelope
+		}
+		return document.Content, nil
+	}
 	parsed, err := pkcs7.Parse(CMSBytes(envelope))
 	if err != nil {
 		return nil, err
@@ -33,6 +46,9 @@ func (CMSEnvelopes) Open(envelope []byte) ([]byte, error) {
 
 // IsEnvelope reports whether data is itself a signed envelope.
 func (CMSEnvelopes) IsEnvelope(data []byte) bool {
+	if tsd.Is(CMSBytes(data)) {
+		return true
+	}
 	parsed, err := pkcs7.Parse(CMSBytes(data))
 	return err == nil && len(parsed.Signers) > 0 && len(parsed.Content) > 0
 }

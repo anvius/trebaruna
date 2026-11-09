@@ -16,14 +16,14 @@ type ExtractedDocument struct {
 }
 
 // ExtractedName is the default name of the document inside an envelope: the
-// envelope's name without its .p7m/.p7s suffixes, so contratto.pdf.p7m.p7m
-// gives contratto.pdf beside it.
+// envelope's name without its .p7m/.p7s/.tsd suffixes, so
+// contratto.pdf.p7m.tsd gives contratto.pdf beside it.
 func ExtractedName(envelope string) string {
 	name := envelope
 	for {
 		lower := strings.ToLower(name)
 		switch {
-		case strings.HasSuffix(lower, ".p7m"), strings.HasSuffix(lower, ".p7s"):
+		case strings.HasSuffix(lower, ".p7m"), strings.HasSuffix(lower, ".p7s"), strings.HasSuffix(lower, ".tsd"):
 			name = name[:len(name)-4]
 		default:
 			if name == envelope || filepath.Base(name) == "" {

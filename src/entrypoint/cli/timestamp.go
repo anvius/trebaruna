@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure"
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/tsd"
 	"github.com/digitorus/timestamp"
 )
 
@@ -38,11 +39,12 @@ func runTimestamp(args []string, stdout, stderr io.Writer) int {
 		tsaUser = flags.String("tsa-user", "", "TSA basic-auth username")
 		tsaPass = flags.String("tsa-pass", "", "TSA basic-auth password (or $TREBARUNA_TSA_PASS)")
 		hashHex = flags.String("hash", "", "timestamp this hex digest instead of a file")
+		asTSD   = flags.Bool("tsd", false, "write <file>.tsd: the document and its token together (RFC 5544)")
 		asJSON  = flags.Bool("json", false, "machine-readable output")
 	)
 
 	flags.Usage = func() {
-		fmt.Fprintln(stderr, "usage: trebaruna timestamp <file> --tsa <url> [flags]")
+		fmt.Fprintln(stderr, "usage: trebaruna timestamp <file> --tsa <url> [--tsd] [flags]")
 		fmt.Fprintln(stderr, "       trebaruna timestamp --hash <hex> --tsa <url> [flags]")
 		flags.PrintDefaults()
 	}
@@ -74,9 +76,15 @@ func runTimestamp(args []string, stdout, stderr io.Writer) int {
 		return exitUsage
 	}
 
+	if *asTSD && path == "" {
+		fmt.Fprintln(stderr, "--tsd keeps the document with its token, so it needs the document, not --hash")
+		return exitUsage
+	}
+
 	// What gets timestamped: the digest of the file, or a digest the caller
 	// already computed. The TSA never sees the document, only its hash.
 	var digest []byte
+	var content []byte
 	switch {
 	case *hashHex != "":
 		decoded, err := hex.DecodeString(strings.TrimSpace(*hashHex))
@@ -86,11 +94,12 @@ func runTimestamp(args []string, stdout, stderr io.Writer) int {
 		}
 		digest = decoded
 	default:
-		content, err := os.ReadFile(path)
+		read, err := os.ReadFile(path)
 		if err != nil {
 			fmt.Fprintf(stderr, "read %q: %v\n", path, err)
 			return exitUsage
 		}
+		content = read
 		sum := sha256.Sum256(content)
 		digest = sum[:]
 	}
@@ -111,14 +120,23 @@ func runTimestamp(args []string, stdout, stderr io.Writer) int {
 	}
 
 	destination := *output
-	if destination == "" {
-		if path != "" {
-			destination = path + ".tsr"
-		} else {
-			destination = "timestamp.tsr"
+	switch {
+	case destination != "":
+	case *asTSD:
+		destination = path + ".tsd"
+	case path != "":
+		destination = path + ".tsr"
+	default:
+		destination = "timestamp.tsr"
+	}
+	written := response
+	if *asTSD {
+		if written, err = timeStampedData(content, path, response); err != nil {
+			fmt.Fprintf(stderr, "build the .tsd: %v\n", err)
+			return exitInvalid
 		}
 	}
-	if err := os.WriteFile(destination, response, 0o644); err != nil {
+	if err := os.WriteFile(destination, written, 0o644); err != nil {
 		fmt.Fprintf(stderr, "write %q: %v\n", destination, err)
 		return exitInvalid
 	}
@@ -132,7 +150,7 @@ func runTimestamp(args []string, stdout, stderr io.Writer) int {
 			"tsa":        firstCertificateName(token),
 			"serial":     token.SerialNumber.String(),
 			"policy":     token.Policy.String(),
-			"size_bytes": len(response),
+			"size_bytes": len(written),
 			"network":    connections(),
 		})
 		return exitOK
@@ -161,6 +179,7 @@ func runVerifyTimestamp(args []string, stdout, stderr io.Writer) int {
 
 	flags.Usage = func() {
 		fmt.Fprintln(stderr, "usage: trebaruna verify-tsr <token.tsr> [file] [--hash <hex>] [--json]")
+		fmt.Fprintln(stderr, "       trebaruna verify-tsr <document.tsd> [--json]")
 		flags.PrintDefaults()
 	}
 
@@ -186,6 +205,10 @@ func runVerifyTimestamp(args []string, stdout, stderr io.Writer) int {
 	if err != nil {
 		fmt.Fprintf(stderr, "read %q: %v\n", tokenPath, err)
 		return exitUsage
+	}
+
+	if tsd.Is(content) {
+		return verifyTimeStampedData(tokenPath, content, *asJSON, stdout, stderr)
 	}
 
 	token, err := timestamp.ParseResponse(content)

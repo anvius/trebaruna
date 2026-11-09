@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Time-stamped data (RFC 5544): `timestamp --tsd` writes `<file>.tsd` with the
+  document, its name and media type, and the token; `verify-tsr <file.tsd>`
+  checks every token (the first against the document, renewals against the
+  previous token) and reads DER or BER; `extract` opens `.tsd`, nested ones
+  included (`name.pdf.p7m.tsd`).
+
 - Card PIN management: `trebaruna pin change` (current PIN → new) and
   `trebaruna pin unlock` (PUK → new PIN, for a locked or forgotten PIN), with
   the secrets only in `TREBARUNA_PIN`, `TREBARUNA_PUK` and `TREBARUNA_NEW_PIN`.

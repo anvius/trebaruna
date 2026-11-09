@@ -264,18 +264,22 @@ The `!` lines are findings, and each has a code in the JSON form. See
 ## `timestamp`
 
 ```
-trebaruna timestamp <file> --tsa <url>
+trebaruna timestamp <file> --tsa <url> [--tsd]
 trebaruna timestamp --hash <hex> --tsa <url>
 ```
 
-Obtains an RFC 3161 token proving a document existed at a moment.
+Obtains an RFC 3161 token proving a document existed at a moment. With
+`--tsd` the document and its token travel together in `<file>.tsd`
+(time-stamped data, RFC 5544: what Italian offices keep as
+`name.pdf.p7m.tsd`), the file name and media type recorded beside them.
 
 | Flag | Meaning |
 |---|---|
 | `--tsa` | Timestamp authority URL (required) |
 | `--hash` | Timestamp a digest instead of a file |
 | `--tsa-user`, `--tsa-pass` | Basic auth, when the authority requires it |
-| `--out` | Output path, default `<file>.tsr` |
+| `--tsd` | Write `<file>.tsd` with the document inside instead of a bare `.tsr` |
+| `--out` | Output path, default `<file>.tsr` (or `<file>.tsd`) |
 | `--json` | Machine-readable result |
 
 ```bash
@@ -291,9 +295,13 @@ See [Timestamps](timestamps.md).
 
 ```
 trebaruna verify-tsr <token.tsr> [document]
+trebaruna verify-tsr <document.tsd>
 ```
 
-Checks a token on its own, or that it matches a document.
+Checks a token on its own, or that it matches a document. A `.tsd` carries its
+document: every token is checked — the first against the document, each
+renewal against the token before it (RFC 5544, section 4.2) — and DER or BER
+files are read.
 
 ```bash
 trebaruna verify-tsr atto.pdf.tsr
@@ -518,13 +526,14 @@ error.
 ## `extract`
 
 ```
-trebaruna extract <document.p7m> [--out path] [--json]
+trebaruna extract <document.p7m|document.tsd> [--out path] [--json]
 ```
 
 Takes the signed document out of a CAdES envelope: what AutoFirma calls
 *extraer datos*. Nested envelopes
 (`contratto.pdf.p7m.p7m`, two people signing one after the other) are opened
-down to the document; DER, BER, PEM and bare Base64 envelopes are all read.
+down to the document, through time-stamped data too (`contratto.pdf.p7m.tsd`);
+DER, BER, PEM and bare Base64 envelopes are all read.
 The default output is the envelope's name without `.p7m`; an existing file is
 never overwritten (exit 2). Extraction checks nothing: verify the envelope.
 A detached `.p7s` has no document inside and is refused with that reason.
