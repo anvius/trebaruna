@@ -279,6 +279,11 @@ type Catalogue struct {
 	FormatDetachedLabel    string
 	ExtractButton          string
 	ExtractedAs            string
+	ExtractDocumentsButton string
+	ExtractedFolder        string
+	ReportButton           string
+	ReportFileName         string
+	ReportSavedAs          string
 	FormatCosignLabel      string
 	FormatCountersignLabel string
 	FormatWrapLabel        string
@@ -525,6 +530,11 @@ var spanish = Catalogue{
 	FormatDetachedLabel:        "Firma separada .p7s (CAdES): el documento no se modifica",
 	ExtractButton:              "Extraer el documento firmado",
 	ExtractedAs:                "Documento extraído en %s. Extraer no comprueba nada: la comprobación es la de arriba.",
+	ExtractDocumentsButton:     "Extraer los documentos del contenedor",
+	ExtractedFolder:            "Documentos extraídos en %s. Extraer no comprueba nada: la comprobación es la de arriba.",
+	ReportButton:               "Guardar informe…",
+	ReportFileName:             "%s - informe.pdf",
+	ReportSavedAs:              "Informe guardado en %s.",
 	FormatCosignLabel:          "Añadir una firma paralela: firmas lo mismo que los demás",
 	FormatCountersignLabel:     "Contrafirmar: firmas sobre las firmas que ya tiene",
 	FormatWrapLabel:            "Envolver en otro sobre .p7m (modo antiguo)",
@@ -759,6 +769,11 @@ var italian = Catalogue{
 	FormatDetachedLabel:        "Firma separata .p7s (CAdES): il documento non viene modificato",
 	ExtractButton:              "Estrai il documento firmato",
 	ExtractedAs:                "Documento estratto in %s. L'estrazione non verifica nulla: la verifica è quella sopra.",
+	ExtractDocumentsButton:     "Estrai i documenti del contenitore",
+	ExtractedFolder:            "Documenti estratti in %s. L'estrazione non verifica nulla: la verifica è quella sopra.",
+	ReportButton:               "Salva il rapporto…",
+	ReportFileName:             "%s - rapporto.pdf",
+	ReportSavedAs:              "Rapporto salvato in %s.",
 	FormatCosignLabel:          "Aggiungi una firma parallela: firmi lo stesso documento degli altri",
 	FormatCountersignLabel:     "Controfirma: firmi sopra le firme già presenti",
 	FormatWrapLabel:            "Racchiudi in un'altra busta .p7m (modo tradizionale)",
@@ -993,6 +1008,11 @@ var english = Catalogue{
 	FormatDetachedLabel:        "Detached .p7s signature (CAdES): the document is left untouched",
 	ExtractButton:              "Extract the signed document",
 	ExtractedAs:                "Document extracted to %s. Extraction checks nothing: the check is the one above.",
+	ExtractDocumentsButton:     "Extract the container's documents",
+	ExtractedFolder:            "Documents extracted to %s. Extracting checks nothing: the check is the one above.",
+	ReportButton:               "Save report…",
+	ReportFileName:             "%s - report.pdf",
+	ReportSavedAs:              "Report saved to %s.",
 	FormatCosignLabel:          "Add a parallel signature: you sign what the others signed",
 	FormatCountersignLabel:     "Counter-sign: you sign over the signatures already there",
 	FormatWrapLabel:            "Wrap in another .p7m envelope (the old way)",

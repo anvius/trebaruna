@@ -87,7 +87,8 @@ user seeing what is signed and where anything goes.
 | Extract the signed document from `.p7m` (nested, DER/BER/PEM/Base64); ASiC through `asic --extract` | built |
 | XML signatures checked completely: every reference (document, signed properties, objects), every signature of a document; what cannot be checked is unknown, not broken | built |
 | ASiC-S and ASiC-E containers: each CAdES (over the document, or over its signed `ASiCManifest` whose digests must match) or XAdES signature against the files it covers; files no signature covers are reported | built |
-| Exportable report (`verify --report x.md|.html|.pdf`): file and SHA-256, verdict, every signature and finding in the chosen language, connections, version; home directory as `~` | built (CLI; desktop button with F3) |
+| Exportable report (`verify --report x.md|.html|.pdf`): file and SHA-256, verdict, every signature and finding in the chosen language, connections, version; home directory as `~` | built (CLI; the Check tab saves a PDF) |
+| Check tab: counter-signatures indented under what they sign; the files each container signature covers and those none covers; extraction from `.p7m`, `.tsd` and ASiC containers | built |
 
 ### Encrypt
 

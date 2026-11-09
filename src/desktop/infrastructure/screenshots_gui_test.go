@@ -89,8 +89,29 @@ func TestScreenshots(t *testing.T) {
 		verification.render(report)
 		tabs.Refresh()
 		capture(t, window, filepath.Join(directory, fmt.Sprintf("check-%s.png", language)))
+
+		// A container whose signature a notary counter-signed.
+		container := newVerificationTab(window, desktop.messages, reportmessaging.For(languageCode(language)), desktop.palette, "trebaruna")
+		tabs.Items[1].Content = container.content()
+		container.path = "/home/mario/Documenti/expediente-licencia.asice"
+		container.file.show(container.path, "")
+		var containerReport verifyReport
+		_ = json.Unmarshal([]byte(sampleContainerReport), &containerReport)
+		container.render(containerReport)
+		tabs.Refresh()
+		capture(t, window, filepath.Join(directory, fmt.Sprintf("check-container-%s.png", language)))
 	}
 }
+
+// sampleContainerReport is an ASiC-E with a counter-signature and a file
+// nobody signed.
+const sampleContainerReport = `{"signed":true,"verdict":"advanced","signers":[
+	{"field":"META-INF/signature.p7s","signer":"MARIO ROSSI","identifier":"TINIT-RSSMRA80A01H501U","issuer":"ArubaPEC S.p.A. NG CA 3",
+	 "signed_at":"2026-11-09T10:12:00+01:00","timestamped":true,"integrity":"good","findings":[
+	 {"code":"container.covers","status":"good","message":"covers","detail":"solicitud.pdf, plano.pdf"},
+	 {"code":"container.unsigned_files","status":"warn","message":"unsigned","detail":"notas.txt"}]},
+	{"field":"META-INF/signature.p7s#1","countersigns":"META-INF/signature.p7s","signer":"ANNA VERDI","issuer":"InfoCert Firma Qualificata 2",
+	 "signed_at":"2026-11-09T12:40:00+01:00","integrity":"good","findings":[]}]}`
 
 // portraitReader stands in for the certificate command with a qualified
 // Italian certificate, so the screenshots show a filled card.

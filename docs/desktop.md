@@ -167,8 +167,19 @@ result reads top to bottom:
   seal prints it, with the offset), integrity, and the findings that are not
   good, in the window language.
 
-For a `.p7m`, **Extract the signed document** writes the document inside next
-to the envelope (under a free name, never over an existing file) and opens it.
+Counter-signatures sit under the signature they sign, indented, so who
+signed over whom reads at a glance. For a container, each signature lists the
+files it covers, and the files no signature covers are named.
+
+For a `.p7m` or time-stamped data (`.tsd`), **Extract the signed document**
+writes the document inside next to the envelope (under a free name, never
+over an existing file) and opens it. For an ASiC container, **Extract the
+container's documents** unpacks it into a folder beside it. Extraction checks
+nothing; the check is the verdict above.
+
+**Save report…** writes the verification as a PDF (`verify --report`), in the
+window's language, and opens it: the file and its SHA-256, the verdict, every
+signature and finding.
 
 Checking runs **offline** by default, like the CLI. The checkbox *Ask over the
 network whether the certificate was revoked (OCSP)* turns revocation on and

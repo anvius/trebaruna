@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Check tab:
+  - signatures as a tree: each counter-signature indented under the
+    signature it signs (SignatureTree in the desktop domain: report order
+    kept, a missing parent or a loop at the top);
+  - a container signature lists the files it covers, and the files no
+    signature covers are named;
+  - extraction from time-stamped data (`.tsd`), and from ASiC containers
+    into a folder beside them;
+  - **Save report…** writes the verification as a PDF in the window's
+    language and opens it.
+  - New strings in Spanish, Italian and English; a screenshot of a
+    counter-signed container checked by eye.
+
 - `verify --report <file>.md|.html|.pdf` writes the verification as a
   document to keep or send.
   - It holds the file and its SHA-256, the verdict, every signature

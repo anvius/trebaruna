@@ -20,9 +20,11 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
+	desktopdomain "codeberg.org/simplicer/trebaruna/src/desktop/domain"
 	"codeberg.org/simplicer/trebaruna/src/desktop/messaging"
 	"codeberg.org/simplicer/trebaruna/src/verification/domain"
 	reportmessaging "codeberg.org/simplicer/trebaruna/src/verification/messaging"
@@ -32,37 +34,40 @@ import (
 
 // verifyReport mirrors the JSON emitted by `trebaruna verify --json`.
 type verifyReport struct {
-	Path    string `json:"path"`
-	Format  string `json:"format"`
-	Signed  bool   `json:"signed"`
-	Verdict string `json:"verdict"`
-	Signers []struct {
-		Field        string `json:"field"`
-		Countersigns string `json:"countersigns"`
-		Signer       string `json:"signer"`
-		ID           string `json:"identifier"`
-		Issuer       string `json:"issuer"`
-		Format       string `json:"format"`
-		SignedAt     string `json:"signed_at"`
-		Timestamp    bool   `json:"timestamped"`
-		TSA          string `json:"timestamp_authority"`
-		Integrity    string `json:"integrity"`
-		Trust        string `json:"trust"`
-		Expired      bool   `json:"certificate_expired_now"`
-		SelfSign     bool   `json:"self_signed"`
-		Findings     []struct {
-			Code    string `json:"code"`
-			Status  string `json:"status"`
-			Message string `json:"message"`
-			Detail  string `json:"detail"`
-		} `json:"findings"`
-	} `json:"signers"`
+	Path     string           `json:"path"`
+	Format   string           `json:"format"`
+	Signed   bool             `json:"signed"`
+	Verdict  string           `json:"verdict"`
+	Signers  []verifiedSigner `json:"signers"`
 	Warnings []struct {
 		Code    string `json:"code"`
 		Status  string `json:"status"`
 		Message string `json:"message"`
 	} `json:"warnings"`
 	Network []transparency.Connection `json:"network"`
+}
+
+// verifiedSigner is one signature of the report.
+type verifiedSigner struct {
+	Field        string `json:"field"`
+	Countersigns string `json:"countersigns"`
+	Signer       string `json:"signer"`
+	ID           string `json:"identifier"`
+	Issuer       string `json:"issuer"`
+	Format       string `json:"format"`
+	SignedAt     string `json:"signed_at"`
+	Timestamp    bool   `json:"timestamped"`
+	TSA          string `json:"timestamp_authority"`
+	Integrity    string `json:"integrity"`
+	Trust        string `json:"trust"`
+	Expired      bool   `json:"certificate_expired_now"`
+	SelfSign     bool   `json:"self_signed"`
+	Findings     []struct {
+		Code    string `json:"code"`
+		Status  string `json:"status"`
+		Message string `json:"message"`
+		Detail  string `json:"detail"`
+	} `json:"findings"`
 }
 
 // signedExtensions are the containers a signed document arrives in.
@@ -92,6 +97,10 @@ type verificationTab struct {
 	signers     *fyne.Container
 	extract     *widget.Button
 	extracted   *widget.Label
+	// saveReport writes the verification as a PDF report; reported says
+	// where it went.
+	saveReport *widget.Button
+	reported   *widget.Label
 	// open shows a file in the system viewer; tests replace it.
 	open func(path string)
 }
@@ -127,6 +136,11 @@ func (v *verificationTab) content() fyne.CanvasObject {
 	v.extracted = widget.NewLabel("")
 	v.extracted.Wrapping = fyne.TextWrapWord
 	v.extracted.Hide()
+	v.saveReport = widget.NewButtonWithIcon(v.ui.ReportButton, theme.DocumentSaveIcon(), v.pickReport)
+	v.saveReport.Hide()
+	v.reported = widget.NewLabel("")
+	v.reported.Wrapping = fyne.TextWrapWord
+	v.reported.Hide()
 
 	heading := canvas.NewText(v.ui.VerifySection, v.palette.Text)
 	heading.TextSize = 16
@@ -142,6 +156,8 @@ func (v *verificationTab) content() fyne.CanvasObject {
 		v.explanation,
 		v.extract,
 		v.extracted,
+		v.saveReport,
+		v.reported,
 		v.signers,
 	)
 	// A reading column, not a full-width sheet: findings are prose, and lines
@@ -205,9 +221,16 @@ func (v *verificationTab) render(report verifyReport) {
 	m := v.report
 	verdict := domain.TrustLevel(report.Verdict)
 	v.extracted.Hide()
-	if isEnvelope(v.path) {
+	v.reported.Hide()
+	v.saveReport.Show()
+	switch extractableKind(v.path) {
+	case extractEnvelope:
+		v.extract.SetText(v.ui.ExtractButton)
 		v.extract.Show()
-	} else {
+	case extractContainer:
+		v.extract.SetText(v.ui.ExtractDocumentsButton)
+		v.extract.Show()
+	default:
 		v.extract.Hide()
 	}
 	if v.onNetwork != nil && len(report.Network) > 0 {
@@ -222,45 +245,15 @@ func (v *verificationTab) render(report verifyReport) {
 	// colour-blind user must get the same answer.
 	v.showVerdict(m.VerdictName(verdict), v.explain(verdict), v.colourFor(verdict))
 
+	// Counter-signatures hang under the signature they sign, indented, so the
+	// order of who signed over whom reads at a glance.
+	nodes := make([]desktopdomain.SignatureNode, len(report.Signers))
+	for index, signer := range report.Signers {
+		nodes[index] = desktopdomain.SignatureNode{Field: signer.Field, Countersigns: signer.Countersigns}
+	}
 	blocks := make([]fyne.CanvasObject, 0, len(report.Signers)+1)
-	for _, signer := range report.Signers {
-		name := widget.NewLabelWithStyle(signer.Signer, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
-		name.Wrapping = fyne.TextWrapWord
-
-		var facts []string
-		if signer.Countersigns != "" {
-			facts = append(facts, fmt.Sprintf(v.ui.CountersignatureOf, signer.Countersigns))
-		}
-		if signer.ID != "" {
-			facts = append(facts, m.LabelIdentifier+": "+signer.ID)
-		}
-		if signer.Issuer != "" {
-			facts = append(facts, m.LabelIssuer+": "+signer.Issuer)
-		}
-		if signer.SignedAt != "" {
-			label := m.LabelSignedAt
-			if signer.Timestamp {
-				label = m.LabelTimestamped
-			}
-			facts = append(facts, label+": "+readableInstant(signer.SignedAt))
-		}
-		facts = append(facts, m.LabelIntegrity+": "+m.StatusName(domain.Status(signer.Integrity)))
-
-		var findings []string
-		for _, finding := range signer.Findings {
-			if finding.Status == "good" {
-				continue
-			}
-			findings = append(findings, m.StatusMark(domain.Status(finding.Status))+" "+m.FindingName(finding.Code, finding.Message))
-		}
-
-		block := container.NewVBox(widget.NewSeparator(), name, caption(strings.Join(facts, "\n")))
-		if len(findings) > 0 {
-			list := widget.NewLabel(strings.Join(findings, "\n"))
-			list.Wrapping = fyne.TextWrapWord
-			block.Add(list)
-		}
-		blocks = append(blocks, block)
+	for _, place := range desktopdomain.SignatureTree(nodes) {
+		blocks = append(blocks, indented(v.signatureBlock(report.Signers[place.Index]), place.Depth))
 	}
 
 	var warnings []string
@@ -273,6 +266,109 @@ func (v *verificationTab) render(report verifyReport) {
 
 	v.signers.Objects = blocks
 	v.signers.Refresh()
+}
+
+// signatureBlock shows one signature: who, what they signed, and what was
+// found beyond the expected.
+func (v *verificationTab) signatureBlock(signer verifiedSigner) fyne.CanvasObject {
+	m := v.report
+	name := widget.NewLabelWithStyle(signer.Signer, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+	name.Wrapping = fyne.TextWrapWord
+
+	var facts []string
+	if signer.Countersigns != "" {
+		facts = append(facts, fmt.Sprintf(v.ui.CountersignatureOf, signer.Countersigns))
+	}
+	if signer.ID != "" {
+		facts = append(facts, m.LabelIdentifier+": "+signer.ID)
+	}
+	if signer.Issuer != "" {
+		facts = append(facts, m.LabelIssuer+": "+signer.Issuer)
+	}
+	if signer.SignedAt != "" {
+		label := m.LabelSignedAt
+		if signer.Timestamp {
+			label = m.LabelTimestamped
+		}
+		facts = append(facts, label+": "+readableInstant(signer.SignedAt))
+	}
+	facts = append(facts, m.LabelIntegrity+": "+m.StatusName(domain.Status(signer.Integrity)))
+
+	var findings []string
+	for _, finding := range signer.Findings {
+		switch {
+		case finding.Code == "container.covers":
+			// Which files of a container this signature covers is a fact
+			// about it, not a problem.
+			facts = append(facts, m.FindingName(finding.Code, finding.Message)+": "+finding.Detail)
+		case finding.Status == "good":
+		default:
+			line := m.StatusMark(domain.Status(finding.Status)) + " " + m.FindingName(finding.Code, finding.Message)
+			if finding.Code == "container.unsigned_files" {
+				line += ": " + finding.Detail
+			}
+			findings = append(findings, line)
+		}
+	}
+
+	block := container.NewVBox(widget.NewSeparator(), name, caption(strings.Join(facts, "\n")))
+	if len(findings) > 0 {
+		list := widget.NewLabel(strings.Join(findings, "\n"))
+		list.Wrapping = fyne.TextWrapWord
+		block.Add(list)
+	}
+	return block
+}
+
+// indented pushes a counter-signature's block right by its depth.
+func indented(block fyne.CanvasObject, depth int) fyne.CanvasObject {
+	if depth == 0 {
+		return block
+	}
+	spacer := canvas.NewRectangle(color.Transparent)
+	spacer.SetMinSize(fyne.NewSize(float32(depth)*24, 0))
+	return container.NewBorder(nil, nil, spacer, nil, block)
+}
+
+// pickReport asks where to save the report, proposing a name beside the
+// verified file.
+func (v *verificationTab) pickReport() {
+	save := dialog.NewFileSave(func(writer fyne.URIWriteCloser, err error) {
+		if err != nil || writer == nil {
+			return
+		}
+		destination := writer.URI().Path()
+		_ = writer.Close()
+		v.writeReport(destination)
+	}, v.window)
+	save.SetFileName(fmt.Sprintf(v.ui.ReportFileName, filepath.Base(v.path)))
+	save.Show()
+}
+
+// writeReport has the command write the verification as a PDF report, in
+// the window's language, and opens it.
+func (v *verificationTab) writeReport(destination string) {
+	path, offline := v.path, !v.online.Checked
+	v.saveReport.Disable()
+	v.background(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cancel()
+		arguments := []string{"verify", path, "--report", destination, fmt.Sprintf("--offline=%t", offline), "--lang", languageCode(v.ui.Language)}
+		raw, _ := runCommand(ctx, v.binary, arguments)
+		_, statErr := os.Stat(destination)
+		fyne.Do(func() {
+			v.saveReport.Enable()
+			v.reported.Show()
+			if statErr != nil {
+				v.reported.Importance = widget.DangerImportance
+				v.reported.SetText(strings.TrimSpace(raw))
+				return
+			}
+			v.reported.Importance = widget.SuccessImportance
+			v.reported.SetText(fmt.Sprintf(v.ui.ReportSavedAs, destination))
+			v.open(destination)
+		})
+	})
 }
 
 // readableInstant writes a signing time the way the seal prints it, keeping
@@ -355,20 +451,52 @@ func (c readingColumn) MinSize(objects []fyne.CanvasObject) fyne.Size {
 // domainExtractedName is the verification slice's naming rule.
 var domainExtractedName = domain.ExtractedName
 
-// isEnvelope reports a CAdES envelope whose document can be taken out.
-func isEnvelope(path string) bool {
-	return strings.HasSuffix(strings.ToLower(path), ".p7m")
+// extractKind is what can be taken out of a signed file.
+type extractKind int
+
+const (
+	extractNothing extractKind = iota
+	// extractEnvelope is a CAdES envelope or time-stamped data holding one
+	// document.
+	extractEnvelope
+	// extractContainer is an ASiC container holding documents.
+	extractContainer
+)
+
+// extractableKind says what a signed file holds that can be taken out.
+func extractableKind(path string) extractKind {
+	lower := strings.ToLower(path)
+	switch {
+	case strings.HasSuffix(lower, ".p7m"), strings.HasSuffix(lower, ".tsd"):
+		return extractEnvelope
+	case strings.HasSuffix(lower, ".asics"), strings.HasSuffix(lower, ".asice"),
+		strings.HasSuffix(lower, ".scs"), strings.HasSuffix(lower, ".sce"):
+		return extractContainer
+	}
+	return extractNothing
 }
 
-// extractDocument writes the document inside the envelope next to it, under
-// a name that is free, and offers to open it.
+// extractDocument writes what the signed file holds next to it, under a name
+// that is free, and offers to open it: the document of an envelope, or the
+// files of a container in a folder of their own.
 func (v *verificationTab) extractDocument() {
-	envelope := v.path
-	output := freeName(domainExtractedName(envelope))
+	source := v.path
+	var output, done string
+	var arguments []string
+	switch extractableKind(source) {
+	case extractContainer:
+		output = freeName(strings.TrimSuffix(source, filepath.Ext(source)))
+		arguments = []string{"asic", "--extract", source, "--out", output}
+		done = v.ui.ExtractedFolder
+	default:
+		output = freeName(domainExtractedName(source))
+		arguments = []string{"extract", source, "--out", output, "--json"}
+		done = v.ui.ExtractedAs
+	}
 	v.background(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 		defer cancel()
-		raw, err := runCommand(ctx, v.binary, []string{"extract", envelope, "--out", output, "--json"})
+		raw, err := runCommand(ctx, v.binary, arguments)
 		fyne.Do(func() {
 			v.extracted.Show()
 			if err != nil {
@@ -377,7 +505,7 @@ func (v *verificationTab) extractDocument() {
 				return
 			}
 			v.extracted.Importance = widget.SuccessImportance
-			v.extracted.SetText(fmt.Sprintf(v.ui.ExtractedAs, output))
+			v.extracted.SetText(fmt.Sprintf(done, output))
 			v.open(output)
 		})
 	})
