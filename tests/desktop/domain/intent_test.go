@@ -135,3 +135,15 @@ func containsValue(values []string, wanted string) bool {
 	}
 	return false
 }
+
+// TestAnOpenDocumentIsSignedInsideItselfFirst, named like the signer names it.
+func TestAnOpenDocumentIsSignedInsideItselfFirst(t *testing.T) {
+	formats := domain.FormatsFor("/tmp/acta.odt")
+	if len(formats) == 0 || formats[0] != domain.FormatODF {
+		t.Fatalf("formats for an ODT: %v", formats)
+	}
+	intent := domain.SigningIntent{DocumentPath: "/tmp/acta.odt", Format: domain.FormatODF}
+	if got := intent.OutputName(); got != "/tmp/acta_signed.odt" {
+		t.Errorf("output %q", got)
+	}
+}

@@ -8,6 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- OpenDocument signatures (ADR-0015): `sign acta.odt` (and `.ods`, `.odp`,
+  `.odg`, templates; `--format odf`) signs inside the file as LibreOffice
+  does.
+  - One XAdES signature in `META-INF/documentsignatures.xml` references every
+    stream, `mimetype` and the manifest included; the XML ones are
+    canonicalised by the manifest's rule.
+  - The package is otherwise copied byte for byte. Signing a signed file adds
+    a signature beside the earlier ones.
+  - `verify` reads ODF files, LibreOffice's signatures included, and names
+    streams added afterwards. An unsigned one reads as having no signatures.
+  - afirma:// `ODF` and `ODF (Open Document Format)`. The desktop offers it
+    first for OpenDocument files, and the Check tab accepts them.
+  - Judged with LibreOffice 26.2.6.3 through UNO: our signature, two of
+    ours, and ours added to one LibreOffice made are all valid; a changed
+    content.xml is not. xmlsec1 1.3.9 and Java 25 agree.
+
 - Remote signing through the Cloud Signature Consortium API v2
   (ADR-0014): `sign --csc https://…/csc/v2 [--credential id]`.
   - The access token (`TREBARUNA_CSC_TOKEN`), or user and password for

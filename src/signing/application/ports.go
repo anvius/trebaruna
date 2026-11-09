@@ -117,14 +117,21 @@ type XadesRequest struct {
 	// Plain writes an XMLDSig signature: no XAdES properties, so level B
 	// only, without policy or roles.
 	Plain bool
-	// DocumentName names the document a detached signature references.
-	DocumentName string
+	// DocumentName names the document a detached signature references;
+	// DocumentCanonical digests its XML canonical form (DetachedDocument).
+	DocumentName      string
+	DocumentCanonical bool
 	// InASiC writes a detached signature inside asic:XAdESSignatures, as an
 	// ASiC container's META-INF/signatures.xml holds it.
 	InASiC bool
 	// MoreDocuments are other documents a detached signature references,
-	// after Content (ASiC-E).
-	MoreDocuments   []DetachedDocument
+	// after Content (ASiC-E, ODF).
+	MoreDocuments []DetachedDocument
+	// Holder is an XML document whose root receives the detached signature
+	// as its last child: ODF's documentsignatures.xml, new or with earlier
+	// signatures. The signature is made inside it, because the namespaces
+	// it declares are part of what the signature covers.
+	Holder          []byte
 	TimestampURL    string
 	TimestampUser   string
 	TimestampSecret string
@@ -135,6 +142,12 @@ type XadesRequest struct {
 	Policy domain.SignaturePolicy
 	// ClaimedRoles are the roles the signer claims (SignerRoleV2).
 	ClaimedRoles []string
+}
+
+// OdfSigner signs an OpenDocument package inside itself; request.Content
+// is the package, the rest says how to sign.
+type OdfSigner interface {
+	SignOdf(ctx context.Context, request XadesRequest) ([]byte, error)
 }
 
 // ContainerWriter packs documents and their signatures into an ASiC
@@ -152,9 +165,12 @@ type ContainerEntry struct {
 }
 
 // DetachedDocument is a document a detached signature references by name.
+// Canonical asks for its XML canonical form to be digested, not its bytes,
+// as ODF signs the XML streams of a package.
 type DetachedDocument struct {
-	Name    string
-	Content []byte
+	Name      string
+	Content   []byte
+	Canonical bool
 }
 
 // FileStore writes the produced artefact.

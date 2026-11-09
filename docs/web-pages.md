@@ -267,7 +267,8 @@ PAdES (invisible unless the page places the seal), XAdES (enveloping when the
 page names no variant, as AutoFirma; enveloped; and "XAdES Detached", the
 `AFIRMA` root holding `CONTENT` and the signature), XMLDSig in the same
 variants (no signed properties: a policy or a timestamp is refused, roles are
-left out as AutoFirma does), `CAdES-ASiC-S` and `XAdES-ASiC-S` (the
+left out as AutoFirma does), `ODF` (the document signed inside itself, as LibreOffice does),
+`CAdES-ASiC-S` and `XAdES-ASiC-S` (the
 container, the data named `asicsFilename` or `dataobject.<extension>` as
 AutoFirma names it), and FacturaE (named, or recognised by `auto`: the invoice signed
 enveloped with FacturaE 3.1, or the 3.0/3.1 policy the page gives exactly, and

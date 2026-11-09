@@ -69,6 +69,7 @@ type VerifyDocument struct {
 	cades DocumentExtractor
 	xades DocumentExtractor
 	asic  DocumentExtractor
+	odf   DocumentExtractor
 	trust TrustProvider
 	clock Clock
 	// revocation is nil until the caller asks for a network check.
@@ -90,6 +91,12 @@ func (u *VerifyDocument) WithXades(xades DocumentExtractor) *VerifyDocument {
 // WithAsic attaches the container verifier (ASiC-S, ASiC-E).
 func (u *VerifyDocument) WithAsic(asic DocumentExtractor) *VerifyDocument {
 	u.asic = asic
+	return u
+}
+
+// WithOdf attaches the OpenDocument verifier.
+func (u *VerifyDocument) WithOdf(odf DocumentExtractor) *VerifyDocument {
+	u.odf = odf
 	return u
 }
 
@@ -211,6 +218,8 @@ func (u *VerifyDocument) extractorFor(format string) DocumentExtractor {
 		return u.xades
 	case "asic":
 		return u.asic
+	case "odf":
+		return u.odf
 	}
 	return nil
 }
@@ -557,6 +566,11 @@ func detectFormat(path, explicit string) string {
 		return "xades"
 	case hasSuffix(path, ".asics"), hasSuffix(path, ".asice"), hasSuffix(path, ".scs"), hasSuffix(path, ".sce"):
 		return "asic"
+	}
+	for _, suffix := range []string{".odt", ".ods", ".odp", ".odg", ".odf", ".odm", ".ott", ".ots", ".otp", ".otg"} {
+		if hasSuffix(path, suffix) {
+			return "odf"
+		}
 	}
 	return "unknown"
 }

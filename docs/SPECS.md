@@ -53,7 +53,8 @@ user seeing what is signed and where anything goes.
 | ASiC-S signed in one step (`sign --asic s`, afirma:// `CAdES-ASiC-S`, `XAdES-ASiC-S`): the document and its detached CAdES or XAdES signature, the XML one inside `asic:XAdESSignatures` | built |
 | ASiC-E signed in one step (`sign a b c --asic e`): one XML signature referencing every document, or a CAdES signature over an `ASiCManifest` of their digests | built |
 | Handwritten-signature image next to the certificate data (ADR-0012) | planned (G3) |
-| ODF and OOXML signatures (ADR-0015) | planned (G1, G2) |
+| ODF signatures (ADR-0015): `sign file.odt` signs inside the package as LibreOffice does, XAdES over every stream (mimetype and manifest included); added signatures keep the earlier ones; LibreOffice 26.2 reports them valid; verify reads ODF, LibreOffice's included | built |
+| OOXML signatures (ADR-0015) | planned (G2) |
 
 ### Keys
 

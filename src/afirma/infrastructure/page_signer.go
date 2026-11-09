@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -25,15 +26,18 @@ type NativePageSigner struct {
 	cades signapp.CadesSigner
 	pades signapp.PadesSigner
 	xades signapp.XadesSigner
+	odf   signapp.OdfSigner
 }
 
 // NewNativePageSigner wires the signers with the RFC 3161 client.
 func NewNativePageSigner() NativePageSigner {
 	timestamps := signinfra.NewRfc3161Timestamper()
+	xades := signinfra.NewXadesSigner(timestamps)
 	return NativePageSigner{
 		cades: signinfra.NewCadesSigner(timestamps),
 		pades: signinfra.NewPadesSigner(timestamps),
-		xades: signinfra.NewXadesSigner(timestamps),
+		xades: xades,
+		odf:   signinfra.NewOdfSigner(xades),
 	}
 }
 
@@ -78,6 +82,8 @@ func (s NativePageSigner) Sign(ctx context.Context, request application.PageSign
 		signature, err = s.signPades(ctx, request, level, tsa)
 	case family == "xades", family == "facturae", family == "xmldsig":
 		signature, err = s.signXades(ctx, request, level, tsa, policy)
+	case family == "odf":
+		signature, err = s.signOdf(ctx, request, level, tsa, policy)
 	default:
 		return application.Signed{}, domain.Failure{Code: domain.UnknownSigner}
 	}
@@ -271,6 +277,24 @@ func claimedRoles(properties map[string]string) []string {
 		}
 	}
 	return roles
+}
+
+// signOdf signs an OpenDocument file inside itself, as AutoFirma's ODF
+// signer and LibreOffice do.
+func (s NativePageSigner) signOdf(ctx context.Context, request application.PageSignature, level signing.Level, tsa string,
+	policy signing.SignaturePolicy) ([]byte, error) {
+	if request.Crypto != domain.Sign {
+		return nil, domain.Failure{Code: domain.UnsupportedOperation, Cause: "an OpenDocument file takes more signatures by being signed again"}
+	}
+	signed, err := s.odf.SignOdf(ctx, signapp.XadesRequest{Content: request.Data, Signer: request.Key, Level: level,
+		TimestampURL: tsa, Policy: policy, ClaimedRoles: claimedRoles(request.Properties)})
+	switch {
+	case errors.Is(err, signinfra.ErrNotOpenDocument):
+		return nil, domain.Failure{Code: domain.InvalidData, Cause: err.Error()}
+	case err != nil:
+		return nil, domain.Failure{Code: domain.SignatureFailed, Cause: err.Error()}
+	}
+	return signed, nil
 }
 
 // signASiCS packs the data and a detached signature into an ASiC-S

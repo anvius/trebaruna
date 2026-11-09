@@ -37,16 +37,30 @@ type documentLayout struct {
 	uri string
 	// files are the documents a detached signature references, in order.
 	files []detachedFile
+	// holder is the document a detached signature goes into (ODF).
+	holder *etree.Document
 	// inASiC roots a detached signature in asic:XAdESSignatures. It must be
 	// there before signing: the namespace it declares is part of the
 	// canonical forms the signature covers.
 	inASiC bool
 }
 
-// detachedFile is a document a detached signature references by name.
+// detachedFile is a document a detached signature references by name;
+// canonical digests its XML canonical form.
 type detachedFile struct {
 	uri, mimeType string
 	content       []byte
+	canonical     bool
+}
+
+// escapePath escapes each segment of a path in a package, keeping the
+// slashes between them (ODF streams live in folders).
+func escapePath(name string) string {
+	segments := strings.Split(name, "/")
+	for index, segment := range segments {
+		segments[index] = url.PathEscape(segment)
+	}
+	return strings.Join(segments, "/")
 }
 
 // asicNamespace is ASiC's namespace (ETSI EN 319 162-1).
@@ -60,7 +74,7 @@ func layoutFor(request application.XadesRequest) (documentLayout, error) {
 		packaging:         request.Packaging,
 		plain:             request.Plain,
 		excludeSignatures: !request.Policy.IsFacturaE(),
-		uri:               url.PathEscape(request.DocumentName),
+		uri:               escapePath(request.DocumentName),
 		inASiC:            request.InASiC,
 	}
 	if layout.packaging == "" {
@@ -80,11 +94,21 @@ func layoutFor(request application.XadesRequest) (documentLayout, error) {
 		return documentLayout{}, fmt.Errorf("an ASiC container holds detached XML signatures, not %s ones", layout.packaging)
 	case len(request.MoreDocuments) > 0 && layout.packaging != domain.XMLDetached:
 		return documentLayout{}, fmt.Errorf("only a detached XML signature signs several documents")
+	case len(request.Holder) > 0 && (layout.packaging != domain.XMLDetached || layout.inASiC):
+		return documentLayout{}, fmt.Errorf("only a detached XML signature goes into a holder document")
+	}
+	if len(request.Holder) > 0 {
+		holder, err := parseDocument(request.Holder)
+		if err != nil {
+			return documentLayout{}, fmt.Errorf("the signatures document: %w", err)
+		}
+		layout.holder = holder
 	}
 	if layout.packaging == domain.XMLDetached {
-		layout.files = []detachedFile{{uri: layout.uri, mimeType: layout.mimeType, content: request.Content}}
+		layout.files = []detachedFile{{uri: layout.uri, mimeType: layout.mimeType, content: request.Content, canonical: request.DocumentCanonical}}
 		for _, document := range request.MoreDocuments {
-			file := detachedFile{uri: url.PathEscape(document.Name), mimeType: mediaType(document.Content), content: document.Content}
+			file := detachedFile{uri: escapePath(document.Name), mimeType: mediaType(document.Content), content: document.Content,
+				canonical: document.Canonical}
 			if _, err := parseDocument(document.Content); err == nil {
 				file.mimeType = "text/xml"
 			}
@@ -148,6 +172,9 @@ func (l documentLayout) tree(ids signatureIDs, content []byte) *etree.Document {
 		holder.SetText(base64.StdEncoding.EncodeToString(content))
 		return tree
 	case domain.XMLDetached:
+		if l.holder != nil {
+			return l.holder
+		}
 		tree := etree.NewDocument()
 		if l.inASiC {
 			root := tree.CreateElement("asic:XAdESSignatures")
@@ -188,7 +215,11 @@ func (l documentLayout) documentReference(ids signatureIDs) string {
 	if l.packaging == domain.XMLDetached {
 		var references strings.Builder
 		for index, file := range l.files {
-			references.WriteString(`<ds:Reference Id="` + ids.referenceAt(index) + `" URI="` + xmlEscape(file.uri) + `">` +
+			transforms := ""
+			if file.canonical {
+				transforms = `<ds:Transforms><ds:Transform Algorithm="` + algorithmC14N + `"/></ds:Transforms>`
+			}
+			references.WriteString(`<ds:Reference Id="` + ids.referenceAt(index) + `" URI="` + xmlEscape(file.uri) + `">` + transforms +
 				`<ds:DigestMethod Algorithm="` + algorithmSHA256 + `"/>` +
 				`<ds:DigestValue>` + placeholderDigest + `</ds:DigestValue>` +
 				`</ds:Reference>`)

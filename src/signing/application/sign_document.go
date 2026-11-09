@@ -24,6 +24,14 @@ type SignDocument struct {
 	xades    XadesSigner
 	// containers packs signatures into ASiC containers; nil without them.
 	containers ContainerWriter
+	// odf signs OpenDocument files inside themselves; nil without it.
+	odf OdfSigner
+}
+
+// WithOdf lets the use case sign OpenDocument files.
+func (u *SignDocument) WithOdf(odf OdfSigner) *SignDocument {
+	u.odf = odf
+	return u
 }
 
 // WithContainers lets the use case sign into ASiC containers.
@@ -241,7 +249,7 @@ func (u *SignDocument) validate(request Request) error {
 	if err := request.Policy.FitsFormat(request.Format); err != nil {
 		return err
 	}
-	if len(request.ClaimedRoles) > 0 && request.Format != domain.Xades {
+	if len(request.ClaimedRoles) > 0 && request.Format != domain.Xades && request.Format != domain.Odf {
 		return fmt.Errorf("a claimed role goes in XAdES signatures, not %s", request.Format)
 	}
 	if (request.Cosign || request.Countersign != "") && request.Format != domain.Cades {
@@ -278,6 +286,13 @@ func (u *SignDocument) validate(request Request) error {
 	case domain.Xades, domain.Xmldsig:
 		if u.xades == nil {
 			return fmt.Errorf("no XML signature adapter configured")
+		}
+	case domain.Odf:
+		if u.odf == nil {
+			return fmt.Errorf("no OpenDocument adapter configured")
+		}
+		if request.detached() || request.Enveloping || request.Cosign || request.Countersign != "" {
+			return fmt.Errorf("an OpenDocument file is signed inside itself; sign the signed file again to add a signature")
 		}
 	default:
 		return fmt.Errorf("%w: %q", domain.ErrUnsupportedFormat, request.Format)
@@ -344,6 +359,8 @@ func (u *SignDocument) sign(ctx context.Context, request Request, content []byte
 
 	case domain.Xades, domain.Xmldsig:
 		return u.xades.SignXades(ctx, u.xadesRequest(request, content))
+	case domain.Odf:
+		return u.odf.SignOdf(ctx, u.xadesRequest(request, content))
 	}
 
 	return nil, fmt.Errorf("%w: %q", domain.ErrUnsupportedFormat, request.Format)

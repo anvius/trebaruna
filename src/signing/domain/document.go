@@ -54,7 +54,12 @@ func (d Document) SignedName(format Format) string {
 	}
 
 	stem := strings.TrimSuffix(base, filepath.Ext(base))
-	return filepath.Join(dir, stem+"_signed"+format.Extension())
+	extension := format.Extension()
+	if format == Odf {
+		// An OpenDocument file stays one, signed inside.
+		extension = filepath.Ext(base)
+	}
+	return filepath.Join(dir, stem+"_signed"+extension)
 }
 
 // AddedSignatureName is where an envelope goes after a signature is added
@@ -89,6 +94,8 @@ func (d Document) Supports(format Format) bool {
 		return d.Extension() == ".pdf"
 	case Xades, Xmldsig:
 		return d.Extension() == ".xml" || d.Extension() == ".xsd" || d.Extension() == ".svg"
+	case Odf:
+		return isOpenDocument(d.Extension())
 	case Cades:
 		return true
 	}
@@ -112,6 +119,19 @@ func (d Document) InferFormat() Format {
 	case ".xml", ".xsd", ".svg":
 		return Xades
 	}
+	if isOpenDocument(d.Extension()) {
+		return Odf
+	}
 	// Anything else is signed as a CMS container, which works for any bytes.
 	return Cades
+}
+
+// isOpenDocument reports an OpenDocument suffix: texts, spreadsheets,
+// presentations, drawings, formulas and their templates.
+func isOpenDocument(extension string) bool {
+	switch extension {
+	case ".odt", ".ods", ".odp", ".odg", ".odf", ".odm", ".ott", ".ots", ".otp", ".otg":
+		return true
+	}
+	return false
 }

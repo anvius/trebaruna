@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -130,4 +131,25 @@ func rewriteEntry(t *testing.T, path, name string, content []byte) string {
 	writer.Close()
 	file.Close()
 	return target
+}
+
+// TestSignAnOpenDocumentAndVerifyIt from the command line.
+func TestSignAnOpenDocumentAndVerifyIt(t *testing.T) {
+	key := writeProtectedP12(t, "segreto")
+	t.Setenv("TREBARUNA_PASSPHRASE", "segreto")
+	source, err := os.ReadFile(filepath.Join("..", "verification", "odf", "testdata", "unsigned.odt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	document := writeDocument(t, "acta.odt", string(source))
+	if _, stderr, code := run("sign", document, "--p12", key); code != 0 {
+		t.Fatalf("exit %d: %s", code, stderr)
+	}
+	signed := strings.TrimSuffix(document, ".odt") + "_signed.odt"
+	if result := verifyJSON(t, signed); result.Signers[0].Integrity != "good" {
+		t.Errorf("verify: %+v", result.Signers[0])
+	}
+	if _, _, code := run("sign", document, "--p12", key, "--format", "odf", "--detached"); code == 0 {
+		t.Error("an OpenDocument signature is never detached")
+	}
 }

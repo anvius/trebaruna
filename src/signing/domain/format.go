@@ -24,6 +24,11 @@ const (
 	// properties, so no signing time, policy or timestamp. Kept for the
 	// systems that still ask for it, as AutoFirma does.
 	Xmldsig Format = "xmldsig"
+
+	// Odf signs an OpenDocument file inside itself (OASIS ODF 1.2, Part 3): a
+	// XAdES signature over every stream of the package, in
+	// META-INF/documentsignatures.xml.
+	Odf Format = "odf"
 )
 
 // IsXML reports an XML signature: XAdES or plain XMLDSig.
@@ -54,6 +59,8 @@ func (f Format) Standard() string {
 		return "ETSI EN 319 132-1"
 	case Xmldsig:
 		return "W3C XML-Signature 1.1"
+	case Odf:
+		return "OASIS ODF 1.2 Part 3, XAdES (ETSI EN 319 132-1)"
 	}
 	return ""
 }
@@ -61,10 +68,10 @@ func (f Format) Standard() string {
 // ParseFormat reads a format from its external name.
 func ParseFormat(raw string) (Format, error) {
 	switch Format(raw) {
-	case Cades, Pades, Xades, Xmldsig:
+	case Cades, Pades, Xades, Xmldsig, Odf:
 		return Format(raw), nil
 	}
-	return "", fmt.Errorf("unknown signature format %q: use cades, pades, xades or xmldsig", raw)
+	return "", fmt.Errorf("unknown signature format %q: use cades, pades, xades, xmldsig or odf", raw)
 }
 
 // Level is the AdES baseline level. It determines whether a timestamp

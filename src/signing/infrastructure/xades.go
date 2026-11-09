@@ -168,7 +168,7 @@ func (s *XadesSigner) SignXades(ctx context.Context, request application.XadesRe
 	}
 
 	signature := buildSignature(ids, signedInfo, placeholderDigest,
-		base64.StdEncoding.EncodeToString(keyPair.Certificate.Raw), signedProperties, payload)
+		base64.StdEncoding.EncodeToString(keyPair.Certificate.Raw), signedProperties, payload, layout.holder != nil)
 
 	if err := attach(tree, signature); err != nil {
 		return nil, err
@@ -465,8 +465,17 @@ func buildSignedInfo(ids signatureIDs, documentDigest, propertiesDigest string, 
 // SignedInfo, SignatureValue, KeyInfo, Object.
 //
 // A plain XMLDSig signature (no signed properties) has no QualifyingProperties.
-func buildSignature(ids signatureIDs, signedInfo, signatureValue, certificate, signedProperties, payload string) string {
+//
+// ownDefault redeclares the default namespace as XML-Signature's, for a
+// signature placed in a document that has a default of its own (ODF's
+// document-signatures): otherwise SignedInfo's canonical form carries the
+// holder's default, and a reader that rebuilds the signature alone, as
+// LibreOffice does, computes another one.
+func buildSignature(ids signatureIDs, signedInfo, signatureValue, certificate, signedProperties, payload string, ownDefault bool) string {
 	namespaces, qualifying := `xmlns:ds="`+namespaceDS+`"`, ""
+	if ownDefault {
+		namespaces = `xmlns="` + namespaceDS + `" ` + namespaces
+	}
 	if signedProperties != "" {
 		namespaces += ` xmlns:xades="` + namespaceXades + `"`
 		qualifying = `<ds:Object><xades:QualifyingProperties Target="#` + ids.signature() + `">` +

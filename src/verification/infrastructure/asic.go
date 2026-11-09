@@ -40,6 +40,9 @@ const (
 type AsicVerifier struct {
 	cades *CadesVerifier
 	xades *XadesVerifier
+	// odf reads OpenDocument packages instead: their signatures live in
+	// META-INF/documentsignatures.xml and cover every stream, mimetype too.
+	odf bool
 }
 
 // NewAsicVerifier builds the adapter over the signature verifiers.
@@ -47,11 +50,19 @@ func NewAsicVerifier(cades *CadesVerifier, xades *XadesVerifier) *AsicVerifier {
 	return &AsicVerifier{cades: cades, xades: xades}
 }
 
+// NewOdfVerifier checks the signatures of OpenDocument files (OASIS ODF
+// 1.2, Part 3) the same way: each against the streams it covers, and the
+// streams no signature covers named.
+func NewOdfVerifier(xades *XadesVerifier) *AsicVerifier {
+	return &AsicVerifier{cades: NewCadesVerifier(), xades: xades, odf: true}
+}
+
 // WithAnchors validates the signatures' chains against the pools.
 func (v *AsicVerifier) WithAnchors(roots, intermediates *x509.CertPool) application.DocumentExtractor {
 	return &AsicVerifier{
 		cades: v.cades.WithAnchors(roots, intermediates).(*CadesVerifier),
 		xades: v.xades.WithAnchors(roots, intermediates).(*XadesVerifier),
+		odf:   v.odf,
 	}
 }
 
@@ -60,6 +71,7 @@ func (v *AsicVerifier) WithAnchorCertificates(roots, intermediates *x509.CertPoo
 	return &AsicVerifier{
 		cades: v.cades.WithAnchorCertificates(roots, intermediates, anchors).(*CadesVerifier),
 		xades: v.xades.WithAnchorCertificates(roots, intermediates, anchors).(*XadesVerifier),
+		odf:   v.odf,
 	}
 }
 
@@ -76,7 +88,7 @@ type container struct {
 
 // Extract reports every signature of the container.
 func (v *AsicVerifier) Extract(archivePath string) ([]domain.SignerReport, error) {
-	unpacked, err := unpack(archivePath)
+	unpacked, err := unpack(archivePath, v.odf)
 	if err != nil {
 		return nil, err
 	}
@@ -116,8 +128,12 @@ func (v *AsicVerifier) Extract(archivePath string) ([]domain.SignerReport, error
 		}
 		reports = append(reports, found...)
 	}
-	if len(reports) == 0 {
-		return nil, fmt.Errorf("%q is an ASiC container with no CAdES or XAdES signature under META-INF", archivePath)
+	switch {
+	case len(reports) == 0 && v.odf:
+		// An OpenDocument file without signatures is an ordinary document.
+		return nil, nil
+	case len(reports) == 0:
+		return nil, fmt.Errorf("%q is a container with no CAdES or XAdES signature under META-INF", archivePath)
 	}
 
 	var unsigned []string
@@ -309,7 +325,7 @@ func containerPath(uri string) (string, bool) {
 // stored first, says ASiC-S or ASiC-E; without one the suffix does. Entries
 // whose names leave the container, or that exceed the size limit, are
 // refused rather than skipped.
-func unpack(archivePath string) (container, error) {
+func unpack(archivePath string, odf bool) (container, error) {
 	archive, err := zip.OpenReader(archivePath)
 	if err != nil {
 		return container{}, fmt.Errorf("open %q as a ZIP container: %w", archivePath, err)
@@ -326,10 +342,14 @@ func unpack(archivePath string) (container, error) {
 		if err != nil {
 			return container{}, err
 		}
-		switch strings.TrimSpace(string(mediaType)) {
-		case asicSimpleMediaType:
+		switch kind := strings.TrimSpace(string(mediaType)); {
+		case odf && strings.HasPrefix(kind, "application/vnd.oasis.opendocument."):
+			unpacked.extended = true
+		case odf:
+			return container{}, fmt.Errorf("%q is not an OpenDocument file: its mimetype is %q", archivePath, mediaType)
+		case kind == asicSimpleMediaType:
 			unpacked.extended = false
-		case asicExtendedMediaType:
+		case kind == asicExtendedMediaType:
 			unpacked.extended = true
 		default:
 			return container{}, fmt.Errorf("%q is not an ASiC container: its mimetype is %q", archivePath, mediaType)
@@ -350,7 +370,7 @@ func unpack(archivePath string) (container, error) {
 // META-INF.
 func (c *container) fill(entries []*zip.File, archivePath string) error {
 	for _, entry := range entries {
-		if entry.FileInfo().IsDir() || entry.Name == "mimetype" {
+		if entry.FileInfo().IsDir() {
 			continue
 		}
 		name, inside := containerPath(entry.Name)
@@ -368,9 +388,13 @@ func (c *container) fill(entries []*zip.File, archivePath string) error {
 		if err := os.WriteFile(target, content, 0o600); err != nil {
 			return err
 		}
-		if strings.HasPrefix(name, "META-INF/") {
+		// mimetype is unpacked, since an ODF signature covers it, but it is
+		// the container's label, not one of its documents.
+		switch {
+		case name == "mimetype":
+		case strings.HasPrefix(name, "META-INF/"):
 			c.meta = append(c.meta, name)
-		} else {
+		default:
 			c.documents = append(c.documents, name)
 		}
 	}

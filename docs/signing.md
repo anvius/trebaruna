@@ -185,6 +185,20 @@ unknown, never as altered (ADR-0005).
 
 ---
 
+## OpenDocument files
+
+`sign acta.odt` signs inside the file, as LibreOffice does: a XAdES
+signature over every part of the package, in
+`META-INF/documentsignatures.xml`, and `acta_signed.odt` opens in
+LibreOffice with the signature shown. Signing a signed file adds a signature
+beside the earlier ones, LibreOffice's included. Texts, spreadsheets,
+presentations and drawings (`.odt`, `.ods`, `.odp`, `.odg`, and their
+templates) are signed the same way; every level works.
+
+`verify` reads them, and names any part added after the signature.
+
+---
+
 ## Remote signing (CSC)
 
 Some providers keep the key on their server and sign for you. trebaruna

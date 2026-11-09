@@ -54,3 +54,23 @@ func TestASiCSPagesGetAContainer(t *testing.T) {
 	_, err := signPage(t, "XAdES-ASiC-S", map[string]string{"asicsFilename": "../evil.xml"}, []byte("<a/>"))
 	wantFailure(t, err, domain.Params, "asicsFilename with a path")
 }
+
+// TestAnODFPageGetsItsDocumentSigned inside itself.
+func TestAnODFPageGetsItsDocumentSigned(t *testing.T) {
+	document, err := os.ReadFile(filepath.Join("..", "..", "verification", "odf", "testdata", "unsigned.odt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	signed, err := signPage(t, "ODF (Open Document Format)", map[string]string{}, document)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "firmado.odt")
+	os.WriteFile(path, signed.Signature, 0o600)
+	reports, err := verification.NewOdfVerifier(verification.NewXadesVerifier()).Extract(path)
+	if err != nil || len(reports) != 1 || reports[0].Integrity != verificationdomain.StatusGood {
+		t.Errorf("%+v %v", reports, err)
+	}
+	_, err = signPage(t, "ODF", map[string]string{}, []byte("%PDF-1.4"))
+	wantFailure(t, err, domain.InvalidData, "a PDF as ODF")
+}
