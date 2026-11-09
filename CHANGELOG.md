@@ -8,6 +8,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- ASiC-S signed in one step.
+  - `sign --asic s` writes `<document>.asics`: the document and its
+    detached signature, `META-INF/signature.p7s` (CAdES) or
+    `META-INF/signatures.xml` (XAdES, XMLDSig).
+  - The XML signature is written inside `asic:XAdESSignatures`, whose
+    namespace is part of what it signs, so it cannot be added afterwards.
+  - afirma:// `CAdES-ASiC-S` and `XAdES-ASiC-S` answer with the container,
+    the data named `asicsFilename` or `dataobject.<extension>` (sniffed),
+    as AutoFirma does.
+  - The parts were checked with OpenSSL, xmlsec1 1.3.9 and Java 25, and the
+    containers with trebaruna's ASiC verifier.
+
+### Changed
+
+- `asic` packs an ASiC-S as ETSI EN 319 162-1 lays it out: the signature
+  under `META-INF` (it went to the root), `.asics` by default (it was
+  `.asice`). A `.p7m`, an XML signature or ASiC-E are refused, with the
+  `sign --asic` command that makes them.
+
 - `verify` reads ASiC containers (`.asics`, `.asice`, `.scs`, `.sce`; ETSI
   EN 319 162-1).
   - The container is unpacked into a private directory. Entries whose

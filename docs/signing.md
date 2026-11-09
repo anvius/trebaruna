@@ -185,6 +185,26 @@ unknown, never as altered (ADR-0005).
 
 ---
 
+## ASiC containers
+
+`--asic s` packs the document and its detached signature into one file, an
+ASiC-S container (ETSI EN 319 162-1): `<document>.asics`, a ZIP whose first
+entry is its media type, the document at the root, and the signature under
+`META-INF`. CAdES writes `signature.p7s`; XAdES and XMLDSig write
+`signatures.xml`, the signature inside `asic:XAdESSignatures`. Some offices
+ask for this wrapper, and it keeps a signature from travelling without its
+document.
+
+```bash
+trebaruna sign atto.pdf --format cades --asic s --p12 k.p12   # → atto.pdf.asics
+trebaruna verify atto.pdf.asics
+```
+
+`verify` judges every signature of a container against the files it covers,
+and names any file no signature covers.
+
+---
+
 ## Adding signatures to an envelope
 
 A `.p7m` or `.p7s` can receive more signatures without opening it:

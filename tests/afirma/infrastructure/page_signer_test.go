@@ -176,7 +176,6 @@ func TestWhatTrebarunaDoesNotDoYetIsRefusedByName(t *testing.T) {
 		{"XAdES Enveloped", map[string]string{}, []byte("not xml"), domain.InvalidXML},
 		{"XAdES", map[string]string{"format": "XAdES Enveloped"}, []byte("not xml"), domain.InvalidXML},
 		{"PAdES", map[string]string{}, []byte("not a pdf"), domain.InvalidPDF},
-		{"CAdES-ASiC-S", map[string]string{}, []byte("x"), domain.UnsupportedFormat},
 	}
 	for _, entry := range cases {
 		_, err := signer.Sign(context.Background(), application.PageSignature{Crypto: domain.Sign, Format: format(t, entry.format),

@@ -5,7 +5,9 @@ package infrastructure
 import (
 	"bytes"
 	"context"
+	"encoding/xml"
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 
@@ -67,7 +69,7 @@ func (s NativePageSigner) Sign(ctx context.Context, request application.PageSign
 	var signature []byte
 	switch {
 	case request.Format.Packaging == "asic-s":
-		return application.Signed{}, domain.Failure{Code: domain.UnsupportedFormat, Cause: "ASiC-S is not supported yet"}
+		signature, err = s.signASiCS(ctx, request, family, level, tsa, policy)
 	case family == "cades":
 		signature, err = s.signCades(ctx, request, level, tsa, policy)
 	case family == "pades" && !policy.IsZero():
@@ -269,6 +271,91 @@ func claimedRoles(properties map[string]string) []string {
 		}
 	}
 	return roles
+}
+
+// signASiCS packs the data and a detached signature into an ASiC-S
+// container, as AutoFirma's CAdES-ASiC-S and XAdES-ASiC-S do: the data under
+// the page's asicsFilename, or dataobject.<extension> from its content.
+func (s NativePageSigner) signASiCS(ctx context.Context, request application.PageSignature, family string, level signing.Level, tsa string,
+	policy signing.SignaturePolicy) ([]byte, error) {
+	if request.Crypto != domain.Sign {
+		return nil, domain.Failure{Code: domain.UnsupportedOperation, Cause: "signatures are not added to ASiC containers yet"}
+	}
+	name := request.Properties["asicsFilename"]
+	if name == "" {
+		name = "dataobject." + dataExtension(request.Data)
+	}
+	if strings.ContainsAny(name, `/\:`) || name == "." || name == ".." {
+		return nil, domain.Failure{Code: domain.Params, Cause: "asicsFilename names a file, not a path"}
+	}
+
+	var signature []byte
+	var err error
+	format := signing.Cades
+	switch family {
+	case "cades":
+		signature, err = s.cades.SignCades(ctx, signapp.CadesRequest{Content: request.Data, Signer: request.Key, Level: level,
+			TimestampURL: tsa, Detached: true, Policy: policy})
+	case "xades":
+		format = signing.Xades
+		signature, err = s.xades.SignXades(ctx, signapp.XadesRequest{Content: request.Data, Signer: request.Key, Level: level,
+			TimestampURL: tsa, Packaging: signing.XMLDetached, DocumentName: name, InASiC: true, Policy: policy,
+			ClaimedRoles: claimedRoles(request.Properties)})
+	default:
+		return nil, domain.Failure{Code: domain.UnsupportedFormat, Cause: request.Format.Name}
+	}
+	if err != nil {
+		return nil, domain.Failure{Code: domain.SignatureFailed, Cause: err.Error()}
+	}
+	container, err := signinfra.AsicContainers{}.WriteContainer(signing.ASiCS, []signapp.ContainerEntry{
+		{Name: name, Content: request.Data},
+		{Name: signing.ASiCS.SignatureEntry(format), Content: signature},
+	})
+	if err != nil {
+		return nil, domain.Failure{Code: domain.SignatureFailed, Cause: err.Error()}
+	}
+	return container, nil
+}
+
+// dataExtension names the data's kind from its content, as AutoFirma's
+// MimeHelper does for an ASiC-S data object; bin when unknown.
+func dataExtension(data []byte) string {
+	if isXML(data) {
+		return "xml"
+	}
+	switch kind := http.DetectContentType(data); {
+	case strings.HasPrefix(kind, "application/pdf"):
+		return "pdf"
+	case strings.HasPrefix(kind, "text/xml"), strings.HasPrefix(kind, "application/xml"):
+		return "xml"
+	case strings.HasPrefix(kind, "text/plain"):
+		return "txt"
+	case strings.HasPrefix(kind, "image/png"):
+		return "png"
+	case strings.HasPrefix(kind, "image/jpeg"):
+		return "jpg"
+	case strings.HasPrefix(kind, "application/zip"):
+		return "zip"
+	}
+	return "bin"
+}
+
+// isXML reports data that open with an XML element; content sniffing alone
+// takes XML without a declaration for text.
+func isXML(data []byte) bool {
+	if !bytes.HasPrefix(bytes.TrimSpace(data), []byte("<")) {
+		return false
+	}
+	decoder := xml.NewDecoder(bytes.NewReader(data))
+	for {
+		token, err := decoder.Token()
+		if err != nil {
+			return false
+		}
+		if _, ok := token.(xml.StartElement); ok {
+			return true
+		}
+	}
 }
 
 // isCMS reports a DER (or BER) SEQUENCE, the start of every CMS envelope.

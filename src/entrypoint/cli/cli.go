@@ -116,6 +116,7 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 		page       = flags.Int("page", 1, "page for the visible seal (1-based)")
 		boxes      = boxList{}
 		enveloping = flags.Bool("enveloping", false, "XAdES enveloping (default: enveloped)")
+		asicType   = flags.String("asic", "", "pack the document and its detached signature: s (ASiC-S, <document>.asics)")
 		invisible  = flags.Bool("invisible", false, "PAdES without any visible seal (excludes --box)")
 		detached   = flags.Bool("detached", false, "the signature beside the document, which stays untouched: <document>.p7s (CAdES) or <document>.xsig (XAdES)")
 		cosign     = flags.Bool("cosign", false, "add a parallel signature to the .p7m/.p7s given as document")
@@ -189,7 +190,7 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 		infrastructure.NewCadesSigner(timestamper),
 		infrastructure.NewPadesSigner(timestamper),
 		infrastructure.NewXadesSigner(timestamper),
-	)
+	).WithContainers(infrastructure.AsicContainers{})
 
 	// Every document gets the same settings; each format is still inferred from
 	// its own suffix unless --format names one. One failure does not stop the
@@ -206,6 +207,10 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 			}
 		}
 		policy, err := policyFor(*policyName, *policyID, *policyAlg, *policyHash, *policyURI, signatureFormat)
+		if err != nil {
+			return application.Artefact{}, err
+		}
+		container, err := domain.ParseContainer(*asicType)
 		if err != nil {
 			return application.Artefact{}, err
 		}
@@ -233,6 +238,7 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 			TimestampUser:   *tsaUser,
 			TimestampSecret: secretFrom(*tsaSecret, tsaSecretVariable),
 			Enveloping:      *enveloping,
+			Container:       container,
 			EmbedRevocation: *onlineRev,
 		})
 		if err != nil {
@@ -275,7 +281,7 @@ func extractDocument(args []string) (documentPath string, remaining []string, er
 // be told apart from flag values wherever the flags appear.
 var signValueFlags = valueFlagsWith("format", "level", "lang", "territory", "out", "name",
 	"reason", "location", "tsa", "tsa-user", "tsa-pass", "page", "box", "content", "countersign",
-	"policy", "policy-id", "policy-hash", "policy-hash-alg", "policy-qualifier", "role")
+	"policy", "policy-id", "policy-hash", "policy-hash-alg", "policy-qualifier", "role", "asic")
 
 // splitSignArguments separates the documents from the flags of `sign`.
 func splitSignArguments(args []string) (positional, remaining []string) {

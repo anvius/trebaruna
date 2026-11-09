@@ -35,7 +35,14 @@ type documentLayout struct {
 	mimeType string
 	// uri is the reference to the document beside a detached signature.
 	uri string
+	// inASiC roots a detached signature in asic:XAdESSignatures. It must be
+	// there before signing: the namespace it declares is part of the
+	// canonical forms the signature covers.
+	inASiC bool
 }
+
+// asicNamespace is ASiC's namespace (ETSI EN 319 162-1).
+const asicNamespace = "http://uri.etsi.org/02918/v1.2.1#"
 
 // layoutFor reads the content once: XML is signed as XML (inside the
 // document, an Object or AutoFirma's CONTENT), anything else as its bytes.
@@ -46,6 +53,7 @@ func layoutFor(request application.XadesRequest) (documentLayout, error) {
 		plain:             request.Plain,
 		excludeSignatures: !request.Policy.IsFacturaE(),
 		uri:               url.PathEscape(request.DocumentName),
+		inASiC:            request.InASiC,
 	}
 	if layout.packaging == "" {
 		layout.packaging = domain.XMLEnveloped
@@ -60,6 +68,8 @@ func layoutFor(request application.XadesRequest) (documentLayout, error) {
 		return documentLayout{}, fmt.Errorf("an enveloped XML signature goes inside an XML document; this one is not XML")
 	case layout.packaging == domain.XMLDetached && request.DocumentName == "":
 		return documentLayout{}, fmt.Errorf("a detached XML signature names its document, and none was given")
+	case layout.inASiC && layout.packaging != domain.XMLDetached:
+		return documentLayout{}, fmt.Errorf("an ASiC container holds detached XML signatures, not %s ones", layout.packaging)
 	}
 	return layout, nil
 }
@@ -107,6 +117,13 @@ func (l documentLayout) tree(ids signatureIDs, content []byte) *etree.Document {
 		}
 		holder.CreateAttr("Encoding", encodingBase64)
 		holder.SetText(base64.StdEncoding.EncodeToString(content))
+		return tree
+	case domain.XMLDetached:
+		tree := etree.NewDocument()
+		if l.inASiC {
+			root := tree.CreateElement("asic:XAdESSignatures")
+			root.CreateAttr("xmlns:asic", asicNamespace)
+		}
 		return tree
 	}
 	return etree.NewDocument()

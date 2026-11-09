@@ -76,6 +76,12 @@ func (d Document) DetachedSignatureName(format Format) string {
 	return d.path + ".p7s"
 }
 
+// ContainerName is where a container holding the document goes: its name
+// plus .asics or .asice, next to it.
+func (d Document) ContainerName(container Container) string {
+	return d.path + container.Extension()
+}
+
 // Supports reports whether the format makes sense for this document.
 func (d Document) Supports(format Format) bool {
 	switch format {

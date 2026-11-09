@@ -104,19 +104,19 @@ func TestVerifyTimestampWithoutComparisonIsNotASuccess(t *testing.T) {
 func TestASiCIgnoresFlagsAfterPositionals(t *testing.T) {
 	directory := t.TempDir()
 	document := filepath.Join(directory, "doc.txt")
-	signature := filepath.Join(directory, "doc.txt.p7m")
+	signature := filepath.Join(directory, "doc.txt.p7s")
 	for _, path := range []string{document, signature} {
 		if err := os.WriteFile(path, []byte("data"), 0o644); err != nil {
 			t.Fatal(err)
 		}
 	}
-	target := filepath.Join(directory, "custom.asice")
+	target := filepath.Join(directory, "custom.asics")
 
 	stdout, stderr, code := run("asic", document, signature, "--out", target)
 	if code != 0 {
 		t.Fatalf("exit = %d, stderr = %q", code, stderr)
 	}
-	if !strings.Contains(stdout, "custom.asice") {
+	if !strings.Contains(stdout, "custom.asics") {
 		t.Errorf("stdout = %q", stdout)
 	}
 	if _, err := os.Stat(target); err != nil {

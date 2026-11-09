@@ -148,3 +148,64 @@ func TestXMLDSigIsLevelBWithoutPolicy(t *testing.T) {
 		t.Errorf("plain XMLDSig request: %+v, %v", xades.request, err)
 	}
 }
+
+// fakeContainers records what is packed.
+type fakeContainers struct {
+	container domain.Container
+	entries   []application.ContainerEntry
+}
+
+func (f *fakeContainers) WriteContainer(container domain.Container, entries []application.ContainerEntry) ([]byte, error) {
+	f.container, f.entries = container, entries
+	return []byte("zip"), nil
+}
+
+// TestAnASiCSHoldsTheDocumentAndItsDetachedSignature.
+func TestAnASiCSHoldsTheDocumentAndItsDetachedSignature(t *testing.T) {
+	store := newFakeStore(map[string][]byte{"/tmp/informe.pdf": []byte("%PDF")})
+	cades, xades, containers := &fakeCades{}, &fakeXades{}, &fakeContainers{}
+	useCase := application.NewSignDocument(store, fakeClock{time.Unix(0, 0)}, selfSignedIdentity(), cades, &fakePades{}, xades).
+		WithContainers(containers)
+	execute := func(format domain.Format, container domain.Container, extra func(*application.Request)) (application.Artefact, error) {
+		request := application.Request{Document: newDocument(t, "/tmp/informe.pdf"), Format: format, Level: domain.BES,
+			Signer: newSigner(t), Container: container}
+		if extra != nil {
+			extra(&request)
+		}
+		return useCase.Execute(context.Background(), request)
+	}
+
+	artefact, err := execute(domain.Cades, domain.ASiCS, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if artefact.Path != "/tmp/informe.pdf.asics" || string(store.written[artefact.Path]) != "zip" || !cades.request.Detached {
+		t.Errorf("artefact %+v, detached %v", artefact, cades.request.Detached)
+	}
+	if len(containers.entries) != 2 || containers.entries[0].Name != "informe.pdf" || containers.entries[1].Name != "META-INF/signature.p7s" {
+		t.Errorf("entries %+v", containers.entries)
+	}
+
+	if _, err := execute(domain.Xades, domain.ASiCS, nil); err != nil {
+		t.Fatal(err)
+	}
+	if !xades.request.InASiC || xades.request.Packaging != domain.XMLDetached || containers.entries[1].Name != "META-INF/signatures.xml" {
+		t.Errorf("XAdES in a container: %+v", xades.request)
+	}
+
+	for what, refused := range map[string]func() error{
+		"PAdES": func() error { _, err := execute(domain.Pades, domain.ASiCS, nil); return err },
+		"co-sign": func() error {
+			_, err := execute(domain.Cades, domain.ASiCS, func(r *application.Request) { r.Cosign = true })
+			return err
+		},
+		"enveloping": func() error {
+			_, err := execute(domain.Xades, domain.ASiCS, func(r *application.Request) { r.Enveloping = true })
+			return err
+		},
+	} {
+		if refused() == nil {
+			t.Errorf("%s into a container was accepted", what)
+		}
+	}
+}

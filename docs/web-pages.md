@@ -267,7 +267,9 @@ PAdES (invisible unless the page places the seal), XAdES (enveloping when the
 page names no variant, as AutoFirma; enveloped; and "XAdES Detached", the
 `AFIRMA` root holding `CONTENT` and the signature), XMLDSig in the same
 variants (no signed properties: a policy or a timestamp is refused, roles are
-left out as AutoFirma does), and FacturaE (named, or recognised by `auto`: the invoice signed
+left out as AutoFirma does), `CAdES-ASiC-S` and `XAdES-ASiC-S` (the
+container, the data named `asicsFilename` or `dataobject.<extension>` as
+AutoFirma names it), and FacturaE (named, or recognised by `auto`: the invoice signed
 enveloped with FacturaE 3.1, or the 3.0/3.1 policy the page gives exactly, and
 the role in `signerClaimedRoles`, `emisor` by default; an invoice already
 signed is refused with `SAF_38`, never signed again as plain XAdES). Signature policies are
@@ -280,7 +282,7 @@ with `policyIdentifierHash`, `policyIdentifierHashAlgorithm` and
 page gives no digest; trebaruna answers `SAF_23` instead, because it does not
 fetch what a page points at. XAdES signatures claim the roles in
 `signerClaimedRoles` (several separated by `|`). Asked for something not done
-yet — a policy in PAdES, ASiC, a digest the page computed, single signatures
+yet — a policy in PAdES, co-signing an ASiC container, a digest the page computed, single signatures
 through the site's server (`CAdEStri` and siblings) — trebaruna answers with an
 AutoFirma error naming it, never with a different signature.
 

@@ -114,7 +114,10 @@ type XadesRequest struct {
 	// only, without policy or roles.
 	Plain bool
 	// DocumentName names the document a detached signature references.
-	DocumentName    string
+	DocumentName string
+	// InASiC writes a detached signature inside asic:XAdESSignatures, as an
+	// ASiC container's META-INF/signatures.xml holds it.
+	InASiC          bool
 	TimestampURL    string
 	TimestampUser   string
 	TimestampSecret string
@@ -125,6 +128,18 @@ type XadesRequest struct {
 	Policy domain.SignaturePolicy
 	// ClaimedRoles are the roles the signer claims (SignerRoleV2).
 	ClaimedRoles []string
+}
+
+// ContainerWriter packs documents and their signatures into an ASiC
+// container.
+type ContainerWriter interface {
+	WriteContainer(container domain.Container, entries []ContainerEntry) ([]byte, error)
+}
+
+// ContainerEntry is a file of a container, by its path inside it.
+type ContainerEntry struct {
+	Name    string
+	Content []byte
 }
 
 // FileStore writes the produced artefact.

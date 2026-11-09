@@ -111,6 +111,7 @@ trebaruna sign <document> [flags]
 | `--cosign` | off | Add a parallel signature to the `.p7m`/`.p7s` given as document |
 | `--countersign` | — | Counter-sign the envelope's signatures: `leaves` or `all` |
 | `--content` | — | The document a detached `.p7s` signs, to co-sign it |
+| `--asic` | — | `s`: the document and its detached signature in an ASiC-S container, `<document>.asics` |
 | `--policy` | — | Signature policy (EPES) by name: `age` (AGE 1.9), `age18`, `facturae` (3.1), `facturae30` |
 | `--policy-id` | — | A policy by its parts: identifier, an OID (`urn:oid:` optional) or, for XAdES, a URL |
 | `--policy-hash` | — | Its document's digest, Base64; required with `--policy-id` |
@@ -398,21 +399,26 @@ publishes. A list that fails goes to quarantine, never to the cache. See
 ## `asic`
 
 ```
-trebaruna asic [flags] <document> <signature>...
+trebaruna asic [flags] <document> <signature.p7s>
 ```
 
-Packs a document and its signature into an ASiC container (ETSI EN 319 162).
+Packs a document and its detached CAdES signature into an ASiC-S container
+(ETSI EN 319 162-1): `mimetype` first and uncompressed, the document at the
+root, the signature as `META-INF/signature.p7s`. To sign straight into a
+container, XML signatures included, use `sign --asic s`: an XML signature
+for a container is written inside it, because the namespace of its root is
+part of what it signs. A `.p7m` carries the document inside and is refused.
 
 | Flag | Meaning |
 |---|---|
-| `--type` | `s` (ASiC-S, one document) or `e` (ASiC-E, several) |
+| `--type` | `s` (ASiC-S); ASiC-E is signed in one step |
 | `--out` | Output path, default `<document>.asics` |
 | `--extract` | Unpack an existing container to this directory |
 
 ```bash
-trebaruna asic atto.pdf atto.pdf.p7m
-trebaruna asic --type e doc.pdf sig1.p7m sig2.p7m --out bundle.asice
-trebaruna asic --extract ./out bundle.asics
+trebaruna sign atto.pdf --format cades --asic s --p12 k.p12   # in one step
+trebaruna asic atto.pdf atto.pdf.p7s                          # pack an existing .p7s
+trebaruna asic --extract bundle.asics --out ./out
 ```
 
 ---

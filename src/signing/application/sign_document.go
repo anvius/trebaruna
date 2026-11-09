@@ -22,6 +22,14 @@ type SignDocument struct {
 	cades    CadesSigner
 	pades    PadesSigner
 	xades    XadesSigner
+	// containers packs signatures into ASiC containers; nil without them.
+	containers ContainerWriter
+}
+
+// WithContainers lets the use case sign into ASiC containers.
+func (u *SignDocument) WithContainers(containers ContainerWriter) *SignDocument {
+	u.containers = containers
+	return u
 }
 
 // NewSignDocument wires the use case. Every adapter is optional until used:
@@ -73,6 +81,9 @@ type Request struct {
 	TimestampSecret string
 	// Enveloping carries the document inside a XAdES signature.
 	Enveloping bool
+	// Container packs the document and its detached signature into an ASiC
+	// container; NoContainer writes the signature alone.
+	Container domain.Container
 	// EmbedRevocation asks for PAdES B-LT: the signature plus a /DSS dictionary
 	// carrying the status answers. It reaches the network, so it is opt-in.
 	EmbedRevocation bool
@@ -105,6 +116,8 @@ func (u *SignDocument) Execute(ctx context.Context, request Request) (Artefact, 
 		output = request.Document.AddedSignatureName("cosigned")
 	case request.Countersign != "":
 		output = request.Document.AddedSignatureName("countersigned")
+	case request.Container != domain.NoContainer:
+		output = request.Document.ContainerName(request.Container)
 	case request.Detached:
 		output = request.Document.DetachedSignatureName(request.Format)
 	default:
@@ -127,6 +140,15 @@ func (u *SignDocument) Execute(ctx context.Context, request Request) (Artefact, 
 	signed, err := u.sign(ctx, request.WithSignedAt(signedAt), content)
 	if err != nil {
 		return Artefact{}, err
+	}
+	if request.Container != domain.NoContainer {
+		signed, err = u.containers.WriteContainer(request.Container, []ContainerEntry{
+			{Name: request.Document.Name(), Content: content},
+			{Name: request.Container.SignatureEntry(request.Format), Content: signed},
+		})
+		if err != nil {
+			return Artefact{}, fmt.Errorf("pack the %s container: %w", request.Container, err)
+		}
 	}
 
 	if err := u.files.Write(output, signed); err != nil {
@@ -156,10 +178,16 @@ func fingerprint(content []byte) string {
 	return hex.EncodeToString(digest[:])
 }
 
+// detached reports a signature kept apart from the document: asked for, or
+// going into a container beside it.
+func (r Request) detached() bool {
+	return r.Detached || r.Container != domain.NoContainer
+}
+
 // xmlPackaging is how a XAdES signature holds the document, from the flags.
 func (r Request) xmlPackaging() domain.XMLPackaging {
 	switch {
-	case r.Detached:
+	case r.detached():
 		return domain.XMLDetached
 	case r.Enveloping:
 		return domain.XMLEnveloping
@@ -169,8 +197,11 @@ func (r Request) xmlPackaging() domain.XMLPackaging {
 
 // validate applies guard clauses so the adapters receive a coherent request.
 func (u *SignDocument) validate(request Request) error {
-	if request.Detached && request.Enveloping {
+	if request.detached() && request.Enveloping {
 		return fmt.Errorf("a signature is either detached or enveloping; choose one")
+	}
+	if err := u.validateContainer(request); err != nil {
+		return err
 	}
 	// Only an enveloped XML signature needs an XML document: detached and
 	// enveloping ones sign any file.
@@ -237,6 +268,25 @@ func (u *SignDocument) validate(request Request) error {
 	return nil
 }
 
+// validateContainer applies the container's rules: CAdES or XML signatures,
+// detached, and the signature is new (signatures are added to a container
+// by signing its document again).
+func (u *SignDocument) validateContainer(request Request) error {
+	switch {
+	case request.Container == domain.NoContainer:
+		return nil
+	case request.Container == domain.ASiCE:
+		return fmt.Errorf("ASiC-E containers with several documents are not supported yet; use ASiC-S")
+	case u.containers == nil:
+		return fmt.Errorf("no container writer configured")
+	case !request.Container.Holds(request.Format):
+		return fmt.Errorf("an ASiC container holds CAdES or XML signatures; %s signs inside the document", request.Format)
+	case request.Cosign || request.Countersign != "":
+		return fmt.Errorf("signatures are added to a container's document by signing it again, not by --cosign or --countersign")
+	}
+	return nil
+}
+
 // sign dispatches to the adapter that owns the format.
 //
 // The second return value reports whether the signing certificate is
@@ -247,7 +297,7 @@ func (u *SignDocument) sign(ctx context.Context, request Request, content []byte
 	case domain.Cades:
 		signed, err := u.cades.SignCades(ctx, CadesRequest{
 			Content:         content,
-			Detached:        request.Detached,
+			Detached:        request.detached(),
 			Cosign:          request.Cosign,
 			Countersign:     request.Countersign,
 			DetachedContent: u.detachedContent(request),
@@ -288,6 +338,7 @@ func (u *SignDocument) sign(ctx context.Context, request Request, content []byte
 			EmbedRevocation: request.EmbedRevocation,
 			Packaging:       request.xmlPackaging(),
 			DocumentName:    request.Document.Name(),
+			InASiC:          request.Container != domain.NoContainer,
 			TimestampURL:    request.TimestampURL,
 			TimestampUser:   request.TimestampUser,
 			TimestampSecret: request.TimestampSecret,

@@ -50,7 +50,8 @@ user seeing what is signed and where anything goes.
 | XAdES detached: `<document>.xsig` beside the untouched document, which the signature names; verify finds it there or takes `--content` | built |
 | AutoFirma's "XAdES Detached" (an `AFIRMA` root holding `CONTENT` and the signature) for afirma:// pages | built |
 | Plain XMLDSig (`--format xmldsig`, afirma:// `XMLDSig…`): the same layouts without signed properties, level B only, no policy; verify names it XMLDSig | built |
-| ASiC-S / ASiC-E signed in one step | planned (E3b, E3c) |
+| ASiC-S signed in one step (`sign --asic s`, afirma:// `CAdES-ASiC-S`, `XAdES-ASiC-S`): the document and its detached CAdES or XAdES signature, the XML one inside `asic:XAdESSignatures` | built |
+| ASiC-E signed in one step (several documents) | planned (E3c) |
 | Handwritten-signature image next to the certificate data (ADR-0012) | planned (G3) |
 | ODF and OOXML signatures (ADR-0015) | planned (G1, G2) |
 
