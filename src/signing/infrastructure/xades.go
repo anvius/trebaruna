@@ -742,19 +742,19 @@ func (s *XadesSigner) attachArchiveTimeStamp(
 func archiveTimestampInput(tree *etree.Document, signature *etree.Element) ([]byte, error) {
 	var input bytes.Buffer
 
-	// 1-3: every ds:Reference target, resolved and canonicalised as its
-	// transforms require. For the references this signer emits, that is the
-	// enveloped document and the SignedProperties element.
-	references, err := referenceTargets(tree, signature)
-	if err != nil {
-		return nil, err
+	// 1-3: every ds:Reference of SignedInfo, processed as XML-Signature
+	// processes it: the document (URI="", every signature left out) and the
+	// SignedProperties, by the same code that computed their digests.
+	signedInfo := signature.SelectElement("SignedInfo")
+	if signedInfo == nil {
+		return nil, fmt.Errorf("the signature has no SignedInfo")
 	}
-	for _, target := range references {
-		canonical, err := canonicalise(target)
+	for _, reference := range signedInfo.SelectElements("Reference") {
+		processed, err := xmldsig.ReferenceData(tree, signature, reference, nil)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("archive timestamp: reference %q: %w", reference.SelectAttrValue("URI", ""), err)
 		}
-		input.Write(canonical)
+		input.Write(processed)
 	}
 
 	// 4: SignedInfo, SignatureValue and KeyInfo, in that order.
@@ -795,82 +795,6 @@ func archiveTimestampInput(tree *etree.Document, signature *etree.Element) ([]by
 	}
 
 	return input.Bytes(), nil
-}
-
-// referenceTargets resolves each ds:Reference URI to the element it names.
-//
-// The enveloped transform is not undone here: the archive timestamp covers what
-// the reference covers, which for the document reference is the document without
-// the signature. Returning the root and letting the canonicaliser walk it would
-// include the signature itself and produce a digest nobody can reproduce.
-func referenceTargets(tree *etree.Document, signature *etree.Element) ([]*etree.Element, error) {
-	var targets []*etree.Element
-
-	signedInfo := signature.SelectElement("SignedInfo")
-	if signedInfo == nil {
-		return nil, fmt.Errorf("the signature has no SignedInfo")
-	}
-
-	for _, reference := range signedInfo.SelectElements("Reference") {
-		uri := reference.SelectAttrValue("URI", "")
-		if uri == "" {
-			continue
-		}
-		if !strings.HasPrefix(uri, "#") {
-			// A detached external reference cannot be covered by this stream.
-			continue
-		}
-		identifier := uri[1:]
-
-		// The enveloped transform means "the document without this signature".
-		if enveloped := reference.SelectElement("Transforms"); enveloped != nil &&
-			strings.Contains(xmlText(enveloped), algorithmEnveloped) {
-			targets = append(targets, documentWithoutSignature(tree, signature))
-			continue
-		}
-
-		if found := findByID(tree.Root(), identifier); found != nil {
-			targets = append(targets, found)
-		}
-	}
-	return targets, nil
-}
-
-// documentWithoutSignature returns a copy of the root with the signature removed,
-// which is what the enveloped transform produces.
-func documentWithoutSignature(tree *etree.Document, signature *etree.Element) *etree.Element {
-	root := tree.Root().Copy()
-
-	removed := false
-	walkElement(root, func(element *etree.Element) {
-		if removed || element.Tag != "Signature" || element.NamespaceURI() != namespaceDS {
-			return
-		}
-		if element.SelectAttrValue("Id", "") == signature.SelectAttrValue("Id", "") {
-			if parent := parentOf(root, element); parent != nil {
-				parent.RemoveChild(element)
-				removed = true
-			}
-		}
-	})
-	return root
-}
-
-// parentOf finds the parent of an element within a tree.
-func parentOf(root, target *etree.Element) *etree.Element {
-	var found *etree.Element
-	walkElement(root, func(element *etree.Element) {
-		if found != nil {
-			return
-		}
-		for _, child := range element.ChildElements() {
-			if child == target {
-				found = element
-				return
-			}
-		}
-	})
-	return found
 }
 
 // walkElement visits an element and its descendants.
@@ -914,18 +838,6 @@ func canonicalise(element *etree.Element) ([]byte, error) {
 		return nil, fmt.Errorf("canonicalise for the archive timestamp: %w", err)
 	}
 	return canonical, nil
-}
-
-// xmlText concatenates the character data of an element and its children.
-func xmlText(element *etree.Element) string {
-	var builder strings.Builder
-	walkElement(element, func(node *etree.Element) {
-		builder.WriteString(node.Text())
-		if attribute := node.SelectAttrValue("Algorithm", ""); attribute != "" {
-			builder.WriteString(attribute)
-		}
-	})
-	return builder.String()
 }
 
 // buildArchiveTimeStamp emits the qualifying property in the 1.4.1 namespace.

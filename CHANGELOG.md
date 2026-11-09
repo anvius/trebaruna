@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The XAdES-A archive timestamp covers the signed document. Its input
+  skipped the enveloped document reference (`URI=""`), so the token covered
+  the signature's objects but not the document, and no other validator could
+  reproduce its imprint. Every SignedInfo reference is now processed as
+  XML-Signature processes it (EN 319 132-1, 5.5.2.2), by the code that
+  computes the digests. A test rebuilds the input from the file, step by
+  step, and compares it with the token's imprint.
+
 - A second XAdES on a signed XML no longer breaks the first.
   - The enveloped reference only excluded its own signature, so the next
     signature added to the root changed what the first one signed.

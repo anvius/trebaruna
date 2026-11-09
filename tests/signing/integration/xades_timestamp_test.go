@@ -499,9 +499,10 @@ func TestXadesLtaReplacesTheRefusal(t *testing.T) {
 
 // TestXadesLtaEmitsArchiveTimeStamp pins the structure XAdES-A requires.
 //
-// The archive timestamp does not cover the document: it covers every object the
-// signature already has, which is why it must be the outermost layer and why it
-// lives in the 1.4.1 namespace rather than the 1.3.2 one.
+// The archive timestamp covers the signed document and every object the
+// signature already has (xades_archive_test.go rebuilds its input), which is
+// why it must be the outermost layer; it lives in the 1.4.1 namespace rather
+// than the 1.3.2 one.
 func TestXadesLtaEmitsArchiveTimeStamp(t *testing.T) {
 	tsa := newLocalTSA(t)
 	signer := xadesTestSigner(t)

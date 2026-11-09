@@ -302,8 +302,9 @@ modified; that is signxml's reading, not a broken signature.
 ### XAdES-A
 
 The signature element plus `xades:SignatureTimeStamp` and
-`xades141:ArchiveTimeStamp`, in that order. The archive token covers every object
-of the signature, which is why it must be written last.
+`xades141:ArchiveTimeStamp`, in that order. The archive token covers the
+signed document and every object of the signature (EN 319 132-1, 5.5.2.2),
+which is why it must be written last.
 
 ### CAdES
 
