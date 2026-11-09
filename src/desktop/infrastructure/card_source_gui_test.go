@@ -245,3 +245,40 @@ func TestChoosingAFileLeavesTheCard(t *testing.T) {
 		t.Error("choosing a certificate file must switch the step back to the file")
 	}
 }
+
+func TestTheFirefoxStoreIsASourceToo(t *testing.T) {
+	fixture := newFormFixtureWithCards(t, scriptedCertificate{summary: qualifiedRossi()}, &scriptedCards{})
+	form := fixture.desktop.form
+	store := identityCard(signing.PINNotRequired)[:1]
+	store[0].Store, store[0].Token = domain.StoreFirefox, "NSS Certificate DB"
+	form.storeList = application.NewListCards(&scriptedCards{listings: [][]domain.CardCertificate{store}})
+	form.setDocument("/tmp/offerta.docx")
+
+	form.keySource.SetSelected(form.m.KeyFromFirefox)
+	settle(t, func() bool { return form.summary != nil })
+
+	if form.cards.where.Text != form.m.FirefoxWhere || !form.cards.pin.Disabled() {
+		t.Errorf("where %q, PIN enabled %t: a store without a primary password asks for nothing",
+			form.cards.where.Text, !form.cards.pin.Disabled())
+	}
+	if form.cards.pin.PlaceHolder != form.m.FirefoxPasswordPlaceholder {
+		t.Errorf("the store's PIN is Firefox's primary password, not %q", form.cards.pin.PlaceHolder)
+	}
+	test.Tap(form.signButton)
+	intent := <-fixture.signer.intents
+	settle(t, func() bool { return form.afterSign.Visible() })
+	if intent.Card.Store != domain.StoreFirefox || intent.Card.Fingerprint != "a18a8855" {
+		t.Errorf("card key %+v: the store and its certificate must be sent", intent.Card)
+	}
+	if got := fyne.CurrentApp().Preferences().String(preferenceKeySource); got != domain.StoreFirefox {
+		t.Errorf("remembered source %q", got)
+	}
+}
+
+func TestAnEmptyFirefoxStoreSaysHowToFillIt(t *testing.T) {
+	fixture := newFormFixtureWithCards(t, scriptedCertificate{summary: qualifiedRossi()}, &scriptedCards{})
+	form := fixture.desktop.form
+
+	form.keySource.SetSelected(form.m.KeyFromFirefox)
+	settle(t, func() bool { return form.standing.Text == form.m.NoFirefoxCertificates })
+}

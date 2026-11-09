@@ -92,6 +92,8 @@ trebaruna sign <document> [flags]
 | `--token` | — | PKCS#11 token label (needs `trebaruna-token`) |
 | `--certificate` | the signing one | Certificate of the card: serial or SHA-256 fingerprint (8+ digits); finds the card without `--token` |
 | `--module` | OpenSC, found on the system | PKCS#11 module path |
+| `--firefox` | — | Sign with a certificate of the Firefox store, in place (PIN: the primary password) |
+| `--nss-db` | — | Sign with a certificate of this NSS store directory (`~/.pki/nssdb` for Chromium) |
 | `--pin` | — | Smartcard PIN |
 | `--pass` | — | Passphrase for the P12 or PEM |
 | `--name` | from the certificate | Signer name recorded in the signature |

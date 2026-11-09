@@ -108,6 +108,8 @@ func signArguments(intent domain.SigningIntent) []string {
 	}
 
 	switch {
+	case intent.Card.Chosen() && intent.Card.Store == domain.StoreFirefox:
+		arguments = append(arguments, "--firefox", "--certificate", intent.Card.Fingerprint)
 	case intent.Card.Chosen():
 		// The label narrows the readers and the fingerprint names the very
 		// certificate the person picked, so the command never chooses for them.

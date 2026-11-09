@@ -57,7 +57,7 @@ user seeing what is signed and where anything goes.
 | Pick a certificate on a card by serial or fingerprint; without one, the only certificate or the only non-repudiation one signs, never a guess; the card holding it is found without a label and without trying the PIN; OpenSC found automatically on each system | built |
 | PIN attempts are never spent needlessly: state read before login, no empty PIN, a refused PIN stops the run (a batch included), the state after a refusal stated | built |
 | Cards and tokens in the desktop window: every certificate listed in full, the signing one chosen, PIN state and locked cards stated before typing, a refused PIN cleared and the card read again | built |
-| Firefox / NSS store used in place, without exporting | planned (C3) |
+| Firefox / NSS store used in place, without exporting: read-only, primary password as PIN, CLI (`--firefox`, `--nss-db`) and window | built |
 | Change PIN, unlock with PUK | planned (C4) |
 | Windows and macOS system stores | planned (C5) |
 | Remote signing through the CSC API v2 only (ADR-0014) | planned (F5) |

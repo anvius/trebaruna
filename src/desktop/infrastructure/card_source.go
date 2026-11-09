@@ -41,6 +41,8 @@ type cardSource struct {
 	chosen       *domain.CardCertificate
 	searching    int
 	run          background
+	// empty is what to say when the source holds no certificate.
+	empty string
 
 	choice *widget.RadioGroup
 	search *widget.Button
@@ -57,7 +59,8 @@ func newCardSource(
 	onChosen func(domain.CardCertificate),
 	onEmpty func(string, widget.Importance),
 ) *cardSource {
-	source := &cardSource{m: m, list: list, preferences: preferences, onChosen: onChosen, onEmpty: onEmpty, run: offThread}
+	source := &cardSource{m: m, list: list, preferences: preferences, onChosen: onChosen, onEmpty: onEmpty,
+		run: offThread, empty: m.NoCards}
 
 	// A list, not a drop-down: a drop-down cuts a long name to fit its width,
 	// and every certificate of the card stays in sight, which is the point of
@@ -81,6 +84,16 @@ func newCardSource(
 }
 
 func (c *cardSource) object() fyne.CanvasObject { return c.root }
+
+// switchTo lists another source of certificates — the cards, or the Firefox
+// store — with what to say when it holds none and what its PIN is called.
+func (c *cardSource) switchTo(list *application.ListCards, empty, pinName string) {
+	c.list, c.empty = list, empty
+	c.certificates, c.chosen = nil, nil
+	c.pin.SetText("")
+	c.pin.SetPlaceHolder(pinName)
+	c.refresh()
+}
 
 // key is the certificate chosen with the PIN typed, or no key at all.
 func (c *cardSource) key() domain.CardKey {
@@ -130,7 +143,7 @@ func (c *cardSource) listed(certificates []domain.CardCertificate, err error) {
 		c.onEmpty(err.Error(), widget.DangerImportance)
 		return
 	case len(certificates) == 0:
-		c.onEmpty(c.m.NoCards, widget.MediumImportance)
+		c.onEmpty(c.empty, widget.MediumImportance)
 		return
 	}
 
@@ -190,7 +203,11 @@ func (c *cardSource) choose(label string) {
 	certificate := c.certificates[index]
 	c.chosen = &certificate
 	c.preferences.SetString(preferenceCardCertificate, certificate.Fingerprint)
-	c.where.SetText(fmt.Sprintf(c.m.CardWhere, certificate.Token, certificate.Reader))
+	if certificate.Store == domain.StoreFirefox {
+		c.where.SetText(c.m.FirefoxWhere)
+	} else {
+		c.where.SetText(fmt.Sprintf(c.m.CardWhere, certificate.Token, certificate.Reader))
+	}
 	c.showPINState(certificate)
 	c.onChosen(certificate)
 }

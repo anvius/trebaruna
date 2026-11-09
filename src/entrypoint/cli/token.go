@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -29,6 +30,8 @@ func runToken(args []string, stdout, stderr io.Writer) int {
 	var (
 		module    = flags.String("module", "", "path of the PKCS#11 module (default: OpenSC, found on this system)")
 		territory = flags.String("territory", defaultTerritory(), "trust list for the issuers' standing in --json")
+		firefox   = flags.Bool("firefox", false, "list the Firefox store instead of the cards")
+		nssDB     = flags.String("nss-db", "", "list this NSS store directory instead of the cards")
 		pin       = flags.String("pin", "", "PIN of the token, optional for listing (or $TREBARUNA_PIN)")
 		asJSON    = flags.Bool("json", false, "machine-readable output")
 	)
@@ -37,15 +40,21 @@ func runToken(args []string, stdout, stderr io.Writer) int {
 		return exitUsage
 	}
 
-	path, err := moduleOrOpenSC(*module)
+	path, parameters, err := cardModule(*module, storeOptions{firefox: *firefox, directory: *nssDB})
+	if errors.Is(err, errNoFirefoxProfile) && *asJSON {
+		// For a listing, no Firefox store holds no certificate: the window
+		// says how to import one instead of showing an error.
+		return printTokenJSON(stdout, nil, *territory)
+	}
 	if err != nil {
 		fmt.Fprintf(stderr, "%v\n", err)
 		return exitInvalid
 	}
 
 	inspector := infrastructure.TokenInspector{
-		Module: path,
-		PIN:    secretFrom(*pin, pinVariable),
+		Module:     path,
+		Parameters: parameters,
+		PIN:        secretFrom(*pin, pinVariable),
 	}
 
 	slots, err := inspector.Inspect()

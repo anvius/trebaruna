@@ -110,3 +110,28 @@ func TestTheCardsRefusalsBecomeProblems(t *testing.T) {
 		}
 	}
 }
+
+func TestTheFirefoxStoreIsListedAndSignedWithItsOwnFlag(t *testing.T) {
+	binary, recorded := fakeCommand(t, "cat <<'JSON'\n"+tokenListing+"\nJSON")
+	cards, err := infrastructure.CommandLineCardReader{BinaryPath: binary, Store: domain.StoreFirefox}.Cards(context.Background())
+	if err != nil {
+		t.Fatalf("Cards: %v", err)
+	}
+	if arguments := recordedArguments(t, recorded); !contains(arguments, "--firefox") {
+		t.Errorf("arguments %v: the store must be asked for", arguments)
+	}
+	if cards[0].Store != domain.StoreFirefox {
+		t.Errorf("store %q", cards[0].Store)
+	}
+
+	binary, recorded = fakeCommand(t, "echo '"+receiptJSON+"'")
+	intent := cardSigningIntent()
+	intent.Card.Store = domain.StoreFirefox
+	if _, err := (infrastructure.CommandLineSigner{BinaryPath: binary}).Sign(context.Background(), intent); err != nil {
+		t.Fatalf("Sign: %v", err)
+	}
+	arguments := recordedArguments(t, recorded)
+	if !contains(arguments, "--firefox") || !containsPair(arguments, "--certificate", "a18a8855") || contains(arguments, "--token") {
+		t.Errorf("arguments %v: the store is named by --firefox, not by a card label", arguments)
+	}
+}

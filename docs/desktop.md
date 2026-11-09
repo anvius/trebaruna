@@ -47,7 +47,7 @@ Nothing the document or the certificate already says is asked for.
 | Step | What you do | What the window fills in |
 |---|---|---|
 | **1 Document** | Choose any file, or drop it on the window | The formats that fit it, and the name the signed file will get |
-| **2 Certificate** | **File**: choose a `.p12`, `.pfx` or `.pem` and type its passphrase. **Card**: pick a certificate of the card in the reader and type its PIN | Holder, identifier, issuer, expiry, and whether a trusted list vouches for it; for a card, which certificate signs and how many PIN attempts are at stake |
+| **2 Certificate** | **File**: choose a `.p12`, `.pfx` or `.pem` and type its passphrase. **Card**: pick a certificate of the card in the reader and type its PIN. **Firefox**: pick a certificate of the Firefox store | Holder, identifier, issuer, expiry, and whether a trusted list vouches for it; for a card, which certificate signs and how many PIN attempts are at stake |
 | **3 Signature** | Pick signed PDF, `.p7m` envelope or detached `.p7s`; for a `.p7m`/`.p7s`, add a parallel signature, counter-sign, or wrap it again | The seal position, from where it sits on the page |
 
 The certificate is read as soon as the passphrase is typed, so a wrong
@@ -94,6 +94,11 @@ never sent twice. The PIN reaches the signer in its environment, like the
 passphrase. **Look for cards** reads the readers again after inserting a card.
 Choosing a certificate file (File → Choose certificate…, or dropping one)
 switches the step back to **File**.
+
+**Firefox** lists the certificates of the Firefox store the same way and signs
+with them in place, never exporting them. Its PIN field asks for Firefox's
+primary password, and is disabled when the store has none. An empty store says
+how to import a certificate into Firefox.
 
 **More options** holds what is rarely changed: an invisible signature (signed
 PDF only; the page pane then says no seal will be drawn), the level (basic, with

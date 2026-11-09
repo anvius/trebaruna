@@ -39,6 +39,7 @@ type Window struct {
 	application *application.SignFromDesktop
 	inspect     *application.InspectCertificate
 	cards       *application.ListCards
+	firefox     *application.ListCards
 	preview     *application.PreviewPage
 	window      fyne.Window
 	messages    messaging.Catalogue
@@ -101,6 +102,7 @@ func newDesktop(window fyne.Window, catalogue messaging.Catalogue, binaryPath st
 		application: application.NewSignFromDesktop(CommandLineSigner{BinaryPath: binaryPath}, fileExists),
 		inspect:     application.NewInspectCertificate(CommandLineCertificateReader{BinaryPath: binaryPath}),
 		cards:       application.NewListCards(CommandLineCardReader{BinaryPath: binaryPath}),
+		firefox:     application.NewListCards(CommandLineCardReader{BinaryPath: binaryPath, Store: domain.StoreFirefox}),
 		preview:     application.NewPreviewPage(NewPopplerRenderer(), application.InkFinder{}),
 		binaryPath:  binaryPath,
 		window:      window,
@@ -121,7 +123,7 @@ func (w *Window) Run() {
 func (w *Window) buildContent(initialDocument string) fyne.CanvasObject {
 	w.pages = newPagePane(w.messages, w.palette, w.preview)
 	w.form = newSignForm(w.window, w.messages, w.palette, fyne.CurrentApp().Preferences(),
-		w.application, w.inspect, w.cards, w.pages)
+		w.application, w.inspect, w.cards, w.firefox, w.pages)
 	w.form.onNetwork = w.activity.add
 	if initialDocument != "" {
 		w.form.setDocument(initialDocument)

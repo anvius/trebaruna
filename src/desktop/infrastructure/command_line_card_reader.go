@@ -21,12 +21,18 @@ import (
 // lists, so the window shows the verdict the command prints.
 type CommandLineCardReader struct {
 	BinaryPath string
+	// Store lists a software store (domain.StoreFirefox) instead of the cards.
+	Store string
 }
 
 // Cards runs the command and flattens its slots into certificates.
 func (r CommandLineCardReader) Cards(ctx context.Context) ([]domain.CardCertificate, error) {
 	var stdout, stderr bytes.Buffer
-	command := exec.CommandContext(ctx, r.BinaryPath, "token", "--json")
+	arguments := []string{"token", "--json"}
+	if r.Store == domain.StoreFirefox {
+		arguments = append(arguments, "--firefox")
+	}
+	command := exec.CommandContext(ctx, r.BinaryPath, arguments...)
 	command.Stdout = &stdout
 	command.Stderr = &stderr
 	if err := command.Run(); err != nil {
@@ -73,6 +79,7 @@ func (r CommandLineCardReader) Cards(ctx context.Context) ([]domain.CardCertific
 				Fingerprint:    certificate.Fingerprint,
 				Serial:         certificate.Serial,
 				SignsByDefault: certificate.SignsByDefault,
+				Store:          r.Store,
 				Summary: domain.CertificateSummary{
 					Holder:     certificate.Name,
 					Identifier: certificate.Identifier,

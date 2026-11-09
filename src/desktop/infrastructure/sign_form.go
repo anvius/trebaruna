@@ -52,7 +52,11 @@ type signForm struct {
 	signing     *application.SignFromDesktop
 	inspect     *application.InspectCertificate
 	cards       *cardSource
-	pages       *pagePane
+	// cardList and storeList feed the card source: the cards in the
+	// readers, or the Firefox store.
+	cardList  *application.ListCards
+	storeList *application.ListCards
+	pages     *pagePane
 	// onCheck hands a signed file to the verification tab.
 	onCheck func(path string)
 	// onNetwork receives the connections a signature reported.
@@ -108,6 +112,7 @@ func newSignForm(
 	signing *application.SignFromDesktop,
 	inspect *application.InspectCertificate,
 	cards *application.ListCards,
+	firefox *application.ListCards,
 	pages *pagePane,
 ) *signForm {
 	form := &signForm{
@@ -115,6 +120,7 @@ func newSignForm(
 		signing: signing, inspect: inspect, pages: pages,
 		format: domain.FormatPAdES,
 		run:    offThread, pause: typingPause,
+		cardList: cards, storeList: firefox,
 	}
 
 	form.documentRow = newFileRow(m.ChooseDocument, m.ChangeButton, m.DropHint, form.pickDocument)
@@ -130,7 +136,8 @@ func newSignForm(
 	// the Italian signature cards are how most people hold their certificate.
 	form.cards = newCardSource(m, cards, preferences, form.cardChosen, form.noCertificate)
 	form.cards.object().Hide()
-	form.keySource = widget.NewRadioGroup([]string{m.KeyFromFile, m.KeyFromCard}, func(string) { form.keySourceChanged() })
+	form.keySource = widget.NewRadioGroup([]string{m.KeyFromFile, m.KeyFromCard, m.KeyFromFirefox},
+		func(string) { form.keySourceChanged() })
 	form.keySource.Horizontal = true
 	form.keySource.Required = true
 
@@ -182,8 +189,12 @@ func newSignForm(
 	)
 	form.afterSign.Hide()
 
-	if preferences.String(preferenceKeySource) == "card" {
+	switch preferences.String(preferenceKeySource) {
+	case "card":
 		form.keySource.SetSelected(m.KeyFromCard)
+		return form
+	case domain.StoreFirefox:
+		form.keySource.SetSelected(m.KeyFromFirefox)
 		return form
 	}
 	form.keySource.SetSelected(m.KeyFromFile)
@@ -499,8 +510,11 @@ func (f *signForm) noCertificate(text string, importance widget.Importance) {
 	f.showStanding(text, importance)
 }
 
-// usesCard reports whether the key comes from a card.
-func (f *signForm) usesCard() bool { return f.keySource.Selected == f.m.KeyFromCard }
+// usesCard reports whether the key comes from a card or the Firefox store,
+// both listed and opened the same way.
+func (f *signForm) usesCard() bool {
+	return f.keySource.Selected == f.m.KeyFromCard || f.keySource.Selected == f.m.KeyFromFirefox
+}
 
 // keySourceChanged swaps the file and the card halves of the step. A pending
 // file read is dropped: its answer would describe a certificate no longer in
@@ -509,17 +523,27 @@ func (f *signForm) keySourceChanged() {
 	f.reading++
 	f.clearCertificate()
 	f.showStanding("", widget.LowImportance)
-	if f.usesCard() {
-		f.preferences.SetString(preferenceKeySource, "card")
-		f.fileSource.Hide()
-		f.cards.object().Show()
-		f.cards.refresh()
+	switch f.keySource.Selected {
+	case f.m.KeyFromCard:
+		f.showListedSource("card", f.cardList, f.m.NoCards, f.m.PINPlaceholder)
+		return
+	case f.m.KeyFromFirefox:
+		f.showListedSource(domain.StoreFirefox, f.storeList, f.m.NoFirefoxCertificates, f.m.FirefoxPasswordPlaceholder)
 		return
 	}
 	f.preferences.SetString(preferenceKeySource, "file")
 	f.cards.object().Hide()
 	f.fileSource.Show()
 	f.readCertificate()
+}
+
+// showListedSource replaces the file half with the list of a card or store,
+// remembering which source was chosen.
+func (f *signForm) showListedSource(remembered string, list *application.ListCards, empty, pinName string) {
+	f.preferences.SetString(preferenceKeySource, remembered)
+	f.fileSource.Hide()
+	f.cards.object().Show()
+	f.cards.switchTo(list, empty, pinName)
 }
 
 // cardChosen fills the certificate card from the card's certificate: the

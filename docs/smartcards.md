@@ -232,6 +232,29 @@ read without the PIN, so the PIN is never tried on a card that is not the one
 meant. With two cards that both fit, nothing is signed and the error names their
 labels.
 
+### The Firefox store
+
+A certificate imported into Firefox (or Chromium on Linux, or Thunderbird) signs
+where it is, without exporting it to a `.p12`: trebaruna opens the store with
+NSS's own PKCS#11 module (`libsoftokn3`, installed with NSS), **read-only**, so
+the browser's database is never changed.
+
+```bash
+trebaruna-token token --firefox                 # what the store holds
+trebaruna-token sign atto.pdf --firefox         # the store of the profile Firefox opens
+trebaruna-token sign atto.pdf --nss-db ~/.pki/nssdb --certificate 3f2a91c0
+```
+
+- `--firefox` uses the profile Firefox starts with (`profiles.ini`: the
+  installation's default, else the profile marked default), looking in
+  `~/.mozilla/firefox`, the Snap and Flatpak locations, `~/Library/Application
+  Support/Firefox` and `%APPDATA%\Mozilla\Firefox`.
+- `--nss-db <dir>` opens any NSS store directory (one holding `cert9.db`).
+- The PIN is Firefox's **primary password**, read from `TREBARUNA_PIN` like a
+  card PIN; a store without one signs without asking. The same rules apply:
+  no empty password is tried, a wrong one stops the run.
+- Certificates of authorities the store keeps are never chosen to sign.
+
 ### Verify your own output
 
 ```bash

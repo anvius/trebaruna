@@ -88,15 +88,29 @@ func (c CertificateChoice) matches(candidate *x509.Certificate) bool {
 		strings.HasPrefix(Fingerprint(candidate), c.selector)
 }
 
-// pickForSigning chooses without a name: the only certificate, or the only
-// one that declares non-repudiation.
+// pickForSigning chooses without a name: the only certificate that can sign
+// a document, or the only one of those that declares non-repudiation. A
+// certificate authority's certificate never signs a document, and a store such
+// as Firefox's holds several.
 func pickForSigning(candidates []*x509.Certificate) (int, error) {
-	if len(candidates) == 1 {
+	var eligible []int
+	for index, candidate := range candidates {
+		if candidate != nil && !(candidate.BasicConstraintsValid && candidate.IsCA) {
+			eligible = append(eligible, index)
+		}
+	}
+	switch {
+	case len(eligible) == 1:
+		return eligible[0], nil
+	case len(candidates) == 1:
+		// The only pair a card offers is tried even when it cannot be read
+		// here; the signer reports what is wrong with it.
 		return 0, nil
 	}
+
 	chosen := -1
-	for index, candidate := range candidates {
-		if candidate == nil || candidate.KeyUsage&x509.KeyUsageContentCommitment == 0 {
+	for _, index := range eligible {
+		if candidates[index].KeyUsage&x509.KeyUsageContentCommitment == 0 {
 			continue
 		}
 		if chosen >= 0 {

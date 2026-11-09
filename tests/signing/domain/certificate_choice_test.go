@@ -76,6 +76,19 @@ func TestTheNonRepudiationCertificateSigns(t *testing.T) {
 	}
 }
 
+// TestAnAuthorityNeverSignsADocument: a store keeps the issuers it trusts next
+// to the person's certificate; only the person's can sign.
+func TestAnAuthorityNeverSignsADocument(t *testing.T) {
+	authority := cardCertificate(t, 0x60, x509.KeyUsageCertSign|x509.KeyUsageCRLSign)
+	authority.BasicConstraintsValid, authority.IsCA = true, true
+	person := cardCertificate(t, 0x61, x509.KeyUsageDigitalSignature)
+
+	index, err := domain.ChooseCertificateBy("").Pick([]*x509.Certificate{authority, person})
+	if err != nil || index != 1 {
+		t.Fatalf("the person's certificate must be chosen over the authority's, got %d, %v", index, err)
+	}
+}
+
 // TestSeveralSigningCertificatesNeedAChoice: guessing between two certificates
 // that can both sign would put a name on the document the person did not pick.
 func TestSeveralSigningCertificatesNeedAChoice(t *testing.T) {

@@ -22,13 +22,16 @@ type CardCertificate struct {
 	// names none: the only one, or the only one with non-repudiation.
 	SignsByDefault bool
 	Summary        CertificateSummary
+	// Store names the software store the certificate lives in ("firefox"),
+	// empty for a card.
+	Store string
 }
 
 // Key is the certificate on the card chosen to sign, with the PIN that opens
 // it. The PIN travels to the signer in its environment, never on a command
 // line (ADR-0006).
 func (c CardCertificate) Key(pin string) CardKey {
-	return CardKey{Token: c.Token, Fingerprint: c.Fingerprint, PIN: pin, PINPad: c.PINPad, State: c.PIN}
+	return CardKey{Token: c.Token, Fingerprint: c.Fingerprint, PIN: pin, PINPad: c.PINPad, State: c.PIN, Store: c.Store}
 }
 
 // CardKey is a certificate on a card and the PIN typed for it.
@@ -38,7 +41,11 @@ type CardKey struct {
 	PIN         string
 	PINPad      bool
 	State       signing.PINState
+	Store       string
 }
+
+// StoreFirefox is the Firefox certificate store, used in place.
+const StoreFirefox = "firefox"
 
 // Chosen reports whether a card certificate was chosen at all.
 func (k CardKey) Chosen() bool { return k.Fingerprint != "" }

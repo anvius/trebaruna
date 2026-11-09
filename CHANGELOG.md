@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Firefox / NSS stores used in place: `sign --firefox` (the profile Firefox
+  starts with, found in profiles.ini under the usual, Snap and Flatpak roots)
+  and `sign --nss-db <dir>` (any NSS store, e.g. Chromium's `~/.pki/nssdb`)
+  open the store through NSS's softokn3, read-only; the primary password is the
+  PIN, with the same PIN rules as a card. `token --firefox/--nss-db` lists it;
+  `token --firefox --json` prints an empty listing when there is no profile.
+  The window's step 2 gains a **Firefox** source. A certificate authority's
+  certificate is never chosen to sign.
+
 - Desktop card source: step 2 offers **File** or **Card**. The card's
   certificates are listed in full from `token --json` (no PIN), the signing one
   chosen, with the card and reader named; the PIN state (attempts failed, last

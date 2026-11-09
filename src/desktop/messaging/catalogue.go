@@ -119,45 +119,49 @@ type Catalogue struct {
 	CertificateExpiresSoon     string
 
 	// The card source of the signing form.
-	KeyFromFile         string
-	KeyFromCard         string
-	SearchCards         string
-	CardsSearching      string
-	NoCards             string
-	CardPlaceholder     string
-	CardSigningRole     string
-	CardOtherRole       string
-	CardWhere           string
-	PINPlaceholder      string
-	PINPadHint          string
-	PINCountLow         string
-	PINFinalTry         string
-	CardLocked          string
-	PINExpired          string
-	MissingPIN          string
-	WrongPIN            string
-	WrongPINFinalTry    string
-	WrongPINNowLocked   string
-	BatchNotTried       string
-	FormatPAdESLabel    string
-	FormatCAdESLabel    string
-	FormatXAdESLabel    string
-	FormatOnlyCAdES     string
-	SealOnPagePane      string
-	MoreOptions         string
-	LevelBasicLabel     string
-	LevelTimestampLabel string
-	LevelLongTermLabel  string
-	LevelArchiveLabel   string
-	LevelHint           string
-	LocationPlaceholder string
-	SignedAs            string
-	OpenSigned          string
-	ShowFolder          string
-	CheckSignature      string
-	TSAUserLabel        string
-	TSAPasswordLabel    string
-	TSAAccountHint      string
+	KeyFromFile                string
+	KeyFromCard                string
+	KeyFromFirefox             string
+	FirefoxWhere               string
+	FirefoxPasswordPlaceholder string
+	NoFirefoxCertificates      string
+	SearchCards                string
+	CardsSearching             string
+	NoCards                    string
+	CardPlaceholder            string
+	CardSigningRole            string
+	CardOtherRole              string
+	CardWhere                  string
+	PINPlaceholder             string
+	PINPadHint                 string
+	PINCountLow                string
+	PINFinalTry                string
+	CardLocked                 string
+	PINExpired                 string
+	MissingPIN                 string
+	WrongPIN                   string
+	WrongPINFinalTry           string
+	WrongPINNowLocked          string
+	BatchNotTried              string
+	FormatPAdESLabel           string
+	FormatCAdESLabel           string
+	FormatXAdESLabel           string
+	FormatOnlyCAdES            string
+	SealOnPagePane             string
+	MoreOptions                string
+	LevelBasicLabel            string
+	LevelTimestampLabel        string
+	LevelLongTermLabel         string
+	LevelArchiveLabel          string
+	LevelHint                  string
+	LocationPlaceholder        string
+	SignedAs                   string
+	OpenSigned                 string
+	ShowFolder                 string
+	CheckSignature             string
+	TSAUserLabel               string
+	TSAPasswordLabel           string
+	TSAAccountHint             string
 
 	// Menus and dialogs.
 	MenuFile              string
@@ -307,6 +311,10 @@ var spanish = Catalogue{
 	CertificateExpiresSoon:     "Caduca en %d días.",
 	KeyFromFile:                "Archivo",
 	KeyFromCard:                "Tarjeta",
+	KeyFromFirefox:             "Firefox",
+	FirefoxWhere:               "En el almacén de certificados de Firefox: se usa allí mismo, sin exportarlo.",
+	FirefoxPasswordPlaceholder: "Contraseña maestra de Firefox",
+	NoFirefoxCertificates:      "Firefox no guarda ningún certificado con su clave. Impórtalo en Firefox (Ajustes, Privacidad y seguridad, Ver certificados) o elige otro origen.",
 	SearchCards:                "Buscar tarjetas",
 	CardsSearching:             "Buscando tarjetas en los lectores…",
 	NoCards:                    "No hay ninguna tarjeta con certificados en los lectores. Inserta la tarjeta y pulsa «Buscar tarjetas».",
@@ -475,6 +483,10 @@ var italian = Catalogue{
 	CertificateExpiresSoon:     "Scade tra %d giorni.",
 	KeyFromFile:                "File",
 	KeyFromCard:                "Carta",
+	KeyFromFirefox:             "Firefox",
+	FirefoxWhere:               "Nell'archivio certificati di Firefox: viene usato lì, senza esportarlo.",
+	FirefoxPasswordPlaceholder: "Password principale di Firefox",
+	NoFirefoxCertificates:      "Firefox non conserva alcun certificato con la sua chiave. Importalo in Firefox (Impostazioni, Privacy e sicurezza, Mostra certificati) o scegli un'altra origine.",
 	SearchCards:                "Cerca carte",
 	CardsSearching:             "Ricerca delle carte nei lettori…",
 	NoCards:                    "Nessuna carta con certificati nei lettori. Inserisci la carta e premi «Cerca carte».",
@@ -643,6 +655,10 @@ var english = Catalogue{
 	CertificateExpiresSoon:     "Expires in %d days.",
 	KeyFromFile:                "File",
 	KeyFromCard:                "Smart card",
+	KeyFromFirefox:             "Firefox",
+	FirefoxWhere:               "In Firefox's certificate store: used there, never exported.",
+	FirefoxPasswordPlaceholder: "Firefox primary password",
+	NoFirefoxCertificates:      "Firefox holds no certificate with its key. Import it in Firefox (Settings, Privacy & Security, View Certificates) or choose another source.",
 	SearchCards:                "Look for cards",
 	CardsSearching:             "Looking for cards in the readers…",
 	NoCards:                    "No card with certificates is in the readers. Insert the card and press “Look for cards”.",

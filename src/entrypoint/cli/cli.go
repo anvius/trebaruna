@@ -98,6 +98,8 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 		useCard    = flags.Bool("card", false, "sign with the card in the reader (OpenSC; the card and its signing certificate are found)")
 		cardCert   = flags.String("certificate", "", "certificate of the card to sign with: serial or SHA-256 fingerprint (see `trebaruna token`)")
 		module     = flags.String("module", "", "PKCS#11 module path (default: OpenSC, found on this system)")
+		firefox    = flags.Bool("firefox", false, "sign with a certificate of the Firefox store, in place (PIN: its primary password)")
+		nssDB      = flags.String("nss-db", "", "sign with a certificate of this NSS store directory (Chromium: ~/.pki/nssdb)")
 		name       = flags.String("name", "", "signer display name (default: the holder printed on the certificate)")
 		reason     = flags.String("reason", "", "reason for signing")
 		location   = flags.String("location", "", "location of signing")
@@ -153,6 +155,7 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 	signer, err := buildSigner(signerOptions{
 		name: *name, p12Path: *p12Path, pemPath: *pemPath, passphrase: *passphrase,
 		pin: *pin, card: *useCard, tokenLabel: *tokenLabel, certificate: *cardCert, module: *module,
+		store: storeOptions{firefox: *firefox, directory: *nssDB},
 	})
 	if err != nil {
 		fmt.Fprintf(stderr, "%v\n", err)
@@ -260,7 +263,7 @@ var signValueFlags = map[string]bool{
 	"-pem": true, "--pem": true, "-pass": true, "--pass": true,
 	"-pin": true, "--pin": true, "-token": true, "--token": true,
 	"-module": true, "--module": true, "-name": true, "--name": true,
-	"-certificate": true, "--certificate": true,
+	"-certificate": true, "--certificate": true, "-nss-db": true, "--nss-db": true,
 	"-reason": true, "--reason": true, "-location": true, "--location": true,
 	"-tsa": true, "--tsa": true, "-tsa-user": true, "--tsa-user": true,
 	"-tsa-pass": true, "--tsa-pass": true, "-page": true, "--page": true,
@@ -286,12 +289,14 @@ type signerOptions struct {
 	tokenLabel  string
 	certificate string
 	module      string
+	store       storeOptions
 }
 
 // buildSigner resolves the key source from the flags, enforcing exactly one.
 func buildSigner(options signerOptions) (domain.Signer, error) {
 	// Any card flag says the key is on a card; --card alone lets everything be found.
-	card := options.card || options.tokenLabel != "" || options.certificate != "" || options.module != ""
+	card := options.card || options.tokenLabel != "" || options.certificate != "" || options.module != "" ||
+		options.store.chosen()
 	sources := 0
 	for _, chosen := range []bool{options.p12Path != "", options.pemPath != "", card} {
 		if chosen {
@@ -311,12 +316,13 @@ func buildSigner(options signerOptions) (domain.Signer, error) {
 	}
 
 	if card {
-		module, err := moduleOrOpenSC(options.module)
+		module, parameters, err := cardModule(options.module, options.store)
 		if err != nil {
 			return domain.Signer{}, err
 		}
 		return domain.NewSigner(displayName, domain.FromToken,
 			domain.WithToken(module, options.tokenLabel, secretFrom(options.pin, pinVariable)),
+			domain.WithModuleParameters(parameters),
 			domain.WithCertificateChoice(domain.ChooseCertificateBy(options.certificate)))
 	}
 
@@ -481,6 +487,8 @@ flags:
   --token    PKCS#11 token label (smartcard)
   --certificate  certificate of the card: serial or fingerprint  default: the signing one
   --module   PKCS#11 module                                 default: OpenSC
+  --firefox  a certificate of the Firefox store, used in place
+  --nss-db   a certificate of this NSS store directory
   --pass     passphrase for the P12 or PEM
   --pin      PIN for the token (better: $TREBARUNA_PIN, kept off the command line)
   --tsa      RFC 3161 timestamp authority URL
@@ -526,6 +534,23 @@ func resolveVersion() string {
 		}
 	}
 	return "0.0.0-dev"
+}
+
+// cardModule returns the PKCS#11 module and its parameters: NSS's for a
+// software store, the one given, or OpenSC.
+func cardModule(module string, store storeOptions) (string, string, error) {
+	if !store.chosen() {
+		found, err := moduleOrOpenSC(module)
+		return found, "", err
+	}
+	if module != "" {
+		return "", "", errors.New("--module names a card driver; a store (--firefox, --nss-db) uses NSS's own")
+	}
+	resolved, nss, err := store.resolve()
+	if err != nil {
+		return "", "", err
+	}
+	return nss, resolved.Parameters(), nil
 }
 
 // moduleOrOpenSC returns the PKCS#11 module given, or the OpenSC module
