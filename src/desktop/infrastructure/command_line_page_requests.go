@@ -80,6 +80,9 @@ type stepLine struct {
 	Answer    string `json:"answer"`
 	Delivered bool   `json:"delivered"`
 	Error     string `json:"error"`
+	Session   bool   `json:"session"`
+	LocalTLS  string `json:"local_tls"`
+	Port      int    `json:"port"`
 }
 
 // Next reads the next proposal or the outcome.
@@ -91,8 +94,14 @@ func (s *commandSession) Next() (domain.PageStep, error) {
 	if err := json.Unmarshal(s.lines.Bytes(), &line); err != nil {
 		return domain.PageStep{}, fmt.Errorf("the command printed an unreadable line: %w", err)
 	}
-	if line.Type == "outcome" {
-		return domain.PageStep{Outcome: &domain.PageOutcome{Answer: line.Answer, Delivered: line.Delivered, Error: line.Error}}, nil
+	switch line.Type {
+	case "outcome":
+		return domain.PageStep{Outcome: &domain.PageOutcome{Answer: line.Answer, Delivered: line.Delivered, Error: line.Error,
+			Session: line.Session, MissingLocalTLS: line.LocalTLS == "missing"}}, nil
+	case "listening":
+		return domain.PageStep{Listening: line.Port}, nil
+	case "closed":
+		return domain.PageStep{Closed: true}, nil
 	}
 	proposal := domain.PageProposal{Operation: line.Operation, Site: line.Site, AppName: line.AppName, Format: line.Format,
 		DataSize: line.DataSize, DataSHA256: line.DataSHA256, DataURL: line.DataURL, ChooseFile: line.ChooseFile,

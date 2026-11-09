@@ -315,6 +315,7 @@ func (w *Window) mainMenu(tabs *container.AppTabs, checkFile func(string)) *fyne
 		fyne.NewMenu(m.MenuTools,
 			fyne.NewMenuItem(m.MenuNetwork, w.showNetworkActivity),
 			fyne.NewMenuItem(m.MenuRequests, w.showRequests),
+			fyne.NewMenuItem(m.MenuLocalChannel, w.showLocalChannel),
 		),
 		fyne.NewMenu(m.MenuHelp,
 			fyne.NewMenuItem(m.MenuManual, func() { _ = fyne.CurrentApp().OpenURL(manualURL()) }),
@@ -353,6 +354,17 @@ func (w *Window) showEnvelopes(envelope string) {
 		w.envelopes.setEnvelope(envelope)
 	}
 	w.envelopes.window.RequestFocus()
+}
+
+// showLocalChannel says whether the local channel's certificate is
+// installed and offers to install or remove it (ADR-0019).
+func (w *Window) showLocalChannel() {
+	panel := newLocalChannelPanel(w.messages,
+		application.NewManageLocalChannel(CommandLineLocalChannel{BinaryPath: w.binaryPath}))
+	shown := dialog.NewCustom(w.messages.MenuLocalChannel, w.messages.PageClose, panel.root, w.window)
+	shown.Resize(fyne.NewSize(560, 320))
+	shown.Show()
+	panel.act("status")
 }
 
 // showRequests opens the web-page requests in their own window.

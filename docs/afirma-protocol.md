@@ -987,6 +987,18 @@ At installation the configurator generates, per machine
   trust-store change; (b) per-site certificate exception in Firefox — impractical
   because the port is random per launch unless the site fixes the port range;
   (c) Chrome's interstitial bypass does not apply to WebSocket connections.
+- trebaruna (ADR-0019, proposed): a per-user root whose private key is
+  destroyed once it has signed the certificate for `127.0.0.1`, with critical
+  name constraints to `127.0.0.1` and `localhost`, installed in the user's NSS
+  stores on request (`trebaruna afirma local-tls install`, or the window). The
+  WebSocket server binds `127.0.0.1` only, speaks protocols 3, 4 and 4.1,
+  checks the session id and answers each operation as from the intermediate
+  server, approved by the person. Checked with headless Chromium trusting the
+  root through its NSS store: the echo and a CAdES signature come back, which
+  openssl verifies; without the root the connection fails.
+- Recent Chromium versions ask the person, the first time, to let a site reach
+  devices on the local network ("Local Network Access"), which includes
+  `127.0.0.1`; the same applies to AutoFirma.
 
 ---
 

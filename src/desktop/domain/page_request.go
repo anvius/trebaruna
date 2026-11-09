@@ -82,6 +82,12 @@ type PageOutcome struct {
 	Answer    string
 	Delivered bool
 	Error     string
+	// Session marks the outcome of one operation of a local channel, which
+	// stays open for the page's next request.
+	Session bool
+	// MissingLocalTLS means the page asked for the local channel and the
+	// certificate it needs is not installed (ADR-0019).
+	MissingLocalTLS bool
 }
 
 // Declined reports a request the person refused.
@@ -97,4 +103,8 @@ func (o PageOutcome) Succeeded() bool {
 type PageStep struct {
 	Proposal *PageProposal
 	Outcome  *PageOutcome
+	// Listening is the port a local channel waits for the page on.
+	Listening int
+	// Closed means the page left the local channel.
+	Closed bool
 }

@@ -120,7 +120,8 @@ user seeing what is signed and where anything goes.
 | `afirma://` single signatures through the site's server (`CAdEStri`, `XAdEStri`, `PAdEStri`, `FacturaEtri`): pre, the key signs each pre-signature here, post; the page receives the certificate and the signature's id | built |
 | `afirma://` approval window: the request in full, the certificate chosen (card, Firefox, file) and held to the page's filters, decision through a pipe to `trebaruna afirma --interactive` | built (D6) |
 | `afirma://` handler registered next to AutoFirma (desktop entry, macOS bundle); the person chooses the default (`make afirma-default`); no browser preference installed | built (D7) |
-| `afirma://` WebSocket and socket channels: TLS on 127.0.0.1 needs a locally trusted certificate, which ADR-0013 forbids installing as a root; not offered unless the owner chooses a leaf-only peer trust | blocked (D5, owner decision) |
+| `afirma://` WebSocket channel, protocols 3, 4 and 4.1 (`#wait`/`getresult`): TLS on 127.0.0.1 alone with a certificate whose root keeps no key and is name-constrained to 127.0.0.1 and localhost, installed in the user's NSS stores on request (ADR-0019, proposed); session id checked; the approval window follows the page's requests in turn and offers to install the certificate when missing; checked with headless Chromium | built (opt-in; ADR-0019 pending owner confirmation) |
+| `afirma://service` legacy socket (Internet Explorer, Firefox ≤ 60) | not planned |
 
 ### Transparency
 

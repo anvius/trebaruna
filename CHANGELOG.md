@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- afirma:// pages that use AutoFirma's WebSocket channel work (D5;
+  ADR-0019, proposed, opt-in): `afirma://websocket?ports=…&v=…&idsession=…`
+  starts a WebSocket server, trebaruna's own RFC 6455 implementation, on
+  the first free port of the page's list, on 127.0.0.1 alone, over TLS with
+  the local channel's certificate. Protocols 3, 4 (session id checked on
+  every message, SAF_46) and 4.1 (`#wait`, `getresult`); each operation runs
+  as from the intermediate server, approved by the person, its answer sent
+  back on the socket; the channel ends when the page's connection does (a
+  connection that sends nothing for the session holds nothing). The
+  approval window shows where it waits, each request in turn, and offers
+  to install the certificate when it is missing; Tools → Local channel
+  for sites installs or removes it. Checked with headless Chromium
+  trusting only the installed root: the echo and a CAdES signature come
+  back and openssl verifies it; without the root the connection fails.
+
 - `trebaruna afirma local-tls install|status|remove`: the certificate the
   afirma:// WebSocket channel will serve on 127.0.0.1 (ADR-0019, proposed).
   Its root is made per user, signs that certificate once and its key is

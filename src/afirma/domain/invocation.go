@@ -94,6 +94,22 @@ func parseQuery(uri string) (map[string]string, error) {
 // Param returns a parameter, empty when absent.
 func (i Invocation) Param(name string) string { return i.params[name] }
 
+// Without is the invocation without the named parameters.
+func (i Invocation) Without(names ...string) Invocation {
+	copied := InvocationOf(i.Operation, i.params)
+	for _, name := range names {
+		delete(copied.params, name)
+	}
+	return copied
+}
+
+// With is the invocation with a parameter set.
+func (i Invocation) With(name, value string) Invocation {
+	copied := InvocationOf(i.Operation, i.params)
+	copied.params[name] = value
+	return copied
+}
+
 // Has reports whether a parameter is present, even empty.
 func (i Invocation) Has(name string) bool {
 	_, present := i.params[name]

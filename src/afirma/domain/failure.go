@@ -34,6 +34,8 @@ const (
 	InvalidSignature       FailureCode = 39
 	MinimumVersion         FailureCode = 41
 	CannotOpenSocket       FailureCode = 45
+	InvalidSessionID       FailureCode = 46
+	ExternalRequest        FailureCode = 47
 	ConfirmationNeeded     FailureCode = 50
 	IncompatibleKeyType    FailureCode = 51
 	LockedKeystore         FailureCode = 52
@@ -77,6 +79,8 @@ var failureTexts = map[FailureCode]string{
 	40: "Error al recuperar el documento",
 	41: "El uso de este trámite web requiere una versión más reciente de Autofirma.\nActualice a la última versión disponible.",
 	45: "No se pudo abrir un socket para la comunicación con la aplicación",
+	46: "Id de sesión inválido",
+	47: "Peticion al socket desde IP externa o sin identificar",
 	50: "La operación puede generar firmas no validas, por lo que no se puede continuar sin confirmacion de usuario.",
 	51: "El tipo de clave del certificado no está soportado.",
 	52: "El almacén de claves esta bloqueado. Siga las instrucciones del proveedor del almacén o tarjeta para desbloquearlo.",

@@ -15,6 +15,7 @@ import (
 	"codeberg.org/simplicer/trebaruna/src/afirma/application"
 	"codeberg.org/simplicer/trebaruna/src/afirma/domain"
 	"codeberg.org/simplicer/trebaruna/src/afirma/infrastructure"
+	"codeberg.org/simplicer/trebaruna/src/afirma/infrastructure/localtls"
 	signing "codeberg.org/simplicer/trebaruna/src/signing/domain"
 )
 
@@ -72,6 +73,9 @@ func runAfirma(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	use := application.NewAnswerPage(approver, infrastructure.NewNativePageSigner(), infrastructure.KeyCertificates{},
 		infrastructure.WebData{}, infrastructure.LocalFiles{}, courier, courier).
 		WithBatches(infrastructure.NewBatchServices(), infrastructure.KeyRawSigner{})
+	if invocation.Operation == domain.WebSocket {
+		return serveLocalChannel(invocation, use, *interactive, stdout, stderr)
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 	answer, err := use.Execute(ctx, invocation)
@@ -254,4 +258,58 @@ func encodeJSONLine(writer io.Writer, value any) {
 	encoder := json.NewEncoder(writer)
 	encoder.SetEscapeHTML(false)
 	_ = encoder.Encode(value)
+}
+
+// serveLocalChannel serves a page's WebSocket channel (ADR-0019) until the
+// page goes: each operation is approved as any other, and in interactive
+// mode the window hears where the channel listens, each operation's
+// outcome, and when the page has gone.
+func serveLocalChannel(invocation domain.Invocation, use *application.AnswerPage, interactive bool, stdout, stderr io.Writer) int {
+	report := func(line map[string]any) {
+		if interactive {
+			encodeJSONLine(stdout, line)
+		}
+	}
+	channel, err := domain.ReadLocalChannel(invocation)
+	if err != nil {
+		report(map[string]any{"type": "outcome", "error": err.Error()})
+		fmt.Fprintf(stderr, "%v\n", err)
+		return exitInvalid
+	}
+	directory, err := localtls.Directory()
+	if err != nil {
+		fmt.Fprintf(stderr, "%v\n", err)
+		return exitInvalid
+	}
+	material, err := localtls.Load(directory)
+	if err != nil {
+		report(map[string]any{"type": "outcome", "error": err.Error(), "local_tls": "missing"})
+		fmt.Fprintf(stderr, "%v\n", err)
+		return exitInvalid
+	}
+	answers := application.NewAnswerLocalChannel(use, channel)
+	server := infrastructure.LocalServer{
+		Certificate: material.Server,
+		Listening: func(port int) {
+			report(map[string]any{"type": "listening", "port": port})
+			fmt.Fprintf(stderr, "listening on 127.0.0.1:%d\n", port)
+		},
+		Answer: func(ctx context.Context, message string) string {
+			operationCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+			defer cancel()
+			answer := answers.Answer(operationCtx, message)
+			// An operation's answer, or over 4.1 the result getresult fetched.
+			if !strings.HasPrefix(message, "echo=") && answer != "#wait" {
+				report(map[string]any{"type": "outcome", "answer": answer, "delivered": true, "session": true})
+			}
+			return answer
+		},
+	}
+	if err := server.Serve(context.Background(), channel.Ports); err != nil {
+		report(map[string]any{"type": "outcome", "error": err.Error()})
+		fmt.Fprintf(stderr, "%v\n", err)
+		return exitInvalid
+	}
+	report(map[string]any{"type": "closed"})
+	return exitOK
 }

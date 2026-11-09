@@ -55,6 +55,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.66.0-unstable" date="2026-11-09">
+      <description>
+        <p>Administration pages that talk to AutoFirma over its local WebSocket channel work, once the local certificate is installed.</p>
+      </description>
+    </release>
     <release version="0.65.0-unstable" date="2026-11-09">
       <description>
         <p>The certificate for the local channel AutoFirma pages use, opt-in.</p>

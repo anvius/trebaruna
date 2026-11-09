@@ -181,3 +181,92 @@ func TestAThreePhaseSignatureNamesItsServer(t *testing.T) {
 		t.Errorf("the server is not named:\n%s", text)
 	}
 }
+
+func sessionOutcomeStep(answer string) domain.PageStep {
+	return domain.PageStep{Outcome: &domain.PageOutcome{Answer: answer, Delivered: true, Session: true}}
+}
+
+// TestALocalChannelSessionShowsEachRequestInTurn: the window says where it
+// waits, shows each request of the page afresh, keeps waiting after each,
+// and closes when the page leaves.
+func TestALocalChannelSessionShowsEachRequestInTurn(t *testing.T) {
+	second := signProposal()
+	second.Site, second.Format = "otra.sede.example", "XAdES"
+	request, session := pageFixture(t, domain.PageStep{Listening: 49152},
+		proposalStep(signProposal()), sessionOutcomeStep("Y2VydA==|c2ln"),
+		proposalStep(second), sessionOutcomeStep("CANCEL"), domain.PageStep{Closed: true})
+
+	if !strings.Contains(detailText(request), "sede.example") || request.approve.Disabled() {
+		t.Fatalf("the first request is not shown: %q", detailText(request))
+	}
+	request.keySource.SetSelected(request.m.KeyFromFile)
+	request.keyFile, request.passphrase.Text = "/home/maria/maria.p12", "segreto"
+	test.Tap(request.approve)
+	if len(session.decisions) != 1 {
+		t.Fatalf("decisions %+v", session.decisions)
+	}
+	// The second request replaced the first.
+	if !strings.Contains(detailText(request), "otra.sede.example") || !strings.Contains(detailText(request), "XAdES") || request.approve.Disabled() {
+		t.Errorf("the second request is not shown afresh: %q", detailText(request))
+	}
+	test.Tap(request.decline)
+	if len(session.decisions) != 2 || session.decisions[1].Approved {
+		t.Fatalf("decisions %+v", session.decisions)
+	}
+	if request.status.Text != request.m.PageSessionClosed || !request.closing.Visible() || !session.closed {
+		t.Errorf("after the page left: %q, close shown %v, session closed %v", request.status.Text, request.closing.Visible(), session.closed)
+	}
+}
+
+// TestAPageNeedingTheLocalCertificateIsOfferedIt: the window explains and
+// offers to install it, then starts the request again.
+func TestAPageNeedingTheLocalCertificateIsOfferedIt(t *testing.T) {
+	missing := domain.PageStep{Outcome: &domain.PageOutcome{Error: "no local channel certificate yet", MissingLocalTLS: true}}
+	request, session := pageFixture(t, missing, domain.PageStep{Listening: 49153})
+	installer := &scriptedLocalChannel{}
+	request.localChannel = application.NewManageLocalChannel(installer)
+	request.offerLocalChannel()
+	if request.status.Text != request.m.PageLocalTLSMissing || !request.installLocal.Visible() {
+		t.Fatalf("not offered: %q", request.status.Text)
+	}
+	session.steps = append(session.steps, domain.PageStep{Listening: 49153}, domain.PageStep{Closed: true})
+	test.Tap(request.installLocal)
+	if strings.Join(installer.actions, ",") != "install" || request.installLocal.Visible() {
+		t.Errorf("actions %v, button still shown %v", installer.actions, request.installLocal.Visible())
+	}
+}
+
+// scriptedLocalChannel records what it is asked.
+type scriptedLocalChannel struct{ actions []string }
+
+func (s *scriptedLocalChannel) Run(_ context.Context, action string) (string, error) {
+	s.actions = append(s.actions, action)
+	return "installed", nil
+}
+
+// installedLocalChannel answers as the command does once installed.
+type installedLocalChannel struct{ actions []string }
+
+func (s *installedLocalChannel) Run(_ context.Context, action string) (string, error) {
+	s.actions = append(s.actions, action)
+	if action == "status" {
+		return "root     ab12, until 2029-11-09\nstore    /home/maria/.pki/nssdb: installed", nil
+	}
+	return "", nil
+}
+
+// TestTheLocalChannelPanelSaysWhatIsInstalled and installs on request.
+func TestTheLocalChannelPanelSaysWhatIsInstalled(t *testing.T) {
+	test.NewTempApp(t)
+	installer := &installedLocalChannel{}
+	panel := newLocalChannelPanel(messaging.For(messaging.Spanish), application.NewManageLocalChannel(installer))
+	panel.run = inLine
+	panel.act("status")
+	if panel.state.Text != panel.m.LocalChannelInstalled {
+		t.Errorf("state %q", panel.state.Text)
+	}
+	test.Tap(panel.install)
+	if strings.Join(installer.actions, ",") != "status,install,status" {
+		t.Errorf("actions %v", installer.actions)
+	}
+}

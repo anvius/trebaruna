@@ -53,6 +53,14 @@ type pageRequest struct {
 	closing     *widget.Button
 	finished    bool
 	cancel      context.CancelFunc
+
+	// uri is the request, started again once the local certificate is
+	// installed; localChannel installs it; installLocal offers to.
+	uri          string
+	localChannel *application.ManageLocalChannel
+	installLocal *widget.Button
+	// deciding is true while a proposal waits for the person.
+	deciding bool
 }
 
 // RunPageRequest opens the approval window for a URI and blocks until it closes.
@@ -68,6 +76,7 @@ func RunPageRequest(options Options, uri string) {
 		application.NewReviewPageRequest(CommandLinePageRequests{BinaryPath: options.BinaryPath}),
 		application.NewListCards(CommandLineCardReader{BinaryPath: options.BinaryPath}),
 		application.NewListCards(CommandLineCardReader{BinaryPath: options.BinaryPath, Store: domain.StoreFirefox}))
+	request.localChannel = application.NewManageLocalChannel(CommandLineLocalChannel{BinaryPath: options.BinaryPath})
 	window.SetContent(request.object())
 	request.start(uri)
 	window.ShowAndRun()
@@ -99,12 +108,19 @@ func newPageRequest(window fyne.Window, m messaging.Catalogue, review *applicati
 	request.closing = widget.NewButton(m.PageClose, window.Close)
 	request.closing.Hide()
 	request.approve.Disable()
+	request.installLocal = widget.NewButtonWithIcon(m.PageInstallLocalTLS, theme.ConfirmIcon(), request.installLocalChannel)
+	request.installLocal.Importance = widget.HighImportance
+	request.installLocal.Hide()
 
 	// Closing the window before deciding declines: the page hears CANCEL.
+	// Between the requests of a local channel, it ends the channel.
 	window.SetCloseIntercept(func() {
-		if !request.finished && request.session != nil {
+		switch {
+		case !request.finished && request.session != nil && request.deciding:
 			request.declined()
 			return
+		case !request.finished && request.cancel != nil:
+			request.cancel()
 		}
 		window.Close()
 	})
@@ -113,14 +129,20 @@ func newPageRequest(window fyne.Window, m messaging.Catalogue, review *applicati
 
 func (r *pageRequest) object() fyne.CanvasObject {
 	body := container.NewVBox(r.details, r.keyBox, r.documentRow.object(), r.saveRow.object(), r.status)
-	actions := container.NewHBox(r.decline, r.closing, layout.NewSpacer(), r.approve)
+	actions := container.NewHBox(r.decline, r.closing, layout.NewSpacer(), r.approve, r.installLocal)
 	return container.NewBorder(nil, container.NewPadded(actions), nil, nil, container.NewVScroll(container.NewPadded(body)))
 }
 
 // start opens the session and shows the first step.
 func (r *pageRequest) start(uri string) {
+	r.uri = uri
 	r.say(r.m.CertificateReading, widget.LowImportance)
-	ctx, cancel := context.WithTimeout(context.Background(), pageRequestTimeout)
+	timeout := pageRequestTimeout
+	if strings.HasPrefix(uri, "afirma://websocket") {
+		// A local channel lasts as long as the page's session.
+		timeout = localChannelTimeout
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	r.cancel = cancel
 	r.run(func() {
 		session, err := r.review.Execute(ctx, uri)
@@ -141,6 +163,16 @@ func (r *pageRequest) show(step domain.PageStep, err error) {
 	switch {
 	case err != nil:
 		r.finish(domain.PageOutcome{Error: err.Error()})
+	case step.Listening > 0:
+		r.say(fmt.Sprintf(r.m.PageListening, step.Listening), widget.LowImportance)
+		r.next()
+	case step.Closed:
+		r.finish(domain.PageOutcome{})
+		r.say(r.m.PageSessionClosed, widget.MediumImportance)
+	case step.Outcome != nil && step.Outcome.MissingLocalTLS:
+		r.offerLocalChannel()
+	case step.Outcome != nil && step.Outcome.Session:
+		r.between(*step.Outcome)
 	case step.Outcome != nil:
 		r.finish(*step.Outcome)
 	case step.Proposal != nil:
@@ -148,10 +180,69 @@ func (r *pageRequest) show(step domain.PageStep, err error) {
 	}
 }
 
+// next shows the session's next step, read off the UI thread.
+func (r *pageRequest) next() {
+	session := r.session
+	if session == nil {
+		return
+	}
+	r.run(func() {
+		step, err := session.Next()
+		fyne.Do(func() { r.show(step, err) })
+	})
+}
+
+// between says how one request of a local channel ended and waits for the
+// page's next one, shown afresh.
+func (r *pageRequest) between(outcome domain.PageOutcome) {
+	text, importance := r.outcomeText(outcome)
+	r.say(text+"\n"+r.m.PageNextRequest, importance)
+	r.approve.Disable()
+	r.decline.Disable()
+	r.proposal = domain.PageProposal{}
+	r.next()
+}
+
+// offerLocalChannel explains that the page needs the local certificate
+// and offers to install it, then to start the request again.
+func (r *pageRequest) offerLocalChannel() {
+	r.approve.Hide()
+	r.decline.Hide()
+	r.closing.Show()
+	r.say(r.m.PageLocalTLSMissing, widget.WarningImportance)
+	if r.localChannel != nil {
+		r.installLocal.Show()
+		r.installLocal.Enable()
+	}
+}
+
+// installLocalChannel installs the certificate and opens the channel again.
+func (r *pageRequest) installLocalChannel() {
+	r.installLocal.Disable()
+	r.run(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		defer cancel()
+		_, err := r.localChannel.Execute(ctx, "install")
+		fyne.Do(func() {
+			if err != nil {
+				r.installLocal.Enable()
+				r.say(fmt.Sprintf(r.m.PageFailed, err.Error()), widget.DangerImportance)
+				return
+			}
+			r.installLocal.Hide()
+			r.closing.Hide()
+			r.approve.Show()
+			r.decline.Show()
+			r.start(r.uri)
+		})
+	})
+}
+
 // present renders a proposal, or asks again after a refused certificate.
 func (r *pageRequest) present(proposal domain.PageProposal) {
 	first := r.proposal.Operation == ""
 	r.proposal = proposal
+	r.deciding = true
 	r.approve.Enable()
 	r.decline.Enable()
 	if proposal.Rejected != "" {
@@ -320,6 +411,7 @@ func (r *pageRequest) send(decision domain.PageDecision) {
 	}
 	r.approve.Disable()
 	r.decline.Disable()
+	r.deciding = false
 	r.say(fmt.Sprintf(r.m.PageWorking, r.proposal.Site), widget.LowImportance)
 	session := r.session
 	r.run(func() {
@@ -338,16 +430,7 @@ func (r *pageRequest) finish(outcome domain.PageOutcome) {
 	r.approve.Hide()
 	r.decline.Hide()
 	r.closing.Show()
-	switch {
-	case outcome.Declined():
-		r.say(r.m.PageDeclined, widget.MediumImportance)
-	case outcome.Succeeded():
-		r.say(fmt.Sprintf(r.m.PageDone, r.proposal.Site), widget.SuccessImportance)
-	case outcome.Error != "":
-		r.say(fmt.Sprintf(r.m.PageFailed, outcome.Error), widget.DangerImportance)
-	default:
-		r.say(fmt.Sprintf(r.m.PageFailed, outcome.Answer), widget.DangerImportance)
-	}
+	r.say(r.outcomeText(outcome))
 	session, cancel := r.session, r.cancel
 	r.run(func() {
 		if session != nil {
@@ -357,6 +440,19 @@ func (r *pageRequest) finish(outcome domain.PageOutcome) {
 			cancel()
 		}
 	})
+}
+
+// outcomeText is how a request ended, in the person's words.
+func (r *pageRequest) outcomeText(outcome domain.PageOutcome) (string, widget.Importance) {
+	switch {
+	case outcome.Declined():
+		return r.m.PageDeclined, widget.MediumImportance
+	case outcome.Succeeded():
+		return fmt.Sprintf(r.m.PageDone, r.proposal.Site), widget.SuccessImportance
+	case outcome.Error != "":
+		return fmt.Sprintf(r.m.PageFailed, outcome.Error), widget.DangerImportance
+	}
+	return fmt.Sprintf(r.m.PageFailed, outcome.Answer), widget.DangerImportance
 }
 
 func (r *pageRequest) say(text string, importance widget.Importance) {
@@ -404,3 +500,6 @@ func wrapped(text string, importance widget.Importance) *widget.Label {
 
 // pageRequestTimeout bounds a whole request, the person's decision included.
 const pageRequestTimeout = 15 * time.Minute
+
+// localChannelTimeout bounds a local channel's whole session.
+const localChannelTimeout = 4 * time.Hour

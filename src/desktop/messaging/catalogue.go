@@ -199,110 +199,120 @@ type Catalogue struct {
 	TSAAccountHint             string
 
 	// Menus and dialogs.
-	MenuFile               string
-	MenuOpenDocument       string
-	MenuChooseCertificate  string
-	MenuCheckDocument      string
-	MenuSignature          string
-	MenuPreviousPage       string
-	MenuNextPage           string
-	MenuTools              string
-	PageTitle              string
-	PageSite               string
-	PageAppName            string
-	PageOpSign             string
-	PageOpCosign           string
-	PageOpCountersign      string
-	PageOpSignAndSave      string
-	PageOpSelectCert       string
-	PageOpSave             string
-	PageOpBatch            string
-	PageOpBatchOne         string
-	PageFormat             string
-	PagePolicy             string
-	PageRoles              string
-	PagePlace              string
-	PageData               string
-	PageDataURL            string
-	PageChooseFile         string
-	PageFilters            string
-	PageWarnDES            string
-	PageWarnDownload       string
-	PageWarnBatch          string
-	PageWarnFilters        string
-	PageWarnTriphase       string
-	PageRejected           string
-	PageApprove            string
-	PageApproveCertificate string
-	PageApproveSave        string
-	PageDecline            string
-	PageClose              string
-	PageSaveTo             string
-	PageDocument           string
-	PageWorking            string
-	PageDone               string
-	PageDeclined           string
-	PageFailed             string
-	MissingSaveTo          string
-	PageKeyTitle           string
-	MenuCard               string
-	MenuChangePIN          string
-	MenuUnlockPIN          string
-	ChangePINTitle         string
-	UnlockPINTitle         string
-	ChangePINHint          string
-	UnlockPINHint          string
-	PINDialogCard          string
-	PINDialogOnlyCard      string
-	CurrentPINLabel        string
-	PUKLabel               string
-	NewPINLabel            string
-	RepeatPINLabel         string
-	ChangePINButton        string
-	UnlockPINButton        string
-	CancelButton           string
-	TalkingToCard          string
-	PINChanged             string
-	CardUnlocked           string
-	PINMismatch            string
-	MissingPUK             string
-	WrongPUK               string
-	WrongPUKFinalTry       string
-	WrongPUKNowLocked      string
-	PUKLocked              string
-	NewPINRejected         string
-	NewPINTooShort         string
-	NewPINTooLong          string
-	MenuRequests           string
-	MenuEncrypt            string
-	MenuOpenEnvelope       string
-	EnvelopesTitle         string
-	EncryptSection         string
-	EncryptIntro           string
-	RecipientsLabel        string
-	AddRecipient           string
-	RemoveRecipient        string
-	NoRecipients           string
-	EncryptButton          string
-	EncryptingMessage      string
-	EncryptedAs            string
-	MissingRecipient       string
-	OpenSection            string
-	ChooseEnvelope         string
-	EnvelopeHint           string
-	OpensWith              string
-	NoKeyToOpen            string
-	GoToCertificate        string
-	OpenEnvelopeButton     string
-	OpeningMessage         string
-	OpenedAs               string
-	MenuHelp               string
-	MenuManual             string
-	MenuAbout              string
-	AboutText              string
-	UnknownVersion         string
-	CloseButton            string
-	RefreshButton          string
+	MenuFile                 string
+	MenuOpenDocument         string
+	MenuChooseCertificate    string
+	MenuCheckDocument        string
+	MenuSignature            string
+	MenuPreviousPage         string
+	MenuNextPage             string
+	MenuTools                string
+	PageTitle                string
+	PageSite                 string
+	PageAppName              string
+	PageOpSign               string
+	PageOpCosign             string
+	PageOpCountersign        string
+	PageOpSignAndSave        string
+	PageOpSelectCert         string
+	PageOpSave               string
+	PageOpBatch              string
+	PageOpBatchOne           string
+	PageFormat               string
+	PagePolicy               string
+	PageRoles                string
+	PagePlace                string
+	PageData                 string
+	PageDataURL              string
+	PageChooseFile           string
+	PageFilters              string
+	PageWarnDES              string
+	PageWarnDownload         string
+	PageWarnBatch            string
+	PageWarnFilters          string
+	PageWarnTriphase         string
+	PageListening            string
+	PageNextRequest          string
+	PageSessionClosed        string
+	PageLocalTLSMissing      string
+	PageInstallLocalTLS      string
+	MenuLocalChannel         string
+	LocalChannelExplain      string
+	LocalChannelInstalled    string
+	LocalChannelNotInstalled string
+	LocalChannelRemove       string
+	PageRejected             string
+	PageApprove              string
+	PageApproveCertificate   string
+	PageApproveSave          string
+	PageDecline              string
+	PageClose                string
+	PageSaveTo               string
+	PageDocument             string
+	PageWorking              string
+	PageDone                 string
+	PageDeclined             string
+	PageFailed               string
+	MissingSaveTo            string
+	PageKeyTitle             string
+	MenuCard                 string
+	MenuChangePIN            string
+	MenuUnlockPIN            string
+	ChangePINTitle           string
+	UnlockPINTitle           string
+	ChangePINHint            string
+	UnlockPINHint            string
+	PINDialogCard            string
+	PINDialogOnlyCard        string
+	CurrentPINLabel          string
+	PUKLabel                 string
+	NewPINLabel              string
+	RepeatPINLabel           string
+	ChangePINButton          string
+	UnlockPINButton          string
+	CancelButton             string
+	TalkingToCard            string
+	PINChanged               string
+	CardUnlocked             string
+	PINMismatch              string
+	MissingPUK               string
+	WrongPUK                 string
+	WrongPUKFinalTry         string
+	WrongPUKNowLocked        string
+	PUKLocked                string
+	NewPINRejected           string
+	NewPINTooShort           string
+	NewPINTooLong            string
+	MenuRequests             string
+	MenuEncrypt              string
+	MenuOpenEnvelope         string
+	EnvelopesTitle           string
+	EncryptSection           string
+	EncryptIntro             string
+	RecipientsLabel          string
+	AddRecipient             string
+	RemoveRecipient          string
+	NoRecipients             string
+	EncryptButton            string
+	EncryptingMessage        string
+	EncryptedAs              string
+	MissingRecipient         string
+	OpenSection              string
+	ChooseEnvelope           string
+	EnvelopeHint             string
+	OpensWith                string
+	NoKeyToOpen              string
+	GoToCertificate          string
+	OpenEnvelopeButton       string
+	OpeningMessage           string
+	OpenedAs                 string
+	MenuHelp                 string
+	MenuManual               string
+	MenuAbout                string
+	AboutText                string
+	UnknownVersion           string
+	CloseButton              string
+	RefreshButton            string
 
 	// Verification results in plain words.
 	OnlineRevocation string
@@ -542,6 +552,16 @@ var spanish = Catalogue{
 	PageWarnBatch:              "Los documentos se quedan en la sede: firmas lo que su servidor prepara a partir de ellos, y trebaruna no puede enseñártelo.",
 	PageWarnFilters:            "La página pone condiciones a los certificados que trebaruna no entiende; ningún certificado las cumple.",
 	PageWarnTriphase:           "La firma la prepara el servidor de la sede (%s): firmas lo que ese servidor calcula, y trebaruna no puede enseñártelo.",
+	PageListening:              "Esperando a que la página se conecte con trebaruna en este equipo (puerto %d)…",
+	PageNextRequest:            "Esperando la siguiente petición de la página…",
+	PageSessionClosed:          "La página ha cerrado la conexión con trebaruna.",
+	PageLocalTLSMissing:        "Esta página se comunica con trebaruna por un canal cifrado en este equipo, que necesita el certificado local de trebaruna. Se instala solo para tu usuario: su raíz no conserva clave privada y solo vale para 127.0.0.1.",
+	PageInstallLocalTLS:        "Instalar el certificado local",
+	MenuLocalChannel:           "Canal local para sedes…",
+	LocalChannelExplain:        "Las sedes que usan AutoFirma hablan con el programa por un canal cifrado en este equipo. Para que el navegador lo acepte, trebaruna instala para tu usuario (Firefox y Chromium) una raíz que solo vale para 127.0.0.1 y cuya clave privada se destruye al crearla: no puede firmar ningún otro certificado.",
+	LocalChannelInstalled:      "Instalado para tu usuario.",
+	LocalChannelNotInstalled:   "No instalado.",
+	LocalChannelRemove:         "Retirar",
 	PageRejected:               "La página no acepta ese certificado (%s). Elige otro.",
 	PageApprove:                "Firmar y enviar",
 	PageApproveCertificate:     "Enviar el certificado",
@@ -834,6 +854,16 @@ var italian = Catalogue{
 	PageWarnBatch:              "I documenti restano sul sito: firmi ciò che il suo server prepara da essi, e trebaruna non può mostrartelo.",
 	PageWarnFilters:            "La pagina pone ai certificati condizioni che trebaruna non capisce; nessun certificato le soddisfa.",
 	PageWarnTriphase:           "La firma la prepara il server del sito (%s): firmi ciò che quel server calcola, e trebaruna non può mostrartelo.",
+	PageListening:              "In attesa che la pagina si colleghi a trebaruna su questo computer (porta %d)…",
+	PageNextRequest:            "In attesa della prossima richiesta della pagina…",
+	PageSessionClosed:          "La pagina ha chiuso la connessione con trebaruna.",
+	PageLocalTLSMissing:        "Questa pagina comunica con trebaruna attraverso un canale cifrato su questo computer, che richiede il certificato locale di trebaruna. Si installa solo per il tuo utente: la sua radice non conserva la chiave privata e vale solo per 127.0.0.1.",
+	PageInstallLocalTLS:        "Installa il certificato locale",
+	MenuLocalChannel:           "Canale locale per i siti…",
+	LocalChannelExplain:        "I siti che usano AutoFirma parlano con il programma attraverso un canale cifrato su questo computer. Perché il browser lo accetti, trebaruna installa per il tuo utente (Firefox e Chromium) una radice che vale solo per 127.0.0.1 e la cui chiave privata viene distrutta alla creazione: non può firmare nessun altro certificato.",
+	LocalChannelInstalled:      "Installato per il tuo utente.",
+	LocalChannelNotInstalled:   "Non installato.",
+	LocalChannelRemove:         "Rimuovi",
 	PageRejected:               "La pagina non accetta quel certificato (%s). Scegline un altro.",
 	PageApprove:                "Firma e invia",
 	PageApproveCertificate:     "Invia il certificato",
@@ -1126,6 +1156,16 @@ var english = Catalogue{
 	PageWarnBatch:              "The documents stay on the site: you sign what its server prepares from them, which trebaruna cannot show you.",
 	PageWarnFilters:            "The page sets certificate conditions trebaruna does not understand; no certificate meets them.",
 	PageWarnTriphase:           "The signature is prepared by the site's server (%s): you sign what that server computes, which trebaruna cannot show you.",
+	PageListening:              "Waiting for the page to connect to trebaruna on this computer (port %d)…",
+	PageNextRequest:            "Waiting for the page's next request…",
+	PageSessionClosed:          "The page closed its connection to trebaruna.",
+	PageLocalTLSMissing:        "This page talks to trebaruna over an encrypted channel on this computer, which needs trebaruna's local certificate. It is installed for your user only: its root keeps no private key and is valid for 127.0.0.1 alone.",
+	PageInstallLocalTLS:        "Install the local certificate",
+	MenuLocalChannel:           "Local channel for sites…",
+	LocalChannelExplain:        "Sites that use AutoFirma talk to the program over an encrypted channel on this computer. For the browser to accept it, trebaruna installs for your user (Firefox and Chromium) a root valid for 127.0.0.1 alone, whose private key is destroyed when it is made: it cannot sign any other certificate.",
+	LocalChannelInstalled:      "Installed for your user.",
+	LocalChannelNotInstalled:   "Not installed.",
+	LocalChannelRemove:         "Remove",
 	PageRejected:               "The page does not accept that certificate (%s). Choose another.",
 	PageApprove:                "Sign and send",
 	PageApproveCertificate:     "Send the certificate",

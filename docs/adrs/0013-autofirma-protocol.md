@@ -25,7 +25,10 @@ Compatibility must be proven against a test server that follows the public servl
   to the site) and is implemented. The page chooses the channel: sites that
   force it (Sistema RED does, the only site in the local AutoFirma logs) work;
   pages that default to WebSocket do not.
-- Pending owner decision: trusting only trebaruna's self-signed *leaf*
+- Amended by ADR-0019 (proposed): a key-less root, name-constrained to
+  127.0.0.1 and localhost, installed on request in the user's stores, opens
+  the WebSocket channel.
+- Pending owner decision (superseded by ADR-0019's proposal): trusting only trebaruna's self-signed *leaf*
   certificate for `127.0.0.1` as a peer (NSS trust flag `P`, no authority to
   issue other certificates) would open the WebSocket channel without a root
   CA. It is still a change to the browser's trust store, so it is not done

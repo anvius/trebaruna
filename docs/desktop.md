@@ -218,6 +218,17 @@ checks again.
 
 ## Requests from AutoFirma pages (afirma://)
 
+Most administration pages reach AutoFirma over a WebSocket channel on this
+computer (`wss://127.0.0.1`), which needs a certificate the browser trusts.
+**Tools → Local channel for sites…** installs it for your user, in Firefox and
+Chromium, and removes it (ADR-0019): its root keeps no private key and is
+valid for 127.0.0.1 alone. When a page asks for the channel and the
+certificate is missing, the approval window offers to install it and opens
+the channel again. While the page keeps the channel, the window shows each
+of its requests in turn and waits for the next; it closes when the page
+leaves. Recent Chromium versions ask once to let the site reach this
+computer ("local network access").
+
 When a Spanish administration page starts AutoFirma's protocol, the system
 opens `trebaruna-desktop` with the `afirma://` URI, and an approval window
 shows the request before anything happens: what the page asks (sign, sign a
