@@ -101,7 +101,7 @@ user seeing what is signed and where anything goes.
 | Exportable report (`verify --report x.md|.html|.pdf`): file and SHA-256, verdict, every signature and finding in the chosen language, connections, version; home directory as `~` | built (CLI; the Check tab saves a PDF) |
 | Check tab: counter-signatures indented under what they sign; the files each container signature covers and those none covers; extraction from `.p7m`, `.tsd` and ASiC containers | built |
 | RSA-PSS (RFC 4055) in CMS, PDF and XML signatures, in keys published as id-RSASSA-PSS (German qualified authorities) and in timestamp tokens, everywhere a token is read; tokens must declare a TSTInfo | built |
-| Keys on brainpool curves (German health-professional cards): an own reading of their certificates, ECDSA on brainpoolP256r1/P384r1/P512r1 (RFC 5639), the chain walked with each issuer's signature checked; in CAdES | built for CAdES (openssl makes the keys, certificates and envelopes on the three curves); PAdES and XAdES, and trusted lists with brainpool authorities, pending |
+| Keys on brainpool curves (German health-professional cards): an own reading of their certificates, ECDSA on brainpoolP256r1/P384r1/P512r1 (RFC 5639), the chain walked with each issuer's signature checked; in CAdES and PAdES | built for CAdES and PAdES (openssl makes the keys, certificates and envelopes on the three curves); XAdES, and trusted lists with brainpool authorities, pending |
 | An independent validator (EU DSS) as a common judge, notably for the CAdES-A archive-time-stamp-v3, which only trebaruna has checked | pending (R20) |
 
 ### Encrypt

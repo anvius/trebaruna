@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/brainpool"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/publickey"
 	"codeberg.org/simplicer/trebaruna/src/verification/application"
 	"codeberg.org/simplicer/trebaruna/src/verification/domain"
@@ -160,21 +161,28 @@ func (v *PDFVerifier) Extract(path string) ([]domain.SignerReport, error) {
 //   - A signature signed with PSS, or whose signature timestamp is: the
 //     CAdES checks, a PDF signature being a detached CMS over its byte
 //     ranges.
+//   - A signature by a brainpool key, which the library cannot even read
+//     and reports as changed: the same CAdES checks.
 func (v *PDFVerifier) checkHere(path string, signer *verify.Signer, index int, envelopes []pdfEnvelope, taken map[int]bool) (domain.SignerReport, bool) {
-	if signer.ValidSignature || !libraryCannotCheck(signer) {
+	if signer.ValidSignature {
 		return domain.SignerReport{}, false
 	}
+	cannotCheck := libraryCannotCheck(signer)
 	for candidate, envelope := range envelopes {
 		if taken[candidate] || envelope.name != signer.Name || len(envelope.tree.signers) != 1 {
 			continue
 		}
 		node := envelope.tree.signers[0]
+		brainpoolInside := signedByBrainpool(envelope.tree, node)
+		if !cannotCheck && !brainpoolInside {
+			continue
+		}
 		documentTimestamp := envelope.tree.contentType.Equal(oidTSTInfo)
 		// A signature carrying content of its own signs that, not the byte
 		// ranges: it is left to the library's verdict.
 		ownContent := len(envelope.tree.content) > 0
 		pssInside := isPSS(node.SignatureAlgorithm) || timeStampedWithPSS(node)
-		if !documentTimestamp && (ownContent || !pssInside) {
+		if !documentTimestamp && (ownContent || !(pssInside || brainpoolInside)) {
 			continue
 		}
 		taken[candidate] = true
@@ -199,6 +207,17 @@ func (v *PDFVerifier) checkHere(path string, signer *verify.Signer, index int, e
 		return report, true
 	}
 	return domain.SignerReport{}, false
+}
+
+// signedByBrainpool reports a SignerInfo whose certificate has a brainpool
+// key.
+func signedByBrainpool(tree signatureTree, node treeSignerInfo) bool {
+	for _, certificate := range tree.certificatesFor(node.SID) {
+		if _, ok := certificate.PublicKey.(*brainpool.PublicKey); ok {
+			return true
+		}
+	}
+	return false
 }
 
 // libraryCannotCheck reports a signature the PDF library left unverified

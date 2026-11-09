@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- PAdES signatures made with brainpool keys are read and checked: the PDF
+  library cannot read them and reported them as changed (a false
+  "altered", which ADR-0005 forbids); trebaruna now checks them itself, as
+  the detached CMS over the byte ranges they are. A PDF signed with
+  openssl's brainpool envelopes on the three curves verifies, its chain
+  reaches an anchored authority, and a changed page is caught.
+
 - CAdES signatures made with brainpool keys (brainpoolP256r1, P384r1,
   P512r1; German health professionals' cards) are read and checked. Go has
   no such curves: trebaruna reads their certificates itself (Go reads the
