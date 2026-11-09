@@ -86,6 +86,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Desktop packages (`install-desktop`, `package-desktop`, the macOS bundle)
+  ship the CLI built with cgo, so the window can sign with cards (ADR-0016);
+  CI checks that the installed CLI reports PKCS#11 support.
 - Trust: the list downloaders moved from the application layer to
   `trust/infrastructure` (`WebLOTL`, `WebList`).
 - Desktop: the command-line adapter moved out of the application and domain

@@ -140,6 +140,8 @@ jobs:
           make install-desktop DESTDIR="$RUNNER_TEMP/root" PREFIX=/usr
           test -f "$RUNNER_TEMP/root/usr/share/applications/trebaruna.desktop"
           test "$("$RUNNER_TEMP/root/usr/bin/trebaruna" version)" = "$(cat VERSION)"
+          # ADR-0016: the CLI installed next to the window can talk to cards.
+          "$RUNNER_TEMP/root/usr/bin/trebaruna" about --json | grep -q '"pkcs11": true'
       - uses: actions/upload-artifact@v4
         with:
           name: trebaruna-desktop-linux-amd64

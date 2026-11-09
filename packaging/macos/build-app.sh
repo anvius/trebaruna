@@ -16,8 +16,8 @@ echo "building trebaruna $VERSION for $(uname -m)"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
-# The CLI: static, no cgo, so it works on any Mac architecture.
-CGO_ENABLED=0 go build -trimpath \
+# The CLI, built with cgo so it can talk to cards (ADR-0016).
+CGO_ENABLED=1 go build -trimpath \
   -ldflags "-s -w -X codeberg.org/simplicer/trebaruna/src/entrypoint/cli.injectedVersion=$VERSION" \
   -o "$APP/Contents/MacOS/trebaruna" "$ROOT/src/entrypoint/main"
 

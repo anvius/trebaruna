@@ -66,8 +66,8 @@ install: build
 
 # Desktop integration: icon, launcher and the trebaruna:// URI scheme, so a
 # website can hand a document to the app the way afirma:// does.
-install-desktop: build build-gui
-	install -Dm755 $(BIN) $(DESTDIR)$(PREFIX)/bin/trebaruna
+install-desktop: build-token build-gui
+	install -Dm755 $(BIN_TOKEN) $(DESTDIR)$(PREFIX)/bin/trebaruna
 	install -Dm755 $(BIN_GUI) $(DESTDIR)$(PREFIX)/bin/trebaruna-desktop
 	install -Dm644 assets/icons/trebaruna-256.png $(DESTDIR)$(PREFIX)/share/icons/hicolor/256x256/apps/trebaruna.png
 	install -Dm644 assets/icons/trebaruna-128.png $(DESTDIR)$(PREFIX)/share/icons/hicolor/128x128/apps/trebaruna.png

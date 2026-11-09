@@ -23,7 +23,9 @@ case "$platform" in
     suffix=; [[ $platform != windows ]] || suffix=.exe
     stage="dist/trebaruna-${version}-${platform}-${arch}"
     rm -rf "$stage" && mkdir -p "$stage"
-    CGO_ENABLED=0 GOOS="$platform" go build -trimpath -ldflags "$ldflags" -o "$stage/trebaruna$suffix" ./src/entrypoint/main
+    # The CLI next to the window is the cgo build, with PKCS#11 (ADR-0016):
+    # the window signs through it, and cards need it.
+    CGO_ENABLED=1 GOOS="$platform" go build -trimpath -ldflags "$ldflags" -o "$stage/trebaruna$suffix" ./src/entrypoint/main
     guiflags="$ldflags"; [[ $platform != windows ]] || guiflags="$guiflags -H=windowsgui"
     CGO_ENABLED=1 go build -tags gui -trimpath -ldflags "$guiflags" -o "$stage/trebaruna-desktop$suffix" ./src/entrypoint/desktop
     cp LICENSE README.md "$stage/"
