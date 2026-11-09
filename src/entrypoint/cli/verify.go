@@ -287,7 +287,7 @@ func encodeVerificationJSON(writer io.Writer, report verification.DocumentReport
 		Format:     report.Format,
 		Signed:     report.Signed,
 		Verdict:    string(report.Verdict()),
-		VerifiedAt: report.VerifiedAt.Format(time.RFC3339),
+		VerifiedAt: report.VerifiedAt.UTC().Format(time.RFC3339),
 		Network:    connections(),
 	}
 
@@ -323,7 +323,7 @@ func encodeVerificationJSON(writer io.Writer, report verification.DocumentReport
 				Missing:              evidence.Missing(signer.SignedAt),
 			}
 			if !evidence.ServiceGrantedSince.IsZero() {
-				entry.Qualification.ServiceGrantedSince = evidence.ServiceGrantedSince.Format(time.RFC3339)
+				entry.Qualification.ServiceGrantedSince = evidence.ServiceGrantedSince.UTC().Format(time.RFC3339)
 			}
 		}
 		if status := signer.Revocation.Status; status.Status != "" {
@@ -334,7 +334,7 @@ func encodeVerificationJSON(writer io.Writer, report verification.DocumentReport
 				Reason:  status.Reason,
 			}
 			if !status.RevokedAt.IsZero() {
-				entry.Revocation.RevokedAt = status.RevokedAt.Format(time.RFC3339)
+				entry.Revocation.RevokedAt = status.RevokedAt.UTC().Format(time.RFC3339)
 			}
 		}
 		if stamp := signer.TimestampEvidence; stamp.Bound {
@@ -346,17 +346,19 @@ func encodeVerificationJSON(writer io.Writer, report verification.DocumentReport
 				Provider:     stamp.ProviderName,
 			}
 			if !stamp.GrantedSince.IsZero() {
-				entry.TimestampProof.GrantedSince = stamp.GrantedSince.Format(time.RFC3339)
+				entry.TimestampProof.GrantedSince = stamp.GrantedSince.UTC().Format(time.RFC3339)
 			}
 			if !stamp.Accredited {
 				entry.TimestampProof.Missing = timestampMissing(stamp, signer.SignedAt)
 			}
 		}
 		if !signer.SignedAt.IsZero() {
-			entry.SignedAt = signer.SignedAt.Format(time.RFC3339)
+			// One zone for every format: UTC for machines, as the PDF
+			// library gave local time and the CMS ones UTC.
+			entry.SignedAt = signer.SignedAt.UTC().Format(time.RFC3339)
 		}
 		if signer.ExpiredAtSigning {
-			entry.ExpiredAt = signer.SignedAt.Format(time.RFC3339)
+			entry.ExpiredAt = signer.SignedAt.UTC().Format(time.RFC3339)
 		}
 		for _, finding := range signer.Findings {
 			entry.Findings = append(entry.Findings, findingJSON{
@@ -396,14 +398,19 @@ func printVerification(writer io.Writer, report verification.DocumentReport, cat
 	width := 14
 	for _, label := range []string{catalogue.LabelSigner, catalogue.LabelIdentifier, catalogue.LabelIssuer,
 		catalogue.LabelSignedAt, catalogue.LabelTimestamped, catalogue.LabelIntegrity,
-		catalogue.LabelPolicy, catalogue.LabelRoles, catalogue.LabelPlace} {
+		catalogue.LabelPolicy, catalogue.LabelRoles, catalogue.LabelPlace, catalogue.LabelReason} {
 		width = max(width, utf8.RuneCountInString(label))
 	}
 	row := func(label, value string) { fmt.Fprintf(writer, "    %-*s %s\n", width, label, value) }
 
 	for index, signer := range report.Signers {
 		fmt.Fprintf(writer, "\n  %s %d — %s\n", catalogue.LabelSignature, index+1, signer.FieldName)
-		row(catalogue.LabelSigner, signer.SignerName)
+		// A signature too damaged to name its signer says so, not a blank.
+		signerName := signer.SignerName
+		if signerName == "" {
+			signerName = catalogue.StatusName(verification.StatusUnknown)
+		}
+		row(catalogue.LabelSigner, signerName)
 		if signer.Identifier != "" {
 			row(catalogue.LabelIdentifier, signer.Identifier)
 		}
@@ -415,7 +422,8 @@ func printVerification(writer io.Writer, report verification.DocumentReport, cat
 			if signer.Timestamped {
 				label = catalogue.LabelTimestamped
 			}
-			row(label, signer.SignedAt.Format("2006-01-02 15:04:05 -07:00"))
+			// The reader's local time, whatever zone the format came in.
+			row(label, signer.SignedAt.Local().Format("2006-01-02 15:04:05 -07:00"))
 		}
 		for _, declared := range catalogue.DeclarationRows(signer.Declared) {
 			row(declared[0], declared[1])
@@ -426,8 +434,12 @@ func printVerification(writer io.Writer, report verification.DocumentReport, cat
 			if finding.Status == verification.StatusGood {
 				continue
 			}
-			fmt.Fprintf(writer, "    %s %s\n", catalogue.StatusMark(finding.Status),
-				catalogue.FindingName(finding.Code, finding.Message))
+			name := catalogue.FindingName(finding.Code, finding.Message)
+			if finding.Code == "verification.warning" && finding.Message != "" && name != finding.Message {
+				// The PDF library's own warnings come in its words.
+				name += ": " + finding.Message
+			}
+			fmt.Fprintf(writer, "    %s %s\n", catalogue.StatusMark(finding.Status), name)
 		}
 	}
 

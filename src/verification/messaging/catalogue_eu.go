@@ -15,6 +15,7 @@ var Basque = Catalogue{
 	LabelPolicy:      "Politika",
 	LabelRoles:       "Rola",
 	LabelPlace:       "Lekua",
+	LabelReason:      "Arrazoia",
 	NoSignatures:     "Dokumentuak ez du sinadurarik.",
 
 	ReportTitle:      "Egiaztapen-txostena",

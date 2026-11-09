@@ -299,7 +299,7 @@ trebaruna verify atto.pdf --offline=false --json
 Human output:
 
 ```
-  Firma 1 — signature-1
+  Firma 1 — Signature 1
     Firmante       MARIA LOPEZ GARCIA
     Identificador  IDCES-00000000X
     Emisor         Example TSP

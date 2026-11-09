@@ -920,6 +920,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `verify`, for PDFs, named each signature after its signer in `field`;
+  it now carries the form field's name ("Signature 1"), two signatures by
+  one person keeping their own fields. The human output printed "! aviso
+  del verificador" with no words: the PDF library's warning that repeats
+  "the signing time is declared by the signer" is dropped, and any other
+  shows its text. The reason a PDF signature gives is shown, and a signer
+  that cannot be read says "unknown" instead of a blank. Times were local
+  for PDFs and UTC for CMS and XML: the JSON is UTC everywhere, the human
+  output and the reports the reader's local time.
+
 - `sign` replaced an existing file at its output without a word, the
   previous signed file included, while `extract` and `decrypt` refused.
   It now refuses (exit 1, naming the file and `--force`), `--force`

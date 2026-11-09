@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/brainpool"
@@ -142,7 +143,7 @@ func (v *PDFVerifier) Extract(path string) ([]domain.SignerReport, error) {
 			continue
 		}
 		report := v.translate(signer, index)
-		bindPDFCertificate(envelopes, signer, &report)
+		bindPDFCertificate(envelopes, signer, &report, checkedHere)
 		if report.Integrity == domain.StatusBad {
 			report.Trust = domain.TrustBroken
 		}
@@ -193,7 +194,7 @@ func (v *PDFVerifier) checkHere(path string, signer *verify.Signer, index int, e
 		cades := &CadesVerifier{Roots: v.Roots, Now: v.Now, Anchors: v.Anchors}
 		if documentTimestamp {
 			report, _ := cades.timeStampReport(envelope.der, signed)
-			report.FieldName, report.Format = fieldName(signer, index), "PAdES"
+			report.FieldName, report.Format = envelopeField(envelope, signer, index), "PAdES"
 			report.Trust = trustFromReport(report)
 			return report, true
 		}
@@ -202,8 +203,8 @@ func (v *PDFVerifier) checkHere(path string, signer *verify.Signer, index int, e
 			return domain.SignerReport{}, false
 		}
 		report := reports[0]
-		report.FieldName, report.Format = fieldName(signer, index), "PAdES"
-		report.Declared.Place = signer.Location
+		report.FieldName, report.Format = envelopeField(envelope, signer, index), "PAdES"
+		report.Declared.Place, report.Declared.Reason = signer.Location, strings.TrimSpace(signer.Reason)
 		return report, true
 	}
 	return domain.SignerReport{}, false
@@ -229,6 +230,15 @@ func libraryCannotCheck(signer *verify.Signer) bool {
 		}
 	}
 	return false
+}
+
+// envelopeField names a signature by its form field, or as fieldName does
+// when the field has no name.
+func envelopeField(envelope pdfEnvelope, signer *verify.Signer, index int) string {
+	if envelope.field != "" {
+		return envelope.field
+	}
+	return fieldName(signer, index)
 }
 
 // fieldName is how a report names a PDF signature.
@@ -397,6 +407,10 @@ func (v *PDFVerifier) describeChain(signer *verify.Signer, report *domain.Signer
 		})
 	}
 	for _, warning := range signer.Warnings {
+		if strings.Contains(warning.Error(), "signature time as fallback") {
+			// certificate.validity_unproven says it, in the reader's language.
+			continue
+		}
 		report.Findings = append(report.Findings, domain.Finding{
 			Code:    "verification.warning",
 			Status:  domain.StatusWarn,

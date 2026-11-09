@@ -30,6 +30,7 @@ type Catalogue struct {
 	LabelPolicy      string
 	LabelRoles       string
 	LabelPlace       string
+	LabelReason      string
 	NoSignatures     string
 
 	// The exported report (verify --report).
@@ -76,6 +77,7 @@ var Spanish = Catalogue{
 	LabelPolicy:      "Política",
 	LabelRoles:       "Rol",
 	LabelPlace:       "Lugar",
+	LabelReason:      "Motivo",
 	NoSignatures:     "El documento no tiene firmas.",
 
 	ReportTitle:      "Informe de verificación",
@@ -157,6 +159,7 @@ var Italian = Catalogue{
 	LabelPolicy:      "Politica",
 	LabelRoles:       "Ruolo",
 	LabelPlace:       "Luogo",
+	LabelReason:      "Motivo",
 	NoSignatures:     "Il documento non contiene firme.",
 
 	ReportTitle:      "Rapporto di verifica",
@@ -238,6 +241,7 @@ var English = Catalogue{
 	LabelPolicy:      "Policy",
 	LabelRoles:       "Role",
 	LabelPlace:       "Place",
+	LabelReason:      "Reason",
 	NoSignatures:     "The document has no signatures.",
 
 	ReportTitle:      "Verification report",
@@ -335,6 +339,9 @@ func (c Catalogue) DeclarationRows(declared domain.Declarations) [][2]string {
 	}
 	if declared.Place != "" {
 		rows = append(rows, [2]string{c.LabelPlace, declared.Place})
+	}
+	if declared.Reason != "" {
+		rows = append(rows, [2]string{c.LabelReason, declared.Reason})
 	}
 	return rows
 }

@@ -13,6 +13,7 @@ var Galician = Catalogue{
 	LabelPolicy:      "Política",
 	LabelRoles:       "Rol",
 	LabelPlace:       "Lugar",
+	LabelReason:      "Motivo",
 	NoSignatures:     "O documento non ten sinaturas.",
 
 	ReportTitle:      "Informe da verificación",

@@ -4,6 +4,7 @@ import (
 	"encoding/asn1"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/digitorus/pdf"
 	"github.com/digitorus/pdfsign/verify"
@@ -20,6 +21,9 @@ type pdfEnvelope struct {
 	byteRange []int64
 	// name is the signature's /Name, as the PDF verifier reports it.
 	name string
+	// field is the signature field's fully qualified name: the partial
+	// names of it and its ancestors, joined by dots.
+	field string
 }
 
 // signedBytes reads the parts of the file the signature covers.
@@ -58,13 +62,17 @@ func signatureEnvelopes(path string) []pdfEnvelope {
 	}
 	defer reader.Close()
 	var envelopes []pdfEnvelope
-	var visit func(fields pdf.Value, depth int)
-	visit = func(fields pdf.Value, depth int) {
+	var visit func(fields pdf.Value, depth int, parent string)
+	visit = func(fields pdf.Value, depth int, parent string) {
 		if depth > 16 {
 			return
 		}
 		for index := 0; index < fields.Len(); index++ {
 			field := fields.Index(index)
+			name := parent
+			if partial := field.Key("T").Text(); partial != "" {
+				name = strings.TrimPrefix(parent+"."+partial, ".")
+			}
 			if value := field.Key("V"); value.Kind() == pdf.Dict {
 				if contents := []byte(value.Key("Contents").RawString()); len(contents) > 0 {
 					// /Contents is padded with zeros after the DER.
@@ -72,7 +80,7 @@ func signatureEnvelopes(path string) []pdfEnvelope {
 					if _, err := asn1.Unmarshal(contents, &envelope); err == nil {
 						if tree, err := parseSignatureTree(envelope.FullBytes, nil); err == nil {
 							byteRange := value.Key("ByteRange")
-							found := pdfEnvelope{tree: tree, der: envelope.FullBytes, name: value.Key("Name").Text()}
+							found := pdfEnvelope{tree: tree, der: envelope.FullBytes, name: value.Key("Name").Text(), field: name}
 							for index := 0; index < byteRange.Len(); index++ {
 								found.byteRange = append(found.byteRange, byteRange.Index(index).Int64())
 							}
@@ -81,10 +89,10 @@ func signatureEnvelopes(path string) []pdfEnvelope {
 					}
 				}
 			}
-			visit(field.Key("Kids"), depth+1)
+			visit(field.Key("Kids"), depth+1, name)
 		}
 	}
-	visit(reader.Trailer().Key("Root").Key("AcroForm").Key("Fields"), 0)
+	visit(reader.Trailer().Key("Root").Key("AcroForm").Key("Fields"), 0, "")
 	return envelopes
 }
 
@@ -92,18 +100,29 @@ func signatureEnvelopes(path string) []pdfEnvelope {
 // against the certificate the verifier resolved, in the envelope whose
 // signer answers to that certificate, and reads what the signature
 // declares: the envelope's policy, the dictionary's /Location.
-func bindPDFCertificate(envelopes []pdfEnvelope, signer *verify.Signer, report *domain.SignerReport) {
-	report.Declared.Place = signer.Location
+//
+// The library reports the signatures in the order of the form's fields, as
+// the envelopes are read: each takes the first envelope of its certificate
+// not taken yet, so two signatures by one person keep their own fields.
+func bindPDFCertificate(envelopes []pdfEnvelope, signer *verify.Signer, report *domain.SignerReport, taken map[int]bool) {
+	report.Declared.Place, report.Declared.Reason = signer.Location, strings.TrimSpace(signer.Reason)
 	if len(signer.Certificates) == 0 || signer.Certificates[0].Certificate == nil {
 		return
 	}
 	leaf := signer.Certificates[0].Certificate
-	for _, envelope := range envelopes {
+	for position, envelope := range envelopes {
+		if taken[position] {
+			continue
+		}
 		for _, info := range envelope.tree.signers {
 			for _, candidate := range envelope.tree.certificatesFor(info.SID) {
 				if candidate.Equal(leaf) {
+					taken[position] = true
+					if envelope.field != "" {
+						report.FieldName = envelope.field
+					}
 					describeESSCertificate(essCertificateDigests(info.SignedAttrs), leaf, report)
-					report.Declared = pdfDeclarations(info.SignedAttrs, signer.Location)
+					report.Declared = pdfDeclarations(info.SignedAttrs, signer.Location, signer.Reason)
 					return
 				}
 			}

@@ -126,7 +126,7 @@ func build(input Input) document {
 			if signer.Timestamped {
 				label = catalogue.LabelTimestamped
 			}
-			signature.rows = append(signature.rows, row{label, signer.SignedAt.Format(timeLayout)})
+			signature.rows = append(signature.rows, row{label, signer.SignedAt.Local().Format(timeLayout)})
 		}
 		for _, declared := range catalogue.DeclarationRows(signer.Declared) {
 			signature.rows = append(signature.rows, row{declared[0], declared[1]})

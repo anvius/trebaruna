@@ -55,6 +55,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.83.3-unstable" date="2026-11-10">
+      <description>
+        <p>Clearer verification output: field names, the reason, one time zone.</p>
+      </description>
+    </release>
     <release version="0.83.2-unstable" date="2026-11-10">
       <description>
         <p>Signing no longer replaces an earlier signed file without saying so.</p>

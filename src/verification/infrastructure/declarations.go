@@ -30,8 +30,8 @@ func cmsPolicy(signedAttrs asn1.RawValue) string {
 
 // pdfDeclarations are a PDF signature's: the policy of its CMS envelope and
 // the place its dictionary names (/Location).
-func pdfDeclarations(signedAttrs asn1.RawValue, location string) domain.Declarations {
-	return domain.Declarations{Policy: cmsPolicy(signedAttrs), Place: strings.TrimSpace(location)}
+func pdfDeclarations(signedAttrs asn1.RawValue, location, reason string) domain.Declarations {
+	return domain.Declarations{Policy: cmsPolicy(signedAttrs), Place: strings.TrimSpace(location), Reason: strings.TrimSpace(reason)}
 }
 
 // xadesDeclarations reads what a XAdES signature declares in its own

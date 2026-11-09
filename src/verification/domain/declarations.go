@@ -12,6 +12,8 @@ type Declarations struct {
 	Roles []string
 	// Place is where the signature says it was made.
 	Place string
+	// Reason is why, as a PDF signature says it (/Reason).
+	Reason string
 }
 
 // knownPolicies are the policies trebaruna signs with, by identifier.

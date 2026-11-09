@@ -202,6 +202,12 @@ anyone can verify it again.
 trebaruna verify atto.pdf --json
 ```
 
+`field` is the signature field's name in a PDF (its fully qualified name),
+the signature's place in other formats. Times are UTC in the JSON and the
+reader's local time in the human output and the reports, whatever zone the
+format stored. The human output also shows what the signature declares:
+policy, roles, place and, for a PDF, the reason.
+
 ```json
 {
   "verdict": "advanced",
@@ -209,7 +215,7 @@ trebaruna verify atto.pdf --json
   "signed": true,
   "signers": [
     {
-      "field": "signature-1",
+      "field": "Signature 1",
       "signer": "MARIA LOPEZ GARCIA",
       "identifier": "IDCES-00000000X",
       "issuer": "Example TSP",
@@ -217,7 +223,7 @@ trebaruna verify atto.pdf --json
       "trust": "advanced",
       "qualified": false,
       "timestamped": true,
-      "signed_at": "2026-11-02T12:52:30+01:00",
+      "signed_at": "2026-11-02T11:52:30Z",
       "qualification": {
         "certificate_qualified": true,
         "device_qualified": false,
