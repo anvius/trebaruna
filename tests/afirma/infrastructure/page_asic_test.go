@@ -3,12 +3,15 @@ package infrastructure_test
 import (
 	"archive/zip"
 	"bytes"
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"codeberg.org/simplicer/trebaruna/src/afirma/application"
 	"codeberg.org/simplicer/trebaruna/src/afirma/domain"
+	"codeberg.org/simplicer/trebaruna/src/afirma/infrastructure"
 	verificationdomain "codeberg.org/simplicer/trebaruna/src/verification/domain"
 	verification "codeberg.org/simplicer/trebaruna/src/verification/infrastructure"
 )
@@ -94,4 +97,48 @@ func TestAnOOXMLPageGetsItsDocumentSigned(t *testing.T) {
 	}
 	_, err = signPage(t, "OOXML", map[string]string{}, []byte("%PDF-1.4"))
 	wantFailure(t, err, domain.InvalidData, "a PDF as OOXML")
+}
+
+// TestASiCSPagesCosignTheContainer: a cosign page that sends a container
+// gets it back with one more signature of the kind it holds, both of which
+// verify; a counter-signature is refused, and so is data that is no
+// container.
+func TestASiCSPagesCosignTheContainer(t *testing.T) {
+	juan, _ := identity(t, "JUAN PEREZ", 22)
+	for _, name := range []string{"CAdES-ASiC-S", "XAdES-ASiC-S"} {
+		first, err := signPage(t, name, map[string]string{"asicsFilename": "solicitud.xml"}, []byte("<solicitud/>"))
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		cosigned, err := infrastructure.NewNativePageSigner().Sign(context.Background(), application.PageSignature{
+			Crypto: domain.Cosign, Format: format(t, name), Algorithm: "SHA256", Data: first.Signature, Key: juan})
+		if err != nil {
+			t.Fatalf("%s cosign: %v", name, err)
+		}
+		path := filepath.Join(t.TempDir(), "firma.asics")
+		if err := os.WriteFile(path, cosigned.Signature, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		reports, err := verification.NewAsicVerifier(verification.NewCadesVerifier(), verification.NewXadesVerifier()).Extract(path)
+		if err != nil || len(reports) != 2 {
+			t.Fatalf("%s: %+v, %v", name, reports, err)
+		}
+		signers := map[string]bool{}
+		for _, report := range reports {
+			if report.Integrity != verificationdomain.StatusGood {
+				t.Errorf("%s: %s %s %+v", name, report.SignerName, report.Integrity, report.Findings)
+			}
+			signers[report.SignerName] = true
+		}
+		if !signers["MARIA GARCIA"] || !signers["JUAN PEREZ"] {
+			t.Errorf("%s: signers %v", name, signers)
+		}
+
+		_, err = infrastructure.NewNativePageSigner().Sign(context.Background(), application.PageSignature{
+			Crypto: domain.Countersign, Format: format(t, name), Algorithm: "SHA256", Data: first.Signature, Key: juan})
+		wantFailure(t, err, domain.UnsupportedOperation, name+" counter-signature")
+		_, err = infrastructure.NewNativePageSigner().Sign(context.Background(), application.PageSignature{
+			Crypto: domain.Cosign, Format: format(t, name), Algorithm: "SHA256", Data: []byte("<solicitud/>"), Key: juan})
+		wantFailure(t, err, domain.NoSignData, name+" without a container")
+	}
 }

@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- afirma:// pages co-sign ASiC-S containers: a `cosign` with
+  `CAdES-ASiC-S` or `XAdES-ASiC-S` takes the container and answers it with
+  one more signature of the kind it holds, as AutoFirma does. The
+  container co-signature is now a use case of its own, CosignContainer,
+  shared by signing a file and answering a page. A counter-signature of a
+  container is refused as not supported yet.
+
 ### Fixed
 
 - A PDF changed under a document timestamp whose authority signed with

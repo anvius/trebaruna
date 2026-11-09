@@ -9,15 +9,35 @@ import (
 	"codeberg.org/simplicer/trebaruna/src/signing/domain"
 )
 
-// cosignContainer adds a parallel signature to an ASiC container, of the
-// kind it already holds (ETSI EN 319 162-1): an ASiC-S's CAdES signature
-// is co-signed in place, its XAdES signatures file takes one more; an
-// ASiC-E takes a new signature file over all its documents (a CAdES one
-// over a new ASiCManifest, or a XAdES one).
+// cosignContainer co-signs a container through CosignContainer.
 func (u *SignDocument) cosignContainer(ctx context.Context, request Request, content []byte) ([]byte, error) {
 	if u.containers == nil {
 		return nil, fmt.Errorf("no container adapter configured")
 	}
+	return NewCosignContainer(u.containers, u.cades, u.xades).Execute(ctx, request, content)
+}
+
+// CosignContainer is the use case that adds a parallel signature to an
+// ASiC container, of the kind it already holds (ETSI EN 319 162-1): an
+// ASiC-S's CAdES signature is co-signed in place, its XAdES signatures
+// file takes one more; an ASiC-E takes a new signature file over all its
+// documents (a CAdES one over a new ASiCManifest, or a XAdES one). It
+// works on the container's bytes: signing a file and answering a web page
+// share it.
+type CosignContainer struct {
+	containers ContainerWriter
+	cades      CadesSigner
+	xades      XadesSigner
+}
+
+// NewCosignContainer wires the use case.
+func NewCosignContainer(containers ContainerWriter, cades CadesSigner, xades XadesSigner) *CosignContainer {
+	return &CosignContainer{containers: containers, cades: cades, xades: xades}
+}
+
+// Execute returns the container with the request's signature added; the
+// request's document is not read, the container is.
+func (u *CosignContainer) Execute(ctx context.Context, request Request, content []byte) ([]byte, error) {
 	container, entries, err := u.containers.ReadContainer(content)
 	if err != nil {
 		return nil, err
@@ -49,7 +69,7 @@ func (u *SignDocument) cosignContainer(ctx context.Context, request Request, con
 		}
 		entries[cades].Content = cosigned
 	case container == domain.ASiCS && xades >= 0:
-		added, err := u.xades.SignXades(ctx, u.containerXades(request, documents))
+		added, err := u.xades.SignXades(ctx, containerXades(request, documents))
 		if err != nil {
 			return nil, err
 		}
@@ -59,7 +79,7 @@ func (u *SignDocument) cosignContainer(ctx context.Context, request Request, con
 		}
 		entries[xades].Content = merged
 	case container == domain.ASiCE && xades >= 0:
-		added, err := u.xades.SignXades(ctx, u.containerXades(request, documents))
+		added, err := u.xades.SignXades(ctx, containerXades(request, documents))
 		if err != nil {
 			return nil, err
 		}
@@ -94,7 +114,7 @@ func containerCades(request Request, content []byte) CadesRequest {
 
 // containerXades is the detached XAdES signature over a container's
 // documents, in an asic:XAdESSignatures file.
-func (u *SignDocument) containerXades(request Request, documents []ContainerEntry) XadesRequest {
+func containerXades(request Request, documents []ContainerEntry) XadesRequest {
 	signing := XadesRequest{Content: documents[0].Content, DocumentName: documents[0].Name, InASiC: true,
 		Packaging: domain.XMLDetached, Signer: request.Signer, Level: request.Level, EmbedRevocation: request.EmbedRevocation,
 		TimestampURL: request.TimestampURL, TimestampUser: request.TimestampUser, TimestampSecret: request.TimestampSecret,

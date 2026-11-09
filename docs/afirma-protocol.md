@@ -434,6 +434,13 @@ of the input signature (a CMS envelope → CAdES, a signed XML → XAdES), or `S
 if not recognised
 (`launch:ProtocolInvocationLauncherUtil#identifyFormatFromData`).
 
+trebaruna: a `cosign` with `CAdES-ASiC-S` or `XAdES-ASiC-S` takes the
+container in `dat` and answers it with one more signature of the kind it
+holds — its CAdES signature co-signed in place, or one more XAdES signature
+in its signatures file, refused when it would break another. A
+`countersign` of a container is refused (`SAF_04`, not supported yet), and
+so is a `cosign` whose data is not a container (`SAF_31`).
+
 Algorithm: the digest part of `algorithm` is kept and the suffix is **recomputed
 from the key type** — `withRSA` for RSA, `withDSA` for DSA, `withECDSA` for EC
 keys (`core:signers/AOSignConstants#composeSignatureAlgorithmName`). So
