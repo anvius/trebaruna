@@ -100,7 +100,11 @@ func (u *AnswerPage) sign(ctx context.Context, request domain.SignRequest) (doma
 
 	proposal := u.proposal(request.Operation, request.Common, request.Format.Name, request.Data)
 	proposal.SuggestedName = request.FileName
-	if request.Format.Triphase {
+	switch {
+	case request.Format.Family == "none":
+		// NONEtri's server prepares nothing, which triphaseSign checks.
+		proposal.Warnings = append(proposal.Warnings, bareWarning)
+	case request.Format.Triphase:
 		// The signature is prepared and assembled by the site's server: the
 		// person learns which one before approving.
 		proposal.Warnings = append(proposal.Warnings,
@@ -144,6 +148,11 @@ func (u *AnswerPage) sign(ctx context.Context, request domain.SignRequest) (doma
 	}
 	return u.deliver(ctx, request.Channel, domain.SignAnswer(signed.Certificate, signed.Signature, chosen, request.Version))
 }
+
+// bareWarning is said of a NONE signature, which is the page's bytes signed
+// as they are: nothing in it says what they are.
+const bareWarning = "a bare signature (NONE) records nothing of what it signs: if these bytes are the signed part of another signature, " +
+	"you sign whatever that one covers, which trebaruna cannot show"
 
 // selectCertificate answers with the certificate the person chose.
 func (u *AnswerPage) selectCertificate(ctx context.Context, common domain.Common) (domain.Answer, error) {

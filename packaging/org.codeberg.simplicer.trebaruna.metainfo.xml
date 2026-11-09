@@ -55,6 +55,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.68.0-unstable" date="2026-11-09">
+      <description>
+        <p>Pages that ask for a bare signature of a few bytes (NONE) get it, with the approval saying what such a signature does and does not record.</p>
+      </description>
+    </release>
     <release version="0.67.0-unstable" date="2026-11-09">
       <description>
         <p>Pages that ask for the signing certificate of the identity card you logged in with find it.</p>

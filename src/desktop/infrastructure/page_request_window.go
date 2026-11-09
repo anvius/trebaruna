@@ -357,6 +357,8 @@ func (r *pageRequest) warningText(warning string, proposal domain.PageProposal) 
 	case strings.Contains(warning, "prepared by the site's server "):
 		host, _, _ := strings.Cut(strings.TrimPrefix(warning, "the signature is prepared by the site's server "), ":")
 		return fmt.Sprintf(r.m.PageWarnTriphase, host)
+	case strings.Contains(warning, "a bare signature (NONE)"):
+		return r.m.PageWarnBare
 	case strings.Contains(warning, "filter conditions not understood"):
 		return r.m.PageWarnFilters
 	}

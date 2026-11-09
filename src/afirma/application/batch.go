@@ -209,6 +209,10 @@ func (u *AnswerPage) triphaseSign(ctx context.Context, request domain.SignReques
 	if err != nil {
 		return nil, nil, err
 	}
+	if request.Format.Family == "none" && !data.PresignsAre(document) {
+		return nil, nil, domain.Failure{Code: domain.SignatureFailed,
+			Cause: "the site's server asked to sign other bytes than the document you approved"}
+	}
 	if err := u.signPresignatures(data, decision, request.Algorithm, domain.SignatureFailed); err != nil {
 		return nil, nil, err
 	}

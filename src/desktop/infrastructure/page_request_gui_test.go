@@ -182,6 +182,19 @@ func TestAThreePhaseSignatureNamesItsServer(t *testing.T) {
 	}
 }
 
+// TestABareSignatureSaysWhatItRecords: NONE's warning, in the person's
+// language.
+func TestABareSignatureSaysWhatItRecords(t *testing.T) {
+	proposal := signProposal()
+	proposal.Format = "NONE"
+	proposal.Warnings = append(proposal.Warnings, "a bare signature (NONE) records nothing of what it signs: "+
+		"if these bytes are the signed part of another signature, you sign whatever that one covers, which trebaruna cannot show")
+	request, _ := pageFixture(t, proposalStep(proposal))
+	if text := detailText(request); !strings.Contains(text, "Una firma desnuda (NONE) no dice nada de lo que firma") {
+		t.Errorf("the bare signature's warning is not said:\n%s", text)
+	}
+}
+
 func sessionOutcomeStep(answer string) domain.PageStep {
 	return domain.PageStep{Outcome: &domain.PageOutcome{Answer: answer, Delivered: true, Session: true}}
 }

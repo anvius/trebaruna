@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- afirma:// bare signatures, `NONE` and `NONEtri` (AutoFirma's
+  AOPkcs1Signer): the page's bytes signed as they are, PKCS#1 v1.5 for RSA
+  and ASN.1 for ECDSA, checked against the certificate before the page
+  gets them. The approval says, in the window's six languages, that a bare
+  signature records nothing of what it signs. `NONEtri` goes through the
+  site's server, whose pre-signature for this format is the document
+  itself: trebaruna signs only when it is exactly the document shown, and
+  refuses before signing otherwise.
+
 - afirma:// certificate filters `ssl:<serial>` and `qualified:<serial>`,
   as AutoFirma's SSLFilter and QualifiedCertificatesFilter: the page names
   a certificate, usually the identity card's authentication certificate

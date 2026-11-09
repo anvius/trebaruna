@@ -98,9 +98,7 @@ func (KeyRawSigner) Chain(key signing.Signer) ([][]byte, error) {
 
 // SignAll hashes each input with the batch's digest and signs it.
 func (KeyRawSigner) SignAll(key signing.Signer, inputs [][]byte, digest string) ([][]byte, error) {
-	hashes := map[string]crypto.Hash{"SHA1": crypto.SHA1, "SHA256": crypto.SHA256, "SHA384": crypto.SHA384, "SHA512": crypto.SHA512,
-		"SHA-1": crypto.SHA1, "SHA-256": crypto.SHA256, "SHA-384": crypto.SHA384, "SHA-512": crypto.SHA512}
-	hash, known := hashes[strings.ToUpper(digest)]
+	hash, known := digestHash(digest)
 	if !known {
 		return nil, fmt.Errorf("unknown digest %q", digest)
 	}
@@ -120,6 +118,14 @@ func (KeyRawSigner) SignAll(key signing.Signer, inputs [][]byte, digest string) 
 		signatures[index] = signature
 	}
 	return signatures, nil
+}
+
+// digestHash names a digest as AutoFirma does: SHA256 or SHA-256.
+func digestHash(name string) (crypto.Hash, bool) {
+	hashes := map[string]crypto.Hash{"SHA1": crypto.SHA1, "SHA256": crypto.SHA256, "SHA384": crypto.SHA384, "SHA512": crypto.SHA512,
+		"SHA-1": crypto.SHA1, "SHA-256": crypto.SHA256, "SHA-384": crypto.SHA384, "SHA-512": crypto.SHA512}
+	hash, known := hashes[strings.ToUpper(name)]
+	return hash, known
 }
 
 // compile-time checks.

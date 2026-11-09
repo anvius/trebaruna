@@ -434,6 +434,13 @@ constants in `core:signers/AOSignConstants`):
 | Raw | `NONE` (PKCS#1), `NONEtri` |
 | Auto | `auto` |
 
+trebaruna: `NONE` signs the data as AutoFirma's `AOPkcs1Signer` does (the
+algorithm's digest, PKCS#1 v1.5 for RSA, ASN.1 for ECDSA, checked against the
+certificate; no co- or counter-signature, `SAF_04`). `NONEtri` goes through the
+site's server with format `NONE`, whose `Pkcs1TriPhasePreProcessor` returns the
+document itself as `PRE`; trebaruna signs only when every `PRE` is the
+document the person approved, and refuses otherwise, before signing anything.
+
 Unknown name → `SAF_06`. `auto` for `sign`: PDF → PAdES, FacturaE → FacturaE,
 other XML → XAdES, anything else → CAdES; for `cosign`/`countersign`: the format
 of the input signature (a CMS envelope → CAdES, a signed XML → XAdES), or `SAF_17`

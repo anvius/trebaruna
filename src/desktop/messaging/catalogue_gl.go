@@ -167,6 +167,7 @@ var galician = Catalogue{
 	PageWarnBatch:              "Os documentos quedan na sede: asinas o que o seu servidor prepara a partir deles, e trebaruna non cho pode amosar.",
 	PageWarnFilters:            "A páxina pon condicións aos certificados que trebaruna non entende; ningún certificado as cumpre.",
 	PageWarnTriphase:           "A sinatura prepáraa o servidor da sede (%s): asinas o que ese servidor calcula, e trebaruna non cho pode amosar.",
+	PageWarnBare:               "Unha sinatura espida (NONE) non di nada do que asina: se estes bytes son a parte asinada doutra sinatura, asinas todo o que esa cobre, e trebaruna non cho pode amosar.",
 	PageListening:              "Agardando a que a páxina se conecte con trebaruna neste equipo (porto %d)…",
 	PageNextRequest:            "Agardando a seguinte petición da páxina…",
 	PageSessionClosed:          "A páxina pechou a conexión con trebaruna.",

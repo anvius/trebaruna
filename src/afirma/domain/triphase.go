@@ -29,7 +29,7 @@ type TriphaseCall struct {
 }
 
 // triphaseFormats are the names the service takes, by family.
-var triphaseFormats = map[string]string{"cades": "CAdES", "xades": "XAdES", "pades": "PAdES", "facturae": "FacturaE"}
+var triphaseFormats = map[string]string{"cades": "CAdES", "xades": "XAdES", "pades": "PAdES", "facturae": "FacturaE", "none": "NONE"}
 
 // Body writes the form the service reads (E.8), in AutoFirma's order and,
 // as AutoFirma does, without percent-encoding (every value is URL-safe):

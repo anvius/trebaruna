@@ -231,6 +231,7 @@ type Catalogue struct {
 	PageWarnBatch            string
 	PageWarnFilters          string
 	PageWarnTriphase         string
+	PageWarnBare             string
 	PageListening            string
 	PageNextRequest          string
 	PageSessionClosed        string
@@ -552,6 +553,7 @@ var spanish = Catalogue{
 	PageWarnBatch:              "Los documentos se quedan en la sede: firmas lo que su servidor prepara a partir de ellos, y trebaruna no puede enseñártelo.",
 	PageWarnFilters:            "La página pone condiciones a los certificados que trebaruna no entiende; ningún certificado las cumple.",
 	PageWarnTriphase:           "La firma la prepara el servidor de la sede (%s): firmas lo que ese servidor calcula, y trebaruna no puede enseñártelo.",
+	PageWarnBare:               "Una firma desnuda (NONE) no dice nada de lo que firma: si estos bytes son la parte firmada de otra firma, firmas todo lo que esa cubre, y trebaruna no puede enseñártelo.",
 	PageListening:              "Esperando a que la página se conecte con trebaruna en este equipo (puerto %d)…",
 	PageNextRequest:            "Esperando la siguiente petición de la página…",
 	PageSessionClosed:          "La página ha cerrado la conexión con trebaruna.",
@@ -854,6 +856,7 @@ var italian = Catalogue{
 	PageWarnBatch:              "I documenti restano sul sito: firmi ciò che il suo server prepara da essi, e trebaruna non può mostrartelo.",
 	PageWarnFilters:            "La pagina pone ai certificati condizioni che trebaruna non capisce; nessun certificato le soddisfa.",
 	PageWarnTriphase:           "La firma la prepara il server del sito (%s): firmi ciò che quel server calcola, e trebaruna non può mostrartelo.",
+	PageWarnBare:               "Una firma nuda (NONE) non dice nulla di ciò che firma: se questi byte sono la parte firmata di un'altra firma, firmi tutto ciò che quella copre, e trebaruna non può mostrartelo.",
 	PageListening:              "In attesa che la pagina si colleghi a trebaruna su questo computer (porta %d)…",
 	PageNextRequest:            "In attesa della prossima richiesta della pagina…",
 	PageSessionClosed:          "La pagina ha chiuso la connessione con trebaruna.",
@@ -1156,6 +1159,7 @@ var english = Catalogue{
 	PageWarnBatch:              "The documents stay on the site: you sign what its server prepares from them, which trebaruna cannot show you.",
 	PageWarnFilters:            "The page sets certificate conditions trebaruna does not understand; no certificate meets them.",
 	PageWarnTriphase:           "The signature is prepared by the site's server (%s): you sign what that server computes, which trebaruna cannot show you.",
+	PageWarnBare:               "A bare signature (NONE) records nothing of what it signs: if these bytes are the signed part of another signature, you sign whatever that one covers, which trebaruna cannot show you.",
 	PageListening:              "Waiting for the page to connect to trebaruna on this computer (port %d)…",
 	PageNextRequest:            "Waiting for the page's next request…",
 	PageSessionClosed:          "The page closed its connection to trebaruna.",

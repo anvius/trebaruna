@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"bytes"
 	"encoding/json"
 	"encoding/xml"
 	"strings"
@@ -145,6 +146,19 @@ type TriSign struct {
 type TriphaseData struct {
 	Format string
 	Signs  []TriSign
+}
+
+// PresignsAre reports pre-signatures that are all the document itself, as
+// a bare (NONE) signature's are: its server prepares nothing, so anything
+// else is a request to sign bytes the person never saw.
+func (d TriphaseData) PresignsAre(document []byte) bool {
+	for _, sign := range d.Signs {
+		pre, err := DecodeBase64(sign.Params["PRE"])
+		if err != nil || !bytes.Equal(pre, document) {
+			return false
+		}
+	}
+	return len(d.Signs) > 0
 }
 
 // PresignAnswer is the JSON pre-signer's answer: triphase data, and results

@@ -55,3 +55,24 @@ func TestPropertiesAreEscapedForJava(t *testing.T) {
 		t.Errorf("%q → %v", text, back)
 	}
 }
+
+// TestABarePresignatureIsTheDocument: NONEtri's server prepares nothing,
+// so every pre-signature must be the document, and there must be one.
+func TestABarePresignatureIsTheDocument(t *testing.T) {
+	document := []byte("expediente-90")
+	of := func(pre []byte) domain.TriSign {
+		return domain.TriSign{Params: map[string]string{"PRE": base64.StdEncoding.EncodeToString(pre)}}
+	}
+	if !(domain.TriphaseData{Signs: []domain.TriSign{of(document)}}).PresignsAre(document) {
+		t.Error("the document itself")
+	}
+	for name, data := range map[string]domain.TriphaseData{
+		"none":        {},
+		"other bytes": {Signs: []domain.TriSign{of(document), of([]byte("otro"))}},
+		"unreadable":  {Signs: []domain.TriSign{{Params: map[string]string{"PRE": "%%%"}}}},
+	} {
+		if data.PresignsAre(document) {
+			t.Errorf("%s: accepted", name)
+		}
+	}
+}

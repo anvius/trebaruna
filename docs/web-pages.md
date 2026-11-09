@@ -269,6 +269,13 @@ Channels:
   local channel, which pages choose only for Internet Explorer and Firefox 60
   or older.
 
+Bare signatures (`NONE`): some pages ask for the signature of a few bytes
+with no envelope around it. trebaruna makes it, and says in the approval that
+such a signature records nothing of what it signs: if the bytes are the
+signed part of another signature, you sign whatever that one covers. With
+`NONEtri` the site's server only passes the document back, and trebaruna
+checks that what it is asked to sign is exactly the document it showed you.
+
 Operations: `sign`, `cosign`, `countersign`, `signandsave`, `selectcert`,
 `save` and `batch`. A batch (JSON or XML) goes through the site's pre- and
 post-signers: the documents stay on the site, the key signs what its server

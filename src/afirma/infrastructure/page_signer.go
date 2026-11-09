@@ -86,6 +86,8 @@ func (s NativePageSigner) Sign(ctx context.Context, request application.PageSign
 		signature, err = s.signXades(ctx, request, level, tsa, policy)
 	case family == "odf", family == "ooxml":
 		signature, err = s.signOffice(ctx, request, family, level, tsa, policy)
+	case family == "none":
+		signature, err = signBare(request)
 	default:
 		return application.Signed{}, domain.Failure{Code: domain.UnknownSigner}
 	}

@@ -4,7 +4,8 @@ import "strings"
 
 // Format is a signature format a page names, as trebaruna understands it.
 type Format struct {
-	// Family is cades, xades, pades or facturae; empty for "auto".
+	// Family is cades, xades, xmldsig, pades, facturae, odf, ooxml or none
+	// (a bare PKCS#1 signature); empty for "auto".
 	Family string
 	// Packaging is the XAdES variant (enveloped, enveloping, detached) or the
 	// ASiC container (asic-s), empty when the family decides.
@@ -47,6 +48,8 @@ func ParseFormat(name string) (Format, error) {
 		"ooxml":                      {Family: "ooxml"},
 		"ooxml (office open xml)":    {Family: "ooxml"},
 		"factura-e":                  {Family: "facturae"},
+		"none":                       {Family: "none"},
+		"nonetri":                    {Family: "none", Triphase: true},
 	}
 	format, known := formats[lower]
 	if !known {
