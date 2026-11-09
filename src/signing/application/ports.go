@@ -157,6 +157,20 @@ type XadesRequest struct {
 	Policy domain.SignaturePolicy
 	// ClaimedRoles are the roles the signer claims (SignerRoleV2).
 	ClaimedRoles []string
+	// Referenced are documents a detached signature names by address and
+	// signs by a digest computed elsewhere, without their content
+	// (AutoFirma's XAdES Externally Detached); Content is then empty.
+	// Manifest puts their references in a ds:Manifest, which the signature
+	// references once.
+	Referenced []ReferencedDocument
+	Manifest   bool
+}
+
+// ReferencedDocument is a document signed by its address and digest.
+type ReferencedDocument struct {
+	URI      string
+	Digest   domain.ContentDigest
+	MimeType string
 }
 
 // OdfSigner signs an OpenDocument package inside itself; request.Content

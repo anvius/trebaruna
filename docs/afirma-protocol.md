@@ -350,6 +350,7 @@ Keys interpreted by the protocol layer itself:
 | `checkSignatures` | `true`: validate the input signature before co/counter-signing; invalid → `SAF_39` | `launch:ProtocolInvocationLauncherSign#sign` |
 | `target` | countersign target: `tree` → whole tree, anything else → leaves | `launch:ProtocolInvocationLauncherSign#executeSign` |
 | `mode` | `implicit`/`explicit`. XAdES + `explicit` without `useManifest=true`: legacy behaviour, data replaced by its SHA-1 and `mimeType=hash/sha1` | `#isXadesExplicitConfigurated` |
+| `useManifest` | `true`: XAdES Externally Detached with the references in a `ds:Manifest` (`XAdESUtil#createManifest`): with `uri`, one document whose digest is the data; otherwise `uri1`, `md1` (Base64), `mimeType1`, `uri2`… The digests' algorithm is `precalculatedHashAlgorithm`, else `referencesDigestMethod`, else SHA-512, and the data are taken as a digest even without `precalculatedHashAlgorithm` (`XAdESSigner`). trebaruna does the same, checks each digest's length, refuses SHA-1, and lists every address and digest in the approval | `XAdESSigner#loadManifestReferencesData` |
 | `filenameExts`, `filenameDescription`, `filenameCurrentDir`, `filenameActualName` | open-dialog hints when `dat` is absent | `launch:AfirmaExtraParams` |
 | `filenameSaveExts`, `filenameSaveDescription`, `filenameSaveCurrentDir` | save-dialog hints for `signandsave` | same |
 | `expPolicy` | `FirmaAGE` or `FirmaAGE18`: expand AGE policy ([F.1](#f1-age-policy-expansion-exppolicy)); other value → `SAF_23` | `core:signers/ExtraParamsProcessor` |

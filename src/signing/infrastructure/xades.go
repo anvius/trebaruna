@@ -55,6 +55,8 @@ const (
 	algorithmC14N        = "http://www.w3.org/TR/2001/REC-xml-c14n-20010315"
 	algorithmEnveloped   = "http://www.w3.org/2000/09/xmldsig#enveloped-signature"
 	algorithmSHA256      = "http://www.w3.org/2001/04/xmlenc#sha256"
+	algorithmSHA384      = "http://www.w3.org/2001/04/xmldsig-more#sha384"
+	algorithmSHA512      = "http://www.w3.org/2001/04/xmlenc#sha512"
 	algorithmRSASHA256   = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"
 	algorithmECDSASHA256 = "http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha256"
 	typeSignedProperties = "http://uri.etsi.org/01903#SignedProperties"
@@ -89,6 +91,10 @@ func (ids signatureIDs) referenceAt(index int) string {
 	return ids.reference() + "-" + strconv.Itoa(index+1)
 }
 func (ids signatureIDs) payload() string { return "trebaruna-payload-" + ids.suffix }
+
+// manifest is the ds:Manifest holding the references to documents named
+// by address.
+func (ids signatureIDs) manifest() string { return "trebaruna-manifest-" + ids.suffix }
 
 // AutoFirma's names for the root and the content of an internally detached
 // signature.
@@ -198,6 +204,9 @@ func (s *XadesSigner) SignXades(ctx context.Context, request application.XadesRe
 		return nil, fmt.Errorf("SignedInfo has %d references, expected %d", len(references), expected)
 	}
 	for _, reference := range references {
+		if layout.presetDigest(reference.SelectAttrValue("URI", "")) {
+			continue
+		}
 		data, err := xmldsig.ReferenceData(tree, signatureElement, reference, resolve)
 		if err != nil {
 			return nil, fmt.Errorf("digest %s: %w", reference.SelectAttrValue("URI", ""), err)

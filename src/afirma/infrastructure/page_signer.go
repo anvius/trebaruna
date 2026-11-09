@@ -45,30 +45,20 @@ func NewNativePageSigner() NativePageSigner {
 	}
 }
 
-// unsupportedProperties are extraParams that change what is signed and that
-// trebaruna does not honour yet; signing without them would hand the page a
-// signature it did not ask for.
-var unsupportedProperties = map[string]string{
-	"useManifest": "XAdES manifests",
-}
-
 // Sign makes the signature the page asked for.
 func (s NativePageSigner) Sign(ctx context.Context, request application.PageSignature) (application.Signed, error) {
-	for property, what := range unsupportedProperties {
-		if request.Properties[property] != "" {
-			return application.Signed{}, domain.Failure{Code: domain.UnsupportedOperation, Cause: what + " are not supported yet"}
-		}
-	}
 	family := request.Format.Family
 	if request.Format.Auto() {
 		family = detectFamily(request.Crypto, request.Data)
 		request.Format.Family = family
 	}
-	// A digest the page computed is signed in CAdES; AutoFirma's NONE
-	// ignores the property and signs the bytes as they are, and so does this.
-	if request.Properties["precalculatedHashAlgorithm"] != "" && family != "cades" && family != "none" {
+	// A digest the page computed is signed in CAdES and in XAdES Externally
+	// Detached; AutoFirma's NONE ignores the property and signs the bytes as
+	// they are, and so does this.
+	externally := family == "xades" && domain.ExternallyDetached(request.Properties)
+	if request.Properties["precalculatedHashAlgorithm"] != "" && family != "cades" && family != "none" && !externally {
 		return application.Signed{}, domain.Failure{Code: domain.UnsupportedOperation,
-			Cause: "a digest the page computed is signed in CAdES only"}
+			Cause: "a digest the page computed is signed in CAdES and XAdES Externally Detached only"}
 	}
 	level, tsa := signing.BES, request.Properties["tsaURL"]
 	if tsa != "" {
@@ -282,6 +272,9 @@ func (s NativePageSigner) signXades(ctx context.Context, request application.Pag
 		}
 		return signature, nil
 	}
+	if request.Format.Family == "xades" && domain.ExternallyDetached(request.Properties) {
+		return s.signReferenced(ctx, request, level, tsa, policy)
+	}
 	// AutoFirma's "XAdES Detached" keeps the data inside a new document, beside
 	// the signature (AFIRMA/CONTENT), so the page receives one file. A
 	// co-signature is the signed document signed again, enveloped: the new
@@ -328,6 +321,36 @@ func (s NativePageSigner) signXades(ctx context.Context, request application.Pag
 	}
 	signature, err := s.xades.SignXades(ctx, signapp.XadesRequest{Content: request.Data, Signer: request.Key, Level: level,
 		Packaging: packaging, Plain: plain, TimestampURL: tsa, Policy: policy, ClaimedRoles: roles, Place: place})
+	if err != nil {
+		return nil, domain.Failure{Code: domain.SignatureFailed, Cause: err.Error()}
+	}
+	return signature, nil
+}
+
+// signReferenced makes AutoFirma's XAdES Externally Detached: a detached
+// signature over documents named by address and signed by the digests the
+// page gives, their references in a ds:Manifest with useManifest. Only a
+// signature: there is nothing here to co- or counter-sign.
+func (s NativePageSigner) signReferenced(ctx context.Context, request application.PageSignature, level signing.Level, tsa string,
+	policy signing.SignaturePolicy) ([]byte, error) {
+	if request.Crypto != domain.Sign {
+		return nil, domain.Failure{Code: domain.UnsupportedOperation, Cause: "documents named by address are signed, not co- or counter-signed"}
+	}
+	documents, err := domain.References(request.Properties, request.Data)
+	if err != nil {
+		return nil, err
+	}
+	referenced := make([]signapp.ReferencedDocument, len(documents))
+	for index, document := range documents {
+		digest, err := signing.NewContentDigest(document.Algorithm, document.Digest)
+		if err != nil {
+			return nil, domain.Failure{Code: domain.Params, Cause: document.URI + ": " + err.Error()}
+		}
+		referenced[index] = signapp.ReferencedDocument{URI: document.URI, Digest: digest, MimeType: document.MimeType}
+	}
+	signature, err := s.xades.SignXades(ctx, signapp.XadesRequest{Signer: request.Key, Level: level, Packaging: signing.XMLDetached,
+		Referenced: referenced, Manifest: domain.UsesManifest(request.Properties), TimestampURL: tsa, Policy: policy,
+		ClaimedRoles: domain.ClaimedRoles(request.Properties), Place: productionPlace(request.Properties)})
 	if err != nil {
 		return nil, domain.Failure{Code: domain.SignatureFailed, Cause: err.Error()}
 	}

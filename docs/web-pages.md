@@ -288,6 +288,13 @@ offers it already ticked, so you need not choose it and type its PIN again;
 you still approve every request, and you can untick it to choose another.
 Nothing is kept once the page leaves.
 
+Documents named by address (`XAdES Externally Detached`, `useManifest`): a
+page may ask for an XML signature over documents that stay on its servers,
+naming each by its address and its digest. trebaruna never sees those
+documents; the approval lists every address with its digest, so you can
+compare them with copies you have. With `useManifest` the references go in a
+manifest inside the signature, as AutoFirma writes them.
+
 Operations: `sign`, `cosign`, `countersign`, `signandsave`, `selectcert`,
 `save` and `batch`. A batch (JSON or XML) goes through the site's pre- and
 post-signers: the documents stay on the site, the key signs what its server

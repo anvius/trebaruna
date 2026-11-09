@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 
 	"codeberg.org/simplicer/trebaruna/src/afirma/domain"
@@ -109,7 +110,20 @@ func (u *AnswerPage) sign(ctx context.Context, request domain.SignRequest) (doma
 
 	proposal := u.proposal(request.Operation, request.Common, request.Format.Name, request.Data)
 	proposal.SuggestedName = request.FileName
-	if algorithm := request.Properties["precalculatedHashAlgorithm"]; algorithm != "" && len(request.Data.Bytes) > 0 {
+	switch algorithm := request.Properties["precalculatedHashAlgorithm"]; {
+	case request.Format.Family == "xades" && domain.ExternallyDetached(request.Properties):
+		// The documents are named by address and digest; an invalid list
+		// is refused before the person is asked.
+		documents, err := domain.References(request.Properties, request.Data.Bytes)
+		if err != nil {
+			return u.fail(ctx, request.Channel, err)
+		}
+		described := make([]string, len(documents))
+		for index, document := range documents {
+			described[index] = fmt.Sprintf("%s (%s %x)", document.URI, document.Algorithm, document.Digest)
+		}
+		proposal.Warnings = append(proposal.Warnings, referencedWarning+strings.Join(described, ", "))
+	case algorithm != "" && len(request.Data.Bytes) > 0:
 		proposal.Warnings = append(proposal.Warnings, fmt.Sprintf("the page sends only the %s digest of a document, %x, not the document: "+
 			"trebaruna cannot show it; compare the digest with the document's if you have it", algorithm, request.Data.Bytes))
 	}
@@ -161,6 +175,10 @@ func (u *AnswerPage) sign(ctx context.Context, request domain.SignRequest) (doma
 	}
 	return u.deliver(ctx, request.Channel, domain.SignAnswer(signed.Certificate, signed.Signature, chosen, request.Version))
 }
+
+// referencedWarning opens the list of documents an Externally Detached
+// signature covers by address and digest.
+const referencedWarning = "the signature covers documents trebaruna does not see, by address and digest: "
 
 // bareWarning is said of a NONE signature, which is the page's bytes signed
 // as they are: nothing in it says what they are.

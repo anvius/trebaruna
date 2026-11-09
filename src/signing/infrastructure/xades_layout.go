@@ -15,7 +15,10 @@ import (
 )
 
 // objectType is the Type of a reference to a ds:Object.
-const objectType = "http://www.w3.org/2000/09/xmldsig#Object"
+const (
+	objectType   = "http://www.w3.org/2000/09/xmldsig#Object"
+	manifestType = "http://www.w3.org/2000/09/xmldsig#Manifest"
+)
 
 // documentLayout says how a signature holds what it signs, decided before
 // any XML is written.
@@ -43,14 +46,41 @@ type documentLayout struct {
 	// there before signing: the namespace it declares is part of the
 	// canonical forms the signature covers.
 	inASiC bool
+	// manifest puts the references to the files in a ds:Manifest, which
+	// SignedInfo references once.
+	manifest bool
 }
 
 // detachedFile is a document a detached signature references by name;
-// canonical digests its XML canonical form.
+// canonical digests its XML canonical form. A file named by address alone
+// has its digest given instead of its content.
 type detachedFile struct {
 	uri, mimeType string
 	content       []byte
 	canonical     bool
+	digest        domain.ContentDigest
+}
+
+// referencedOnly reports a file signed by a digest given, not its content.
+func (f detachedFile) referencedOnly() bool { return !f.digest.IsZero() }
+
+// digestMethod is the file's digest algorithm, as XML-Signature names it.
+func (f detachedFile) digestMethod() string {
+	switch f.digest.Algorithm() {
+	case "SHA384":
+		return algorithmSHA384
+	case "SHA512":
+		return algorithmSHA512
+	}
+	return algorithmSHA256
+}
+
+// digestValue is the file's digest when given, a placeholder otherwise.
+func (f detachedFile) digestValue() string {
+	if f.referencedOnly() {
+		return base64.StdEncoding.EncodeToString(f.digest.Value())
+	}
+	return placeholderDigest
 }
 
 // escapePath escapes each segment of a path in a package, keeping the
@@ -76,9 +106,13 @@ func layoutFor(request application.XadesRequest) (documentLayout, error) {
 		excludeSignatures: !request.Policy.IsFacturaE(),
 		uri:               escapePath(request.DocumentName),
 		inASiC:            request.InASiC,
+		manifest:          request.Manifest,
 	}
 	if layout.packaging == "" {
 		layout.packaging = domain.XMLEnveloped
+	}
+	if len(request.Referenced) > 0 || request.Manifest {
+		return referencedLayout(layout, request)
 	}
 	if document, err := parseDocument(request.Content); err == nil {
 		layout.xml, layout.mimeType = document, "text/xml"
@@ -123,6 +157,32 @@ func layoutFor(request application.XadesRequest) (documentLayout, error) {
 	return layout, nil
 }
 
+// referencedLayout is a detached signature over documents named by address
+// and digest alone, their references in SignedInfo or in a ds:Manifest.
+func referencedLayout(layout documentLayout, request application.XadesRequest) (documentLayout, error) {
+	switch {
+	case len(request.Referenced) == 0:
+		return documentLayout{}, fmt.Errorf("a manifest references documents, and none was given")
+	case layout.packaging != domain.XMLDetached || len(request.Content) > 0 || len(request.MoreDocuments) > 0:
+		return documentLayout{}, fmt.Errorf("documents named by address are signed alone, by a detached signature")
+	case layout.inASiC || len(request.Holder) > 0:
+		return documentLayout{}, fmt.Errorf("documents named by address are not signed inside a container")
+	case request.Level.Archival():
+		return documentLayout{}, fmt.Errorf("level %s seals the documents, and only their digests are here", request.Level)
+	}
+	for _, document := range request.Referenced {
+		if strings.TrimSpace(document.URI) == "" || document.Digest.IsZero() {
+			return documentLayout{}, fmt.Errorf("a document named by address needs its address and its digest")
+		}
+		mimeType := document.MimeType
+		if mimeType == "" {
+			mimeType = "application/octet-stream"
+		}
+		layout.files = append(layout.files, detachedFile{uri: document.URI, mimeType: mimeType, digest: document.Digest})
+	}
+	return layout, nil
+}
+
 // mediaType sniffs the media type of bytes, without its parameters.
 func mediaType(content []byte) string {
 	detected := http.DetectContentType(content)
@@ -136,7 +196,7 @@ func mediaType(content []byte) string {
 // and the signed properties unless the signature is plain XMLDSig.
 func (l documentLayout) referenceCount() int {
 	documents := 1
-	if l.packaging == domain.XMLDetached {
+	if l.packaging == domain.XMLDetached && !l.manifest {
 		documents = len(l.files)
 	}
 	if l.plain {
@@ -187,6 +247,9 @@ func (l documentLayout) tree(ids signatureIDs, content []byte) *etree.Document {
 
 // payload is the ds:Object an enveloping signature carries the content in.
 func (l documentLayout) payload(ids signatureIDs, content []byte) (string, error) {
+	if l.manifest {
+		return `<ds:Object><ds:Manifest Id="` + ids.manifest() + `">` + l.fileReferences(ids) + `</ds:Manifest></ds:Object>`, nil
+	}
 	if l.packaging != domain.XMLEnveloping {
 		return "", nil
 	}
@@ -212,19 +275,15 @@ func (l documentLayout) payload(ids signatureIDs, content []byte) (string, error
 // digest is the document's own, XML is canonicalised. A detached signature
 // names the file beside it and digests its bytes.
 func (l documentLayout) documentReference(ids signatureIDs) string {
+	if l.manifest {
+		return `<ds:Reference Id="` + ids.reference() + `" Type="` + manifestType + `" URI="#` + ids.manifest() + `">` +
+			`<ds:Transforms><ds:Transform Algorithm="` + algorithmC14N + `"/></ds:Transforms>` +
+			`<ds:DigestMethod Algorithm="` + algorithmSHA256 + `"/>` +
+			`<ds:DigestValue>` + placeholderDigest + `</ds:DigestValue>` +
+			`</ds:Reference>`
+	}
 	if l.packaging == domain.XMLDetached {
-		var references strings.Builder
-		for index, file := range l.files {
-			transforms := ""
-			if file.canonical {
-				transforms = `<ds:Transforms><ds:Transform Algorithm="` + algorithmC14N + `"/></ds:Transforms>`
-			}
-			references.WriteString(`<ds:Reference Id="` + ids.referenceAt(index) + `" URI="` + xmlEscape(file.uri) + `">` + transforms +
-				`<ds:DigestMethod Algorithm="` + algorithmSHA256 + `"/>` +
-				`<ds:DigestValue>` + placeholderDigest + `</ds:DigestValue>` +
-				`</ds:Reference>`)
-		}
-		return references.String()
+		return l.fileReferences(ids)
 	}
 	var uri, referenceType, transforms string
 	switch l.packaging {
@@ -256,6 +315,35 @@ func (l documentLayout) documentReference(ids signatureIDs) string {
 		`</ds:Reference>`
 }
 
+// fileReferences are the references to the files beside a detached
+// signature, with the digests given for files named by address alone.
+func (l documentLayout) fileReferences(ids signatureIDs) string {
+	var references strings.Builder
+	for index, file := range l.files {
+		transforms := ""
+		if file.canonical {
+			transforms = `<ds:Transforms><ds:Transform Algorithm="` + algorithmC14N + `"/></ds:Transforms>`
+		}
+		references.WriteString(`<ds:Reference Id="` + ids.referenceAt(index) + `" URI="` + xmlEscape(file.uri) + `">` + transforms +
+			`<ds:DigestMethod Algorithm="` + file.digestMethod() + `"/>` +
+			`<ds:DigestValue>` + file.digestValue() + `</ds:DigestValue>` +
+			`</ds:Reference>`)
+	}
+	return references.String()
+}
+
+// presetDigest reports a SignedInfo reference whose digest was given: a
+// file named by address alone, not dereferenced. With a manifest, SignedInfo
+// references the manifest instead, which is digested.
+func (l documentLayout) presetDigest(uri string) bool {
+	for _, file := range l.files {
+		if file.uri == uri && file.referencedOnly() {
+			return true
+		}
+	}
+	return false
+}
+
 // contentTransform turns the element holding the content back into it.
 func (l documentLayout) contentTransform() string {
 	if l.inBase64() {
@@ -267,6 +355,10 @@ func (l documentLayout) contentTransform() string {
 // dataObjectFormats describe the signed documents (EN 319 132-1, B-B), one
 // DataObjectFormat bound to each document reference.
 func (l documentLayout) dataObjectFormats(ids signatureIDs) string {
+	if l.manifest {
+		return `<xades:DataObjectFormat ObjectReference="#` + ids.reference() + `">` +
+			`<xades:MimeType>text/xml</xades:MimeType></xades:DataObjectFormat>`
+	}
 	if l.packaging == domain.XMLDetached {
 		var formats strings.Builder
 		for index, file := range l.files {

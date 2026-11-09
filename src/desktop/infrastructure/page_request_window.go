@@ -361,6 +361,10 @@ func (r *pageRequest) operationText(proposal domain.PageProposal) string {
 	return r.m.PageOpSign
 }
 
+// referencedPrefix opens the command's list of documents an Externally
+// Detached signature covers by address and digest.
+const referencedPrefix = "the signature covers documents trebaruna does not see, by address and digest: "
+
 // warningText translates the command's warnings, which are stable English.
 func (r *pageRequest) warningText(warning string, proposal domain.PageProposal) string {
 	switch {
@@ -375,6 +379,8 @@ func (r *pageRequest) warningText(warning string, proposal domain.PageProposal) 
 		return fmt.Sprintf(r.m.PageWarnTriphase, host)
 	case strings.Contains(warning, "a bare signature (NONE)"):
 		return r.m.PageWarnBare
+	case strings.HasPrefix(warning, referencedPrefix):
+		return fmt.Sprintf(r.m.PageWarnReferenced, strings.TrimPrefix(warning, referencedPrefix))
 	case strings.HasPrefix(warning, "the page sends only the "):
 		algorithm, rest, _ := strings.Cut(strings.TrimPrefix(warning, "the page sends only the "), " digest of a document, ")
 		digest, _, _ := strings.Cut(rest, ", not the document")

@@ -170,6 +170,7 @@ var catalan = Catalogue{
 	PageWarnTriphase:           "La signatura la prepara el servidor de la seu (%s): signes el que aquest servidor calcula, i trebaruna no te'l pot mostrar.",
 	PageWarnBare:               "Una signatura nua (NONE) no diu res del que signa: si aquests bytes són la part signada d'una altra signatura, signes tot el que aquella cobreix, i trebaruna no t'ho pot mostrar.",
 	PageWarnDigest:             "La pàgina envia només el resum %s d'un document, %s, no el document: trebaruna no el pot mostrar; si tens el document, compara'n el resum amb aquest.",
+	PageWarnReferenced:         "La signatura cobreix documents que trebaruna no veu, només la seva adreça i el seu resum: %s. Compara els resums amb els dels documents si els tens.",
 	PageUseRemembered:          "Fes servir el mateix certificat que a la petició anterior",
 	PageRememberedHolder:       "%s: la pàgina va demanar conservar-lo mentre duri la connexió.",
 	PageListening:              "S'està esperant que la pàgina es connecti amb trebaruna en aquest ordinador (port %d)…",

@@ -209,7 +209,7 @@ func TestWhatTrebarunaDoesNotDoYetIsRefusedByName(t *testing.T) {
 		data       []byte
 		want       domain.FailureCode
 	}{
-		{"XAdES", map[string]string{"useManifest": "true"}, []byte("<a/>"), domain.UnsupportedOperation},
+		{"XAdES", map[string]string{"useManifest": "true"}, []byte("<a/>"), domain.Params},
 		{"CAdES", map[string]string{"precalculatedHashAlgorithm": "SHA-256"}, []byte("x"), domain.Params},
 		{"XAdES Enveloped", map[string]string{}, []byte("not xml"), domain.InvalidXML},
 		{"XAdES", map[string]string{"format": "XAdES Enveloped"}, []byte("not xml"), domain.InvalidXML},

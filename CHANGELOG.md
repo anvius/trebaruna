@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- afirma:// XAdES Externally Detached and `useManifest`: an XML signature
+  over documents that stay on the site, named by address and digest (`uri`
+  with the data as its digest, or `uri1`/`md1`/`mimeType1`… for a
+  manifest), the references in SignedInfo or, with `useManifest`, in a
+  `ds:Manifest` the signature references once, as AutoFirma writes them.
+  The digests' algorithm follows AutoFirma (precalculatedHashAlgorithm,
+  else referencesDigestMethod, else SHA-512); each length is checked and
+  SHA-1 refused; the approval lists every address and digest, in the
+  window's six languages. xmlsec1 verifies both kinds with the documents
+  mapped to their addresses, and catches a changed document. XAdES
+  signatures in general can now reference documents by a digest given,
+  with SHA-256, SHA-384 or SHA-512.
+
 - afirma:// `sticky` and `resetsticky`: within one process, a WebSocket
   session, the key approved for a sticky request is kept in memory (with
   its PIN or passphrase) and the window offers it, ticked, at the page's

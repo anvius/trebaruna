@@ -169,6 +169,7 @@ var galician = Catalogue{
 	PageWarnTriphase:           "A sinatura prepáraa o servidor da sede (%s): asinas o que ese servidor calcula, e trebaruna non cho pode amosar.",
 	PageWarnBare:               "Unha sinatura espida (NONE) non di nada do que asina: se estes bytes son a parte asinada doutra sinatura, asinas todo o que esa cobre, e trebaruna non cho pode amosar.",
 	PageWarnDigest:             "A páxina envía só o resumo %s dun documento, %s, non o documento: trebaruna non o pode amosar; se tes o documento, compara o seu resumo con este.",
+	PageWarnReferenced:         "A sinatura cobre documentos que trebaruna non ve, só o seu enderezo e o seu resumo: %s. Compara os resumos cos dos documentos se os tes.",
 	PageUseRemembered:          "Usar o mesmo certificado ca na petición anterior",
 	PageRememberedHolder:       "%s: a páxina pediu conservalo mentres dure a conexión.",
 	PageListening:              "Agardando a que a páxina se conecte con trebaruna neste equipo (porto %d)…",

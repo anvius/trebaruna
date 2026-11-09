@@ -231,6 +231,19 @@ func TestAKeptCertificateIsOfferedFirst(t *testing.T) {
 	}
 }
 
+// TestDocumentsNamedByAddressAreListed: the person reads each address and
+// digest a manifest signature covers.
+func TestDocumentsNamedByAddressAreListed(t *testing.T) {
+	proposal := signProposal()
+	proposal.Warnings = append(proposal.Warnings, "the signature covers documents trebaruna does not see, by address and digest: "+
+		"https://sede.example/anexo.pdf (SHA-512 9f86d081)")
+	request, _ := pageFixture(t, proposalStep(proposal))
+	if text := detailText(request); !strings.Contains(text, "La firma cubre documentos que trebaruna no ve, solo su dirección y su resumen: "+
+		"https://sede.example/anexo.pdf (SHA-512 9f86d081)") {
+		t.Errorf("the documents are not listed:\n%s", text)
+	}
+}
+
 func sessionOutcomeStep(answer string) domain.PageStep {
 	return domain.PageStep{Outcome: &domain.PageOutcome{Answer: answer, Delivered: true, Session: true}}
 }

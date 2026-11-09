@@ -202,3 +202,37 @@ func TestEveryNameAutoFirmaSignsIsKnown(t *testing.T) {
 		}
 	}
 }
+
+// TestReferencedDocumentsAreReadAsAutoFirmaReadsThem: uri with the data as
+// its digest, or uri1/md1… for a manifest; the digest's algorithm from
+// precalculatedHashAlgorithm, referencesDigestMethod or SHA-512.
+func TestReferencedDocumentsAreReadAsAutoFirmaReadsThem(t *testing.T) {
+	data := []byte("digest-bytes")
+	single, err := domain.References(map[string]string{"format": "XAdES Externally Detached", "uri": "https://sede/doc.pdf", "mimeType": "application/pdf"}, data)
+	if err != nil || len(single) != 1 || single[0].URI != "https://sede/doc.pdf" || string(single[0].Digest) != "digest-bytes" ||
+		single[0].Algorithm != "SHA-512" || single[0].MimeType != "application/pdf" {
+		t.Errorf("one document: %+v %v", single, err)
+	}
+	manifest, err := domain.References(map[string]string{"useManifest": "true", "referencesDigestMethod": "SHA-384",
+		"uri1": "https://sede/a", "md1": base64.StdEncoding.EncodeToString([]byte("aaa")), "mimeType1": "text/plain",
+		"uri2": "https://sede/b", "md2": base64.StdEncoding.EncodeToString([]byte("bbb")), "uri4": "https://sede/lost"}, nil)
+	if err != nil || len(manifest) != 2 || string(manifest[1].Digest) != "bbb" || manifest[0].Algorithm != "SHA-384" || manifest[0].MimeType != "text/plain" {
+		t.Errorf("a manifest: %+v %v", manifest, err)
+	}
+	both, _ := domain.References(map[string]string{"uri": "u", "referencesDigestMethod": "SHA-384", "precalculatedHashAlgorithm": "SHA-256"}, data)
+	if both[0].Algorithm != "SHA-256" {
+		t.Errorf("precalculatedHashAlgorithm wins: %s", both[0].Algorithm)
+	}
+	for name, properties := range map[string]map[string]string{
+		"no uri":         {"format": "XAdES Externally Detached"},
+		"empty manifest": {"useManifest": "true"},
+		"no digest":      {"useManifest": "true", "uri1": "https://sede/a"},
+	} {
+		if _, err := domain.References(properties, data); err == nil {
+			t.Errorf("%s: accepted", name)
+		}
+	}
+	if !domain.ExternallyDetached(map[string]string{"format": "xades externally detached"}) || domain.ExternallyDetached(map[string]string{"format": "XAdES Detached"}) {
+		t.Error("the variant is read case-insensitively, and only that one")
+	}
+}

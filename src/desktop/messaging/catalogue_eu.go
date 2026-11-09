@@ -173,6 +173,7 @@ var basque = Catalogue{
 	PageWarnTriphase:           "Sinadura egoitzaren zerbitzariak prestatzen du (%s): zerbitzari horrek kalkulatzen duena sinatzen duzu, eta trebarunak ezin dizu erakutsi.",
 	PageWarnBare:               "Sinadura biluzi batek (NONE) ez du ezer esaten sinatzen duenaz: byte hauek beste sinadura baten zati sinatua badira, hark estaltzen duen guztia sinatzen duzu, eta trebarunak ezin dizu erakutsi.",
 	PageWarnDigest:             "Orriak dokumentu baten %s laburpena bakarrik bidaltzen du, %s, ez dokumentua: trebarunak ezin du erakutsi; dokumentua baduzu, alderatu haren laburpena honekin.",
+	PageWarnReferenced:         "Sinadurak trebarunak ikusten ez dituen dokumentuak estaltzen ditu, haien helbidea eta laburpena soilik: %s. Alderatu laburpenak dokumentuenekin, badituzu.",
 	PageUseRemembered:          "Erabili aurreko eskaerako ziurtagiri bera",
 	PageRememberedHolder:       "%s: orriak gordetzeko eskatu zuen konexioak irauten duen bitartean.",
 	PageListening:              "Orria ordenagailu honetan trebarunarekin konektatzeko zain (%d ataka)…",

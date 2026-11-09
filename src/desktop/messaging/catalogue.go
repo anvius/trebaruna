@@ -233,6 +233,7 @@ type Catalogue struct {
 	PageWarnTriphase         string
 	PageWarnBare             string
 	PageWarnDigest           string
+	PageWarnReferenced       string
 	PageUseRemembered        string
 	PageRememberedHolder     string
 	PageListening            string
@@ -558,6 +559,7 @@ var spanish = Catalogue{
 	PageWarnTriphase:           "La firma la prepara el servidor de la sede (%s): firmas lo que ese servidor calcula, y trebaruna no puede enseñártelo.",
 	PageWarnBare:               "Una firma desnuda (NONE) no dice nada de lo que firma: si estos bytes son la parte firmada de otra firma, firmas todo lo que esa cubre, y trebaruna no puede enseñártelo.",
 	PageWarnDigest:             "La página envía solo el resumen %s de un documento, %s, no el documento: trebaruna no puede enseñarlo; si tienes el documento, compara su resumen con este.",
+	PageWarnReferenced:         "La firma cubre documentos que trebaruna no ve, solo su dirección y su resumen: %s. Compara los resúmenes con los de los documentos si los tienes.",
 	PageUseRemembered:          "Usar el mismo certificado que en la petición anterior",
 	PageRememberedHolder:       "%s: la página pidió conservarlo mientras dure la conexión.",
 	PageListening:              "Esperando a que la página se conecte con trebaruna en este equipo (puerto %d)…",
@@ -864,6 +866,7 @@ var italian = Catalogue{
 	PageWarnTriphase:           "La firma la prepara il server del sito (%s): firmi ciò che quel server calcola, e trebaruna non può mostrartelo.",
 	PageWarnBare:               "Una firma nuda (NONE) non dice nulla di ciò che firma: se questi byte sono la parte firmata di un'altra firma, firmi tutto ciò che quella copre, e trebaruna non può mostrartelo.",
 	PageWarnDigest:             "La pagina invia solo l'impronta %s di un documento, %s, non il documento: trebaruna non può mostrarlo; se hai il documento, confronta la sua impronta con questa.",
+	PageWarnReferenced:         "La firma copre documenti che trebaruna non vede, solo il loro indirizzo e la loro impronta: %s. Confronta le impronte con quelle dei documenti, se li hai.",
 	PageUseRemembered:          "Usa lo stesso certificato della richiesta precedente",
 	PageRememberedHolder:       "%s: la pagina ha chiesto di conservarlo finché dura la connessione.",
 	PageListening:              "In attesa che la pagina si colleghi a trebaruna su questo computer (porta %d)…",
@@ -1170,6 +1173,7 @@ var english = Catalogue{
 	PageWarnTriphase:           "The signature is prepared by the site's server (%s): you sign what that server computes, which trebaruna cannot show you.",
 	PageWarnBare:               "A bare signature (NONE) records nothing of what it signs: if these bytes are the signed part of another signature, you sign whatever that one covers, which trebaruna cannot show you.",
 	PageWarnDigest:             "The page sends only the %s digest of a document, %s, not the document: trebaruna cannot show it; if you have the document, compare its digest with this one.",
+	PageWarnReferenced:         "The signature covers documents trebaruna does not see, only their address and digest: %s. Compare the digests with the documents' if you have them.",
 	PageUseRemembered:          "Use the same certificate as in the previous request",
 	PageRememberedHolder:       "%s: the page asked to keep it while the connection lasts.",
 	PageListening:              "Waiting for the page to connect to trebaruna on this computer (port %d)…",
