@@ -241,6 +241,9 @@ type SignerReport struct {
 	// Countersigns names the signature this one counter-signs, when it is a
 	// counter-signature; empty for a signature over the document.
 	Countersigns string
+	// Declared is what the signature says of itself in what it signs: the
+	// policy it follows, the roles its signer claims, where it was made.
+	Declared Declarations
 	// SignerName is the subject common name.
 	SignerName string
 	// Identifier is the national identifier from the certificate.

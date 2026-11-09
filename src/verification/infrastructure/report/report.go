@@ -128,6 +128,9 @@ func build(input Input) document {
 			}
 			signature.rows = append(signature.rows, row{label, signer.SignedAt.Format(timeLayout)})
 		}
+		for _, declared := range catalogue.DeclarationRows(signer.Declared) {
+			signature.rows = append(signature.rows, row{declared[0], declared[1]})
+		}
 		signature.rows = append(signature.rows,
 			row{catalogue.LabelFormat, signer.Format},
 			row{catalogue.LabelIntegrity, catalogue.StatusName(signer.Integrity)},

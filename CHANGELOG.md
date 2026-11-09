@@ -73,6 +73,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- verify shows what a signature declares of itself: its signature policy
+  (CAdES and PAdES signature-policy-identifier, XAdES
+  SignaturePolicyIdentifier; AGE 1.9, AGE 1.8, FacturaE 3.1 and 3.0 by
+  name), the roles its signer claims (XAdES SignerRole/V2) and its
+  production place (XAdES SignatureProductionPlace/V2, a PDF's /Location):
+  `policy`, `claimed_roles` and `production_place` in the JSON, rows in the
+  text output, the reports and the window's Check tab, in the six
+  languages. They are statements, not checked facts.
+
 - afirma:// single signatures through the site's server: the `CAdEStri`,
   `XAdEStri`, `PAdEStri` and `FacturaEtri` formats (E.8) were refused.
   After the person approves, trebaruna posts `op=pre` to `serverUrl` (the

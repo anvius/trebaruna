@@ -12,6 +12,9 @@ var Basque = Catalogue{
 	LabelSignedAt:    "Sinatuta",
 	LabelTimestamped: "Zigilatuta",
 	LabelIntegrity:   "Osotasuna",
+	LabelPolicy:      "Politika",
+	LabelRoles:       "Rola",
+	LabelPlace:       "Lekua",
 	NoSignatures:     "Dokumentuak ez du sinadurarik.",
 
 	ReportTitle:      "Egiaztapen-txostena",

@@ -27,6 +27,9 @@ type Catalogue struct {
 	LabelSignedAt    string
 	LabelTimestamped string
 	LabelIntegrity   string
+	LabelPolicy      string
+	LabelRoles       string
+	LabelPlace       string
 	NoSignatures     string
 
 	// The exported report (verify --report).
@@ -70,6 +73,9 @@ var Spanish = Catalogue{
 	LabelSignedAt:    "Firmado",
 	LabelTimestamped: "Sellado",
 	LabelIntegrity:   "Integridad",
+	LabelPolicy:      "Política",
+	LabelRoles:       "Rol",
+	LabelPlace:       "Lugar",
 	NoSignatures:     "El documento no tiene firmas.",
 
 	ReportTitle:      "Informe de verificación",
@@ -148,6 +154,9 @@ var Italian = Catalogue{
 	LabelSignedAt:    "Firmato",
 	LabelTimestamped: "Marcato",
 	LabelIntegrity:   "Integrità",
+	LabelPolicy:      "Politica",
+	LabelRoles:       "Ruolo",
+	LabelPlace:       "Luogo",
 	NoSignatures:     "Il documento non contiene firme.",
 
 	ReportTitle:      "Rapporto di verifica",
@@ -226,6 +235,9 @@ var English = Catalogue{
 	LabelSignedAt:    "Signed",
 	LabelTimestamped: "Timestamped",
 	LabelIntegrity:   "Integrity",
+	LabelPolicy:      "Policy",
+	LabelRoles:       "Role",
+	LabelPlace:       "Place",
 	NoSignatures:     "The document has no signatures.",
 
 	ReportTitle:      "Verification report",
@@ -309,6 +321,22 @@ func (c Catalogue) VerdictName(level domain.TrustLevel) string {
 		return c.VerdictBroken
 	}
 	return c.VerdictUnknown
+}
+
+// DeclarationRows are the label and value of each thing a signature
+// declares of itself, for a report.
+func (c Catalogue) DeclarationRows(declared domain.Declarations) [][2]string {
+	var rows [][2]string
+	if declared.Policy != "" {
+		rows = append(rows, [2]string{c.LabelPolicy, declared.PolicyText()})
+	}
+	if len(declared.Roles) > 0 {
+		rows = append(rows, [2]string{c.LabelRoles, strings.Join(declared.Roles, ", ")})
+	}
+	if declared.Place != "" {
+		rows = append(rows, [2]string{c.LabelPlace, declared.Place})
+	}
+	return rows
 }
 
 // StatusName renders a status.

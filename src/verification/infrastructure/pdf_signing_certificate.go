@@ -90,8 +90,10 @@ func signatureEnvelopes(path string) []pdfEnvelope {
 
 // bindPDFCertificate checks a PDF signature's signing-certificate attribute
 // against the certificate the verifier resolved, in the envelope whose
-// signer answers to that certificate.
+// signer answers to that certificate, and reads what the signature
+// declares: the envelope's policy, the dictionary's /Location.
 func bindPDFCertificate(envelopes []pdfEnvelope, signer *verify.Signer, report *domain.SignerReport) {
+	report.Declared.Place = signer.Location
 	if len(signer.Certificates) == 0 || signer.Certificates[0].Certificate == nil {
 		return
 	}
@@ -101,6 +103,7 @@ func bindPDFCertificate(envelopes []pdfEnvelope, signer *verify.Signer, report *
 			for _, candidate := range envelope.tree.certificatesFor(info.SID) {
 				if candidate.Equal(leaf) {
 					describeESSCertificate(essCertificateDigests(info.SignedAttrs), leaf, report)
+					report.Declared = pdfDeclarations(info.SignedAttrs, signer.Location)
 					return
 				}
 			}

@@ -21,6 +21,7 @@ import (
 	"codeberg.org/simplicer/trebaruna/src/signing/domain"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure"
 	verificationdomain "codeberg.org/simplicer/trebaruna/src/verification/domain"
+	verificationinfra "codeberg.org/simplicer/trebaruna/src/verification/infrastructure"
 )
 
 // TestCadesDeclaresTheAGEPolicy: openssl verifies the signature and prints
@@ -71,6 +72,12 @@ func TestCadesDeclaresTheAGEPolicy(t *testing.T) {
 	// G7roucf600+f03r/o0bAOQ6WAs0= in the hexadecimal dump openssl prints.
 	if !strings.Contains(dump, "1BBAE8B9C7FAD34F9FD37AFFA346C0390E9602CD") {
 		t.Error("the policy digest is not AutoFirma's")
+	}
+
+	// verify reads it back.
+	reports, err := verificationinfra.NewCadesVerifier().Extract(path)
+	if err != nil || len(reports) != 1 || reports[0].Declared.PolicyName() != "AGE 1.9" {
+		t.Errorf("verify reads the policy: %+v %v", reports, err)
 	}
 }
 
@@ -142,6 +149,20 @@ func TestXadesDeclaresThePolicyAndTheRole(t *testing.T) {
 			t.Errorf("the signature lacks %s", expected)
 		}
 	}
+
+	// verify reads them back.
+	path := filepath.Join(t.TempDir(), "solicitud.xml")
+	if err := os.WriteFile(path, output, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	reports, err := verificationinfra.NewXadesVerifier().Extract(path)
+	if err != nil || len(reports) != 1 {
+		t.Fatalf("%v %v", reports, err)
+	}
+	if declared := reports[0].Declared; declared.PolicyText() != "AGE 1.9 (2.16.724.1.3.1.1.2.1.9)" ||
+		strings.Join(declared.Roles, "|") != "Jefe de <servicio>|Notario" {
+		t.Errorf("verify reads %+v", declared)
+	}
 }
 
 // TestFacturaENamesItsPolicyByURL: no OID qualifier and no SPURI, as
@@ -199,7 +220,7 @@ func TestPadesDeclaresTheAGEPolicy(t *testing.T) {
 			t.Fatalf("%s: %v", name, err)
 		}
 		reports := verifyPDF(t, newLocalTSA(t), signed)
-		if len(reports) != 1 || reports[0].Integrity != verificationdomain.StatusGood {
+		if len(reports) != 1 || reports[0].Integrity != verificationdomain.StatusGood || reports[0].Declared.PolicyName() != "AGE 1.9" {
 			t.Errorf("%s: %+v", name, reports)
 		}
 		envelope, covered := lastEnvelope(t, signed)

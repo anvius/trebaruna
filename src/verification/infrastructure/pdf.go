@@ -172,6 +172,7 @@ func (v *PDFVerifier) checkHere(path string, signer *verify.Signer, index int, e
 		}
 		report := reports[0]
 		report.FieldName, report.Format = fieldName(signer, index), "PAdES"
+		report.Declared.Place = signer.Location
 		return report, true
 	}
 	return domain.SignerReport{}, false

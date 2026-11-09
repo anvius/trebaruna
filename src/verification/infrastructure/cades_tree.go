@@ -171,7 +171,8 @@ func (v *CadesVerifier) extractTree(tree signatureTree) ([]domain.SignerReport, 
 
 // checkNode reports one signature and recurses into its counter-signatures.
 func (v *CadesVerifier) checkNode(tree signatureTree, signer treeSignerInfo, signed []byte, field, countersigns string, reports []domain.SignerReport) []domain.SignerReport {
-	report := domain.SignerReport{FieldName: field, Format: "CAdES", Countersigns: countersigns}
+	report := domain.SignerReport{FieldName: field, Format: "CAdES", Countersigns: countersigns,
+		Declared: domain.Declarations{Policy: cmsPolicy(signer.SignedAttrs)}}
 
 	// Several carried certificates may answer to the same identifier (a
 	// re-issued certificate keeps issuer and serial in careless PKIs); the one

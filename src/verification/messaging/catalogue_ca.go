@@ -11,6 +11,9 @@ var Catalan = Catalogue{
 	LabelSignedAt:    "Signat",
 	LabelTimestamped: "Segellat",
 	LabelIntegrity:   "Integritat",
+	LabelPolicy:      "Política",
+	LabelRoles:       "Rol",
+	LabelPlace:       "Lloc",
 	NoSignatures:     "El document no té signatures.",
 
 	ReportTitle:      "Informe de verificació",

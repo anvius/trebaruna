@@ -10,6 +10,9 @@ var Galician = Catalogue{
 	LabelSignedAt:    "Asinado",
 	LabelTimestamped: "Selado",
 	LabelIntegrity:   "Integridade",
+	LabelPolicy:      "Política",
+	LabelRoles:       "Rol",
+	LabelPlace:       "Lugar",
 	NoSignatures:     "O documento non ten sinaturas.",
 
 	ReportTitle:      "Informe da verificación",

@@ -161,6 +161,7 @@ func (v *XadesVerifier) report(document *etree.Document, signature *etree.Elemen
 	report := domain.SignerReport{
 		FieldName: "XMLSignature",
 		Format:    xmlSignatureFormat(signature),
+		Declared:  xadesDeclarations(signature),
 	}
 
 	// The certificate travels inside KeyInfo, which is what the verifier needs

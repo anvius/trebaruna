@@ -226,6 +226,9 @@ trebaruna verify atto.pdf --json
         "checked": true,
         "source": "ocsp"
       },
+      "policy": { "identifier": "2.16.724.1.3.1.1.2.1.9", "name": "AGE 1.9" },
+      "claimed_roles": ["Apoderado"],
+      "production_place": "Madrid",
       "findings": [ ... ]
     }
   ]
@@ -234,6 +237,15 @@ trebaruna verify atto.pdf --json
 
 The `missing` array is what makes the verdict auditable: it names the condition
 that failed, so a user can go and fix it rather than guess.
+
+`policy`, `claimed_roles` and `production_place` are what the signature declares
+of itself, covered by it: the signature policy (CAdES and PAdES
+signature-policy-identifier, XAdES SignaturePolicyIdentifier; AGE 1.9 and 1.8 and
+FacturaE 3.1 and 3.0 named), the roles its signer claims (XAdES SignerRole or
+SignerRoleV2) and where it says it was made (XAdES SignatureProductionPlace or V2,
+a PDF signature's /Location). They are statements, not facts trebaruna checked:
+the policy's rules are not evaluated. The text output, the reports and the
+window's Check tab show them too.
 
 ---
 

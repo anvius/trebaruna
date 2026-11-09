@@ -62,7 +62,14 @@ type verifiedSigner struct {
 	Trust        string `json:"trust"`
 	Expired      bool   `json:"certificate_expired_now"`
 	SelfSign     bool   `json:"self_signed"`
-	Findings     []struct {
+	// Policy, Roles and Place are what the signature declares of itself.
+	Policy *struct {
+		Identifier string `json:"identifier"`
+		Name       string `json:"name"`
+	} `json:"policy"`
+	Roles    []string `json:"claimed_roles"`
+	Place    string   `json:"production_place"`
+	Findings []struct {
 		Code    string `json:"code"`
 		Status  string `json:"status"`
 		Message string `json:"message"`
@@ -292,6 +299,13 @@ func (v *verificationTab) signatureBlock(signer verifiedSigner) fyne.CanvasObjec
 			label = m.LabelTimestamped
 		}
 		facts = append(facts, label+": "+readableInstant(signer.SignedAt))
+	}
+	declared := domain.Declarations{Roles: signer.Roles, Place: signer.Place}
+	if signer.Policy != nil {
+		declared.Policy = signer.Policy.Identifier
+	}
+	for _, row := range m.DeclarationRows(declared) {
+		facts = append(facts, row[0]+": "+row[1])
 	}
 	facts = append(facts, m.LabelIntegrity+": "+m.StatusName(domain.Status(signer.Integrity)))
 

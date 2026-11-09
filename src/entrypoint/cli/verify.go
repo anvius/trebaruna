@@ -203,16 +203,20 @@ type signerJSON struct {
 	Field string `json:"field"`
 	// Countersigns is the field of the signature this one counter-signs.
 	Countersigns string `json:"countersigns,omitempty"`
-	Signer       string `json:"signer"`
-	ID           string `json:"identifier,omitempty"`
-	Issuer       string `json:"issuer,omitempty"`
-	Format       string `json:"format"`
-	SignedAt     string `json:"signed_at,omitempty"`
-	Timestamp    bool   `json:"timestamped"`
-	TSA          string `json:"timestamp_authority,omitempty"`
-	Integrity    string `json:"integrity"`
-	Trust        string `json:"trust"`
-	Qualified    bool   `json:"qualified"`
+	// Policy, Roles and Place are what the signature declares of itself.
+	Policy    *policyJSON `json:"policy,omitempty"`
+	Roles     []string    `json:"claimed_roles,omitempty"`
+	Place     string      `json:"production_place,omitempty"`
+	Signer    string      `json:"signer"`
+	ID        string      `json:"identifier,omitempty"`
+	Issuer    string      `json:"issuer,omitempty"`
+	Format    string      `json:"format"`
+	SignedAt  string      `json:"signed_at,omitempty"`
+	Timestamp bool        `json:"timestamped"`
+	TSA       string      `json:"timestamp_authority,omitempty"`
+	Integrity string      `json:"integrity"`
+	Trust     string      `json:"trust"`
+	Qualified bool        `json:"qualified"`
 	// Qualification explains the QES verdict: which condition held and which
 	// did not. A boolean alone cannot be audited.
 	Qualification *qualificationJSON `json:"qualification,omitempty"`
@@ -227,6 +231,12 @@ type signerJSON struct {
 	ExpiredAt      string         `json:"certificate_expired_at_signing"`
 	SelfSign       bool           `json:"self_signed"`
 	Findings       []findingJSON  `json:"findings"`
+}
+
+// policyJSON is the signature policy a signature declares.
+type policyJSON struct {
+	Identifier string `json:"identifier"`
+	Name       string `json:"name,omitempty"`
 }
 
 // revocationJSON is the outcome of an OCSP or CRL query.
@@ -284,6 +294,8 @@ func encodeVerificationJSON(writer io.Writer, report verification.DocumentReport
 		entry := signerJSON{
 			Field:        signer.FieldName,
 			Countersigns: signer.Countersigns,
+			Roles:        signer.Declared.Roles,
+			Place:        signer.Declared.Place,
 			Signer:       signer.SignerName,
 			ID:           signer.Identifier,
 			Issuer:       signer.Issuer,
@@ -295,6 +307,9 @@ func encodeVerificationJSON(writer io.Writer, report verification.DocumentReport
 			Qualified:    signer.Qualified,
 			Expired:      signer.ExpiredNow,
 			SelfSign:     signer.SelfSigned,
+		}
+		if signer.Declared.Policy != "" {
+			entry.Policy = &policyJSON{Identifier: signer.Declared.PolicyIdentifier(), Name: signer.Declared.PolicyName()}
 		}
 		if evidence := signer.Qualification; evidence.CertificateQualified || evidence.ServiceListed || evidence.DeviceQualified {
 			entry.Qualification = &qualificationJSON{
@@ -379,7 +394,8 @@ func printVerification(writer io.Writer, report verification.DocumentReport, cat
 	// The labels line up on the longest of the language's, 14 at least.
 	width := 14
 	for _, label := range []string{catalogue.LabelSigner, catalogue.LabelIdentifier, catalogue.LabelIssuer,
-		catalogue.LabelSignedAt, catalogue.LabelTimestamped, catalogue.LabelIntegrity} {
+		catalogue.LabelSignedAt, catalogue.LabelTimestamped, catalogue.LabelIntegrity,
+		catalogue.LabelPolicy, catalogue.LabelRoles, catalogue.LabelPlace} {
 		width = max(width, utf8.RuneCountInString(label))
 	}
 	row := func(label, value string) { fmt.Fprintf(writer, "    %-*s %s\n", width, label, value) }
@@ -399,6 +415,9 @@ func printVerification(writer io.Writer, report verification.DocumentReport, cat
 				label = catalogue.LabelTimestamped
 			}
 			row(label, signer.SignedAt.Format("2006-01-02 15:04:05 -07:00"))
+		}
+		for _, declared := range catalogue.DeclarationRows(signer.Declared) {
+			row(declared[0], declared[1])
 		}
 		row(catalogue.LabelIntegrity, catalogue.StatusName(signer.Integrity))
 

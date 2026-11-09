@@ -231,6 +231,7 @@ func (v *CadesVerifier) extractEnvelope(content []byte) ([]domain.SignerReport, 
 	signer := parsed.GetOnlySigner()
 	if treeErr == nil && len(tree.signers) == 1 {
 		describeESSCertificate(essCertificateDigests(tree.signers[0].SignedAttrs), signer, &report)
+		report.Declared.Policy = cmsPolicy(tree.signers[0].SignedAttrs)
 	}
 	describeCertificate(signer, &report)
 
