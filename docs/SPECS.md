@@ -108,6 +108,7 @@ user seeing what is signed and where anything goes.
 |---|---|
 | `.p7e` envelopes for recipients' certificates and their decryption with a file, a card or a store (ADR-0011): CLI | built |
 | `.p7e` encryption and decryption in the window: its own window from the File menu, recipients read from their certificates, opened with the key chosen to sign; a dropped or opened `.p7e` goes there | built |
+| Recipients' address book: `trebaruna recipients list|add|remove`, `encrypt --to saved:<who>`; certificates kept by fingerprint in a private directory, only those that can receive; the window offers saved recipients with one click and keeps those of an envelope just made | built (openssl opens an envelope made for a saved recipient) |
 
 ### Web entry points
 

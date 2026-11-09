@@ -595,6 +595,9 @@ Trust lists: `~/.cache/trebaruna/`. Nothing else is cached.
 trebaruna encrypt offerta.pdf --to luca.pem --to maria.cer     # offerta.pdf.p7e
 trebaruna decrypt offerta.pdf.p7e --p12 luca.p12                # offerta.pdf
 trebaruna-token decrypt offerta.pdf.p7e --card                  # the key stays on the card
+trebaruna recipients add luca.pem                               # keep Luca's certificate
+trebaruna encrypt offerta.pdf --to saved:bianchi                # by name, or by the fingerprint's start
+trebaruna recipients list | remove <fingerprint start | holder>
 ```
 
 An encrypted envelope (`.p7e`, CMS EnvelopedData) only the recipients'
@@ -610,6 +613,13 @@ on the card. Neither command overwrites a file; the output is written readable
 only by its owner. Envelopes made by `openssl cms -encrypt` (PKCS#1 v1.5 or
 OAEP with SHA-1 or SHA-256) open, and ours open with `openssl cms -decrypt`.
 Many cards decrypt OAEP only with SHA-1; the error says so.
+
+`recipients` is the address book: the certificates you encrypt for, kept as
+`<SHA-256>.pem` in `$XDG_CONFIG_HOME/trebaruna/recipients` (the directory
+`0700`, each file `0600`: certificates are public, whom you write to is not).
+`add` keeps only a certificate that can receive envelopes now; `--to
+saved:<who>` takes a saved one by the start of its fingerprint or words of its
+holder's name, and refuses a name two certificates share. `--json` on each.
 
 ## `afirma`
 

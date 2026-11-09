@@ -55,6 +55,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.76.0-unstable" date="2026-11-09">
+      <description>
+        <p>An address book of the people you encrypt for, in the command line and the envelopes window.</p>
+      </description>
+    </release>
     <release version="0.75.0-unstable" date="2026-11-09">
       <description>
         <p>Change a card's PUK, from the command line or the Card menu.</p>

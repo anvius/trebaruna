@@ -50,6 +50,15 @@ type envelopesPanel struct {
 	documentPath  string
 	recipients    []recipient
 	recipientList *fyne.Container
+	// book is the address book; saved its recipients, offered in savedList;
+	// keepBook keeps the recipients of an envelope once it is made.
+	book      *application.ManageRecipientBook
+	saved     []domain.SavedRecipient
+	savedList *fyne.Container
+	keepBook  *widget.Check
+	// bookStatus says what went wrong with the book, apart from the
+	// envelope\'s own outcome.
+	bookStatus    *widget.Label
 	encryptButton *widget.Button
 	encryptStatus *widget.Label
 
@@ -76,6 +85,10 @@ func newEnvelopesPanel(window fyne.Window, m messaging.Catalogue, palette Palett
 		newFileOpen(p.window, nil, p.setDocument).Show()
 	})
 	p.recipientList = container.NewVBox()
+	p.savedList = container.NewVBox()
+	p.keepBook = widget.NewCheck(m.KeepRecipients, nil)
+	p.keepBook.SetChecked(true)
+	p.bookStatus = statusLabel()
 	p.encryptButton = widget.NewButtonWithIcon(m.EncryptButton, theme.VisibilityOffIcon(), p.encryptDocument)
 	p.encryptButton.Importance = widget.HighImportance
 	p.encryptStatus = statusLabel()
@@ -120,6 +133,10 @@ func (p *envelopesPanel) content() fyne.CanvasObject {
 		container.NewHBox(widget.NewButtonWithIcon(p.m.AddRecipient, theme.ContentAddIcon(), func() {
 			newFileOpen(p.window, recipientExtensions, p.addRecipient).Show()
 		})),
+		fieldLabel(p.m.SavedRecipientsLabel),
+		p.savedList,
+		p.bookStatus,
+		p.keepBook,
 		p.encryptStatus,
 		p.encryptButton,
 	)
@@ -190,6 +207,73 @@ func (p *envelopesPanel) removeRecipient(path string) {
 	p.showRecipients()
 }
 
+// changeBook keeps or forgets recipients off the UI thread, then shows the
+// book as it is; with no change it only reads it.
+func (p *envelopesPanel) changeBook(change domain.RecipientBookChange) {
+	if p.book == nil {
+		return
+	}
+	p.run(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		saved, err := p.book.Execute(ctx, change)
+		fyne.Do(func() {
+			reading := len(change.Keep) == 0 && change.Forget == ""
+			switch {
+			case err != nil && reading:
+				// A book that cannot be read leaves the list empty; encrypting
+				// for files still works.
+				return
+			case err != nil:
+				p.report(p.bookStatus, translate(err, p.m), widget.DangerImportance)
+				return
+			}
+			p.report(p.bookStatus, "", widget.LowImportance)
+			p.saved = saved
+			p.showSaved()
+		})
+	})
+}
+
+// showSaved offers each saved recipient not chosen yet: its holder, until
+// when it serves, to add with one click or forget.
+func (p *envelopesPanel) showSaved() {
+	p.savedList.Objects = nil
+	chosen := map[string]bool{}
+	for _, listed := range p.recipients {
+		chosen[listed.path] = true
+	}
+	shown := 0
+	for _, saved := range p.saved {
+		if chosen[saved.Path] {
+			continue
+		}
+		shown++
+		saved := saved
+		name := widget.NewLabelWithStyle(saved.Holder, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+		name.Wrapping = fyne.TextWrapWord
+		validity := caption(fmt.Sprintf(p.m.SavedUntil, saved.NotAfter.Format("02/01/2006")))
+		add := widget.NewButtonWithIcon(p.m.UseSavedRecipient, theme.ContentAddIcon(), func() {
+			p.recipients = append(p.recipients, recipient{path: saved.Path, holder: saved.Holder})
+			p.showRecipients()
+		})
+		if time.Now().After(saved.NotAfter) {
+			validity = caption(fmt.Sprintf(p.m.SavedExpired, saved.NotAfter.Format("02/01/2006")))
+			validity.Importance = widget.DangerImportance
+			add.Disable()
+		}
+		forget := widget.NewButtonWithIcon(p.m.ForgetRecipient, theme.DeleteIcon(), func() {
+			p.changeBook(domain.RecipientBookChange{Forget: saved.Fingerprint})
+		})
+		details := container.New(layout.NewCustomPaddedVBoxLayout(0), name, validity)
+		p.savedList.Add(container.NewBorder(nil, nil, nil, container.NewHBox(add, forget), details))
+	}
+	if shown == 0 {
+		p.savedList.Add(caption(p.m.NoSavedRecipients))
+	}
+	p.savedList.Refresh()
+}
+
 // showRecipients lists each recipient by name, with the file it came from.
 func (p *envelopesPanel) showRecipients() {
 	p.recipientList.Objects = nil
@@ -205,6 +289,7 @@ func (p *envelopesPanel) showRecipients() {
 		p.recipientList.Add(container.NewBorder(nil, nil, nil, container.NewVBox(remove), details))
 	}
 	p.recipientList.Refresh()
+	p.showSaved()
 }
 
 func (p *envelopesPanel) encryptDocument() {
@@ -231,8 +316,29 @@ func (p *envelopesPanel) encryptDocument() {
 			// The names the command encrypted for, as it read them.
 			p.report(p.encryptStatus, fmt.Sprintf(p.m.EncryptedAs, filepath.Base(sealed.Path), strings.Join(sealed.Recipients, ", ")),
 				widget.SuccessImportance)
+			if p.keepBook.Checked {
+				p.keepNewRecipients()
+			}
 		})
 	})
+}
+
+// keepNewRecipients saves the recipients chosen from files, not those
+// already in the book.
+func (p *envelopesPanel) keepNewRecipients() {
+	inBook := map[string]bool{}
+	for _, saved := range p.saved {
+		inBook[saved.Path] = true
+	}
+	var fresh []string
+	for _, listed := range p.recipients {
+		if !inBook[listed.path] {
+			fresh = append(fresh, listed.path)
+		}
+	}
+	if len(fresh) > 0 {
+		p.changeBook(domain.RecipientBookChange{Keep: fresh})
+	}
 }
 
 // ---- opening ----

@@ -289,7 +289,11 @@ rare next to signatures.
   may open it (`.pem`, `.cer`, `.crt`, `.der`), each listed by the holder's
   name read from it. **Encrypt** writes `<document>.p7e` beside the document
   and names who can open it. Only they can: add your own certificate to open
-  it yourself.
+  it yourself. **Saved recipients** lists the address book, each with the date
+  its certificate serves until (an expired one is marked and cannot be added):
+  **Add** puts one on the envelope, **Forget** takes it out of the book. With
+  *Keep these recipients for next time* ticked, the recipients of an envelope
+  just made are kept (the same book as `trebaruna recipients`).
 - **Open an envelope**: a `.p7e` and the key chosen in step 2 of the Sign tab
   (file, card or Firefox store, with its passphrase or PIN), which the window
   names and follows while it is open; without one it offers to go and choose

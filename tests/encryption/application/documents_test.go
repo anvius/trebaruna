@@ -98,3 +98,54 @@ func TestTheDocumentComesOutBesideItsEnvelope(t *testing.T) {
 		t.Errorf("the document must not be overwritten: %v", err)
 	}
 }
+
+// failingFiles reads nothing and writes nothing.
+type failingFiles struct{ readable map[string][]byte }
+
+func (f failingFiles) Read(path string) ([]byte, error) {
+	if content, ok := f.readable[path]; ok {
+		return content, nil
+	}
+	return nil, errors.New("unreadable")
+}
+func (f failingFiles) Exists(string) bool         { return false }
+func (f failingFiles) Write(string, []byte) error { return errors.New("disk full") }
+
+type refusingSealer struct{}
+
+func (refusingSealer) Seal([]byte, []*x509.Certificate, bool) ([]byte, error) {
+	return nil, errors.New("the sealer failed")
+}
+
+type refusingOpener struct{}
+
+func (refusingOpener) Open([]byte, signing.Signer) ([]byte, error) {
+	return nil, errors.New("not for this key")
+}
+
+// TestNothingIsWrittenWhenAStepFails: an unreadable document, a sealer or
+// an opener that fails, a file that cannot be written; each is reported.
+func TestNothingIsWrittenWhenAStepFails(t *testing.T) {
+	recipient := recipientCertificate(t, x509.KeyUsageKeyEncipherment)
+	request := application.EncryptRequest{Document: "/doc.txt", Recipients: []*x509.Certificate{recipient}}
+	for name, use := range map[string]*application.EncryptDocument{
+		"unreadable":   application.NewEncryptDocument(failingFiles{}, &recordingSealer{}, time.Now),
+		"sealer fails": application.NewEncryptDocument(failingFiles{readable: map[string][]byte{"/doc.txt": []byte("x")}}, refusingSealer{}, time.Now),
+		"write fails":  application.NewEncryptDocument(failingFiles{readable: map[string][]byte{"/doc.txt": []byte("x")}}, &recordingSealer{}, time.Now),
+	} {
+		if _, err := use.Execute(context.Background(), request); err == nil {
+			t.Errorf("encrypt, %s: no error", name)
+		}
+	}
+	key, _ := signing.NewSigner("MARIA", signing.FromP12, signing.WithKeyMaterial([]byte("p12")))
+	open := application.DecryptRequest{Envelope: "/doc.txt.p7e", Key: key}
+	for name, use := range map[string]*application.DecryptDocument{
+		"unreadable":   application.NewDecryptDocument(failingFiles{}, fixedOpener{content: []byte("x")}),
+		"opener fails": application.NewDecryptDocument(failingFiles{readable: map[string][]byte{"/doc.txt.p7e": []byte("e")}}, refusingOpener{}),
+		"write fails":  application.NewDecryptDocument(failingFiles{readable: map[string][]byte{"/doc.txt.p7e": []byte("e")}}, fixedOpener{content: []byte("x")}),
+	} {
+		if _, err := use.Execute(context.Background(), open); err == nil {
+			t.Errorf("decrypt, %s: no error", name)
+		}
+	}
+}

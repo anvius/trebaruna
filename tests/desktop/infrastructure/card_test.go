@@ -199,3 +199,28 @@ func TestAPUKChangeCarriesTheCurrentAndTheNewPUKInTheEnvironment(t *testing.T) {
 		t.Errorf("environment carried %q: the new PUK in TREBARUNA_NEW_PUK, not the new PIN's variable", got)
 	}
 }
+
+// TestTheAddressBookIsReachedThroughTheCommand: list, keep and forget as
+// `trebaruna recipients`, the listing read from its JSON.
+func TestTheAddressBookIsReachedThroughTheCommand(t *testing.T) {
+	binary, recorded := fakeCommand(t, `echo '{"recipients":[{"holder":"ANNA BIANCHI","fingerprint":"a1b2","not_after":"2030-05-01T00:00:00Z","path":"/book/a1b2.pem"}]}'`)
+	book := infrastructure.CommandLineRecipientBook{BinaryPath: binary}
+	saved, err := book.Saved(context.Background())
+	if err != nil || len(saved) != 1 || saved[0].Holder != "ANNA BIANCHI" || saved[0].Path != "/book/a1b2.pem" || saved[0].NotAfter.Year() != 2030 {
+		t.Fatalf("saved %+v, %v", saved, err)
+	}
+	if arguments := recordedArguments(t, recorded); strings.Join(arguments, " ") != "recipients list --json" {
+		t.Errorf("arguments %v", arguments)
+	}
+	if err := book.Forget(context.Background(), "a1b2"); err != nil {
+		t.Fatal(err)
+	}
+	if arguments := recordedArguments(t, recorded); strings.Join(arguments, " ") != "recipients remove a1b2 --json" {
+		t.Errorf("arguments %v", arguments)
+	}
+	failing, _ := fakeCommand(t, "echo 'the certificate cannot receive an encrypted envelope' >&2; exit 2")
+	if err := (infrastructure.CommandLineRecipientBook{BinaryPath: failing}).Keep(context.Background(), "/x.pem"); err == nil ||
+		!strings.Contains(err.Error(), "cannot receive") {
+		t.Errorf("the command's reason comes back: %v", err)
+	}
+}

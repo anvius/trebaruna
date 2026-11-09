@@ -36,6 +36,14 @@ encrypt)
 decrypt)
   printf '%s\n' "$@" > ` + decrypted + `
   echo '{"path":"/tmp/offerta.pdf","size":2048}' ;;
+recipients)
+  case "$2" in
+  add) touch "$0.kept"; echo '{}' ;;
+  remove) rm -f "$0.kept"; echo '{}' ;;
+  *) if [ -e "$0.kept" ]; then
+       echo '{"recipients":[{"holder":"ANNA BIANCHI","fingerprint":"a1b2","not_after":"2030-01-01T00:00:00Z","path":"/book/a1b2.pem"}]}'
+     else echo '{"recipients":[]}'; fi ;;
+  esac ;;
 esac
 `
 	if err := os.WriteFile(binary, []byte(script), 0o755); err != nil {
@@ -141,4 +149,40 @@ func TestADroppedEnvelopeOpensTheEnvelopesWindow(t *testing.T) {
 		t.Error("the envelope became the document to sign")
 	}
 	fyne.DoAndWait(func() {})
+}
+
+// TestTheAddressBookOffersWhomYouEncryptedFor: after an envelope, its
+// recipient is kept and offered with one click; forgotten, it goes.
+func TestTheAddressBookOffersWhomYouEncryptedFor(t *testing.T) {
+	test.NewTempApp(t)
+	binary, _ := envelopeCommand(t)
+	desktop := newDesktop(test.NewTempWindow(t, nil), messaging.For(messaging.Spanish), binary)
+	desktop.window.SetContent(desktop.withTabs(desktop.buildContent("")))
+	desktop.showEnvelopes("")
+	panel := desktop.envelopes
+	settle(t, func() bool { return len(panel.savedList.Objects) == 1 })
+	if label, ok := panel.savedList.Objects[0].(*widget.Label); !ok || label.Text != panel.m.NoSavedRecipients {
+		t.Fatalf("an empty book says how it fills: %#v", panel.savedList.Objects[0])
+	}
+
+	panel.setDocument("/tmp/offerta.pdf")
+	panel.addRecipient("/tmp/anna.pem")
+	settle(t, func() bool { return len(panel.recipients) == 1 })
+	panel.encryptDocument()
+	settle(t, func() bool { return len(panel.saved) == 1 })
+	if panel.encryptStatus.Importance != widget.SuccessImportance {
+		t.Errorf("keeping the recipient leaves the envelope's outcome: %q", panel.encryptStatus.Text)
+	}
+
+	panel.removeRecipient("/tmp/anna.pem")
+	row := panel.savedList.Objects[0].(*fyne.Container)
+	buttons := row.Objects[1].(*fyne.Container)
+	test.Tap(buttons.Objects[0].(*widget.Button))
+	if len(panel.recipients) != 1 || panel.recipients[0].path != "/book/a1b2.pem" || panel.recipients[0].holder != "ANNA BIANCHI" {
+		t.Fatalf("added from the book: %+v", panel.recipients)
+	}
+	panel.removeRecipient("/book/a1b2.pem")
+	row = panel.savedList.Objects[0].(*fyne.Container)
+	test.Tap(row.Objects[1].(*fyne.Container).Objects[1].(*widget.Button))
+	settle(t, func() bool { return len(panel.saved) == 0 })
 }

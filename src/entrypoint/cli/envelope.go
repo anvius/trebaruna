@@ -26,7 +26,7 @@ func runEncrypt(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("encrypt", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	var recipients recipientList
-	flags.Var(&recipients, "to", "certificate (.pem/.cer/.crt) of a recipient; repeat for each")
+	flags.Var(&recipients, "to", "certificate (.pem/.cer/.crt) of a recipient, or saved:<fingerprint start | holder> from the address book (trebaruna recipients); repeat for each")
 	var (
 		oaep   = flags.Bool("oaep", false, "send the key with RSA-OAEP (default PKCS#1 v1.5, which every tool reads)")
 		output = flags.String("out", "", "output path (default: <document>.p7e)")
@@ -46,7 +46,12 @@ func runEncrypt(args []string, stdout, stderr io.Writer) int {
 	}
 
 	certificates := make([]*x509.Certificate, 0, len(recipients))
-	for _, path := range recipients {
+	for _, value := range recipients {
+		path, err := recipientPath(value)
+		if err != nil {
+			fmt.Fprintf(stderr, "%v\n", err)
+			return exitUsage
+		}
 		certificate, err := readCertificateFile(path)
 		if err != nil {
 			fmt.Fprintf(stderr, "%v\n", err)

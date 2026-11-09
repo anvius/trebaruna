@@ -308,6 +308,13 @@ type Catalogue struct {
 	RecipientsLabel          string
 	AddRecipient             string
 	RemoveRecipient          string
+	SavedRecipientsLabel     string
+	NoSavedRecipients        string
+	KeepRecipients           string
+	UseSavedRecipient        string
+	ForgetRecipient          string
+	SavedUntil               string
+	SavedExpired             string
 	NoRecipients             string
 	EncryptButton            string
 	EncryptingMessage        string
@@ -662,6 +669,13 @@ var spanish = Catalogue{
 	RecipientsLabel:            "Destinatarios",
 	AddRecipient:               "Añadir certificado…",
 	RemoveRecipient:            "Quitar",
+	SavedRecipientsLabel:       "Destinatarios guardados",
+	NoSavedRecipients:          "Aún no hay ninguno: se guardan al cifrar si dejas marcada la casilla de abajo.",
+	KeepRecipients:             "Guardar estos destinatarios para la próxima vez",
+	UseSavedRecipient:          "Añadir",
+	ForgetRecipient:            "Olvidar",
+	SavedUntil:                 "válido hasta el %s",
+	SavedExpired:               "caducó el %s: ya no se puede cifrar para él",
 	NoRecipients:               "Ningún destinatario todavía.",
 	EncryptButton:              "Cifrar",
 	EncryptingMessage:          "Cifrando…",
@@ -997,6 +1011,13 @@ var italian = Catalogue{
 	RecipientsLabel:            "Destinatari",
 	AddRecipient:               "Aggiungi certificato…",
 	RemoveRecipient:            "Rimuovi",
+	SavedRecipientsLabel:       "Destinatari salvati",
+	NoSavedRecipients:          "Ancora nessuno: si salvano quando cifri, se lasci spuntata la casella qui sotto.",
+	KeepRecipients:             "Salva questi destinatari per la prossima volta",
+	UseSavedRecipient:          "Aggiungi",
+	ForgetRecipient:            "Dimentica",
+	SavedUntil:                 "valido fino al %s",
+	SavedExpired:               "scaduto il %s: non si può più cifrare per lui",
 	NoRecipients:               "Ancora nessun destinatario.",
 	EncryptButton:              "Cifra",
 	EncryptingMessage:          "Cifratura in corso…",
@@ -1332,6 +1353,13 @@ var english = Catalogue{
 	RecipientsLabel:            "Recipients",
 	AddRecipient:               "Add certificate…",
 	RemoveRecipient:            "Remove",
+	SavedRecipientsLabel:       "Saved recipients",
+	NoSavedRecipients:          "None yet: they are saved when you encrypt, if the box below stays ticked.",
+	KeepRecipients:             "Keep these recipients for next time",
+	UseSavedRecipient:          "Add",
+	ForgetRecipient:            "Forget",
+	SavedUntil:                 "valid until %s",
+	SavedExpired:               "expired on %s: nothing can be encrypted for it any more",
 	NoRecipients:               "No recipients yet.",
 	EncryptButton:              "Encrypt",
 	EncryptingMessage:          "Encrypting…",

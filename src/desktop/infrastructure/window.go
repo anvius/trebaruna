@@ -333,8 +333,10 @@ func (w *Window) showEnvelopes(envelope string) {
 		window := fyne.CurrentApp().NewWindow(w.messages.EnvelopesTitle)
 		panel := newEnvelopesPanel(window, w.messages, w.palette)
 		panel.encrypt = application.NewEncryptForRecipients(CommandLineEncrypter{BinaryPath: w.binaryPath})
+		panel.book = application.NewManageRecipientBook(CommandLineRecipientBook{BinaryPath: w.binaryPath})
 		panel.open = application.NewOpenEnvelope(CommandLineEnvelopeOpener{BinaryPath: w.binaryPath})
 		panel.inspect = w.inspect
+		panel.changeBook(domain.RecipientBookChange{})
 		panel.key = w.form.chosenKey
 		panel.refused = w.form.cardRefused
 		panel.chooseKey = func() {

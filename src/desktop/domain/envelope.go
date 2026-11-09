@@ -1,6 +1,9 @@
 package domain
 
-import "strings"
+import (
+	"strings"
+	"time"
+)
 
 // EncryptionIntent is a document to encrypt for the people whose
 // certificates are given: the .p7e it becomes opens only with their keys.
@@ -53,4 +56,22 @@ type OpenedEnvelope struct {
 // IsEnvelope recognises an encrypted envelope by its suffix.
 func IsEnvelope(path string) bool {
 	return strings.HasSuffix(strings.ToLower(path), ".p7e")
+}
+
+// SavedRecipient is a certificate kept in the address book, to encrypt for
+// its holder again with one click.
+type SavedRecipient struct {
+	Holder      string
+	Fingerprint string
+	NotAfter    time.Time
+	// Path is the file the certificate is kept in.
+	Path string
+}
+
+// RecipientBookChange is what the person does to the address book: keep
+// the certificates of these files, or forget one by fingerprint; empty,
+// only list it.
+type RecipientBookChange struct {
+	Keep   []string
+	Forget string
 }

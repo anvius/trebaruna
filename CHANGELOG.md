@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A recipients' address book for `.p7e` envelopes: `trebaruna recipients
+  list|add|remove` and `encrypt --to saved:<fingerprint start | holder>`.
+  Certificates are kept as `<SHA-256>.pem` in a private directory (0700,
+  files 0600), only those that can receive envelopes now; a name two
+  certificates share is refused. The envelopes window lists the saved
+  recipients with the date each serves until (an expired one marked),
+  adds one with a click, forgets one, and keeps the recipients of an
+  envelope just made when its box stays ticked. openssl opens an envelope
+  made for a saved recipient. The encryption use cases are now fully
+  covered by tests.
+
 - Changing a card's PUK: `trebaruna-token pin change-puk` ($TREBARUNA_PUK,
   $TREBARUNA_NEW_PUK) and the window's Card → Change the PUK…. A security
   officer login with the current PUK, then C_SetPIN; a locked PUK, or a
