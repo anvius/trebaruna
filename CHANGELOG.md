@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The verification tab showed an empty heading, hint and button in every
+  language: four catalogue entries had never been written. The catalogue test
+  now walks every string field by reflection instead of a hand-kept list, which
+  is how the gap was found.
 - `make install-desktop` failed on every machine: it installed
   `packaging/trebaruna.desktop`, but the file was still `firma-it.desktop`.
 - `make package-desktop` called a script that lived in the ignored `bin/`

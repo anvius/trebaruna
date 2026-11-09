@@ -1,6 +1,7 @@
 package messaging_test
 
 import (
+	"reflect"
 	"testing"
 
 	"codeberg.org/simplicer/trebaruna/src/desktop/messaging"
@@ -25,40 +26,22 @@ func TestParseLanguageAcceptsLocaleStrings(t *testing.T) {
 	}
 }
 
+// TestEveryCatalogueIsComplete walks every string field by reflection, so a
+// field added to one language and forgotten in another fails here instead of
+// showing an empty label in the window.
 func TestEveryCatalogueIsComplete(t *testing.T) {
 	for _, language := range []messaging.Language{
 		messaging.Spanish, messaging.Italian, messaging.English,
 	} {
 		catalogue := messaging.For(language)
-
-		fields := map[string]string{
-			"WindowTitle":      catalogue.WindowTitle,
-			"Subtitle":         catalogue.Subtitle,
-			"DocumentLabel":    catalogue.DocumentLabel,
-			"CertificateLabel": catalogue.CertificateLabel,
-			"PassphraseLabel":  catalogue.PassphraseLabel,
-			"FormatLabel":      catalogue.FormatLabel,
-			"LevelLabel":       catalogue.LevelLabel,
-			"PageLabel":        catalogue.PageLabel,
-			"BoxLabel":         catalogue.BoxLabel,
-			"CaptionLabel":     catalogue.CaptionLabel,
-			"TSALabel":         catalogue.TSALabel,
-			"ResultLabel":      catalogue.ResultLabel,
-			"ChooseButton":     catalogue.ChooseButton,
-			"SignButton":       catalogue.SignButton,
-			"SigningMessage":   catalogue.SigningMessage,
-			"DoneTitle":        catalogue.DoneTitle,
-			"DoneQuestion":     catalogue.DoneQuestion,
-			"MissingDocument":  catalogue.MissingDocument,
-			"MissingKey":       catalogue.MissingKey,
-			"MissingTSA":       catalogue.MissingTSA,
-			"InvalidPage":      catalogue.InvalidPage,
-			"NoOutput":         catalogue.NoOutput,
-		}
-
-		for name, value := range fields {
-			if value == "" {
-				t.Errorf("%s.%s is empty: a missing translation must not compile silently", language, name)
+		value := reflect.ValueOf(catalogue)
+		for index := 0; index < value.NumField(); index++ {
+			field := value.Type().Field(index)
+			if field.Type.Kind() != reflect.String {
+				continue
+			}
+			if value.Field(index).String() == "" {
+				t.Errorf("%s.%s is empty: a missing translation must not ship silently", language, field.Name)
 			}
 		}
 		if catalogue.Language != language {
