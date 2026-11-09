@@ -171,15 +171,9 @@ func abs(value float64) float64 {
 
 // Sign signs the document in its empty signature field called name.
 func Sign(content []byte, name string, appearance *Appearance, signature Signature) ([]byte, error) {
-	reader, err := pdf.NewReader(bytes.NewReader(content), int64(len(content)))
+	reader, err := openForSigning(content)
 	if err != nil {
-		return nil, fmt.Errorf("read the PDF: %w", err)
-	}
-	if reader.IsEncrypted() {
-		return nil, fmt.Errorf("%w: it is encrypted", ErrUnsupported)
-	}
-	if certifiedAgainstChanges(reader) {
-		return nil, fmt.Errorf("%w: its author certified it against any change", ErrUnsupported)
+		return nil, err
 	}
 	fields := emptyFields(reader)
 	index := slices.IndexFunc(fields, func(field Field) bool { return field.Name == name })
@@ -195,7 +189,10 @@ func Sign(content []byte, name string, appearance *Appearance, signature Signatu
 	signatureID := update.allocate()
 	widgetChanges := map[string]string{}
 	if appearance != nil {
-		widgetChanges = update.writeAppearance(field, appearance)
+		widgetChanges["AP"] = fmt.Sprintf("<< /N %d 0 R >>", update.writeAppearance(field.Width(), field.Height(), appearance))
+		if field.widget.Key("F").IsNull() {
+			widgetChanges["F"] = "4" // printed
+		}
 	}
 	fieldChanges := map[string]string{"V": fmt.Sprintf("%d 0 R", signatureID)}
 	if field.field.GetPtr() == field.widget.GetPtr() {
@@ -229,19 +226,15 @@ func missingField(name string, fields []Field) error {
 }
 
 // writeAppearance writes the appearance as a form XObject of the widget's
-// size, with its objects, and returns the widget's changed entries.
-func (u *update) writeAppearance(field Field, appearance *Appearance) map[string]string {
+// size, with its objects, and returns the form's number.
+func (u *update) writeAppearance(width, height float64, appearance *Appearance) uint32 {
 	formID := u.allocate()
-	changes := map[string]string{"AP": fmt.Sprintf("<< /N %d 0 R >>", formID)}
-	if field.widget.Key("F").IsNull() {
-		changes["F"] = "4" // printed
-	}
 	ids := make([]uint32, len(appearance.Objects))
 	for position := range appearance.Objects {
 		ids[position] = u.allocate()
 	}
 	u.write(formID, fmt.Sprintf("<< /Type /XObject /Subtype /Form /BBox [0 0 %s %s] /Resources %s /Length %d >>",
-		number(field.Width()), number(field.Height()), references(appearance.Resources, ids), len(appearance.Content)), appearance.Content)
+		number(width), number(height), references(appearance.Resources, ids), len(appearance.Content)), appearance.Content)
 	for position, object := range appearance.Objects {
 		dictionary := references(object.Dictionary, ids)
 		if object.Stream != nil {
@@ -249,7 +242,23 @@ func (u *update) writeAppearance(field Field, appearance *Appearance) map[string
 		}
 		u.write(ids[position], dictionary, object.Stream)
 	}
-	return changes
+	return formID
+}
+
+// openForSigning reads a PDF this package can add a signature to: not
+// encrypted, and not certified against any change.
+func openForSigning(content []byte) (*pdf.Reader, error) {
+	reader, err := pdf.NewReader(bytes.NewReader(content), int64(len(content)))
+	if err != nil {
+		return nil, fmt.Errorf("read the PDF: %w", err)
+	}
+	if reader.IsEncrypted() {
+		return nil, fmt.Errorf("%w: it is encrypted", ErrUnsupported)
+	}
+	if certifiedAgainstChanges(reader) {
+		return nil, fmt.Errorf("%w: its author certified it against any change", ErrUnsupported)
+	}
+	return reader, nil
 }
 
 // certifiedAgainstChanges reports a certification signature whose DocMDP

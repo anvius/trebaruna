@@ -46,7 +46,7 @@ user seeing what is signed and where anything goes.
 | Signature policies (EPES) in CAdES and XAdES: AGE 1.9 and 1.8, FacturaE 3.1 and 3.0 by name, with AutoFirma 1.9's digests; any other by identifier, digest and qualifier, never downloaded; a policy named by a URL only in XAdES | built |
 | Claimed roles in XAdES (`SignerRoleV2`) | built |
 | FacturaE invoices: unsigned `Facturae` documents, XAdES enveloped, FacturaE's policy, role `emisor` by default and only the policy's roles | built (not yet checked with the administration's own validator) |
-| Signature policies in PAdES | planned (the PDF library cannot add signed attributes; refused meanwhile) |
+| Signature policies in PAdES (EPES), from the command line and afirma:// `expPolicy`: trebaruna's own incremental update and CMS envelope, in a new field with a seal per placement or none, or in a form's field | built |
 | XAdES detached: `<document>.xsig` beside the untouched document, which the signature names; verify finds it there or takes `--content` | built |
 | AutoFirma's "XAdES Detached" (an `AFIRMA` root holding `CONTENT` and the signature) for afirma:// pages | built |
 | Plain XMLDSig (`--format xmldsig`, afirma:// `XMLDSig…`): the same layouts without signed properties, level B only, no policy; verify names it XMLDSig | built |

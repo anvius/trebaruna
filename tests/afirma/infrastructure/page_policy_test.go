@@ -104,6 +104,19 @@ func TestFirmaAGEForAXAdESPage(t *testing.T) {
 	}
 }
 
+// TestFirmaAGEForAPDFPage: the policy goes in the PDF signature's signed
+// attributes (2.16.724.1.3.1.1.2.1.9, its DER in the hexadecimal
+// /Contents).
+func TestFirmaAGEForAPDFPage(t *testing.T) {
+	signed, err := signPage(t, "PAdES", map[string]string{"expPolicy": "FirmaAGE"}, onePagePDF())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.HasPrefix(signed.Signature, []byte("%PDF")) || !bytes.Contains(signed.Signature, []byte("060A60855401030101020109")) {
+		t.Error("a PAdES AGE signature declares the policy")
+	}
+}
+
 // TestPolicyRequestsTrebarunaRefuses, with AutoFirma's codes.
 func TestPolicyRequestsTrebarunaRefuses(t *testing.T) {
 	cases := []struct {
@@ -115,7 +128,6 @@ func TestPolicyRequestsTrebarunaRefuses(t *testing.T) {
 	}{
 		{"FirmaAGE19, listed and refused by AutoFirma", "CAdES", map[string]string{"expPolicy": "FirmaAGE19"}, []byte("x"), domain.InvalidPolicy},
 		{"FirmaAGE18 on a PDF", "PAdES", map[string]string{"expPolicy": "FirmaAGE18"}, onePagePDF(), domain.InvalidPolicy},
-		{"FirmaAGE on a PDF", "PAdES", map[string]string{"expPolicy": "FirmaAGE"}, onePagePDF(), domain.UnsupportedOperation},
 		{"FirmaAGE on an invoice", "FacturaE", map[string]string{"expPolicy": "FirmaAGE"}, []byte(invoice), domain.InvalidPolicy},
 		{"a policy without its digest, which AutoFirma downloads", "CAdES",
 			map[string]string{"policyIdentifier": "1.2.3.4"}, []byte("x"), domain.InvalidPolicy},

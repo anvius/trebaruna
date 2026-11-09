@@ -79,10 +79,8 @@ func (s NativePageSigner) Sign(ctx context.Context, request application.PageSign
 		signature, err = s.signASiCS(ctx, request, family, level, tsa, policy)
 	case family == "cades":
 		signature, err = s.signCades(ctx, request, level, tsa, policy)
-	case family == "pades" && !policy.IsZero():
-		return application.Signed{}, domain.Failure{Code: domain.UnsupportedOperation, Cause: "PAdES signatures with a policy are not supported yet"}
 	case family == "pades":
-		signature, err = s.signPades(ctx, request, level, tsa)
+		signature, err = s.signPades(ctx, request, level, tsa, policy)
 	case family == "xades", family == "facturae", family == "xmldsig":
 		signature, err = s.signXades(ctx, request, level, tsa, policy)
 	case family == "odf", family == "ooxml":
@@ -145,7 +143,7 @@ func (s NativePageSigner) signCades(ctx context.Context, request application.Pag
 
 // signPades signs a PDF: invisibly, as AutoFirma does, unless the page gives
 // the seal's place (signaturePage, signaturePositionOnPage…).
-func (s NativePageSigner) signPades(ctx context.Context, request application.PageSignature, level signing.Level, tsa string) ([]byte, error) {
+func (s NativePageSigner) signPades(ctx context.Context, request application.PageSignature, level signing.Level, tsa string, policy signing.SignaturePolicy) ([]byte, error) {
 	if !bytes.HasPrefix(request.Data, []byte("%PDF")) {
 		return nil, domain.Failure{Code: domain.InvalidPDF}
 	}
@@ -155,6 +153,7 @@ func (s NativePageSigner) signPades(ctx context.Context, request application.Pag
 	pades := signapp.PadesRequest{
 		Content: request.Data, Signer: request.Key, Level: level, TimestampURL: tsa,
 		Reason: request.Properties["signReason"], Location: request.Properties["signatureProductionCity"],
+		Policy: policy,
 	}
 	placement, placed, err := sealFrom(request.Properties)
 	if err != nil {

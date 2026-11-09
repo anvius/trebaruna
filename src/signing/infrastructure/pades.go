@@ -65,14 +65,11 @@ func (s *PadesSigner) SignPades(ctx context.Context, request application.PadesRe
 	}
 	defer keyPair.Close()
 
-	// The PDF library's builder cannot add signed attributes, which is where
-	// a policy goes; refusing beats signing without the policy asked for.
-	if !request.Policy.IsZero() {
-		return nil, fmt.Errorf("%w: PAdES signatures with a policy are not supported yet", domain.ErrPolicyNotForFormat)
-	}
-
-	if request.Field != "" {
-		signed, err := s.signInField(ctx, request, keyPair)
+	// A signature in an existing field, or with a policy (which goes in the
+	// signed attributes the PDF library's builder cannot add), is written
+	// by trebaruna.
+	if request.Field != "" || !request.Policy.IsZero() {
+		signed, err := s.signOwn(ctx, request, keyPair)
 		if err != nil {
 			return nil, err
 		}

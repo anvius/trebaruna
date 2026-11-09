@@ -286,7 +286,7 @@ with `policyIdentifierHash`, `policyIdentifierHashAlgorithm` and
 page gives no digest; trebaruna answers `SAF_23` instead, because it does not
 fetch what a page points at. XAdES signatures claim the roles in
 `signerClaimedRoles` (several separated by `|`). Asked for something not done
-yet — a policy in PAdES, co-signing an ASiC container, a digest the page computed, single signatures
+yet — co-signing an ASiC container, a digest the page computed, single signatures
 through the site's server (`CAdEStri` and siblings) — trebaruna answers with an
 AutoFirma error naming it, never with a different signature.
 

@@ -370,8 +370,11 @@ trebaruna sign factura.xml --policy facturae --role receptor --p12 k.p12
 trebaruna sign solicitud.txt --format cades --policy age --p12 k.p12
 ```
 
-PAdES refuses a policy for now: the PDF library writes the signed attributes
-itself and cannot add this one. FacturaE signatures have been checked with
+A PAdES signature with a policy (PAdES-EPES) is written by trebaruna, since the
+PDF library writes the signed attributes itself and cannot add this one: in a
+new field with a seal at each placement, or none, or in a form's field with
+`--field`, as an incremental update with trebaruna's CMS envelope (see
+"Signing in a form's field"). FacturaE signatures have been checked with
 openssl and signxml, not yet with the Spanish administration's own validator.
 
 ---

@@ -6,16 +6,21 @@ package integration_test
 
 import (
 	"context"
-	"errors"
+	"encoding/asn1"
+	"encoding/hex"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
 	"codeberg.org/simplicer/trebaruna/src/signing/application"
 	"codeberg.org/simplicer/trebaruna/src/signing/domain"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure"
+	verificationdomain "codeberg.org/simplicer/trebaruna/src/verification/domain"
 )
 
 // TestCadesDeclaresTheAGEPolicy: openssl verifies the signature and prints
@@ -162,17 +167,104 @@ func TestFacturaENamesItsPolicyByURL(t *testing.T) {
 	}
 }
 
-// TestPadesRefusesAPolicy: the PDF signer cannot add the attribute yet, and
-// signing without the policy asked for would mislead.
-func TestPadesRefusesAPolicy(t *testing.T) {
+// TestPadesDeclaresTheAGEPolicy: a PDF signature with a policy is written
+// by trebaruna (the PDF library cannot add the attribute), in a new field
+// with one seal per placement (the second page's annotations an object of
+// their own) or in a form's field. openssl checks each envelope over the
+// signed byte ranges and finds the policy; the PDF verifier the document.
+func TestPadesDeclaresTheAGEPolicy(t *testing.T) {
 	fixture := newFixture(t)
 	signer := buildPemSigner(t, readFile(t, fixture.keyPath), readFile(t, fixture.certPath))
-	age, _ := domain.NamedPolicy("age", domain.Pades)
-
-	_, err := infrastructure.NewPadesSigner(nil).SignPades(context.Background(), application.PadesRequest{
-		Content: blankPDFBytes(), Signer: signer, Level: domain.BES, Policy: age,
-	})
-	if !errors.Is(err, domain.ErrPolicyNotForFormat) {
-		t.Fatalf("err = %v, want ErrPolicyNotForFormat", err)
+	age, err := domain.NamedPolicy("age", domain.Pades)
+	if err != nil {
+		t.Fatal(err)
 	}
+	twoPages := []byte("%PDF-1.7\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n" +
+		"2 0 obj\n<< /Type /Pages /Kids [3 0 R 4 0 R] /Count 2 >>\nendobj\n" +
+		"3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << >> >>\nendobj\n" +
+		"4 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 842 595] /Resources << >> /Annots 5 0 R >>\nendobj\n" +
+		"5 0 obj\n[]\nendobj\n")
+	twoPages = append(twoPages, crossReferences(twoPages, 5)...)
+
+	for name, request := range map[string]application.PadesRequest{
+		"a new field, the default seal": {Content: blankPDFBytes(), Placements: []domain.SealPlacement{domain.DefaultSeal(1)}},
+		"a new field, invisible":        {Content: blankPDFBytes()},
+		"two seals on two pages": {Content: twoPages, Placements: []domain.SealPlacement{
+			mustPlacement(t, 1, 400, 700, 560, 750), mustPlacement(t, 2, 600, 60, 780, 110)}},
+		"a form's field": {Content: formPDF(false, false), Field: "form.Firma2"},
+	} {
+		request.Signer, request.Level, request.Policy, request.SignedAt = signer, domain.BES, age, timeNow()
+		signed, err := infrastructure.NewPadesSigner(nil).SignPades(context.Background(), request)
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		reports := verifyPDF(t, newLocalTSA(t), signed)
+		if len(reports) != 1 || reports[0].Integrity != verificationdomain.StatusGood {
+			t.Errorf("%s: %+v", name, reports)
+		}
+		envelope, covered := lastEnvelope(t, signed)
+		directory := t.TempDir()
+		envelopePath, coveredPath := filepath.Join(directory, "signature.p7s"), filepath.Join(directory, "covered.bin")
+		os.WriteFile(envelopePath, envelope, 0o600)
+		os.WriteFile(coveredPath, covered, 0o600)
+		verify := exec.Command("openssl", "cms", "-verify", "-binary", "-in", envelopePath, "-inform", "DER", "-content", coveredPath,
+			"-CAfile", fixture.certPath, "-purpose", "any", "-cades", "-out", os.DevNull)
+		if output, err := verify.CombinedOutput(); err != nil {
+			t.Errorf("%s: openssl refused the envelope: %v\n%s", name, err, output)
+		}
+		printed, _ := exec.Command("openssl", "cms", "-cmsout", "-print", "-in", envelopePath, "-inform", "DER").CombinedOutput()
+		if !strings.Contains(string(printed), "2.16.724.1.3.1.1.2.1.9") || strings.Contains(string(printed), "signingTime") {
+			t.Errorf("%s: the envelope does not declare the AGE policy, or declares a signing time", name)
+		}
+	}
+}
+
+// mustPlacement is a seal box on a page.
+func mustPlacement(t *testing.T, page int, left, bottom, right, top float64) domain.SealPlacement {
+	t.Helper()
+	placement, err := domain.PlaceSeal(page, left, bottom, right, top)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return placement
+}
+
+// crossReferences closes a PDF body of objects 1..count with a table.
+func crossReferences(body []byte, count int) []byte {
+	var out strings.Builder
+	start := len(body)
+	fmt.Fprintf(&out, "xref\n0 %d\n0000000000 65535 f \n", count+1)
+	for id := 1; id <= count; id++ {
+		offset := strings.Index(string(body), fmt.Sprintf("\n%d 0 obj", id)) + 1
+		fmt.Fprintf(&out, "%010d 00000 n \n", offset)
+	}
+	fmt.Fprintf(&out, "trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n", count+1, start)
+	return []byte(out.String())
+}
+
+// lastEnvelope reads the last signature's CMS envelope and the bytes its
+// /ByteRange covers.
+func lastEnvelope(t *testing.T, signed []byte) ([]byte, []byte) {
+	t.Helper()
+	ranges := regexp.MustCompile(`/ByteRange \[0 (\d+) (\d+) (\d+)\s*\]`).FindAllSubmatch(signed, -1)
+	if len(ranges) == 0 {
+		t.Fatal("no /ByteRange")
+	}
+	last := ranges[len(ranges)-1]
+	start, _ := strconv.Atoi(string(last[1]))
+	end, _ := strconv.Atoi(string(last[2]))
+	length, _ := strconv.Atoi(string(last[3]))
+	hexed := strings.TrimRight(string(signed[start+1:end-1]), "0")
+	if len(hexed)%2 == 1 {
+		hexed += "0"
+	}
+	envelope, err := hex.DecodeString(hexed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var envelopeDER asn1.RawValue
+	if _, err := asn1.Unmarshal(envelope, &envelopeDER); err == nil {
+		envelope = envelopeDER.FullBytes
+	}
+	return envelope, append(append([]byte{}, signed[:start]...), signed[end:end+length]...)
 }

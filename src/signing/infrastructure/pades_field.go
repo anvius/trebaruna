@@ -9,10 +9,28 @@ import (
 	"time"
 
 	"codeberg.org/simplicer/trebaruna/src/signing/application"
+	"codeberg.org/simplicer/trebaruna/src/signing/domain"
 	"codeberg.org/simplicer/trebaruna/src/signing/domain/identity"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/cms"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/pdffield"
 )
+
+// signOwn writes a PDF signature the PDF library cannot: in an existing
+// field, or with a policy.
+func (s *PadesSigner) signOwn(ctx context.Context, request application.PadesRequest, keyPair KeyPair) ([]byte, error) {
+	if request.Field != "" {
+		return s.signInField(ctx, request, keyPair)
+	}
+	return s.signInNewField(ctx, request, keyPair)
+}
+
+// signingMoment is the request's instant, the stamp's and /M alike.
+func signingMoment(request application.PadesRequest) time.Time {
+	if request.SignedAt.IsZero() {
+		return time.Now()
+	}
+	return request.SignedAt
+}
 
 // minimumLegibleSize is the smallest type a seal in a field may use, in
 // points: the box of a field is the form's, and a seal scaled to a tiny one
@@ -20,19 +38,14 @@ import (
 const minimumLegibleSize = 3.0
 
 // signInField signs the PDF in its empty signature field request.Field,
-// the seal drawn in the field's box unless the request is invisible. The
-// CMS envelope is trebaruna's own (a PAdES baseline one: no signing-time
-// attribute, the time is /M), timestamped for level T.
+// the seal drawn in the field's box unless the request is invisible.
 func (s *PadesSigner) signInField(ctx context.Context, request application.PadesRequest, keyPair KeyPair) ([]byte, error) {
 	fields, err := pdffield.EmptyFields(request.Content)
 	if err != nil {
 		return nil, err
 	}
 	index := slices.IndexFunc(fields, func(field pdffield.Field) bool { return field.Name == request.Field })
-	moment := request.SignedAt
-	if moment.IsZero() {
-		moment = time.Now()
-	}
+	moment := signingMoment(request)
 
 	var appearance *pdffield.Appearance
 	if index >= 0 && !request.Invisible {
@@ -49,12 +62,54 @@ func (s *PadesSigner) signInField(ctx context.Context, request application.Pades
 		}
 	}
 
-	envelope := func(signed []byte) ([]byte, error) {
+	return s.signWithRoom(ctx, request, keyPair, func(signature pdffield.Signature) ([]byte, error) {
+		return pdffield.Sign(request.Content, request.Field, appearance, signature)
+	})
+}
+
+// signInNewField signs the PDF in a new field, with a seal at each
+// placement or none: the PDF library's job, done here for what it cannot
+// add to the signed attributes, a signature policy (PAdES-EPES).
+func (s *PadesSigner) signInNewField(ctx context.Context, request application.PadesRequest, keyPair KeyPair) ([]byte, error) {
+	placements := request.Placements
+	if len(placements) == 0 && !request.Placement.IsZero() {
+		placements = []domain.SealPlacement{request.Placement}
+	}
+	placements, err := placeOnPages(request.Content, placements)
+	if err != nil {
+		return nil, err
+	}
+	moment := signingMoment(request)
+	holder := identity.FromCertificate(keyPair.Certificate)
+	widgets := make([]pdffield.Widget, 0, len(placements))
+	for _, placement := range placements {
+		left, bottom, right, top := placement.Box()
+		marks, err := layoutSeal(right-left, top-bottom, holder, moment, request.Rubric)
+		if err != nil {
+			return nil, fmt.Errorf("page %d: %w", placement.Page(), err)
+		}
+		appearance, err := marks.fieldAppearance()
+		if err != nil {
+			return nil, err
+		}
+		widgets = append(widgets, pdffield.Widget{Page: placement.Page(), Rect: [4]float64{left, bottom, right, top}, Appearance: appearance})
+	}
+	return s.signWithRoom(ctx, request, keyPair, func(signature pdffield.Signature) ([]byte, error) {
+		return pdffield.SignNew(request.Content, widgets, signature)
+	})
+}
+
+// envelope builds trebaruna's CMS envelope over the bytes a PDF signature
+// covers: a PAdES baseline one (no signing-time attribute, the time is
+// /M), with the policy given, timestamped for level T.
+func (s *PadesSigner) envelope(ctx context.Context, request application.PadesRequest, keyPair KeyPair, policy []cms.Attribute) func([]byte) ([]byte, error) {
+	return func(signed []byte) ([]byte, error) {
 		built, err := cms.Sign(cms.Request{
-			Content:     signed,
-			Certificate: keyPair.Certificate,
-			Chain:       keyPair.Chain,
-			Signer:      keyPair.Signer,
+			Content:         signed,
+			Certificate:     keyPair.Certificate,
+			Chain:           keyPair.Chain,
+			Signer:          keyPair.Signer,
+			ExtraAttributes: policy,
 		})
 		if err != nil {
 			return nil, err
@@ -72,7 +127,16 @@ func (s *PadesSigner) signInField(ctx context.Context, request application.Pades
 		}
 		return built.WithTimestamp(response)
 	}
+}
 
+// signWithRoom signs with trebaruna's envelope, its room doubled when it
+// does not fit.
+func (s *PadesSigner) signWithRoom(ctx context.Context, request application.PadesRequest, keyPair KeyPair, sign func(pdffield.Signature) ([]byte, error)) ([]byte, error) {
+	policy, err := policyAttributes(request.Policy)
+	if err != nil {
+		return nil, err
+	}
+	envelope := s.envelope(ctx, request, keyPair, policy)
 	reserve := 8192
 	for _, certificate := range keyPair.Certificates() {
 		reserve += len(certificate.Raw)
@@ -81,11 +145,11 @@ func (s *PadesSigner) signInField(ctx context.Context, request application.Pades
 		reserve += 12288
 	}
 	for attempt := 0; ; attempt++ {
-		signed, err := pdffield.Sign(request.Content, request.Field, appearance, pdffield.Signature{
+		signed, err := sign(pdffield.Signature{
 			Name:     keyPair.Name,
 			Reason:   request.Reason,
 			Location: request.Location,
-			SignedAt: moment,
+			SignedAt: signingMoment(request),
 			Reserve:  reserve,
 			Envelope: envelope,
 		})

@@ -230,8 +230,8 @@ OpenSC is found on its own (`--module` for a vendor driver); see
   the identity is unvouched.
 - **A policy is a promise, not a lookup.** The digest goes into the signature
   as given or as AutoFirma 1.9 declares it for the named policies; trebaruna
-  never downloads a policy document. CAdES and XAdES carry policies; PAdES
-  refuses one for now. A policy named by a URL (FacturaE's) fits only XAdES.
+  never downloads a policy document. CAdES, XAdES and PAdES carry policies
+  (PAdES written by trebaruna itself). A policy named by a URL (FacturaE's) fits only XAdES.
 - **FacturaE policies sign FacturaE invoices only**: an XML whose root is
   `Facturae`, not signed yet, XAdES enveloped. The role must be one the policy
   names: `emisor`, `receptor`, `tercero` (or `supplier`, `customer`,

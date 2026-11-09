@@ -61,6 +61,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- PAdES signatures carry a signature policy (PAdES-EPES): `sign --policy`
+  on a PDF, and afirma:// `expPolicy` (FirmaAGE) or `policyIdentifier` on
+  a PAdES page, were refused. The PDF library cannot add the attribute, so
+  trebaruna writes these signatures itself (pdffield.SignNew): a new field
+  "Signature n" with one widget per seal, a widget kid each when several
+  (or one empty widget when invisible), added to each page's /Annots (the
+  page or its annotations array written again) and to the form's /Fields
+  (a form created when the PDF has none), /SigFlags 3; its CMS envelope
+  with signature-policy-identifier and no signing-time. With `--field` it
+  goes in the form's field.
+
 - `sign --field <name>` signs a PDF form in its empty signature field (by
   its fully qualified name), the seal drawn in the field's box, or none
   with `--invisible`; an unknown name is refused with the empty fields the

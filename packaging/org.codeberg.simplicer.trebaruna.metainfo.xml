@@ -54,6 +54,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.49.0-unstable" date="2026-11-09">
+      <description>
+        <p>PDF signatures declare a signature policy, such as the AGE's, from the command line and from web pages.</p>
+      </description>
+    </release>
     <release version="0.48.1-unstable" date="2026-11-09">
       <description>
         <p>A PAdES B-LT signature added to a signed PDF keys its revocation entry to itself.</p>
