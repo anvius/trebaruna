@@ -37,6 +37,9 @@ var Catalan = Catalogue{
 	StatusUnknown: "sense verificar",
 
 	Findings: map[string]string{
+		"signing_certificate.bound":              "el certificat mostrat és el que anomena la signatura",
+		"signing_certificate.mismatch":           "el certificat mostrat no és el que anomena la signatura: la identitat que dona no es va signar",
+		"signing_certificate.missing":            "la signatura no anomena el seu certificat a les propietats signades: el certificat mostrat no hi queda vinculat",
 		"signature.intact":                       "el contingut signat no s'ha modificat",
 		"content.detached":                       "signatura separada: comprovada amb el document que té al costat",
 		"content.missing":                        "signatura separada: cal el document signat per comparar-ne els bytes (posa'l al costat de la signatura: el mateix nom sense .p7s, o el que indica la signatura XML; o indica'l amb --content)",

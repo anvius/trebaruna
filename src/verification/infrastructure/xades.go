@@ -174,6 +174,9 @@ func (v *XadesVerifier) report(document *etree.Document, signature *etree.Elemen
 		})
 	}
 	describeIntegrity(err, &report)
+	if report.Integrity == domain.StatusGood {
+		describeSigningCertificate(signature, certificate, &report)
+	}
 
 	v.describeSigningTime(signature, &report)
 	v.describeSignatureTimeStamp(signature, &report)

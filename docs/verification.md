@@ -137,6 +137,9 @@ anyone can verify it again.
 | `certificate.expired_at_signing` | bad | Expired when it signed |
 | `certificate.validity_unproven` | warn | No trusted signing time, so the validity window cannot be judged |
 | `certificate.not_yet_valid_at_signing` | bad | Signed before the certificate was issued |
+| `signing_certificate.bound` | good | The certificate shown is the one the signature names in its signed attributes (CAdES and PAdES signing-certificate-v2 or v1, XAdES SigningCertificate or V2) |
+| `signing_certificate.mismatch` | bad | The signature names another certificate: one with the same key and another identity was put in its place. The signature counts as broken |
+| `signing_certificate.missing` | warn | The signature names no certificate (older PKCS#7, plain XAdES properties): the identity shown is not bound to it |
 
 ### Revocation
 
@@ -233,6 +236,10 @@ worse than none.
 - The certificate chain, including when the document carries only the leaf. Most
   Spanish and Italian signing tools embed just the signer certificate, so the
   issuer is resolved from the trust list itself.
+- That the certificate shown is the one the signer signed for: the digest in
+  the signed signing-certificate attribute (CAdES, PAdES) or property
+  (XAdES), against the certificate carried. Without it, a certificate with
+  the same key and another name could stand in for the real one.
 - The certificate validity window, against the proven signing time when a trusted
   timestamp exists.
 - Revocation, when `--offline=false`, with the answer recorded as checked or not.

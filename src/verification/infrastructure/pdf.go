@@ -123,12 +123,18 @@ func (v *PDFVerifier) Extract(path string) ([]domain.SignerReport, error) {
 		return nil, fmt.Errorf("verify %q: the verifier returned nothing", path)
 	}
 
+	envelopes := signatureEnvelopes(path)
 	reports := make([]domain.SignerReport, 0, len(response.Signers))
 	for index := range response.Signers {
 		// A pointer is needed because describeChain reads nested fields; taking
 		// one per iteration keeps the copies local to this loop.
 		signer := &response.Signers[index]
-		reports = append(reports, v.translate(signer, index))
+		report := v.translate(signer, index)
+		bindPDFCertificate(envelopes, signer, &report)
+		if report.Integrity == domain.StatusBad {
+			report.Trust = domain.TrustBroken
+		}
+		reports = append(reports, report)
 	}
 	return reports, nil
 }

@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- verify checks that the certificate a signature carries is the one it
+  names in its signed attributes: signing-certificate-v2 or v1 in CAdES and
+  PAdES (read from each PDF signature field's envelope, which the PDF
+  library does not hand back), SigningCertificate or SigningCertificateV2 in
+  XAdES (only when SignedInfo covers the signed properties). A certificate
+  with the same key and another identity put in its place left the
+  signature value valid and the wrong name on the report; it is now
+  `signing_certificate.mismatch` and the signature counts as broken. A
+  signature that names no certificate gets a warning. Among CMS
+  certificates answering to the same identifier, the named one is chosen.
+
 ### Added
 
 - Accessibility (plan G8), after a WCAG 2.2 AA review of the window

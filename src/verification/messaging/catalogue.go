@@ -96,6 +96,9 @@ var Spanish = Catalogue{
 	StatusUnknown: "sin verificar",
 
 	Findings: map[string]string{
+		"signing_certificate.bound":              "el certificado mostrado es el que nombra la firma",
+		"signing_certificate.mismatch":           "el certificado mostrado no es el que nombra la firma: la identidad que da no se firmó",
+		"signing_certificate.missing":            "la firma no nombra su certificado en las propiedades firmadas: el certificado mostrado no queda vinculado a ella",
 		"signature.intact":                       "el contenido firmado no se ha modificado",
 		"content.detached":                       "firma separada: comprobada con el documento que tiene al lado",
 		"content.missing":                        "firma separada: hace falta el documento firmado para comparar sus bytes (ponlo al lado de la firma: el mismo nombre sin .p7s, o el que nombra la firma XML; o indícalo con --content)",
@@ -169,6 +172,9 @@ var Italian = Catalogue{
 	StatusUnknown: "non verificato",
 
 	Findings: map[string]string{
+		"signing_certificate.bound":              "il certificato mostrato è quello indicato dalla firma",
+		"signing_certificate.mismatch":           "il certificato mostrato non è quello indicato dalla firma: l'identità che riporta non è stata firmata",
+		"signing_certificate.missing":            "la firma non indica il suo certificato nelle proprietà firmate: il certificato mostrato non è legato a essa",
 		"signature.intact":                       "il contenuto firmato non è stato modificato",
 		"content.detached":                       "firma separata: verificata con il documento che le sta accanto",
 		"content.missing":                        "firma separata: serve il documento firmato per confrontarne i byte (mettilo accanto alla firma: lo stesso nome senza .p7s, o quello che la firma XML indica; oppure indicalo con --content)",
@@ -242,6 +248,9 @@ var English = Catalogue{
 	StatusUnknown: "unverified",
 
 	Findings: map[string]string{
+		"signing_certificate.bound":              "the certificate shown is the one the signature names",
+		"signing_certificate.mismatch":           "the certificate shown is not the one the signature names: the identity it gives was not signed",
+		"signing_certificate.missing":            "the signature names no signing certificate in its signed properties: the certificate shown is not bound to it",
 		"signature.intact":                       "the signed content is unaltered",
 		"content.detached":                       "detached signature: checked against the document beside it",
 		"content.missing":                        "detached signature: the signed document is needed to compare its bytes (put it beside the signature: the same name without .p7s, or the name an XML signature gives; or name it with --content)",
@@ -346,6 +355,7 @@ func init() {
 		"trustlist.stale", "format.unsupported", "verification.warning",
 		"signature.qualified", "signature.not_qualified",
 		"signature.unverifiable", "container.covers", "container.unsigned_files", "relationships.libxmlsec_form", "timestamp.legacy_form",
+		"signing_certificate.bound", "signing_certificate.mismatch", "signing_certificate.missing",
 	}
 
 	for name, catalogue := range languages {

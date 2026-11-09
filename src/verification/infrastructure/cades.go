@@ -121,7 +121,8 @@ func (v *CadesVerifier) Extract(path string) ([]domain.SignerReport, error) {
 
 	// Several signatures, or counter-signatures, go through the tree path,
 	// which checks each node on its own.
-	if tree, err := parseSignatureTree(content, nil); err == nil && tree.isTree() {
+	tree, treeErr := parseSignatureTree(content, nil)
+	if treeErr == nil && tree.isTree() {
 		if len(tree.content) == 0 && v.contentPath != "" {
 			if tree.content, err = os.ReadFile(v.contentPath); err != nil {
 				return nil, fmt.Errorf("read the signed document %q: %w", v.contentPath, err)
@@ -183,6 +184,9 @@ func (v *CadesVerifier) Extract(path string) ([]domain.SignerReport, error) {
 	}
 
 	signer := parsed.GetOnlySigner()
+	if treeErr == nil && len(tree.signers) == 1 {
+		describeESSCertificate(essCertificateDigests(tree.signers[0].SignedAttrs), signer, &report)
+	}
 	describeCertificate(signer, &report)
 
 	// The issuer travels with the container, so a revocation query can be built

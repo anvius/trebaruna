@@ -38,6 +38,9 @@ var Basque = Catalogue{
 	StatusUnknown: "egiaztatu gabe",
 
 	Findings: map[string]string{
+		"signing_certificate.bound":              "erakutsitako ziurtagiria sinadurak izendatzen duena da",
+		"signing_certificate.mismatch":           "erakutsitako ziurtagiria ez da sinadurak izendatzen duena: ematen duen identitatea ez zen sinatu",
+		"signing_certificate.missing":            "sinadurak ez du bere ziurtagiria izendatzen sinatutako propietateetan: erakutsitako ziurtagiria ez dago harekin lotuta",
 		"signature.intact":                       "sinatutako edukia ez da aldatu",
 		"content.detached":                       "sinadura bereizia: ondoan duen dokumentuarekin egiaztatua",
 		"content.missing":                        "sinadura bereizia: sinatutako dokumentua behar da haren byteak alderatzeko (jarri sinaduraren ondoan: izen bera .p7s gabe, edo XML sinadurak aipatzen duen izena; edo adierazi --content aukerarekin)",

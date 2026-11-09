@@ -36,6 +36,9 @@ var Galician = Catalogue{
 	StatusUnknown: "sen verificar",
 
 	Findings: map[string]string{
+		"signing_certificate.bound":              "o certificado mostrado é o que nomea a sinatura",
+		"signing_certificate.mismatch":           "o certificado mostrado non é o que nomea a sinatura: a identidade que dá non se asinou",
+		"signing_certificate.missing":            "a sinatura non nomea o seu certificado nas propiedades asinadas: o certificado mostrado non queda vinculado a ela",
 		"signature.intact":                       "o contido asinado non se modificou",
 		"content.detached":                       "sinatura separada: comprobada co documento que ten ao lado",
 		"content.missing":                        "sinatura separada: fai falta o documento asinado para comparar os seus bytes (pono ao lado da sinatura: o mesmo nome sen .p7s, ou o que nomea a sinatura XML; ou indícao con --content)",

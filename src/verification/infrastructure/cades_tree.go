@@ -169,15 +169,11 @@ func (v *CadesVerifier) checkNode(tree signatureTree, signer treeSignerInfo, sig
 	// Several carried certificates may answer to the same identifier (a
 	// re-issued certificate keeps issuer and serial in careless PKIs); the one
 	// whose key verifies is the signer's.
-	candidates := tree.certificatesFor(signer.SID)
-	var certificate *x509.Certificate
-	err := fmt.Errorf("the signing certificate is not in the envelope")
-	for _, candidate := range candidates {
-		certificate = candidate
-		if err = verifyNode(signer, candidate, signed); err == nil {
-			break
-		}
-	}
+	// The one the signed ESS attribute names is preferred.
+	named := essCertificateDigests(signer.SignedAttrs)
+	certificate, err := chooseSigner(tree.certificatesFor(signer.SID), named, func(candidate *x509.Certificate) error {
+		return verifyNode(signer, candidate, signed)
+	})
 
 	if err != nil {
 		report.Integrity = domain.StatusBad
@@ -195,6 +191,7 @@ func (v *CadesVerifier) checkNode(tree signatureTree, signer treeSignerInfo, sig
 		})
 	}
 
+	describeESSCertificate(named, certificate, &report)
 	describeCertificate(certificate, &report)
 	report.Revocation.Certificate = certificate
 	report.Revocation.Issuer = issuerFromSet(tree.certificates, certificate)
