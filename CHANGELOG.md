@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Window: ASiC containers, FacturaE invoices and declared policies. Any
+  document can go in an ASiC-S container (`.asics`, with a CAdES
+  signature); a batch can go in one ASiC-E container under one XAdES
+  signature, in one command. A FacturaE invoice is recognised by its root
+  and offered as an invoice first: signed inside with FacturaE's policy
+  (3.1 or 3.0) and the role the person chooses (issuer, recipient, third
+  party). More options offers the policy a signature declares (AGE 1.9 for
+  PDF; AGE 1.9 or 1.8 for CMS and XML). Six languages; a policy that does
+  not fit the format, or an invoice without its policy or role, is said
+  before anything runs.
+
 - afirma:// `visibleSignature=want|optional`: when a page asks for a
   visible seal without fixing its place, the approval window shows the PDF
   with the main window's seal canvas (drag, draw, find free space, turn

@@ -5,6 +5,7 @@
 package domain
 
 import (
+	"slices"
 	"strings"
 
 	transparency "codeberg.org/simplicer/trebaruna/src/transparency/domain"
@@ -35,6 +36,13 @@ type SigningIntent struct {
 	// RubricPath is a PNG or JPEG of a handwritten signature for the
 	// visible seal of a PDF, drawn beside the certificate data.
 	RubricPath string
+	// MoreDocuments are signed with DocumentPath under one signature, in an
+	// ASiC-E container.
+	MoreDocuments []string
+	// Policy is the signature policy declared; Role the role claimed in an
+	// XML signature (a FacturaE invoice's: emisor, receptor, tercero).
+	Policy PolicyName
+	Role   string
 }
 
 // Validate reports what is missing, before any process is spawned.
@@ -57,6 +65,12 @@ func (i SigningIntent) Validate() error {
 	}
 	if i.Seal.Page < 1 {
 		return Problem{Code: ProblemInvalidPage}
+	}
+	if !slices.Contains(i.Format.Policies(), i.Policy) && i.Policy != PolicyNone {
+		return Problem{Code: ProblemPolicyFormat, Detail: string(i.Policy)}
+	}
+	if i.Format == FormatFacturaE && (i.Policy == PolicyNone || !slices.Contains(InvoiceRoles(), i.Role)) {
+		return Problem{Code: ProblemInvoiceRole}
 	}
 	return nil
 }
@@ -109,8 +123,13 @@ func (i SigningIntent) OutputName() string {
 		return addedSignatureName(i.DocumentPath, "cosigned")
 	case FormatCountersign:
 		return addedSignatureName(i.DocumentPath, "countersigned")
-	case FormatXAdES:
+	case FormatXAdES, FormatFacturaE:
 		return trimExtension(i.DocumentPath) + "_signed.xml"
+	case FormatASiCS:
+		return i.DocumentPath + ".asics"
+	case FormatASiCE:
+		// The container takes the first document's name.
+		return i.DocumentPath + ".asice"
 	case FormatODF, FormatOOXML:
 		return trimExtension(i.DocumentPath) + "_signed" + i.DocumentPath[len(trimExtension(i.DocumentPath)):]
 	default:
@@ -218,6 +237,14 @@ const (
 	// ProblemMissingRecipient means a document was to be encrypted for
 	// nobody.
 	ProblemMissingRecipient ProblemCode = "missing_recipient"
+
+	// ProblemPolicyFormat means the policy chosen does not fit the format;
+	// Detail names it.
+	ProblemPolicyFormat ProblemCode = "policy_format"
+
+	// ProblemInvoiceRole means a FacturaE invoice is signed without its
+	// policy or with a role it does not know.
+	ProblemInvoiceRole ProblemCode = "invoice_role"
 )
 
 // StopsCard reports whether the problem forbids trying the card again with

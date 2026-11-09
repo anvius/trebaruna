@@ -12,6 +12,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -85,9 +86,11 @@ type signForm struct {
 	fingerprint string
 	certificate string
 	format      domain.SignatureFormat
-	summary     *domain.CertificateSummary
-	reading     int
-	debounce    *time.Timer
+	// offered are the formats on offer for the document, as listed.
+	offered  []domain.SignatureFormat
+	summary  *domain.CertificateSummary
+	reading  int
+	debounce *time.Timer
 	// run starts background work; pause is the wait after typing (zero: read
 	// at once).
 	run   background
@@ -103,9 +106,16 @@ type signForm struct {
 	standing       *widget.Label
 	formatChoice   *widget.RadioGroup
 	formatNote     *widget.Label
-	sealNote       *widget.Label
-	fieldChoice    *widget.Select
-	fieldBox       *fyne.Container
+	// invoiceBox asks a FacturaE invoice's role and policy version;
+	// policyBox, under More options, the policy other signatures declare.
+	invoiceBox    *fyne.Container
+	invoiceRole   *widget.RadioGroup
+	invoicePolicy *widget.Select
+	policyBox     *fyne.Container
+	policy        *widget.Select
+	sealNote      *widget.Label
+	fieldChoice   *widget.Select
+	fieldBox      *fyne.Container
 	// rubric is the handwritten signature the seal carries, from rubricPath.
 	rubricPath   string
 	rubricRow    *fileRow
@@ -178,6 +188,17 @@ func newSignForm(
 	form.formatChoice = widget.NewRadioGroup(nil, func(label string) { form.chooseFormat(label) })
 	form.formatChoice.Required = true
 	form.formatNote = caption("")
+	form.invoiceRole = widget.NewRadioGroup([]string{m.InvoiceRoleIssuer, m.InvoiceRoleReceiver, m.InvoiceRoleThird}, nil)
+	form.invoiceRole.Required = true
+	form.invoiceRole.SetSelected(m.InvoiceRoleIssuer)
+	form.invoicePolicy = widget.NewSelect([]string{m.PolicyFacturaELabel, m.PolicyFacturaE30Label}, nil)
+	form.invoicePolicy.SetSelected(m.PolicyFacturaELabel)
+	form.invoiceBox = container.NewVBox(caption(m.InvoiceDetected), fieldLabel(m.InvoiceRoleLabel), form.invoiceRole,
+		fieldLabel(m.PolicyLabel), form.invoicePolicy)
+	form.invoiceBox.Hide()
+	form.policy = widget.NewSelect(nil, nil)
+	form.policyBox = container.NewVBox(fieldLabel(m.PolicyLabel), form.policy, caption(m.PolicyHint))
+	form.policyBox.Hide()
 	form.sealNote = caption("")
 	form.fieldChoice = widget.NewSelect(nil, func(string) { form.formatChanged() })
 	form.fieldBox = container.NewVBox(fieldLabel(m.FormFieldLabel), form.fieldChoice, caption(m.FormFieldsOffered))
@@ -264,6 +285,7 @@ func (f *signForm) object() fyne.CanvasObject {
 		f.step(3, m.StepSignature),
 		f.formatChoice,
 		f.formatNote,
+		f.invoiceBox,
 		f.fieldBox,
 		f.sealNote,
 		f.rubricBox,
@@ -273,6 +295,7 @@ func (f *signForm) object() fyne.CanvasObject {
 			f.timestampBox,
 			fieldLabel(m.ReasonLabel), f.reason,
 			fieldLabel(m.LocationLabel), f.location,
+			f.policyBox,
 		))),
 	)
 
@@ -328,7 +351,27 @@ func (f *signForm) setDocument(path string) {
 	f.afterSign.Hide()
 	f.status.SetText("")
 
-	formats := domain.FormatsFor(path)
+	f.offerFormats(domain.FormatsFor(path))
+	if strings.EqualFold(filepath.Ext(path), ".xml") {
+		// A FacturaE invoice is signed as one: its root says so.
+		f.run(func() {
+			content, err := os.ReadFile(path)
+			if err != nil || !signingdomain.IsFacturaEInvoice(content) {
+				return
+			}
+			fyne.Do(func() {
+				if f.document == path && len(f.batch) == 0 {
+					f.offerFormats(domain.InvoiceFormats())
+				}
+			})
+		})
+	}
+}
+
+// offerFormats lists the formats on offer for the document, the first
+// chosen.
+func (f *signForm) offerFormats(formats []domain.SignatureFormat) {
+	f.offered = formats
 	f.format = formats[0]
 	labels := make([]string, 0, len(formats))
 	for _, format := range formats {
@@ -357,7 +400,7 @@ func (f *signForm) chooseFormat(label string) {
 		}
 		return
 	}
-	for _, format := range domain.FormatsFor(f.document) {
+	for _, format := range f.offered {
 		if f.formatLabel(format) == label && format != f.format {
 			f.format = format
 			f.formatChanged()
@@ -403,6 +446,7 @@ func (f *signForm) formatChanged() {
 		return
 	}
 	f.documentRow.show(f.document, f.documentNote())
+	f.policiesChanged()
 
 	f.rubricBox.Hide()
 	f.fieldBox.Hide()
@@ -483,8 +527,83 @@ func (f *signForm) formatLabel(format domain.SignatureFormat) string {
 		return f.m.FormatCountersignLabel
 	case domain.FormatEach:
 		return f.m.FormatEachLabel
+	case domain.FormatASiCS:
+		return f.m.FormatASiCSLabel
+	case domain.FormatASiCE:
+		return f.m.FormatASiCELabel
+	case domain.FormatFacturaE:
+		return f.m.FormatFacturaELabel
 	}
 	return f.m.FormatPAdESLabel
+}
+
+// policyLabel names a policy in the person's language.
+func (f *signForm) policyLabel(policy domain.PolicyName) string {
+	switch policy {
+	case domain.PolicyAGE:
+		return f.m.PolicyAGELabel
+	case domain.PolicyAGE18:
+		return f.m.PolicyAGE18Label
+	case domain.PolicyFacturaE:
+		return f.m.PolicyFacturaELabel
+	case domain.PolicyFacturaE30:
+		return f.m.PolicyFacturaE30Label
+	}
+	return f.m.PolicyNoneLabel
+}
+
+// policiesChanged offers the policies the format can declare: an invoice's
+// in its own box, the others under More options, keeping the one chosen
+// when it still fits.
+func (f *signForm) policiesChanged() {
+	f.invoiceBox.Hide()
+	f.policyBox.Hide()
+	if f.format == domain.FormatFacturaE {
+		f.invoiceBox.Show()
+		return
+	}
+	policies := f.format.Policies()
+	if len(policies) == 0 {
+		return
+	}
+	labels := make([]string, len(policies))
+	for index, policy := range policies {
+		labels[index] = f.policyLabel(policy)
+	}
+	chosen := f.policy.Selected
+	f.policy.Options = labels
+	if !slices.Contains(labels, chosen) {
+		chosen = labels[0]
+	}
+	f.policy.SetSelected(chosen)
+	f.policyBox.Show()
+}
+
+// chosenPolicy and chosenRole are what the signature declares.
+func (f *signForm) chosenPolicy() domain.PolicyName {
+	selected := f.policy.Selected
+	if f.format == domain.FormatFacturaE {
+		selected = f.invoicePolicy.Selected
+	}
+	for _, policy := range f.format.Policies() {
+		if f.policyLabel(policy) == selected {
+			return policy
+		}
+	}
+	return domain.PolicyNone
+}
+
+func (f *signForm) chosenRole() string {
+	if f.format != domain.FormatFacturaE {
+		return ""
+	}
+	labels := []string{f.m.InvoiceRoleIssuer, f.m.InvoiceRoleReceiver, f.m.InvoiceRoleThird}
+	for index, label := range labels {
+		if label == f.invoiceRole.Selected {
+			return domain.InvoiceRoles()[index]
+		}
+	}
+	return ""
 }
 
 // ---- rubric ----
@@ -851,6 +970,13 @@ func (f *signForm) batchChanged() {
 		names = append(names, filepath.Base(path))
 	}
 	f.documentRow.showMany(fmt.Sprintf(f.m.BatchTitle, len(f.batch)), strings.Join(names, "\n"))
+	if f.format == domain.FormatASiCE {
+		// One container under one signature carries no seal.
+		f.pages.withoutVisibleSeal()
+		f.sealNote.Hide()
+		f.invisible.Disable()
+		return
+	}
 	message := f.m.BatchSeal
 	if f.invisible.Checked {
 		message = f.m.InvisibleExplained
@@ -866,6 +992,12 @@ func (f *signForm) batchChanged() {
 func (f *signForm) signBatch(base domain.SigningIntent) {
 	documents := append([]string{}, f.batch...)
 	format := f.format
+	if format == domain.FormatASiCE {
+		// One signature over every document: one container, one command.
+		base.DocumentPath, base.MoreDocuments, base.Format = documents[0], documents[1:], format
+		f.signOne(base)
+		return
+	}
 	f.signButton.Disable()
 	f.afterSign.Hide()
 
@@ -942,6 +1074,8 @@ func (f *signForm) sign() {
 		TimestampPassword: f.tsaPassword.Text,
 		Reason:            strings.TrimSpace(f.reason.Text),
 		Location:          strings.TrimSpace(f.location.Text),
+		Policy:            f.chosenPolicy(),
+		Role:              f.chosenRole(),
 	}
 	f.keyIntent(&intent)
 	if field, inField := f.chosenField(); inField {
@@ -969,7 +1103,12 @@ func (f *signForm) sign() {
 		f.report(translate(err, f.m), widget.DangerImportance)
 		return
 	}
+	f.signOne(intent)
+}
 
+// signOne signs off the UI thread and reports in place: one document, or
+// one container over a batch.
+func (f *signForm) signOne(intent domain.SigningIntent) {
 	f.signButton.Disable()
 	f.afterSign.Hide()
 	f.report(f.m.SigningMessage, widget.LowImportance)

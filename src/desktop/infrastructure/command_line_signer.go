@@ -75,16 +75,28 @@ func (s CommandLineSigner) Sign(ctx context.Context, intent domain.SigningIntent
 func signArguments(intent domain.SigningIntent) []string {
 	format := string(intent.Format)
 	switch intent.Format {
-	case domain.FormatCAdESDetached, domain.FormatCosign, domain.FormatCountersign:
+	case domain.FormatCAdESDetached, domain.FormatCosign, domain.FormatCountersign, domain.FormatASiCS:
 		format = string(domain.FormatCAdES)
+	case domain.FormatASiCE, domain.FormatFacturaE:
+		format = string(domain.FormatXAdES)
 	}
-	arguments := []string{
-		"sign", intent.DocumentPath,
+	arguments := append([]string{"sign", intent.DocumentPath}, intent.MoreDocuments...)
+	arguments = append(arguments,
 		"--format", format,
 		"--level", string(intent.Level),
 		"--json",
+	)
+	if intent.Policy != domain.PolicyNone {
+		arguments = append(arguments, "--policy", string(intent.Policy))
+	}
+	if intent.Role != "" {
+		arguments = append(arguments, "--role", intent.Role)
 	}
 	switch intent.Format {
+	case domain.FormatASiCS:
+		arguments = append(arguments, "--asic", "s")
+	case domain.FormatASiCE:
+		arguments = append(arguments, "--asic", "e")
 	case domain.FormatCAdESDetached:
 		arguments = append(arguments, "--detached")
 	case domain.FormatCosign:

@@ -504,6 +504,10 @@ func translate(err error, m messaging.Catalogue) string {
 		return m.MissingTSAMessage(problem.Detail)
 	case domain.ProblemInvalidPage:
 		return m.InvalidPage
+	case domain.ProblemPolicyFormat:
+		return m.PolicyNotForFormat
+	case domain.ProblemInvoiceRole:
+		return m.InvoiceRoleMissing
 	case domain.ProblemNoOutput:
 		return m.NoOutputMessage(problem.Detail)
 	case domain.ProblemLockedCertificate:

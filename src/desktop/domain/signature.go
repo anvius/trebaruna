@@ -38,12 +38,61 @@ const (
 	// FormatEach signs every document of a batch in its own conventional
 	// format: signed PDF, signed XML, .p7m for anything else.
 	FormatEach SignatureFormat = "each"
+
+	// FormatASiCS packs the document and a CAdES signature over it in an
+	// ASiC-S container (.asics), which keeps them together.
+	FormatASiCS SignatureFormat = "asic-s"
+
+	// FormatASiCE signs every document of a batch with one XAdES signature,
+	// all in one ASiC-E container (.asice).
+	FormatASiCE SignatureFormat = "asic-e"
+
+	// FormatFacturaE signs a FacturaE invoice inside it, declaring
+	// FacturaE's policy and the role the signer has in it.
+	FormatFacturaE SignatureFormat = "facturae"
 )
 
 // BatchFormats lists what a batch can be signed as.
 func BatchFormats() []SignatureFormat {
-	return []SignatureFormat{FormatEach, FormatCAdES, FormatCAdESDetached}
+	return []SignatureFormat{FormatEach, FormatCAdES, FormatCAdESDetached, FormatASiCE}
 }
+
+// InvoiceFormats lists what a FacturaE invoice can be signed as: as an
+// invoice first.
+func InvoiceFormats() []SignatureFormat {
+	return []SignatureFormat{FormatFacturaE, FormatXAdES, FormatCAdES, FormatCAdESDetached, FormatASiCS}
+}
+
+// PolicyName is a signature policy the signature declares (EPES), by the
+// name the command line takes; empty declares none.
+type PolicyName string
+
+const (
+	PolicyNone       PolicyName = ""
+	PolicyAGE        PolicyName = "age"
+	PolicyAGE18      PolicyName = "age18"
+	PolicyFacturaE   PolicyName = "facturae"
+	PolicyFacturaE30 PolicyName = "facturae30"
+)
+
+// Policies lists the policies a format can declare, the default first: AGE
+// 1.9 for PDF signatures (1.8 has no PDF form), both for CMS and XML, the
+// FacturaE versions for an invoice, none elsewhere.
+func (f SignatureFormat) Policies() []PolicyName {
+	switch f {
+	case FormatPAdES:
+		return []PolicyName{PolicyNone, PolicyAGE}
+	case FormatCAdES, FormatCAdESDetached, FormatXAdES:
+		return []PolicyName{PolicyNone, PolicyAGE, PolicyAGE18}
+	case FormatFacturaE:
+		return []PolicyName{PolicyFacturaE, PolicyFacturaE30}
+	}
+	return nil
+}
+
+// InvoiceRoles are the roles a FacturaE signature may claim, the issuer's
+// first.
+func InvoiceRoles() []string { return []string{"emisor", "receptor", "tercero"} }
 
 // For resolves the batch choice for one document.
 func (f SignatureFormat) For(documentPath string) SignatureFormat {
@@ -68,16 +117,16 @@ func FormatsFor(documentPath string) []SignatureFormat {
 		// A container takes a parallel signature of the kind it holds.
 		return []SignatureFormat{FormatCosign}
 	case ".pdf":
-		return []SignatureFormat{FormatPAdES, FormatCAdES, FormatCAdESDetached}
+		return []SignatureFormat{FormatPAdES, FormatCAdES, FormatCAdESDetached, FormatASiCS}
 	case ".xml":
-		return []SignatureFormat{FormatXAdES, FormatCAdES, FormatCAdESDetached}
+		return []SignatureFormat{FormatXAdES, FormatCAdES, FormatCAdESDetached, FormatASiCS}
 	case ".odt", ".ods", ".odp", ".odg", ".odf", ".odm", ".ott", ".ots", ".otp", ".otg":
-		return []SignatureFormat{FormatODF, FormatCAdES, FormatCAdESDetached}
+		return []SignatureFormat{FormatODF, FormatCAdES, FormatCAdESDetached, FormatASiCS}
 	case ".docx", ".docm", ".dotx", ".dotm", ".xlsx", ".xlsm", ".xltx", ".xltm",
 		".pptx", ".pptm", ".potx", ".potm", ".ppsx", ".ppsm":
-		return []SignatureFormat{FormatOOXML, FormatCAdES, FormatCAdESDetached}
+		return []SignatureFormat{FormatOOXML, FormatCAdES, FormatCAdESDetached, FormatASiCS}
 	}
-	return []SignatureFormat{FormatCAdES, FormatCAdESDetached}
+	return []SignatureFormat{FormatCAdES, FormatCAdESDetached, FormatASiCS}
 }
 
 // HasVisibleSeal reports whether the format puts a mark on a page.

@@ -327,7 +327,7 @@ func TestABatchSignsEachDocumentInItsFormat(t *testing.T) {
 	form.setCertificate("/tmp/rossi.p12")
 
 	form.setDocuments([]string{"/tmp/a.pdf", "/tmp/b.xml", "/tmp/rotto.txt"})
-	if form.format != domain.FormatEach || len(form.formatChoice.Options) != 3 {
+	if form.format != domain.FormatEach || len(form.formatChoice.Options) != 4 {
 		t.Fatalf("format %s, options %v", form.format, form.formatChoice.Options)
 	}
 	test.Tap(form.signButton)

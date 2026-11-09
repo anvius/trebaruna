@@ -9,10 +9,10 @@ import (
 
 func TestTheDocumentDecidesWhichFormatsMakeSense(t *testing.T) {
 	cases := map[string][]domain.SignatureFormat{
-		"/tmp/contratto.PDF":    {domain.FormatPAdES, domain.FormatCAdES, domain.FormatCAdESDetached},
-		"/tmp/fattura.xml":      {domain.FormatXAdES, domain.FormatCAdES, domain.FormatCAdESDetached},
-		"/tmp/offerta.docx":     {domain.FormatOOXML, domain.FormatCAdES, domain.FormatCAdESDetached},
-		"/tmp/senza-estensio":   {domain.FormatCAdES, domain.FormatCAdESDetached},
+		"/tmp/contratto.PDF":    {domain.FormatPAdES, domain.FormatCAdES, domain.FormatCAdESDetached, domain.FormatASiCS},
+		"/tmp/fattura.xml":      {domain.FormatXAdES, domain.FormatCAdES, domain.FormatCAdESDetached, domain.FormatASiCS},
+		"/tmp/offerta.docx":     {domain.FormatOOXML, domain.FormatCAdES, domain.FormatCAdESDetached, domain.FormatASiCS},
+		"/tmp/senza-estensio":   {domain.FormatCAdES, domain.FormatCAdESDetached, domain.FormatASiCS},
 		"/tmp/atto.pdf.p7m":     {domain.FormatCosign, domain.FormatCountersign, domain.FormatCAdES},
 		"/tmp/offerta.txt.p7s":  {domain.FormatCosign, domain.FormatCountersign},
 		"/tmp/expediente.ASICE": {domain.FormatCosign},
@@ -110,7 +110,7 @@ func TestAnApproachingExpiryIsWorthMentioning(t *testing.T) {
 }
 
 func TestABatchResolvesItsFormatPerDocument(t *testing.T) {
-	if formats := domain.BatchFormats(); len(formats) != 3 || formats[0] != domain.FormatEach {
+	if formats := domain.BatchFormats(); len(formats) != 4 || formats[0] != domain.FormatEach || formats[3] != domain.FormatASiCE {
 		t.Fatalf("BatchFormats = %v", formats)
 	}
 	cases := map[string]domain.SignatureFormat{
@@ -124,5 +124,51 @@ func TestABatchResolvesItsFormatPerDocument(t *testing.T) {
 		if got := domain.FormatCAdESDetached.For(path); got != domain.FormatCAdESDetached {
 			t.Errorf("a forced format stays as it is, got %s", got)
 		}
+	}
+}
+
+// TestEachFormatDeclaresThePoliciesItCanCarry: AGE 1.9 in a PDF, both AGE
+// versions in CMS and XML, FacturaE's for an invoice, none in containers
+// or office documents; an invoice needs its policy and a known role.
+func TestEachFormatDeclaresThePoliciesItCanCarry(t *testing.T) {
+	cases := map[domain.SignatureFormat][]domain.PolicyName{
+		domain.FormatPAdES:    {domain.PolicyNone, domain.PolicyAGE},
+		domain.FormatXAdES:    {domain.PolicyNone, domain.PolicyAGE, domain.PolicyAGE18},
+		domain.FormatFacturaE: {domain.PolicyFacturaE, domain.PolicyFacturaE30},
+		domain.FormatASiCS:    nil,
+		domain.FormatOOXML:    nil,
+	}
+	for format, want := range cases {
+		if got := format.Policies(); len(got) != len(want) || (len(want) > 0 && got[len(got)-1] != want[len(want)-1]) {
+			t.Errorf("%s: %v, want %v", format, got, want)
+		}
+	}
+	base := domain.SigningIntent{DocumentPath: "/tmp/a.pdf", Key: domain.CertificateFile{Path: "/tmp/k.p12"}, Format: domain.FormatPAdES,
+		Level: domain.LevelBasic, Seal: domain.SealChoice{Page: 1}}
+	for name, test := range map[string]struct {
+		change func(*domain.SigningIntent)
+		code   domain.ProblemCode
+	}{
+		"AGE 1.8 in a PDF":    {func(i *domain.SigningIntent) { i.Policy = domain.PolicyAGE18 }, domain.ProblemPolicyFormat},
+		"a policy in ASiC":    {func(i *domain.SigningIntent) { i.Format, i.Policy = domain.FormatASiCS, domain.PolicyAGE }, domain.ProblemPolicyFormat},
+		"an invoice, no role": {func(i *domain.SigningIntent) { i.Format, i.Policy = domain.FormatFacturaE, domain.PolicyFacturaE }, domain.ProblemInvoiceRole},
+		"an invoice, a guess": {func(i *domain.SigningIntent) {
+			i.Format, i.Policy, i.Role = domain.FormatFacturaE, domain.PolicyFacturaE, "jefe"
+		}, domain.ProblemInvoiceRole},
+		"an invoice, no policy": {func(i *domain.SigningIntent) { i.Format, i.Role = domain.FormatFacturaE, "emisor" }, domain.ProblemInvoiceRole},
+	} {
+		intent := base
+		test.change(&intent)
+		if problem, ok := intent.Validate().(domain.Problem); !ok || problem.Code != test.code {
+			t.Errorf("%s: %v", name, intent.Validate())
+		}
+	}
+	valid := base
+	valid.Format, valid.Policy, valid.Role = domain.FormatFacturaE, domain.PolicyFacturaE, "tercero"
+	if err := valid.Validate(); err != nil {
+		t.Errorf("an invoice signed by a third party: %v", err)
+	}
+	if invoice := domain.InvoiceFormats(); invoice[0] != domain.FormatFacturaE {
+		t.Errorf("an invoice is offered as one first: %v", invoice)
 	}
 }

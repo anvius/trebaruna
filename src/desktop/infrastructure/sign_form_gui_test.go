@@ -125,7 +125,7 @@ func TestAPDFOffersASignedPDFOrAnEnvelope(t *testing.T) {
 
 	form.setDocument("/tmp/contratto.pdf")
 
-	if len(form.formatChoice.Options) != 3 || form.format != domain.FormatPAdES {
+	if len(form.formatChoice.Options) != 4 || form.format != domain.FormatPAdES {
 		t.Fatalf("options %v, format %s: want PAdES first and CAdES offered", form.formatChoice.Options, form.format)
 	}
 	if form.documentRow.note.Text != "Se guardará como contratto_signed.pdf" {
@@ -148,7 +148,7 @@ func TestAnyOtherFileGoesInAnEnvelopeOrBesideIt(t *testing.T) {
 
 	form.setDocument("/tmp/offerta.txt")
 
-	if form.format != domain.FormatCAdES || len(form.formatChoice.Options) != 2 {
+	if form.format != domain.FormatCAdES || len(form.formatChoice.Options) != 3 {
 		t.Fatalf("format %s, options %v: a .txt goes in an envelope or gets a .p7s beside it", form.format, form.formatChoice.Options)
 	}
 	form.formatChoice.SetSelected(form.m.FormatDetachedLabel)
@@ -165,7 +165,7 @@ func TestAWordFileIsSignedInsideFirst(t *testing.T) {
 
 	form.setDocument("/tmp/offerta.docx")
 
-	if form.format != domain.FormatOOXML || len(form.formatChoice.Options) != 3 || form.formatChoice.Options[0] != form.m.FormatOOXMLLabel {
+	if form.format != domain.FormatOOXML || len(form.formatChoice.Options) != 4 || form.formatChoice.Options[0] != form.m.FormatOOXMLLabel {
 		t.Fatalf("format %s, options %v", form.format, form.formatChoice.Options)
 	}
 	if form.documentRow.note.Text != "Se guardará como offerta_signed.docx" {
@@ -453,5 +453,88 @@ func TestAFormsFieldTakesTheSeal(t *testing.T) {
 	settle(t, func() bool { return fixture.desktop.pages.canvas != nil && !fixture.desktop.pages.canvas.locked })
 	if fixture.desktop.pages.field != nil {
 		t.Error("back to the page, the seal is placed again")
+	}
+}
+
+// TestAnInvoiceIsSignedAsOne: a FacturaE invoice is recognised by its
+// root, offered as an invoice first, and signed with its policy and the
+// role the person chooses.
+func TestAnInvoiceIsSignedAsOne(t *testing.T) {
+	fixture := newFormFixture(t, scriptedCertificate{summary: qualifiedRossi()})
+	form := fixture.desktop.form
+	signer := &collectingSigner{}
+	form.signing = application.NewSignFromDesktop(signer, func(string) bool { return true })
+	form.setCertificate("/tmp/rossi.p12")
+	invoice := filepath.Join(t.TempDir(), "factura-2026-114.xml")
+	if err := os.WriteFile(invoice, []byte(`<fe:Facturae xmlns:fe="http://www.facturae.gob.es/formato/Versiones/Facturaev3_2_2.xml"><FileHeader/></fe:Facturae>`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	form.setDocument(invoice)
+	settle(t, func() bool { return form.format == domain.FormatFacturaE })
+	if !form.invoiceBox.Visible() || form.policyBox.Visible() || form.formatChoice.Options[0] != form.m.FormatFacturaELabel {
+		t.Fatalf("invoice box %t, policy box %t, options %v", form.invoiceBox.Visible(), form.policyBox.Visible(), form.formatChoice.Options)
+	}
+	if !strings.HasPrefix(form.documentRow.note.Text, "Se guardará como factura-2026-114_signed.xml") {
+		t.Errorf("note = %q", form.documentRow.note.Text)
+	}
+	form.invoiceRole.SetSelected(form.m.InvoiceRoleReceiver)
+	test.Tap(form.signButton)
+	settle(t, func() bool { signer.mu.Lock(); defer signer.mu.Unlock(); return len(signer.intents) == 1 })
+	intent := signer.intents[0]
+	if intent.Format != domain.FormatFacturaE || intent.Policy != domain.PolicyFacturaE || intent.Role != "receptor" {
+		t.Errorf("intent %s, %s, %s", intent.Format, intent.Policy, intent.Role)
+	}
+}
+
+// TestAPDFSignatureCanDeclareAPolicy: under More options, the policies a
+// PDF signature can carry; an envelope offers AGE 1.8 as well, a container
+// none.
+func TestAPDFSignatureCanDeclareAPolicy(t *testing.T) {
+	fixture := newFormFixture(t, scriptedCertificate{summary: qualifiedRossi()})
+	form := fixture.desktop.form
+	signer := &collectingSigner{}
+	form.signing = application.NewSignFromDesktop(signer, func(string) bool { return true })
+	form.setCertificate("/tmp/rossi.p12")
+	form.setDocument("/tmp/contratto.pdf")
+	if !form.policyBox.Visible() || len(form.policy.Options) != 2 || form.policy.Selected != form.m.PolicyNoneLabel {
+		t.Fatalf("policies %v, chosen %q", form.policy.Options, form.policy.Selected)
+	}
+	form.formatChoice.SetSelected(form.m.FormatCAdESLabel)
+	if len(form.policy.Options) != 3 {
+		t.Errorf("an envelope declares either AGE version: %v", form.policy.Options)
+	}
+	form.formatChoice.SetSelected(form.m.FormatASiCSLabel)
+	if form.policyBox.Visible() {
+		t.Error("a container declares no policy here")
+	}
+	form.formatChoice.SetSelected(form.m.FormatPAdESLabel)
+	form.policy.SetSelected(form.m.PolicyAGELabel)
+	form.invisible.SetChecked(true)
+	test.Tap(form.signButton)
+	settle(t, func() bool { signer.mu.Lock(); defer signer.mu.Unlock(); return len(signer.intents) == 1 })
+	if signer.intents[0].Policy != domain.PolicyAGE {
+		t.Errorf("policy %q", signer.intents[0].Policy)
+	}
+}
+
+// TestABatchGoesInOneASiCEContainer: the documents of a batch under one
+// signature, in one command.
+func TestABatchGoesInOneASiCEContainer(t *testing.T) {
+	fixture := newFormFixture(t, scriptedCertificate{summary: qualifiedRossi()})
+	form := fixture.desktop.form
+	signer := &collectingSigner{}
+	form.signing = application.NewSignFromDesktop(signer, func(string) bool { return true })
+	form.setCertificate("/tmp/rossi.p12")
+	form.setDocuments([]string{"/tmp/a.pdf", "/tmp/b.xml", "/tmp/c.dwg"})
+	form.formatChoice.SetSelected(form.m.FormatASiCELabel)
+	if form.format != domain.FormatASiCE || form.invisible.Disabled() == false {
+		t.Fatalf("format %s, the seal choice off: %t", form.format, form.invisible.Disabled())
+	}
+	test.Tap(form.signButton)
+	settle(t, func() bool { return strings.HasPrefix(form.status.Text, "Firmado") })
+	signer.mu.Lock()
+	defer signer.mu.Unlock()
+	if len(signer.intents) != 1 || signer.intents[0].DocumentPath != "/tmp/a.pdf" || len(signer.intents[0].MoreDocuments) != 2 {
+		t.Errorf("one command over the three documents: %+v", signer.intents)
 	}
 }

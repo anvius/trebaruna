@@ -336,3 +336,37 @@ func TestTheFormFieldsAreReadFromTheFieldsCommand(t *testing.T) {
 		}
 	}
 }
+
+// TestContainersInvoicesAndPoliciesBecomeFlags: an ASiC-S of one document,
+// an ASiC-E of several under one signature, a FacturaE invoice with its
+// policy and role, and a policy declared by a PDF signature.
+func TestContainersInvoicesAndPoliciesBecomeFlags(t *testing.T) {
+	for name, test := range map[string]struct {
+		change func(*domain.SigningIntent)
+		want   []string
+	}{
+		"ASiC-S": {func(i *domain.SigningIntent) { i.Format = domain.FormatASiCS },
+			[]string{"sign /tmp/contratto.pdf --format cades", "--asic s"}},
+		"ASiC-E": {func(i *domain.SigningIntent) {
+			i.Format, i.MoreDocuments = domain.FormatASiCE, []string{"/tmp/anexo.xml", "/tmp/plano.dwg"}
+		}, []string{"sign /tmp/contratto.pdf /tmp/anexo.xml /tmp/plano.dwg --format xades", "--asic e"}},
+		"FacturaE": {func(i *domain.SigningIntent) {
+			i.DocumentPath, i.Format, i.Policy, i.Role = "/tmp/factura.xml", domain.FormatFacturaE, domain.PolicyFacturaE30, "receptor"
+		}, []string{"sign /tmp/factura.xml --format xades", "--policy facturae30", "--role receptor"}},
+		"PAdES with AGE": {func(i *domain.SigningIntent) { i.Policy = domain.PolicyAGE },
+			[]string{"--format pades", "--policy age"}},
+	} {
+		binary, recorded := fakeCommand(t, "echo '"+receiptJSON+"'")
+		intent := fullIntent()
+		test.change(&intent)
+		if _, err := (infrastructure.CommandLineSigner{BinaryPath: binary}).Sign(context.Background(), intent); err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		line := strings.Join(recordedArguments(t, recorded), " ")
+		for _, wanted := range test.want {
+			if !strings.Contains(line, wanted) {
+				t.Errorf("%s: %q lacks %q", name, line, wanted)
+			}
+		}
+	}
+}

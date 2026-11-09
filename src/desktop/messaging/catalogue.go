@@ -368,6 +368,23 @@ type Catalogue struct {
 	FormatWrapLabel        string
 	CountersignatureOf     string
 	FormatEachLabel        string
+	FormatASiCSLabel       string
+	FormatASiCELabel       string
+	FormatFacturaELabel    string
+	InvoiceRoleLabel       string
+	InvoiceRoleIssuer      string
+	InvoiceRoleReceiver    string
+	InvoiceRoleThird       string
+	PolicyLabel            string
+	PolicyNoneLabel        string
+	PolicyAGELabel         string
+	PolicyAGE18Label       string
+	PolicyFacturaELabel    string
+	PolicyFacturaE30Label  string
+	PolicyHint             string
+	InvoiceDetected        string
+	PolicyNotForFormat     string
+	InvoiceRoleMissing     string
 	BatchTitle             string
 	BatchSeal              string
 	BatchProgress          string
@@ -693,6 +710,23 @@ var spanish = Catalogue{
 	FormatWrapLabel:            "Envolver en otro sobre .p7m (modo antiguo)",
 	CountersignatureOf:         "Contrafirma de la firma %s",
 	FormatEachLabel:            "Cada uno en su formato: PDF firmado, XML firmado, .p7m para el resto",
+	FormatASiCSLabel:           "Contenedor ASiC-S (.asics): el documento y su firma juntos",
+	FormatASiCELabel:           "Un contenedor ASiC-E con todos (.asice), bajo una sola firma",
+	FormatFacturaELabel:        "Factura FacturaE: firma dentro, con la política de FacturaE",
+	InvoiceRoleLabel:           "Firmas la factura como",
+	InvoiceRoleIssuer:          "emisor",
+	InvoiceRoleReceiver:        "receptor",
+	InvoiceRoleThird:           "tercero",
+	PolicyLabel:                "Política de firma que declara",
+	PolicyNoneLabel:            "Ninguna",
+	PolicyAGELabel:             "AGE 1.9 (Administración General del Estado)",
+	PolicyAGE18Label:           "AGE 1.8",
+	PolicyFacturaELabel:        "FacturaE 3.1",
+	PolicyFacturaE30Label:      "FacturaE 3.0",
+	PolicyHint:                 "Solo si la sede o el destinatario lo piden: la firma declara seguir esa política.",
+	InvoiceDetected:            "Es una factura FacturaE: se firma dentro, con la política de FacturaE y tu papel en ella.",
+	PolicyNotForFormat:         "Esa política no se puede declarar en este formato.",
+	InvoiceRoleMissing:         "Una factura FacturaE se firma con su política y como emisor, receptor o tercero.",
 	BatchTitle:                 "%d documentos",
 	BatchSeal:                  "En un lote, cada PDF lleva el sello en la esquina inferior derecha de su primera página.",
 	BatchProgress:              "Firmando %d de %d…",
@@ -1003,6 +1037,23 @@ var italian = Catalogue{
 	FormatWrapLabel:            "Racchiudi in un'altra busta .p7m (modo tradizionale)",
 	CountersignatureOf:         "Controfirma della firma %s",
 	FormatEachLabel:            "Ognuno nel suo formato: PDF firmato, XML firmato, .p7m per gli altri",
+	FormatASiCSLabel:           "Contenitore ASiC-S (.asics): il documento e la sua firma insieme",
+	FormatASiCELabel:           "Un contenitore ASiC-E con tutti (.asice), sotto un'unica firma",
+	FormatFacturaELabel:        "Fattura FacturaE: firma interna, con la politica FacturaE",
+	InvoiceRoleLabel:           "Firmi la fattura come",
+	InvoiceRoleIssuer:          "emittente (emisor)",
+	InvoiceRoleReceiver:        "destinatario (receptor)",
+	InvoiceRoleThird:           "terzo (tercero)",
+	PolicyLabel:                "Politica di firma dichiarata",
+	PolicyNoneLabel:            "Nessuna",
+	PolicyAGELabel:             "AGE 1.9 (Amministrazione statale spagnola)",
+	PolicyAGE18Label:           "AGE 1.8",
+	PolicyFacturaELabel:        "FacturaE 3.1",
+	PolicyFacturaE30Label:      "FacturaE 3.0",
+	PolicyHint:                 "Solo se la sede o il destinatario lo chiedono: la firma dichiara di seguire quella politica.",
+	InvoiceDetected:            "È una fattura FacturaE: si firma all'interno, con la politica FacturaE e il tuo ruolo.",
+	PolicyNotForFormat:         "Questa politica non si può dichiarare in questo formato.",
+	InvoiceRoleMissing:         "Una fattura FacturaE si firma con la sua politica e come emittente, destinatario o terzo.",
 	BatchTitle:                 "%d documenti",
 	BatchSeal:                  "In un lotto, ogni PDF riceve il timbro nell'angolo in basso a destra della prima pagina.",
 	BatchProgress:              "Firma %d di %d…",
@@ -1313,6 +1364,23 @@ var english = Catalogue{
 	FormatWrapLabel:            "Wrap in another .p7m envelope (the old way)",
 	CountersignatureOf:         "Counter-signature of signature %s",
 	FormatEachLabel:            "Each in its own format: signed PDF, signed XML, .p7m for the rest",
+	FormatASiCSLabel:           "ASiC-S container (.asics): the document and its signature together",
+	FormatASiCELabel:           "One ASiC-E container with them all (.asice), under one signature",
+	FormatFacturaELabel:        "FacturaE invoice: signed inside, with FacturaE's policy",
+	InvoiceRoleLabel:           "You sign the invoice as",
+	InvoiceRoleIssuer:          "issuer (emisor)",
+	InvoiceRoleReceiver:        "recipient (receptor)",
+	InvoiceRoleThird:           "third party (tercero)",
+	PolicyLabel:                "Signature policy it declares",
+	PolicyNoneLabel:            "None",
+	PolicyAGELabel:             "AGE 1.9 (Spanish State Administration)",
+	PolicyAGE18Label:           "AGE 1.8",
+	PolicyFacturaELabel:        "FacturaE 3.1",
+	PolicyFacturaE30Label:      "FacturaE 3.0",
+	PolicyHint:                 "Only when the office or the recipient asks: the signature declares it follows that policy.",
+	InvoiceDetected:            "This is a FacturaE invoice: it is signed inside, with FacturaE's policy and your role in it.",
+	PolicyNotForFormat:         "That policy cannot be declared in this format.",
+	InvoiceRoleMissing:         "A FacturaE invoice is signed with its policy, as issuer, recipient or third party.",
 	BatchTitle:                 "%d documents",
 	BatchSeal:                  "In a batch, every PDF gets the seal in the bottom-right corner of its first page.",
 	BatchProgress:              "Signing %d of %d…",

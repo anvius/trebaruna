@@ -48,7 +48,15 @@ Nothing the document or the certificate already says is asked for.
 |---|---|---|
 | **1 Document** | Choose any file, or drop it on the window | The formats that fit it, and the name the signed file will get |
 | **2 Certificate** | **File**: choose a `.p12`, `.pfx` or `.pem` and type its passphrase. **Card**: pick a certificate of the card in the reader and type its PIN. **Firefox**: pick a certificate of the Firefox store | Holder, identifier, issuer, expiry, and whether a trusted list vouches for it; for a card, which certificate signs and how many PIN attempts are at stake |
-| **3 Signature** | Pick signed PDF, `.p7m` envelope or detached `.p7s`; for a `.p7m`/`.p7s`, add a parallel signature, counter-sign, or wrap it again | The seal position, from where it sits on the page |
+| **3 Signature** | Pick signed PDF, `.p7m` envelope, detached `.p7s` or an ASiC-S container (`.asics`, the document and its signature together); for a `.p7m`/`.p7s`, add a parallel signature, counter-sign, or wrap it again; for a FacturaE invoice, your role in it | The seal position, from where it sits on the page; for an invoice, that it is one |
+
+A **FacturaE invoice** is recognised by its content, not its name: it is
+offered as *FacturaE invoice* first, signed inside with FacturaE's policy
+(3.1, or 3.0 if asked), and step 3 asks whether you sign it as issuer,
+recipient or third party. **More options → Signature policy it declares**
+offers, only when an office or a recipient asks for it, AGE 1.9 for a signed
+PDF, and AGE 1.9 or 1.8 for an envelope or a signed XML; containers and office
+documents declare none.
 
 The certificate is read as soon as the passphrase is typed, so a wrong
 passphrase, an expired certificate or an issuer no trusted list knows is said
@@ -325,9 +333,11 @@ Linux and Windows, `Cmd` on macOS):
 
 Dropping several files on the signing tab, or **File → Sign a folder…**, starts
 a batch: every document with the same settings, each in its own format unless
-an envelope or a detached signature is chosen for all; PDFs get the seal in the
-corner of their first page (or none, with the invisible option); the result
-lists what failed and why.
+an envelope or a detached signature is chosen for all, or *One ASiC-E container
+with them all*, which puts every document under one signature in a single
+`.asice` named after the first; PDFs get the seal in the corner of their first
+page (or none, with the invisible option); the result lists what failed and
+why.
 
 Dropping a file on the window does what the file suggests: a `.p12`, `.pfx` or
 `.pem` becomes the certificate; a `.p7e` goes to the envelopes window; on the
