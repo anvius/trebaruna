@@ -40,7 +40,9 @@ jobs:
         run: |
           make package-desktop
           cp dist/trebaruna-*-linux-amd64.tar.gz dist/release/
-          (cd dist/release && sha256sum trebaruna-* > SHA256SUMS)
+          sudo apt-get install -y dpkg-dev
+          cp "$(bash packaging/build-deb.sh)" dist/release/
+          (cd dist/release && sha256sum trebaruna[-_]* > SHA256SUMS)
       # Signing is ready for when a key exists (ADR-0017): add the minisign
       # secret key as MINISIGN_SECRET_KEY and its password as MINISIGN_PASSWORD.
       - name: Sign the sums

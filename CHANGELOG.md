@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- CI (plan G6): the test suite on Windows and macOS; on Windows the window,
+  the card CLI, the zip and the MSI (WiX 5); on Linux the .deb installed
+  and removed for real, the AppImage (appimagetool 1.9.1 pinned by digest)
+  run as the command line, and the Flatpak in Flathub's builder image. The
+  release attaches the .deb and lists it in SHA256SUMS. Not run yet:
+  nothing has been published since.
+
 - Packages (plan G5):
   - `make package-deb`: a `.deb` with the window, the CLI that reads cards,
     the launcher and its URL handlers, the icons, an AppStream description

@@ -93,6 +93,10 @@ jobs:
           # Fyne needs cgo for Cocoa, which only exists on a macOS runner. This
           # is why the .app cannot be cross-compiled from Linux.
           go-version: '1.27'
+      # The suite without cgo, as make check runs it; a test that needs a
+      # tool the runner lacks skips itself.
+      - name: Tests
+        run: CGO_ENABLED=0 go test ./tests/... -count=1
       - name: Build and package
         run: VERSION="$(cat VERSION)" ./packaging/macos/build-app.sh
       - name: Smoke test the CLI inside the bundle
@@ -146,3 +150,107 @@ jobs:
         with:
           name: trebaruna-desktop-linux-amd64
           path: bin/trebaruna-desktop
+
+  windows:
+    name: Windows build, tests and installer
+    runs-on: windows-latest
+    needs: test
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27'
+          cache: true
+      # The suite without cgo, as make check runs it; a test that needs a
+      # tool the runner lacks skips itself.
+      - name: Tests
+        run: CGO_ENABLED=0 go test ./tests/... -count=1
+      # WiX 5 (MS-RL): later majors add a maintenance-fee EULA.
+      - name: WiX Toolset
+        run: dotnet tool install --global wix --version 5.0.2
+      # The window and the card CLI need cgo: the runner image carries MinGW.
+      - name: Zip and installer
+        run: bash packaging/package-desktop.sh windows
+      - name: Smoke test
+        run: |
+          stage=$(ls -d dist/trebaruna-*-windows-amd64 | head -n1)
+          test "$("$stage/trebaruna.exe" version | tr -d '\r')" = "$(cat VERSION)"
+          test -f "$stage.msi"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: trebaruna-windows-amd64
+          path: |
+            dist/trebaruna-*-windows-amd64.zip
+            dist/trebaruna-*-windows-amd64.msi
+
+  packages:
+    name: Linux packages
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27'
+      - name: Toolchain and checkers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc pkg-config libgl1-mesa-dev xorg-dev \
+            libxkbcommon-dev libwayland-dev libegl1-mesa-dev dpkg-dev desktop-file-utils appstream
+      # The package is installed for real, then removed.
+      - name: .deb
+        run: |
+          deb=$(bash packaging/build-deb.sh)
+          dpkg-deb --info "$deb"
+          sudo apt-get install -y "./$deb"
+          test "$(trebaruna version)" = "$(cat VERSION)"
+          desktop-file-validate /usr/share/applications/trebaruna.desktop
+          appstreamcli validate --no-net /usr/share/metainfo/org.codeberg.simplicer.trebaruna.metainfo.xml
+          sudo apt-get remove -y trebaruna
+      # appimagetool 1.9.1, pinned by the digest GitHub publishes for it. The
+      # runner has no FUSE, so it runs extracted.
+      - name: appimagetool
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/appimagetool.AppImage" \
+            https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage
+          echo "ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0  $RUNNER_TEMP/appimagetool.AppImage" | sha256sum -c -
+          chmod +x "$RUNNER_TEMP/appimagetool.AppImage"
+          mkdir -p "$RUNNER_TEMP/bin"
+          printf '#!/bin/sh\nexec "%s" --appimage-extract-and-run "$@"\n' "$RUNNER_TEMP/appimagetool.AppImage" > "$RUNNER_TEMP/bin/appimagetool"
+          chmod +x "$RUNNER_TEMP/bin/appimagetool"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - name: AppImage
+        run: |
+          image=$(bash packaging/build-appimage.sh)
+          ln -s "$PWD/$image" "$RUNNER_TEMP/trebaruna"
+          test "$(APPIMAGE_EXTRACT_AND_RUN=1 "$RUNNER_TEMP/trebaruna" version)" = "$(cat VERSION)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: trebaruna-linux-packages
+          path: |
+            dist/trebaruna_*.deb
+            dist/trebaruna-*.AppImage
+
+  flatpak:
+    name: Flatpak
+    runs-on: ubuntu-latest
+    needs: test
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:freedesktop-24.08
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27'
+      # flatpak-builder builds offline: the modules go in with the source.
+      - name: Vendor the Go modules
+        run: go mod vendor
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: trebaruna.flatpak
+          manifest-path: packaging/flatpak/org.codeberg.simplicer.trebaruna.yml
+          cache-key: flatpak-builder-${{ github.sha }}

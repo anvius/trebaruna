@@ -84,7 +84,8 @@ side by side:
   reaches the network (timestamps, revocation, trust lists, all listed in
   the result) and the home folder. Its Go toolchain comes as a checked
   archive and the modules are vendored, since `flatpak-builder` builds
-  offline. Not built on the machine the manifest was written on.
+  offline. The CI builds it in Flathub's builder image; that workflow has
+  not run yet.
 
 ### From a release binary
 
@@ -215,7 +216,9 @@ unless you ask for them:
 msiexec /i trebaruna-0.43.0-unstable-windows-amd64.msi ADDLOCAL=ALL
 ```
 
-Not built yet: it needs Windows, which the CI of plan G6 brings.
+The CI builds it on Windows with WiX 5 on every push, with the zip, and
+runs the test suite there; that workflow has not run yet, since nothing has
+been published since it was written.
 
 ### The command line alone
 
