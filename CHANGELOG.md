@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- XML signatures (XAdES, XMLDSig) made with brainpool keys are read and
+  checked: their certificates through trebaruna's own reading, the value
+  (XML-Signature's r and s) with its brainpool ECDSA, the chain walked to
+  an anchor. openssl signs the canonical SignedInfo with the brainpool key
+  on the three curves (this system's xmlsec1 cannot load such a key): the
+  signature verifies, a changed prescription is caught, the chain reaches
+  the anchored authority and not an impostor.
+
 - PAdES signatures made with brainpool keys are read and checked: the PDF
   library cannot read them and reported them as changed (a false
   "altered", which ADR-0005 forbids); trebaruna now checks them itself, as

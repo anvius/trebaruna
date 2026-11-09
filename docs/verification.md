@@ -290,7 +290,7 @@ worse than none.
   document; it does not mean the person who pressed the button was that person.
 - **Keys on brainpool curves** (brainpoolP256r1, P384r1, P512r1), which
   German health-professional cards and their authorities use, are read and
-  checked in CAdES and PAdES: Go has no such curves, so trebaruna reads their
+  checked in CAdES, PAdES and XAdES: Go has no such curves, so trebaruna reads their
   certificates itself (Go reads the rest while the key is set aside),
   verifies ECDSA on them with its own arithmetic, and walks their chain to an
   anchor, each issuer's signature checked. The PDF library cannot read such a

@@ -9,6 +9,7 @@ import (
 	_ "crypto/sha256"
 	_ "crypto/sha3"
 	_ "crypto/sha512"
+	"encoding/asn1"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -16,6 +17,7 @@ import (
 	"regexp"
 	"strings"
 
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/brainpool"
 	"github.com/beevik/etree"
 )
 
@@ -356,6 +358,14 @@ func checkSignatureValue(signature, signedInfo *etree.Element, key crypto.Public
 			valid = ecdsa.Verify(public, sum, new(big.Int).SetBytes(value[:size]), new(big.Int).SetBytes(value[size:]))
 		default:
 			valid = ecdsa.VerifyASN1(public, sum, value)
+		}
+	case *brainpool.PublicKey:
+		// XML-Signature's ECDSA value is r and s side by side, each as wide
+		// as the curve's order.
+		size := (public.Curve.N.BitLen() + 7) / 8
+		if method.scheme == ecdsaRS && len(value) == 2*size {
+			der, err := asn1.Marshal(struct{ R, S *big.Int }{new(big.Int).SetBytes(value[:size]), new(big.Int).SetBytes(value[size:])})
+			valid = err == nil && public.Verify(sum, der)
 		}
 	default:
 		return fmt.Errorf("%w: a %T key", ErrUnverifiable, key)

@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/brainpool"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/publickey"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/xmldsig"
 	"codeberg.org/simplicer/trebaruna/src/verification/application"
@@ -291,6 +292,13 @@ func (v *XadesVerifier) chainTrusted(certificate *x509.Certificate, embedded []*
 	}
 
 	_, err := certificate.Verify(options)
+	if err != nil && involvesBrainpool(append(append([]*x509.Certificate{certificate}, embedded...), v.Anchors...)) {
+		at := options.CurrentTime
+		if at.IsZero() {
+			at = time.Now()
+		}
+		return brainpoolChainOf(certificate, embedded, v.Anchors, at) == nil
+	}
 	return err == nil
 }
 
@@ -363,7 +371,7 @@ func extractCertificates(signature *etree.Element) []*x509.Certificate {
 		if element.Tag != "X509Certificate" || element.NamespaceURI() != "http://www.w3.org/2000/09/xmldsig#" {
 			return
 		}
-		certificate, err := x509.ParseCertificate(decodeBase64Element(element.Text()))
+		certificate, err := brainpool.ParseCertificate(decodeBase64Element(element.Text()))
 		if err != nil {
 			return
 		}
