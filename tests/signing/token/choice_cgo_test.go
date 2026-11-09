@@ -71,9 +71,9 @@ func loadFromCard(t *testing.T, module, label, pin string, choice domain.Certifi
 	}
 	pair, err := infrastructure.LoadKeyPair(signer)
 	if err == nil {
-		// The session ends with the test, as it ends after a signature: SoftHSM
-		// sees the tokens of later tests only once no session holds it.
-		t.Cleanup(func() { _ = pair.Close() })
+		// The session ends at once, as it ends after a signature: one card
+		// session exists at a time, and the certificate stays readable.
+		_ = pair.Close()
 	}
 	return pair, err
 }

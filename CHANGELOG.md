@@ -260,6 +260,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- A wrong card PIN could sign while another signature of the same process
+  held a logged-in session (the local API serving two requests, for
+  instance): PKCS#11 logins belong to the whole process, the second login
+  answered "already logged in" and that answer was taken as success. Card
+  sessions now run one at a time per process, and a leftover login is logged
+  out so the card checks every PIN.
+
 - The desktop app no longer passes the certificate passphrase as `--pass`,
   where every local user could read it in the process list. The CLI accepts
   `TREBARUNA_PASSPHRASE`, `TREBARUNA_PIN` and `TREBARUNA_TSA_PASS` when the

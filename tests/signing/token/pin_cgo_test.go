@@ -14,9 +14,11 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"codeberg.org/simplicer/trebaruna/src/entrypoint/cli"
 	"codeberg.org/simplicer/trebaruna/src/signing/domain"
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure"
 )
 
 // TestAWrongPINIsNamedAsSuch: the card's CKR_PIN_INCORRECT becomes the
@@ -166,4 +168,44 @@ func TestTheTokenListingCarriesWhatTheWindowShows(t *testing.T) {
 		return
 	}
 	t.Fatalf("token %q not listed:\n%s", token.label, stdout.String())
+}
+
+// TestAnOpenSessionNeverVouchesForAnotherPIN: a PKCS#11 login belongs to the
+// whole process. While one signature held a logged-in session, a second
+// login answered "already logged in" and a wrong PIN signed. Now the second
+// waits for the first and the card checks its PIN.
+func TestAnOpenSessionNeverVouchesForAnotherPIN(t *testing.T) {
+	token, _, _ := cardWithTwoCertificates(t, "digitalSignature", "nonRepudiation")
+	signer := func(pin string) domain.Signer {
+		built, err := domain.NewSigner(domain.NameFromCertificate, domain.FromToken, domain.WithToken(token.module, token.label, pin))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return built
+	}
+
+	open, err := infrastructure.LoadKeyPair(signer(token.pin))
+	if err != nil {
+		t.Fatalf("first session: %v", err)
+	}
+	result := make(chan error, 1)
+	go func() {
+		pair, err := infrastructure.LoadKeyPair(signer("0000"))
+		if err == nil {
+			_ = pair.Close()
+		}
+		result <- err
+	}()
+
+	time.Sleep(200 * time.Millisecond)
+	select {
+	case err := <-result:
+		t.Fatalf("the second session ran while the first was open: %v", err)
+	default:
+	}
+	_ = open.Close()
+
+	if err := <-result; !errors.Is(err, domain.ErrWrongPIN) {
+		t.Fatalf("a wrong PIN must be refused even right after a good one, got %v", err)
+	}
 }

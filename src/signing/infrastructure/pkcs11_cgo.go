@@ -86,19 +86,28 @@ func alreadyInitialised(err error) bool {
 	return errors.As(err, &code) && code == pkcs11.CKR_CRYPTOKI_ALREADY_INITIALIZED
 }
 
+// cardSessions lets one card session exist at a time in this process. A
+// PKCS#11 login belongs to the whole application, not to one session: while a
+// session was logged in, a second login answered "already logged in" and a
+// wrong PIN would have signed. One session at a time keeps every PIN checked.
+var cardSessions sync.Mutex
+
 // session is one logged-in session on one slot. Every signature goes through
 // it, one at a time.
 type session struct {
 	module module
 	handle pkcs11.SessionHandle
 	mutex  sync.Mutex
+	closed bool
 }
 
 // openSession opens a session on the slot and logs in. A pinpad reader gets
 // no PIN at all, which is how PKCS#11 asks it to read the PIN on its keypad.
 func openSession(path, parameters string, slot uint, pin string, login bool) (*session, error) {
+	cardSessions.Lock()
 	loaded, err := loadModule(path, parameters)
 	if err != nil {
+		cardSessions.Unlock()
 		return nil, err
 	}
 	handle, err := loaded.context.OpenSession(slot, pkcs11.CKF_SERIAL_SESSION|pkcs11.CKF_RW_SESSION)
@@ -108,6 +117,7 @@ func openSession(path, parameters string, slot uint, pin string, login bool) (*s
 	}
 	if err != nil {
 		loaded.unload()
+		cardSessions.Unlock()
 		return nil, err
 	}
 
@@ -118,7 +128,13 @@ func openSession(path, parameters string, slot uint, pin string, login bool) (*s
 		// caller never gets here without a PIN.
 		err := loaded.context.Login(handle, pkcs11.CKU_USER, pin)
 		var code pkcs11.Error
-		if err != nil && !(errors.As(err, &code) && code == pkcs11.CKR_USER_ALREADY_LOGGED_IN) {
+		if errors.As(err, &code) && code == pkcs11.CKR_USER_ALREADY_LOGGED_IN {
+			// A login left over from elsewhere in this process must not stand
+			// in for this PIN: log out and let the card check it.
+			_ = loaded.context.Logout(handle)
+			err = loaded.context.Login(handle, pkcs11.CKU_USER, pin)
+		}
+		if err != nil {
 			_ = opened.Close()
 			return nil, err
 		}
@@ -130,9 +146,14 @@ func openSession(path, parameters string, slot uint, pin string, login bool) (*s
 func (s *session) Close() error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
+	if s.closed {
+		return nil
+	}
+	s.closed = true
 	_ = s.module.context.Logout(s.handle)
 	_ = s.module.context.CloseSession(s.handle)
 	s.module.unload()
+	cardSessions.Unlock()
 	return nil
 }
 
