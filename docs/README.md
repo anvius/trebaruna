@@ -11,7 +11,7 @@ Everything about using this tool, in the order you are likely to need it.
 | [Certificates](certificates.md) | Which certificates and keys are accepted, and how to inspect one |
 | [Timestamps](timestamps.md) | RFC 3161 tokens: obtaining, using and verifying them |
 | [Trust lists](trust-lists.md) | Where "trusted issuer" comes from, and why a downloaded list is not enough |
-| [Desktop app](desktop.md) | The window: signing, verifying, pending requests |
+| [Desktop app](desktop.md) | The window: placing the seal, the certificate card, checking, menus |
 | [Web pages](web-pages.md) | Making a browser ask `trebaruna` to sign, safely |
 | [Local API](local-api.md) | The HTTP surface for agents and scripts |
 | [Smartcards](smartcards.md) | PKCS#11 tokens: setup, PINs, what is tested |
