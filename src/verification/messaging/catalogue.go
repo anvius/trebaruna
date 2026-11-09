@@ -7,6 +7,7 @@ package messaging
 
 import (
 	"fmt"
+	"strings"
 
 	"codeberg.org/simplicer/trebaruna/src/verification/domain"
 )
@@ -347,9 +348,7 @@ func init() {
 		"signature.unverifiable", "container.covers", "container.unsigned_files", "relationships.libxmlsec_form", "timestamp.legacy_form",
 	}
 
-	for name, catalogue := range map[string]Catalogue{
-		"es": Spanish, "it": Italian, "en": English,
-	} {
+	for name, catalogue := range languages {
 		for _, code := range required {
 			if _, ok := catalogue.Findings[code]; !ok {
 				panic(fmt.Sprintf("catalogue %s is missing the finding %q", name, code))
@@ -358,13 +357,24 @@ func init() {
 	}
 }
 
-// For picks a language from a locale string.
-func For(locale string) Catalogue {
-	switch {
-	case len(locale) >= 2 && (locale[:2] == "it" || locale[:2] == "It" || locale[:2] == "IT"):
-		return Italian
-	case len(locale) >= 2 && (locale[:2] == "en" || locale[:2] == "En" || locale[:2] == "EN"):
-		return English
-	}
-	return Spanish
+// languages are the report's catalogues by language tag.
+var languages = map[string]Catalogue{
+	"es": Spanish, "ca": Catalan, "gl": Galician, "eu": Basque, "it": Italian, "en": English,
 }
+
+// Tag is the language a locale string names ("it", "ca_ES.UTF-8"), among
+// the report's; "es" when none matches.
+func Tag(locale string) string {
+	if len(locale) < 2 {
+		return "es"
+	}
+	tag := strings.ToLower(locale[:2])
+	if _, known := languages[tag]; !known {
+		return "es"
+	}
+	return tag
+}
+
+// For picks the catalogue of the language a locale string names; Spanish
+// when none matches.
+func For(locale string) Catalogue { return languages[Tag(locale)] }

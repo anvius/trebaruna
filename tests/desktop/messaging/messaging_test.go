@@ -3,6 +3,8 @@ package messaging_test
 import (
 	"fmt"
 	"reflect"
+	"regexp"
+	"strings"
 	"testing"
 
 	"codeberg.org/simplicer/trebaruna/src/desktop/messaging"
@@ -16,6 +18,9 @@ func TestParseLanguageAcceptsLocaleStrings(t *testing.T) {
 		"es":          messaging.Spanish,
 		"es_ES.UTF-8": messaging.Spanish,
 		"en_GB":       messaging.English,
+		"ca_ES.UTF-8": messaging.Catalan,
+		"gl_ES":       messaging.Galician,
+		"eu_ES.UTF-8": messaging.Basque,
 		"":            messaging.Spanish,
 		"fr_FR":       messaging.Spanish,
 	}
@@ -31,9 +36,7 @@ func TestParseLanguageAcceptsLocaleStrings(t *testing.T) {
 // field added to one language and forgotten in another fails here instead of
 // showing an empty label in the window.
 func TestEveryCatalogueIsComplete(t *testing.T) {
-	for _, language := range []messaging.Language{
-		messaging.Spanish, messaging.Italian, messaging.English,
-	} {
+	for _, language := range messaging.Languages() {
 		catalogue := messaging.For(language)
 		value := reflect.ValueOf(catalogue)
 		for index := 0; index < value.NumField(); index++ {
@@ -52,7 +55,7 @@ func TestEveryCatalogueIsComplete(t *testing.T) {
 }
 
 func TestFormatStringsKeepTheirPlaceholders(t *testing.T) {
-	for _, language := range []messaging.Language{messaging.Spanish, messaging.Italian, messaging.English} {
+	for _, language := range messaging.Languages() {
 		catalogue := messaging.For(language)
 		if got := fmt.Sprintf(catalogue.PageOf, 2, 5); !contains(got, "2") || !contains(got, "5") {
 			t.Errorf("%s PageOf renders %q, want both numbers", language, got)
@@ -77,6 +80,49 @@ func TestItalianAndSpanishDiffer(t *testing.T) {
 	for _, pair := range pairs {
 		if pair[0] == pair[1] {
 			t.Errorf("the same string appears in both catalogues: %q", pair[0])
+		}
+	}
+}
+
+// verbs are the formatting verbs of a string, in order.
+var verbs = regexp.MustCompile(`%[-+# 0-9.]*[a-zA-Z%]`)
+
+// TestEveryTranslationKeepsTheVerbsOfTheSpanish: a translated string that
+// loses a %s or swaps a %d for a %s prints garbage at run time.
+func TestEveryTranslationKeepsTheVerbsOfTheSpanish(t *testing.T) {
+	spanish := reflect.ValueOf(messaging.For(messaging.Spanish))
+	for _, language := range messaging.Languages() {
+		value := reflect.ValueOf(messaging.For(language))
+		for index := 0; index < value.NumField(); index++ {
+			if value.Field(index).Kind() != reflect.String {
+				continue
+			}
+			want := strings.Join(verbs.FindAllString(spanish.Field(index).String(), -1), " ")
+			if got := strings.Join(verbs.FindAllString(value.Field(index).String(), -1), " "); got != want {
+				t.Errorf("%s.%s has verbs %q, the Spanish %q", language, value.Type().Field(index).Name, got, want)
+			}
+		}
+	}
+}
+
+// TestEveryLanguageIsTranslated: no catalogue is the Spanish one under
+// another name.
+func TestEveryLanguageIsTranslated(t *testing.T) {
+	spanish := messaging.For(messaging.Spanish)
+	for _, language := range messaging.Languages()[1:] {
+		catalogue := messaging.For(language)
+		same := 0
+		for _, pair := range [][2]string{
+			{spanish.SignButton, catalogue.SignButton}, {spanish.MissingDocument, catalogue.MissingDocument},
+			{spanish.CertificateLocked, catalogue.CertificateLocked}, {spanish.SealHint, catalogue.SealHint},
+			{spanish.VerifyHint, catalogue.VerifyHint}, {spanish.RubricHint, catalogue.RubricHint},
+		} {
+			if pair[0] == pair[1] {
+				same++
+			}
+		}
+		if same > 1 {
+			t.Errorf("%s repeats %d Spanish strings out of 6", language, same)
 		}
 	}
 }

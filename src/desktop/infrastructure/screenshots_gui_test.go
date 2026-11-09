@@ -49,7 +49,7 @@ func TestScreenshots(t *testing.T) {
 	document := writeSampleContract(t)
 	InstallTranslations(messaging.Spanish)
 
-	for _, language := range []messaging.Language{messaging.Spanish, messaging.Italian} {
+	for _, language := range []messaging.Language{messaging.Spanish, messaging.Italian, messaging.Catalan, messaging.Galician, messaging.Basque} {
 		window := test.NewTempWindow(t, nil)
 		desktop := newDesktop(window, messaging.For(language), "trebaruna")
 		desktop.inspect = application.NewInspectCertificate(portraitReader{})
@@ -234,8 +234,8 @@ const sampleReport = `{"signed":true,"verdict":"untrusted","signers":[{"field":"
 "signer":"MARIO ROSSI","identifier":"TINIT-RSSMRA80A01H501U","issuer":"MARIO ROSSI",
 "signed_at":"2026-11-09T10:12:03+01:00","timestamped":false,"integrity":"good","trust":"untrusted",
 "self_signed":true,"findings":[{"code":"certificate.self_signed","status":"bad","message":"the certificate is its own issuer"},
-{"code":"timestamp.missing","status":"warn","message":"no timestamp: the signing time is the signer's claim"}]}],
-"warnings":[{"code":"revocation.offline","status":"warn","message":"revocation not checked: offline"}]}`
+{"code":"certificate.validity_unproven","status":"warn","message":"the signing time is claimed by the signer and not timestamped"}]}],
+"warnings":[{"code":"certificate.revocation_unchecked","status":"warn","message":"the certificate revocation status could not be obtained"}]}`
 
 // TestScreenshotOfAPageRequest renders the approval window for a batch like
 // Sistema RED's.

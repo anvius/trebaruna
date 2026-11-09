@@ -85,11 +85,17 @@ func TestItalianSystemEnglishAppStaysReadable(t *testing.T) {
 // there.
 func TestFallbackCoversEveryOverrideKey(t *testing.T) {
 	base := englishFallback()
-	for _, language := range []messaging.Language{messaging.Italian, messaging.Spanish} {
-		for key := range fyneTranslationsFor(language) {
+	for _, language := range messaging.Languages() {
+		overrides := fyneTranslationsFor(language)
+		for key := range overrides {
 			if _, ok := base[key]; !ok {
 				t.Errorf("language %v overrides %q, but the base does not carry it", language, key)
 			}
+		}
+		// A language Fyne does not ship answers for every key, or its users
+		// see English buttons next to their own labels.
+		if language != messaging.English && len(overrides) != len(base) {
+			t.Errorf("language %v translates %d of the %d widget strings", language, len(overrides), len(base))
 		}
 	}
 }

@@ -28,3 +28,28 @@ func TestVerifyWritesAReport(t *testing.T) {
 		t.Errorf("a .docx report: exit %d, %s", code, stderr)
 	}
 }
+
+// TestTheReportNamesTheLanguageItIsIn: its lang attribute and its text
+// agree, for the co-official languages and for a locale none matches.
+func TestTheReportNamesTheLanguageItIsIn(t *testing.T) {
+	key := writeProtectedP12(t, "segreto")
+	t.Setenv("TREBARUNA_PASSPHRASE", "segreto")
+	document := writeDocument(t, "acta.txt", "acta\n")
+	if _, stderr, code := run("sign", document, "--p12", key, "--format", "cades"); code != 0 {
+		t.Fatalf("exit %d: %s", code, stderr)
+	}
+	t.Setenv("LANG", "")
+	directory := t.TempDir()
+	for _, language := range []string{"ca", "gl", "eu", "fr"} {
+		destination := filepath.Join(directory, language+".html")
+		run("verify", document+".p7m", "--report", destination, "--lang", language)
+		content, _ := os.ReadFile(destination)
+		want := language
+		if language == "fr" {
+			want = "es"
+		}
+		if !strings.Contains(string(content), `<html lang="`+want+`">`) {
+			t.Errorf("--lang %s: %.120q", language, content)
+		}
+	}
+}

@@ -251,7 +251,7 @@ trebaruna verify <document> [flags]
 | `--format` | from the suffix | `pdf`, `cades`, `xades` or `asic` |
 | `--territory` | from `$LANG` | Trust list to use, e.g. `IT`, `ES`, `EU` |
 | `--offline` | `true` | Set `--offline=false` to query OCSP and CRL responders |
-| `--lang` | from `$LANG` | `es`, `it` or `en` for human output and the report |
+| `--lang` | from `$LANG` | `es`, `ca`, `gl`, `eu`, `it` or `en` for human output and the report |
 | `--json` | off | Machine-readable report |
 | `--report` | — | Also write the verification as a document to keep or send: `<file>.md`, `.html` or `.pdf` |
 | `--content` | beside it | The document a detached signature signs |

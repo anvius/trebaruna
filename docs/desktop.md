@@ -269,15 +269,17 @@ else it becomes the document to sign.
 
 ## Languages
 
-Spanish, Italian and English, chosen from `TREBARUNA_LANG` or `$LANG`:
+Spanish, Catalan, Galician, Basque, Italian and English (`es`, `ca`, `gl`,
+`eu`, `it`, `en`), chosen from `TREBARUNA_LANG` or `$LANG`:
 
 ```bash
-TREBARUNA_LANG=it trebaruna-desktop
+TREBARUNA_LANG=ca trebaruna-desktop
 ```
 
-The catalogue is compile-checked: a missing translation is a build error and a
-test failure, not an empty label at runtime. Fyne's own strings are supplied by
-hand for Italian, because Fyne does not ship them.
+The catalogue is checked by the tests: a missing translation, a string left
+in Spanish, or a lost `%s` fails them instead of showing an empty or broken
+label at runtime. Fyne's own widget strings are supplied by hand for Italian,
+Catalan, Galician and Basque, because Fyne does not ship them.
 
 ---
 

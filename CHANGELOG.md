@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Catalan, Galician and Basque (plan G4): the window, the approval windows
+  and the verification report (`verify --lang ca|gl|eu`, `TREBARUNA_LANG`,
+  `$LANG`), Fyne's own widget strings, and the launcher's name and comment.
+  - Tests fail on a missing string, a catalogue that repeats the Spanish,
+    or a translation that loses or reorders a formatting verb, for every
+    language.
+  - The HTML report's `lang` names the language its text is in: an unknown
+    locale gave Spanish text under `lang="en"`.
+
 - A handwritten signature in the seal (ADR-0012): `sign --rubric firma.png`,
   afirma:// `signatureRubricImage`, and a rubric row in the desktop, which
   remembers it and previews it in the seal.

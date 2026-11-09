@@ -4,7 +4,6 @@ package infrastructure
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/lang"
@@ -32,9 +31,10 @@ var fyneShippedLanguages = map[string]bool{
 
 // InstallTranslations installs the strings Fyne's own widgets use.
 //
-// Fyne bundles Spanish but not Italian (v2.8.2 ships cs, de, el, en, es, fr, ja,
-// pl, pt, ru, sv, ta, uk, zh). Without this, an Italian user would see English
-// buttons next to Italian labels, which looks broken.
+// Fyne bundles Spanish but not Italian, Catalan, Galician or Basque (v2.8.2
+// ships cs, de, el, en, es, fr, ja, pl, pt, ru, sv, ta, uk, zh). Without
+// this, an Italian user would see English buttons next to Italian labels,
+// which looks broken.
 func InstallTranslations(language messaging.Language) {
 	base := englishFallback()
 	encodedBase, err := json.Marshal(base)
@@ -89,16 +89,9 @@ func baseLanguage(locale fyne.Locale) string {
 	return value
 }
 
-// localeFor maps our language onto a Fyne locale string.
+// localeFor maps our language onto a Fyne locale string: the same code.
 func localeFor(language messaging.Language) fyne.Locale {
-	switch language {
-	case messaging.Italian:
-		return "it"
-	case messaging.English:
-		return "en"
-	default:
-		return "es"
-	}
+	return fyne.Locale(language)
 }
 
 // fyneTranslationsFor returns the widget strings Fyne needs.
@@ -132,6 +125,72 @@ func fyneTranslationsFor(language messaging.Language) map[string]string {
 			"File":          "File",
 			"file.name":     "Nome",
 			"file.parent":   "Su",
+		}
+	case messaging.Catalan:
+		return map[string]string{
+			"(Select one)":  "(tria'n un)",
+			"OK":            "D'acord",
+			"Cancel":        "Cancel·la",
+			"Open":          "Obre",
+			"Save":          "Desa",
+			"Create Folder": "Crea una carpeta",
+			"New Folder":    "Carpeta nova",
+			"Name":          "Nom",
+			"Delete":        "Suprimeix",
+			"Rename":        "Canvia el nom",
+			"Confirm":       "Confirma",
+			"Yes":           "Sí",
+			"No":            "No",
+			"Error":         "Error",
+			"Information":   "Informació",
+			"Are you sure?": "N'estàs segur?",
+			"File":          "Fitxer",
+			"file.name":     "Nom",
+			"file.parent":   "Amunt",
+		}
+	case messaging.Galician:
+		return map[string]string{
+			"(Select one)":  "(escolle un)",
+			"OK":            "Aceptar",
+			"Cancel":        "Cancelar",
+			"Open":          "Abrir",
+			"Save":          "Gardar",
+			"Create Folder": "Crear cartafol",
+			"New Folder":    "Novo cartafol",
+			"Name":          "Nome",
+			"Delete":        "Eliminar",
+			"Rename":        "Cambiar o nome",
+			"Confirm":       "Confirmar",
+			"Yes":           "Si",
+			"No":            "Non",
+			"Error":         "Erro",
+			"Information":   "Información",
+			"Are you sure?": "Estás seguro?",
+			"File":          "Ficheiro",
+			"file.name":     "Nome",
+			"file.parent":   "Arriba",
+		}
+	case messaging.Basque:
+		return map[string]string{
+			"(Select one)":  "(aukeratu bat)",
+			"OK":            "Ados",
+			"Cancel":        "Utzi",
+			"Open":          "Ireki",
+			"Save":          "Gorde",
+			"Create Folder": "Sortu karpeta",
+			"New Folder":    "Karpeta berria",
+			"Name":          "Izena",
+			"Delete":        "Ezabatu",
+			"Rename":        "Aldatu izena",
+			"Confirm":       "Berretsi",
+			"Yes":           "Bai",
+			"No":            "Ez",
+			"Error":         "Errorea",
+			"Information":   "Informazioa",
+			"Are you sure?": "Ziur zaude?",
+			"File":          "Fitxategia",
+			"file.name":     "Izena",
+			"file.parent":   "Gora",
 		}
 	case messaging.English:
 		return map[string]string{}
@@ -183,9 +242,4 @@ func englishFallback() map[string]string {
 		"file.name":     "Name",
 		"file.parent":   "Parent",
 	}
-}
-
-// describeLanguages is used by the tests to assert both catalogues are whole.
-func describeLanguages() string {
-	return fmt.Sprintf("%s,%s,%s", messaging.Spanish, messaging.Italian, messaging.English)
 }

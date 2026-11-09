@@ -19,7 +19,18 @@ const (
 
 	// English is the fallback for bug reports and foreign colleagues.
 	English Language = "en"
+
+	// Catalan, Galician and Basque are co-official in Spain, and AutoFirma
+	// speaks them.
+	Catalan  Language = "ca"
+	Galician Language = "gl"
+	Basque   Language = "eu"
 )
+
+// Languages lists every interface language, the default first.
+func Languages() []Language {
+	return []Language{Spanish, Catalan, Galician, Basque, Italian, English}
+}
 
 // ParseLanguage maps a locale name onto a supported language.
 //
@@ -29,13 +40,10 @@ func ParseLanguage(raw string) Language {
 	if len(raw) < 2 {
 		return Spanish
 	}
-	switch raw[:2] {
-	case "it":
-		return Italian
-	case "en":
-		return English
-	case "es":
-		return Spanish
+	for _, language := range Languages() {
+		if raw[:2] == string(language) {
+			return language
+		}
 	}
 	return Spanish
 }
@@ -310,6 +318,12 @@ func For(language Language) Catalogue {
 		return italian
 	case English:
 		return english
+	case Catalan:
+		return catalan
+	case Galician:
+		return galician
+	case Basque:
+		return basque
 	default:
 		return spanish
 	}

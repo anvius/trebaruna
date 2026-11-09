@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"codeberg.org/simplicer/trebaruna/src/verification/application"
 	verification "codeberg.org/simplicer/trebaruna/src/verification/domain"
@@ -39,7 +40,7 @@ func runVerify(args []string, stdout, stderr io.Writer) int {
 		territory = flags.String("territory", defaultTerritory(), "trust list to use, e.g. IT or ES")
 		asJSON    = flags.Bool("json", false, "machine-readable output")
 		offline   = flags.Bool("offline", true, "do not contact OCSP/CRL responders")
-		lang      = flags.String("lang", "", "language for messages: es | it | en")
+		lang      = flags.String("lang", "", "language for messages: es | ca | gl | eu | it | en")
 		reportTo  = flags.String("report", "", "also write the verification as a report: <file>.md, .html or .pdf")
 		content   = flags.String("content", "", "the document a detached signature signs (default: beside it, the same name without .p7s, or the name a .xsig gives)")
 	)
@@ -129,7 +130,7 @@ func writeReport(destination, verified string, verificationReport verification.D
 	rendered, err := report.Render(format, report.Input{
 		Report:    verificationReport,
 		Catalogue: catalogue,
-		Language:  languageTag(locale),
+		Language:  messaging.Tag(locale),
 		Digest:    hex.EncodeToString(digest[:]),
 		Tool:      "trebaruna " + version,
 		Network:   connections(),
@@ -138,17 +139,6 @@ func writeReport(destination, verified string, verificationReport verification.D
 		return err
 	}
 	return os.WriteFile(destination, rendered, 0o644)
-}
-
-// languageTag is the language a locale names, among the catalogue's.
-func languageTag(locale string) string {
-	locale = strings.ToLower(locale)
-	for _, tag := range []string{"es", "it"} {
-		if strings.HasPrefix(locale, tag) {
-			return tag
-		}
-	}
-	return "en"
 }
 
 // systemClock is the production clock.
@@ -386,23 +376,31 @@ func printVerification(writer io.Writer, report verification.DocumentReport, cat
 
 	fmt.Fprintf(writer, "  %s: %s\n", catalogue.LabelVerdict, catalogue.VerdictName(report.Verdict()))
 
+	// The labels line up on the longest of the language's, 14 at least.
+	width := 14
+	for _, label := range []string{catalogue.LabelSigner, catalogue.LabelIdentifier, catalogue.LabelIssuer,
+		catalogue.LabelSignedAt, catalogue.LabelTimestamped, catalogue.LabelIntegrity} {
+		width = max(width, utf8.RuneCountInString(label))
+	}
+	row := func(label, value string) { fmt.Fprintf(writer, "    %-*s %s\n", width, label, value) }
+
 	for index, signer := range report.Signers {
 		fmt.Fprintf(writer, "\n  %s %d — %s\n", catalogue.LabelSignature, index+1, signer.FieldName)
-		fmt.Fprintf(writer, "    %-14s %s\n", catalogue.LabelSigner, signer.SignerName)
+		row(catalogue.LabelSigner, signer.SignerName)
 		if signer.Identifier != "" {
-			fmt.Fprintf(writer, "    %-14s %s\n", catalogue.LabelIdentifier, signer.Identifier)
+			row(catalogue.LabelIdentifier, signer.Identifier)
 		}
 		if signer.Issuer != "" {
-			fmt.Fprintf(writer, "    %-14s %s\n", catalogue.LabelIssuer, signer.Issuer)
+			row(catalogue.LabelIssuer, signer.Issuer)
 		}
 		if !signer.SignedAt.IsZero() {
 			label := catalogue.LabelSignedAt
 			if signer.Timestamped {
 				label = catalogue.LabelTimestamped
 			}
-			fmt.Fprintf(writer, "    %-14s %s\n", label, signer.SignedAt.Format("2006-01-02 15:04:05 -07:00"))
+			row(label, signer.SignedAt.Format("2006-01-02 15:04:05 -07:00"))
 		}
-		fmt.Fprintf(writer, "    %-14s %s\n", catalogue.LabelIntegrity, catalogue.StatusName(signer.Integrity))
+		row(catalogue.LabelIntegrity, catalogue.StatusName(signer.Integrity))
 
 		for _, finding := range signer.Findings {
 			if finding.Status == verification.StatusGood {

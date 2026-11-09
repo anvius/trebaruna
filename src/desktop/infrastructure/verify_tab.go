@@ -414,15 +414,10 @@ func (v *verificationTab) colourFor(verdict domain.TrustLevel) color.Color {
 	return v.palette.TextMuted
 }
 
-// languageCode maps the window language onto the CLI flag value.
+// languageCode maps the window language onto the CLI flag value: the
+// same two-letter code.
 func languageCode(language messaging.Language) string {
-	switch language {
-	case messaging.Italian:
-		return "it"
-	case messaging.English:
-		return "en"
-	}
-	return "es"
+	return string(language)
 }
 
 // readingColumn centres one child and caps its width, so text keeps a
