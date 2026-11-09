@@ -23,11 +23,13 @@ func (m sealMarks) fieldAppearance() (*pdffield.Appearance, error) {
 	var content bytes.Buffer
 	appearance := &pdffield.Appearance{}
 	var resources strings.Builder
-	resources.WriteString("<< /Font << /Helv << /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>" +
-		" /HeBo << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >> >>")
+	face := m.face
+	if face == nil {
+		face = standardFace{}
+	}
 
 	if m.rubric != nil {
-		objects, err := pictureObjects(m.rubric.data)
+		objects, err := pictureObjects(m.rubric.data, m.flatRubric)
 		if err != nil {
 			return nil, err
 		}
@@ -36,7 +38,9 @@ func (m sealMarks) fieldAppearance() (*pdffield.Appearance, error) {
 		fmt.Fprintf(&content, "q %s 0 0 %s %s %s cm /Rubric Do Q\n",
 			pdfNumber(m.rubric.width), pdfNumber(m.rubric.height), pdfNumber(m.rubric.x), pdfNumber(m.rubric.y))
 	}
-	resources.WriteString(" >>")
+	fonts, objects := face.fonts(len(appearance.Objects))
+	appearance.Objects = append(appearance.Objects, objects...)
+	appearance.Resources = "<< /Font << " + fonts + " >>" + resources.String() + " >>"
 
 	fmt.Fprintf(&content, "q %s RG %s w %s %s m %s %s l S Q\n", rgb(m.rule.colour), pdfNumber(m.rule.width),
 		pdfNumber(m.rule.x), pdfNumber(m.rule.bottom), pdfNumber(m.rule.x), pdfNumber(m.rule.top))
@@ -56,7 +60,6 @@ func (m sealMarks) fieldAppearance() (*pdffield.Appearance, error) {
 			pdfNumber(text.x), pdfNumber(text.y), []byte(encoded))
 	}
 	appearance.Content = content.Bytes()
-	appearance.Resources = resources.String()
 	return appearance, nil
 }
 
@@ -75,8 +78,8 @@ func winAnsiOrQuestionMark(text string) string {
 
 // pictureObjects is the rubric as an image XObject: a colour JPEG as is,
 // anything else as Flate-compressed RGB with its transparency as a soft
-// mask ({{1}}).
-func pictureObjects(data []byte) ([]pdffield.Object, error) {
+// mask ({{1}}), or, flat, painted on white with none.
+func pictureObjects(data []byte, flat bool) ([]pdffield.Object, error) {
 	config, format, err := image.DecodeConfig(bytes.NewReader(data))
 	if err != nil {
 		return nil, fmt.Errorf("read the rubric: %w", err)
@@ -99,6 +102,14 @@ func pictureObjects(data []byte) ([]pdffield.Object, error) {
 	alpha := make([]byte, 0, bounds.Dx()*bounds.Dy())
 	opaque := true
 	for pixel := 0; pixel < len(picture.Pix); pixel += 4 {
+		if flat {
+			// Over white: each channel moves toward 255 as alpha falls.
+			alphaValue := int(picture.Pix[pixel+3])
+			for channel := 0; channel < 3; channel++ {
+				picture.Pix[pixel+channel] = uint8((int(picture.Pix[pixel+channel])*alphaValue + 255*(255-alphaValue)) / 255)
+			}
+			picture.Pix[pixel+3] = 255
+		}
 		samples = append(samples, picture.Pix[pixel], picture.Pix[pixel+1], picture.Pix[pixel+2])
 		alpha = append(alpha, picture.Pix[pixel+3])
 		opaque = opaque && picture.Pix[pixel+3] == 255

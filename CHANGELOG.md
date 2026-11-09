@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- PDF/A documents stay PDF/A when signed with a seal: the part their
+  metadata claims is read, and the seal is set in the Go fonts, embedded
+  whole as TrueType with the widths read from the font program (ISO
+  19005-1, 6.3.4 and 6.3.6), instead of Helvetica; in PDF/A-1 a rubric's
+  transparency is painted onto white (no soft mask, 6.4). Other documents
+  keep the lighter seal. veraPDF 1.30 passes Ghostscript's PDF/A-1b and
+  PDF/A-2b files signed with a seal and a rubric; before, both failed on
+  the fonts and PDF/A-1 on the mask.
+
 - Window: a PDF that opens only with a password asks for it under the
   document (detected by opening it, so one that only restricts
   permissions asks nothing); it travels to the signer in its environment

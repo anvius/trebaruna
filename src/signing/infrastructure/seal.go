@@ -47,7 +47,6 @@ import (
 
 	"codeberg.org/simplicer/trebaruna/src/signing/domain"
 	"codeberg.org/simplicer/trebaruna/src/signing/domain/identity"
-	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/helvetica"
 	"github.com/digitorus/pdfsign"
 )
 
@@ -115,7 +114,7 @@ func DrawSeal(width, height float64, holder identity.Holder, moment time.Time) (
 // DrawSealWithRubric composes the stamp with a rubric to the left of the
 // certificate data; with none, it is DrawSeal.
 func DrawSealWithRubric(width, height float64, holder identity.Holder, moment time.Time, rubric domain.Rubric) (*pdfsign.Appearance, error) {
-	marks, err := layoutSeal(width, height, holder, moment, rubric)
+	marks, err := layoutSeal(width, height, holder, moment, rubric, standardFace{})
 	if err != nil {
 		return nil, err
 	}
@@ -128,9 +127,13 @@ func DrawSealWithRubric(width, height float64, holder identity.Holder, moment ti
 // existing one.
 type sealMarks struct {
 	width, height float64
-	rubric        *sealPicture
-	rule          sealRule
-	texts         []sealText
+	// face is the type the text is set in; flatRubric paints the rubric on
+	// white, without a soft mask, which PDF/A-1 forbids.
+	face       sealFace
+	flatRubric bool
+	rubric     *sealPicture
+	rule       sealRule
+	texts      []sealText
 }
 
 // sealPicture is the rubric, ready for a PDF, and the box it fills.
@@ -155,7 +158,7 @@ type sealText struct {
 }
 
 // layoutSeal places the stamp's marks in the box.
-func layoutSeal(width, height float64, holder identity.Holder, moment time.Time, rubric domain.Rubric) (sealMarks, error) {
+func layoutSeal(width, height float64, holder identity.Holder, moment time.Time, rubric domain.Rubric, face sealFace) (sealMarks, error) {
 	if width <= 0 || height <= 0 {
 		return sealMarks{}, fmt.Errorf("seal dimensions must be positive, got %.1fx%.1f pt", width, height)
 	}
@@ -163,7 +166,7 @@ func layoutSeal(width, height float64, holder identity.Holder, moment time.Time,
 	// The type is sized by the whole box, rubric or not: the data keep their
 	// size and the rubric takes room beside them.
 	typography := typographyFor(width, height)
-	marks := sealMarks{width: width, height: height}
+	marks := sealMarks{width: width, height: height, face: face}
 
 	// left is where the data block starts: the box's edge, or past the rubric.
 	left := 0.0
@@ -185,12 +188,12 @@ func layoutSeal(width, height float64, holder identity.Holder, moment time.Time,
 		return sealMarks{}, fmt.Errorf("seal %.0f pt wide leaves no room for text", width)
 	}
 
-	nameLines := helvetica.Wrap(holder.Name, innerWidth, typography.nameSize, true)
+	nameLines := face.Wrap(holder.Name, innerWidth, typography.nameSize, true)
 	if len(nameLines) == 0 {
 		return sealMarks{}, fmt.Errorf("the certificate carries no printable name")
 	}
 
-	details, err := sealDetailLines(holder, moment, innerWidth, typography)
+	details, err := sealDetailLines(holder, moment, innerWidth, typography, face)
 	if err != nil {
 		return sealMarks{}, err
 	}
@@ -244,7 +247,7 @@ func (m sealMarks) appearance() *pdfsign.Appearance {
 }
 
 // sealDetailLines builds the supporting lines: identifier and date, then time.
-func sealDetailLines(holder identity.Holder, moment time.Time, width float64, typography sealTypography) ([]string, error) {
+func sealDetailLines(holder identity.Holder, moment time.Time, width float64, typography sealTypography, face sealFace) ([]string, error) {
 	date := moment.Format("02/01/2006")
 	clock := moment.Format("15:04:05 -07:00")
 
@@ -254,10 +257,10 @@ func sealDetailLines(holder identity.Holder, moment time.Time, width float64, ty
 		// Identifier and date together when they fit: fewer lines means a
 		// tighter block, and the identifier is what a verifier looks for.
 		combined := holder.Identifier + " · " + date
-		if helvetica.Width(combined, typography.detailSize, false) <= width {
+		if face.Width(combined, typography.detailSize, false) <= width {
 			details = append(details, combined)
 		} else {
-			details = append(details, helvetica.Wrap(holder.Identifier, width, typography.detailSize, false)...)
+			details = append(details, face.Wrap(holder.Identifier, width, typography.detailSize, false)...)
 			details = append(details, date)
 		}
 	default:
@@ -266,7 +269,7 @@ func sealDetailLines(holder identity.Holder, moment time.Time, width float64, ty
 
 	// The time keeps its offset: without it a reader cannot tell whether the
 	// stamp refers to UTC or to the signer's desk.
-	details = append(details, helvetica.Wrap(clock, width, typography.timeSize, false)...)
+	details = append(details, face.Wrap(clock, width, typography.timeSize, false)...)
 	return details, nil
 }
 

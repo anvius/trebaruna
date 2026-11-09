@@ -71,6 +71,11 @@ func Width(text string, size float64, bolded bool) float64 {
 // which case it splits on rune boundaries: a fiscal identifier with no spaces
 // must still be printable, and dropping it would be worse than breaking it.
 func Wrap(text string, maxWidth, size float64, bolded bool) []string {
+	return WrapWith(text, maxWidth, func(part string) float64 { return Width(part, size, bolded) })
+}
+
+// WrapWith is Wrap for any face, measured by measure.
+func WrapWith(text string, maxWidth float64, measure func(string) float64) []string {
 	var lines []string
 	current := ""
 	for _, word := range strings.Fields(text) {
@@ -78,7 +83,7 @@ func Wrap(text string, maxWidth, size float64, bolded bool) []string {
 		if current != "" {
 			candidate = current + " " + word
 		}
-		if Width(candidate, size, bolded) <= maxWidth {
+		if measure(candidate) <= maxWidth {
 			current = candidate
 			continue
 		}
@@ -88,9 +93,9 @@ func Wrap(text string, maxWidth, size float64, bolded bool) []string {
 		}
 		// The word alone may still be too long: cut it between runes.
 		runes := []rune(word)
-		for Width(string(runes), size, bolded) > maxWidth && len(runes) > 1 {
+		for measure(string(runes)) > maxWidth && len(runes) > 1 {
 			cut := len(runes)
-			for cut > 1 && Width(string(runes[:cut]), size, bolded) > maxWidth {
+			for cut > 1 && measure(string(runes[:cut])) > maxWidth {
 				cut--
 			}
 			lines = append(lines, string(runes[:cut]))

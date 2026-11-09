@@ -52,10 +52,11 @@ func (s *PadesSigner) signInField(ctx context.Context, request application.Pades
 		if typographyFor(field.Width(), field.Height()).timeSize < minimumLegibleSize {
 			return nil, fmt.Errorf("the field %q (%.0fx%.0f pt) is too small for a legible seal; sign it without a seal with --invisible", field.Name, field.Width(), field.Height())
 		}
-		marks, err := layoutSeal(field.Width(), field.Height(), identity.FromCertificate(keyPair.Certificate), moment, request.Rubric)
+		marks, err := layoutSeal(field.Width(), field.Height(), identity.FromCertificate(keyPair.Certificate), moment, request.Rubric, faceFor(request.Content))
 		if err != nil {
 			return nil, fmt.Errorf("the field %q (%.0fx%.0f pt): %w; sign it without a seal with --invisible", field.Name, field.Width(), field.Height(), err)
 		}
+		marks.flatRubric = pdfaPart(request.Content) == 1
 		if appearance, err = marks.fieldAppearance(); err != nil {
 			return nil, err
 		}
@@ -76,13 +77,15 @@ func (s *PadesSigner) signInNewField(ctx context.Context, request application.Pa
 	}
 	moment := signingMoment(request)
 	holder := identity.FromCertificate(keyPair.Certificate)
+	face, part := faceFor(request.Content), pdfaPart(request.Content)
 	widgets := make([]pdffield.Widget, 0, len(placements))
 	for _, placement := range placements {
 		left, bottom, right, top := placement.Box()
-		marks, err := layoutSeal(right-left, top-bottom, holder, moment, request.Rubric)
+		marks, err := layoutSeal(right-left, top-bottom, holder, moment, request.Rubric, face)
 		if err != nil {
 			return nil, fmt.Errorf("page %d: %w", placement.Page(), err)
 		}
+		marks.flatRubric = part == 1
 		appearance, err := marks.fieldAppearance()
 		if err != nil {
 			return nil, err

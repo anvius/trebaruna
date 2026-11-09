@@ -191,6 +191,19 @@ for any PDF signature. A field too small for a legible seal (type under 3 pt) is
 refused, with `--invisible` offered; documents their author certified against
 any change are refused. `--field` excludes `--box`.
 
+### PDF/A documents
+
+A PDF/A document stays PDF/A when it is signed. trebaruna reads the part its
+metadata claims (`pdfaid:part`) and, for a PDF/A document, sets the seal in
+the Go fonts (BSD licence, part of the program), embedded whole as TrueType
+with the widths read from the font program, instead of the standard Helvetica
+a reader supplies; in PDF/A-1, which forbids soft masks, a rubric with
+transparency is painted onto white. Other documents keep the lighter seal.
+Invisible signatures change nothing a PDF/A validator looks at. The type is
+a little wider than Helvetica, so a long identifier may take one more line;
+nothing is cut. Checked with Ghostscript's PDF/A-1b and PDF/A-2b files and
+veraPDF 1.30: seal and rubric pass, and pdfsig verifies the signatures.
+
 ### Encrypted PDFs
 
 ```bash

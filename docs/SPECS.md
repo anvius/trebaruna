@@ -39,6 +39,7 @@ user seeing what is signed and where anything goes.
 | Signer name: the certificate holder unless one is given | built |
 | PAdES visible seal: certificate data only (ADR-0007), placed by the user, repeatable across pages; chained signatures by incremental update | built |
 | PAdES invisible signature; default seal placed on the real page size | built |
+| PDF/A kept on signing: a PDF/A document's seal in embedded Go fonts with the program's widths, a PDF/A-1 rubric flattened on white (no soft mask); other documents keep Helvetica | built (veraPDF 1.30 passes PDF/A-1b and 2b signed with seal and rubric; pdffonts, qpdf, pdfsig) |
 | Encrypted PDFs (RC4, AES-128, AES-256): opened with the password from `TREBARUNA_PDF_PASSWORD` or afirma:// `ownerPassword`/`userPassword`; the update encrypted as the document is, `/Contents` left clear; the author's permissions honoured; levels B and T; verify opens them too | built (qpdf makes them, pdfsig and qpdf --check judge) |
 | PAdES seal in an existing empty form field: `sign --field <name>`, the seal in its box or none with `--invisible`; trebaruna's own incremental update (pdffield) and CMS envelope, cross-references of the file's kind | built (command line, `trebaruna fields`, the window's field choice, afirma:// `signatureField`) |
 | CAdES detached (`.p7s`), verified with the document beside it | built |
