@@ -2,10 +2,18 @@ package application_test
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/base64"
 	"errors"
+	"math/big"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"codeberg.org/simplicer/trebaruna/src/afirma/application"
 	"codeberg.org/simplicer/trebaruna/src/afirma/domain"
@@ -26,12 +34,21 @@ type recordingSigner struct{ requests []application.PageSignature }
 
 func (r *recordingSigner) Sign(_ context.Context, request application.PageSignature) (application.Signed, error) {
 	r.requests = append(r.requests, request)
-	return application.Signed{Certificate: []byte("cert"), Signature: append([]byte("signed:"), request.Data...)}, nil
+	return application.Signed{Certificate: holder, Signature: append([]byte("signed:"), request.Data...)}, nil
 }
+
+// holder is the certificate every scripted key has: valid now, CN MARIA.
+var holder = func() []byte {
+	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	template := &x509.Certificate{SerialNumber: big.NewInt(7), Subject: pkix.Name{CommonName: "MARIA GARCIA"},
+		NotBefore: time.Now().Add(-time.Hour), NotAfter: time.Now().Add(time.Hour)}
+	raw, _ := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
+	return raw
+}()
 
 type fixedCertificate struct{}
 
-func (fixedCertificate) Certificate(signing.Signer) ([]byte, error) { return []byte("cert"), nil }
+func (fixedCertificate) Certificate(signing.Signer) ([]byte, error) { return holder, nil }
 
 type recordingFetcher struct{ fetched []string }
 
@@ -126,7 +143,7 @@ func TestAnApprovedSignatureIsDeliveredToTheSite(t *testing.T) {
 	if string(f.signer.requests[0].Data) != "hola" || f.signer.requests[0].Crypto != domain.Sign {
 		t.Errorf("signed %+v", f.signer.requests[0])
 	}
-	if answer.Text() != domain.SignAnswer([]byte("cert"), []byte("signed:hola"), "", 0).Text() || len(f.courier.delivered) != 1 {
+	if answer.Text() != domain.SignAnswer(holder, []byte("signed:hola"), "", 0).Text() || len(f.courier.delivered) != 1 {
 		t.Errorf("answer %q", answer.Text())
 	}
 	if f.courier.waits != 1 || f.courier.stopped != 1 {
@@ -177,8 +194,9 @@ func TestCounterSignaturesAndSignAndSave(t *testing.T) {
 // TestSelectCertAndSaveAndTheBlockedChannels.
 func TestSelectCertAndSaveAndTheBlockedChannels(t *testing.T) {
 	f := newFixture(t, true)
-	answer, _ := f.use.Execute(context.Background(), invocation(t, "afirma://selectcert?properties="+"ZmlsdGVyPWRuaWU6"))
-	if answer.Text() != domain.EncodeBase64URL([]byte("cert")) || len(f.approver.proposals[0].Filter.Expressions()) != 1 {
+	answer, _ := f.use.Execute(context.Background(), invocation(t, "afirma://selectcert?properties="+
+		base64.StdEncoding.EncodeToString([]byte("filter=subject.contains:maria"))))
+	if answer.Text() != domain.EncodeBase64URL(holder) || len(f.approver.proposals[0].Filter.Expressions()) != 1 {
 		t.Errorf("selectcert %q, filter %v", answer.Text(), f.approver.proposals[0].Filter.Expressions())
 	}
 	saved, _ := f.use.Execute(context.Background(), invocation(t, "afirma://save?dat=aG9sYQ%3D%3D&filename=nota.txt"))
@@ -190,5 +208,19 @@ func TestSelectCertAndSaveAndTheBlockedChannels(t *testing.T) {
 	}
 	if loaded, _ := f.use.Execute(context.Background(), invocation(t, "afirma://load?exts=pdf")); !strings.HasPrefix(loaded.Text(), "SAF_04") {
 		t.Errorf("load %q", loaded.Text())
+	}
+}
+
+// TestACertificateThePageDoesNotAcceptIsRefusedAndAskedAgain: AutoFirma only
+// offers matching certificates; trebaruna refuses the choice with the reason.
+func TestACertificateThePageDoesNotAcceptIsRefusedAndAskedAgain(t *testing.T) {
+	f := newFixture(t, true)
+	properties := base64.StdEncoding.EncodeToString([]byte("filter=subject.contains:ROSSI"))
+	answer, err := f.use.Execute(context.Background(), invocation(t, "afirma://sign?format=CAdES&algorithm=SHA256&dat=aG9sYQ%3D%3D&properties="+properties))
+	if len(f.approver.proposals) != 3 || f.approver.proposals[0].Rejected != "" || !strings.Contains(f.approver.proposals[1].Rejected, "MARIA GARCIA") {
+		t.Errorf("proposals %d, rejected %q", len(f.approver.proposals), f.approver.proposals[len(f.approver.proposals)-1].Rejected)
+	}
+	if len(f.signer.requests) != 0 || !strings.HasPrefix(answer.Text(), "SAF_19") || err == nil {
+		t.Errorf("nothing may be signed with a certificate the page refuses: %q", answer.Text())
 	}
 }

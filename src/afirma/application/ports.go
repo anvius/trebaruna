@@ -30,7 +30,10 @@ type Proposal struct {
 	// signandsave.
 	SuggestedName string
 	// Items are the documents of a batch.
-	Items    []domain.BatchItem
+	Items []domain.BatchItem
+	// Rejected says why the last certificate chosen was refused, when the
+	// person is asked again.
+	Rejected string
 	Filter   domain.CertificateFilter
 	Warnings []string
 }

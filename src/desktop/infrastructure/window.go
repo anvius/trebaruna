@@ -450,6 +450,8 @@ func translate(err error, m messaging.Catalogue) string {
 			return m.WrongPINNowLocked
 		}
 		return m.WrongPIN
+	case domain.ProblemMissingSaveTo:
+		return m.MissingSaveTo
 	case domain.ProblemMissingPUK:
 		return m.MissingPUK
 	case domain.ProblemPUKLocked:

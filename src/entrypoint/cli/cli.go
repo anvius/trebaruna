@@ -31,6 +31,12 @@ const (
 
 // Run executes the CLI and returns the process exit code.
 func Run(args []string, stdout, stderr io.Writer) int {
+	return RunIO(args, os.Stdin, stdout, stderr)
+}
+
+// RunIO is Run with the standard input given: the interactive afirma
+// protocol reads the person's decision from it.
+func RunIO(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	// Each command reports the connections it made, not those of an earlier
 	// command run in the same process (tests, the local server).
 	transparency.Reset()
@@ -59,7 +65,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	case "encrypt":
 		return runEncrypt(args[1:], stdout, stderr)
 	case "afirma":
-		return runAfirma(args[1:], stdout, stderr)
+		return runAfirma(args[1:], stdin, stdout, stderr)
 	case "decrypt":
 		return runDecrypt(args[1:], stdout, stderr)
 	case "asic":

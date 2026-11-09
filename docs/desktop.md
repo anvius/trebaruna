@@ -176,6 +176,23 @@ checks again.
 
 ---
 
+## Requests from AutoFirma pages (afirma://)
+
+When a Spanish administration page starts AutoFirma's protocol, the system
+opens `trebaruna-desktop` with the `afirma://` URI, and an approval window
+shows the request before anything happens: what the page asks (sign, sign a
+batch, give the certificate, save a file), the site the answer goes to and the
+name the page gives itself, the data (size and SHA-256, or the address it would
+be downloaded from), every document of a batch, the certificate filters the
+page sets, and the warnings — among them that the answer travels to the site
+under single DES. The certificate is chosen as in step 2 of the Sign tab (card
+by default, Firefox store or file, with its PIN or passphrase); a certificate
+the page does not accept is refused with the reason and another can be chosen.
+**Sign and send** answers the page; **Decline**, or closing the window,
+answers `CANCEL`. The window drives `trebaruna afirma --interactive`: the
+decision, secrets included, goes to the command through a pipe, never on a
+command line, and the command keeps the page waiting meanwhile.
+
 ## Requests from web pages
 
 **Tools → Requests from web pages…** opens a separate window. It is where a

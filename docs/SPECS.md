@@ -97,6 +97,7 @@ user seeing what is signed and where anything goes.
 | `afirma://` through the intermediate server: answers posted ciphered (DES, AES for autoscript 1.10), `#WAIT` while the person decides, uploaded requests fetched; `trebaruna afirma` | built (D3) |
 | `afirma://` batches: JSON and XML through the site's pre- and post-signers (three-phase), and local batches; every document shown before approval | built (D4) |
 | `afirma://` single signatures through the site's server (`…tri` formats) | planned |
+| `afirma://` approval window: the request in full, the certificate chosen (card, Firefox, file) and held to the page's filters, decision through a pipe to `trebaruna afirma --interactive` | built (D6) |
 | `afirma://` WebSocket and socket channels: TLS on 127.0.0.1 needs a locally trusted certificate, which ADR-0013 forbids installing as a root; not offered unless the owner chooses a leaf-only peer trust | blocked (D5, owner decision) |
 
 ### Transparency
@@ -118,6 +119,6 @@ user seeing what is signed and where anything goes.
 | trust | `VerifyList` | `Execute` |
 | encryption | `EncryptDocument`, `DecryptDocument` | `Execute` |
 | afirma | `AnswerPage` | `Execute(ctx, Invocation) (Answer, error)` |
-| desktop | `SignFromDesktop`, `PreviewPage`, `InspectCertificate`, `ListCards`, `ChangeCardPIN` | `Execute` |
+| desktop | `SignFromDesktop`, `PreviewPage`, `InspectCertificate`, `ListCards`, `ChangeCardPIN`, `ReviewPageRequest` | `Execute` |
 
 New capabilities add use cases here as they are built.

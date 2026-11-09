@@ -164,50 +164,84 @@ type Catalogue struct {
 	TSAAccountHint             string
 
 	// Menus and dialogs.
-	MenuFile              string
-	MenuOpenDocument      string
-	MenuChooseCertificate string
-	MenuCheckDocument     string
-	MenuSignature         string
-	MenuPreviousPage      string
-	MenuNextPage          string
-	MenuTools             string
-	MenuCard              string
-	MenuChangePIN         string
-	MenuUnlockPIN         string
-	ChangePINTitle        string
-	UnlockPINTitle        string
-	ChangePINHint         string
-	UnlockPINHint         string
-	PINDialogCard         string
-	PINDialogOnlyCard     string
-	CurrentPINLabel       string
-	PUKLabel              string
-	NewPINLabel           string
-	RepeatPINLabel        string
-	ChangePINButton       string
-	UnlockPINButton       string
-	CancelButton          string
-	TalkingToCard         string
-	PINChanged            string
-	CardUnlocked          string
-	PINMismatch           string
-	MissingPUK            string
-	WrongPUK              string
-	WrongPUKFinalTry      string
-	WrongPUKNowLocked     string
-	PUKLocked             string
-	NewPINRejected        string
-	NewPINTooShort        string
-	NewPINTooLong         string
-	MenuRequests          string
-	MenuHelp              string
-	MenuManual            string
-	MenuAbout             string
-	AboutText             string
-	UnknownVersion        string
-	CloseButton           string
-	RefreshButton         string
+	MenuFile               string
+	MenuOpenDocument       string
+	MenuChooseCertificate  string
+	MenuCheckDocument      string
+	MenuSignature          string
+	MenuPreviousPage       string
+	MenuNextPage           string
+	MenuTools              string
+	PageTitle              string
+	PageSite               string
+	PageAppName            string
+	PageOpSign             string
+	PageOpCosign           string
+	PageOpCountersign      string
+	PageOpSignAndSave      string
+	PageOpSelectCert       string
+	PageOpSave             string
+	PageOpBatch            string
+	PageOpBatchOne         string
+	PageFormat             string
+	PageData               string
+	PageDataURL            string
+	PageChooseFile         string
+	PageFilters            string
+	PageWarnDES            string
+	PageWarnDownload       string
+	PageWarnBatch          string
+	PageWarnFilters        string
+	PageRejected           string
+	PageApprove            string
+	PageApproveCertificate string
+	PageApproveSave        string
+	PageDecline            string
+	PageClose              string
+	PageSaveTo             string
+	PageDocument           string
+	PageWorking            string
+	PageDone               string
+	PageDeclined           string
+	PageFailed             string
+	MissingSaveTo          string
+	PageKeyTitle           string
+	MenuCard               string
+	MenuChangePIN          string
+	MenuUnlockPIN          string
+	ChangePINTitle         string
+	UnlockPINTitle         string
+	ChangePINHint          string
+	UnlockPINHint          string
+	PINDialogCard          string
+	PINDialogOnlyCard      string
+	CurrentPINLabel        string
+	PUKLabel               string
+	NewPINLabel            string
+	RepeatPINLabel         string
+	ChangePINButton        string
+	UnlockPINButton        string
+	CancelButton           string
+	TalkingToCard          string
+	PINChanged             string
+	CardUnlocked           string
+	PINMismatch            string
+	MissingPUK             string
+	WrongPUK               string
+	WrongPUKFinalTry       string
+	WrongPUKNowLocked      string
+	PUKLocked              string
+	NewPINRejected         string
+	NewPINTooShort         string
+	NewPINTooLong          string
+	MenuRequests           string
+	MenuHelp               string
+	MenuManual             string
+	MenuAbout              string
+	AboutText              string
+	UnknownVersion         string
+	CloseButton            string
+	RefreshButton          string
 
 	// Verification results in plain words.
 	OnlineRevocation string
@@ -388,6 +422,40 @@ var spanish = Catalogue{
 	MenuPreviousPage:           "Página anterior",
 	MenuNextPage:               "Página siguiente",
 	MenuTools:                  "Herramientas",
+	PageTitle:                  "Una página web pide tu firma",
+	PageSite:                   "La respuesta irá a %s.",
+	PageAppName:                "La página dice llamarse «%s».",
+	PageOpSign:                 "Firmar un documento",
+	PageOpCosign:               "Añadir tu firma a un documento ya firmado",
+	PageOpCountersign:          "Contrafirmar las firmas de un documento",
+	PageOpSignAndSave:          "Firmar un documento y guardarlo",
+	PageOpSelectCert:           "Darle tu certificado, sin firmar nada",
+	PageOpSave:                 "Guardar un fichero en tu equipo",
+	PageOpBatch:                "Firmar %d documentos",
+	PageOpBatchOne:             "Firmar 1 documento",
+	PageFormat:                 "Formato: %s",
+	PageData:                   "Datos: %d bytes, huella SHA-256 %s",
+	PageDataURL:                "Los datos se descargarán de %s si apruebas.",
+	PageChooseFile:             "La página no envía el documento: elige cuál firmar.",
+	PageFilters:                "Solo acepta certificados que cumplan: %s",
+	PageWarnDES:                "La respuesta viaja a la sede cifrada con DES simple y una clave de 8 cifras: quien la vea puede leerla.",
+	PageWarnDownload:           "Los datos se descargarán de %s cuando apruebes.",
+	PageWarnBatch:              "Los documentos se quedan en la sede: firmas lo que su servidor prepara a partir de ellos, y trebaruna no puede enseñártelo.",
+	PageWarnFilters:            "La página pone condiciones a los certificados que trebaruna no entiende; ningún certificado las cumple.",
+	PageRejected:               "La página no acepta ese certificado (%s). Elige otro.",
+	PageApprove:                "Firmar y enviar",
+	PageApproveCertificate:     "Enviar el certificado",
+	PageApproveSave:            "Guardar",
+	PageDecline:                "Rechazar",
+	PageClose:                  "Cerrar",
+	PageSaveTo:                 "Guardar en…",
+	PageDocument:               "Documento a firmar…",
+	PageWorking:                "Trabajando; la respuesta irá a %s…",
+	PageDone:                   "Hecho: la respuesta ha llegado a %s.",
+	PageDeclined:               "Has rechazado la petición; la página lo sabe.",
+	PageFailed:                 "No se ha completado: %s",
+	MissingSaveTo:              "Elige dónde guardar.",
+	PageKeyTitle:               "Con qué certificado",
 	MenuCard:                   "Tarjeta",
 	MenuChangePIN:              "Cambiar el PIN…",
 	MenuUnlockPIN:              "Desbloquear con el PUK…",
@@ -588,6 +656,40 @@ var italian = Catalogue{
 	MenuPreviousPage:           "Pagina precedente",
 	MenuNextPage:               "Pagina successiva",
 	MenuTools:                  "Strumenti",
+	PageTitle:                  "Una pagina web chiede la tua firma",
+	PageSite:                   "La risposta andrà a %s.",
+	PageAppName:                "La pagina dice di chiamarsi «%s».",
+	PageOpSign:                 "Firmare un documento",
+	PageOpCosign:               "Aggiungere la tua firma a un documento già firmato",
+	PageOpCountersign:          "Controfirmare le firme di un documento",
+	PageOpSignAndSave:          "Firmare un documento e salvarlo",
+	PageOpSelectCert:           "Darle il tuo certificato, senza firmare nulla",
+	PageOpSave:                 "Salvare un file sul tuo computer",
+	PageOpBatch:                "Firmare %d documenti",
+	PageOpBatchOne:             "Firmare 1 documento",
+	PageFormat:                 "Formato: %s",
+	PageData:                   "Dati: %d byte, impronta SHA-256 %s",
+	PageDataURL:                "I dati verranno scaricati da %s se approvi.",
+	PageChooseFile:             "La pagina non invia il documento: scegli quale firmare.",
+	PageFilters:                "Accetta solo certificati che soddisfano: %s",
+	PageWarnDES:                "La risposta viaggia verso il sito cifrata con DES semplice e una chiave di 8 cifre: chi la vede può leggerla.",
+	PageWarnDownload:           "I dati verranno scaricati da %s quando approvi.",
+	PageWarnBatch:              "I documenti restano sul sito: firmi ciò che il suo server prepara da essi, e trebaruna non può mostrartelo.",
+	PageWarnFilters:            "La pagina pone ai certificati condizioni che trebaruna non capisce; nessun certificato le soddisfa.",
+	PageRejected:               "La pagina non accetta quel certificato (%s). Scegline un altro.",
+	PageApprove:                "Firma e invia",
+	PageApproveCertificate:     "Invia il certificato",
+	PageApproveSave:            "Salva",
+	PageDecline:                "Rifiuta",
+	PageClose:                  "Chiudi",
+	PageSaveTo:                 "Salva in…",
+	PageDocument:               "Documento da firmare…",
+	PageWorking:                "In corso; la risposta andrà a %s…",
+	PageDone:                   "Fatto: la risposta è arrivata a %s.",
+	PageDeclined:               "Hai rifiutato la richiesta; la pagina lo sa.",
+	PageFailed:                 "Non completato: %s",
+	MissingSaveTo:              "Scegli dove salvare.",
+	PageKeyTitle:               "Con quale certificato",
 	MenuCard:                   "Carta",
 	MenuChangePIN:              "Cambia il PIN…",
 	MenuUnlockPIN:              "Sblocca con il PUK…",
@@ -788,6 +890,40 @@ var english = Catalogue{
 	MenuPreviousPage:           "Previous page",
 	MenuNextPage:               "Next page",
 	MenuTools:                  "Tools",
+	PageTitle:                  "A web page asks for your signature",
+	PageSite:                   "The answer goes to %s.",
+	PageAppName:                "The page calls itself “%s”.",
+	PageOpSign:                 "Sign a document",
+	PageOpCosign:               "Add your signature to a signed document",
+	PageOpCountersign:          "Counter-sign the signatures of a document",
+	PageOpSignAndSave:          "Sign a document and save it",
+	PageOpSelectCert:           "Give it your certificate, signing nothing",
+	PageOpSave:                 "Save a file on your computer",
+	PageOpBatch:                "Sign %d documents",
+	PageOpBatchOne:             "Sign 1 document",
+	PageFormat:                 "Format: %s",
+	PageData:                   "Data: %d bytes, SHA-256 fingerprint %s",
+	PageDataURL:                "The data will be downloaded from %s if you approve.",
+	PageChooseFile:             "The page sends no document: choose which one to sign.",
+	PageFilters:                "It accepts only certificates matching: %s",
+	PageWarnDES:                "The answer travels to the site encrypted with single DES and an 8-digit key: anyone who sees it can read it.",
+	PageWarnDownload:           "The data will be downloaded from %s when you approve.",
+	PageWarnBatch:              "The documents stay on the site: you sign what its server prepares from them, which trebaruna cannot show you.",
+	PageWarnFilters:            "The page sets certificate conditions trebaruna does not understand; no certificate meets them.",
+	PageRejected:               "The page does not accept that certificate (%s). Choose another.",
+	PageApprove:                "Sign and send",
+	PageApproveCertificate:     "Send the certificate",
+	PageApproveSave:            "Save",
+	PageDecline:                "Decline",
+	PageClose:                  "Close",
+	PageSaveTo:                 "Save to…",
+	PageDocument:               "Document to sign…",
+	PageWorking:                "Working; the answer goes to %s…",
+	PageDone:                   "Done: the answer reached %s.",
+	PageDeclined:               "You declined the request; the page knows.",
+	PageFailed:                 "Not completed: %s",
+	MissingSaveTo:              "Choose where to save.",
+	PageKeyTitle:               "With which certificate",
 	MenuCard:                   "Card",
 	MenuChangePIN:              "Change the PIN…",
 	MenuUnlockPIN:              "Unlock with the PUK…",

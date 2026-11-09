@@ -3,9 +3,11 @@ package application
 import (
 	"context"
 	"crypto/sha256"
+	"crypto/x509"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"time"
 
 	"codeberg.org/simplicer/trebaruna/src/afirma/domain"
 )
@@ -98,9 +100,9 @@ func (u *AnswerPage) sign(ctx context.Context, request domain.SignRequest) (doma
 	if request.Format.Triphase {
 		return u.fail(ctx, request.Channel, domain.Failure{Code: domain.UnsupportedFormat, Cause: request.Format.Name + " (signed through the site's server) is not supported yet"})
 	}
-	decision, err := u.approver.Approve(ctx, proposal)
+	decision, err := u.approve(ctx, proposal)
 	if err != nil {
-		return u.fail(ctx, request.Channel, domain.Failure{Code: domain.CannotAccessKeystore, Cause: err.Error()})
+		return u.fail(ctx, request.Channel, approvalFailure(err))
 	}
 	if !decision.Approved {
 		return u.cancel(ctx, request.Channel)
@@ -134,9 +136,9 @@ func (u *AnswerPage) selectCertificate(ctx context.Context, common domain.Common
 	stop := u.waiting(common.Channel)
 	defer stop()
 
-	decision, err := u.approver.Approve(ctx, u.proposal(domain.SelectCert, common, "", domain.Payload{}))
+	decision, err := u.approve(ctx, u.proposal(domain.SelectCert, common, "", domain.Payload{}))
 	if err != nil {
-		return u.fail(ctx, common.Channel, domain.Failure{Code: domain.CannotAccessKeystore, Cause: err.Error()})
+		return u.fail(ctx, common.Channel, approvalFailure(err))
 	}
 	if !decision.Approved {
 		return u.cancel(ctx, common.Channel)
@@ -155,7 +157,7 @@ func (u *AnswerPage) save(ctx context.Context, common domain.Common, payload dom
 
 	proposal := u.proposal(domain.Save, common, "", payload)
 	proposal.ChooseFile, proposal.SuggestedName = false, name
-	decision, err := u.approver.Approve(ctx, proposal)
+	decision, err := u.approve(ctx, proposal)
 	if err != nil || !decision.Approved || decision.SavePath == "" {
 		return u.cancel(ctx, common.Channel)
 	}
@@ -167,6 +169,46 @@ func (u *AnswerPage) save(ctx context.Context, common domain.Common, payload dom
 		return u.fail(ctx, common.Channel, domain.Failure{Code: domain.CannotSaveData, Cause: err.Error()})
 	}
 	return u.deliver(ctx, common.Channel, domain.SavedAnswer())
+}
+
+// maximumChoices is how many times a person may pick a certificate the page
+// does not accept before the request fails.
+const maximumChoices = 3
+
+// approve asks the person and holds the choice to the page's certificate
+// filter, as AutoFirma offers only matching certificates: a certificate that
+// does not match is refused with the reason, and the person may choose again.
+func (u *AnswerPage) approve(ctx context.Context, proposal Proposal) (Decision, error) {
+	for attempt := 0; attempt < maximumChoices; attempt++ {
+		decision, err := u.approver.Approve(ctx, proposal)
+		if err != nil || !decision.Approved || proposal.Operation == domain.Save {
+			return decision, err
+		}
+		raw, err := u.certificates.Certificate(decision.Key)
+		if err != nil {
+			return Decision{}, err
+		}
+		certificate, err := x509.ParseCertificate(raw)
+		if err != nil {
+			return Decision{}, err
+		}
+		if proposal.Filter.Accepts(certificate, time.Now()) {
+			return decision, nil
+		}
+		proposal.Rejected = certificate.Subject.CommonName + " is not a certificate this page accepts" +
+			" (expired, or outside its filters)"
+	}
+	return Decision{}, domain.Failure{Code: domain.NoCertificatesKeystore}
+}
+
+// approvalFailure keeps a failure the approval step decided (SAF_19) and
+// reports any other error as the keystore's (SAF_08).
+func approvalFailure(err error) error {
+	var failure domain.Failure
+	if errors.As(err, &failure) {
+		return failure
+	}
+	return domain.Failure{Code: domain.CannotAccessKeystore, Cause: err.Error()}
 }
 
 // proposal describes the request for the person.

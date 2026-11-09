@@ -215,3 +215,21 @@ const sampleReport = `{"signed":true,"verdict":"untrusted","signers":[{"field":"
 "self_signed":true,"findings":[{"code":"certificate.self_signed","status":"bad","message":"the certificate is its own issuer"},
 {"code":"timestamp.missing","status":"warn","message":"no timestamp: the signing time is the signer's claim"}]}],
 "warnings":[{"code":"revocation.offline","status":"warn","message":"revocation not checked: offline"}]}`
+
+// TestScreenshotOfAPageRequest renders the approval window for a batch like
+// Sistema RED's.
+func TestScreenshotOfAPageRequest(t *testing.T) {
+	directory := os.Getenv("TREBARUNA_SCREENSHOTS")
+	if directory == "" {
+		t.Skip("set TREBARUNA_SCREENSHOTS to a directory to write screenshots")
+	}
+	batch := domain.PageProposal{Operation: "batch", Site: "sede.red.gob.es", AppName: "SistemaRED", Format: "1 document(s), CAdES, SHA256withRSA",
+		Items:   []domain.PageItem{{ID: "doc-2026-11-0042", Format: "CAdES", Suboperation: "sign"}},
+		Filters: []string{"subject.rfc2254:(serialNumber=12345678Z)", "subject.rfc2254:(serialNumber=IDCES-12345678Z)"},
+		Warnings: []string{"the answer travels to the site encrypted with single DES and an 8-digit key: anyone who sees it can read it",
+			"the documents stay on the site: you sign what its server prepares from them, which trebaruna cannot show"}}
+	request, _ := pageFixture(t, proposalStep(batch))
+	fyne.CurrentApp().Settings().SetTheme(NewAppTheme(DefaultPalette()))
+	request.window.Resize(fyne.NewSize(640, 760))
+	capture(t, request.window, filepath.Join(directory, "page-request-es.png"))
+}

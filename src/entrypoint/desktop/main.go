@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"codeberg.org/simplicer/trebaruna/src/desktop/infrastructure"
 	"codeberg.org/simplicer/trebaruna/src/desktop/messaging"
@@ -34,6 +35,14 @@ func main() {
 	// they carry a document plus parameters, and treating one as a filename would
 	// put a URL in the file field. The URI is parsed here and only its document
 	// reaches the window; approval of what follows is a separate, deliberate step.
+	// An afirma:// URI is a Spanish administration page asking AutoFirma's
+	// protocol: it opens the approval window, which shows the request and
+	// answers the page only once the person decides.
+	if len(os.Args) > 1 && strings.HasPrefix(os.Args[1], "afirma://") {
+		infrastructure.RunPageRequest(infrastructure.Options{BinaryPath: resolveBinary(), Language: language}, os.Args[1])
+		return
+	}
+
 	documentPath := ""
 	if len(os.Args) > 1 {
 		documentPath = serve.DocumentFromArgument(os.Args[1])

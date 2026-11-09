@@ -207,6 +207,9 @@ free source ([afirma-protocol.md](afirma-protocol.md)), with the difference
 that matters here: nothing is signed, downloaded or sent before a person has
 seen the request and approved it.
 
+In the desktop, the URI opens an approval window ([Desktop](desktop.md#requests-from-autofirma-pages-afirma));
+from a terminal:
+
 ```bash
 trebaruna afirma 'afirma://sign?…'                       # shows the request, answers CANCEL
 trebaruna afirma 'afirma://sign?…' --approve --p12 k.p12   # signs and answers the site

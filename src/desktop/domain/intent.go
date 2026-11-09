@@ -182,6 +182,10 @@ const (
 	// ProblemNewPINRejected means the card cannot take the new PIN; Detail
 	// carries the card's limits as the command stated them.
 	ProblemNewPINRejected ProblemCode = "new_pin_rejected"
+
+	// ProblemMissingSaveTo means a page asked to save a file and no place
+	// was chosen.
+	ProblemMissingSaveTo ProblemCode = "missing_save_to"
 )
 
 // StopsCard reports whether the problem forbids trying the card again with

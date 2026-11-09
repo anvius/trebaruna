@@ -31,9 +31,9 @@ func (u *AnswerPage) batch(ctx context.Context, request domain.BatchRequest) (do
 		proposal.Warnings = append(proposal.Warnings,
 			"the documents stay on the site: you sign what its server prepares from them, which trebaruna cannot show")
 	}
-	decision, err := u.approver.Approve(ctx, proposal)
+	decision, err := u.approve(ctx, proposal)
 	if err != nil {
-		return u.fail(ctx, request.Channel, domain.Failure{Code: domain.CannotAccessKeystore, Cause: err.Error()})
+		return u.fail(ctx, request.Channel, approvalFailure(err))
 	}
 	if !decision.Approved {
 		return u.cancel(ctx, request.Channel)

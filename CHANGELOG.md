@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- afirma:// approval window: `trebaruna-desktop afirma://…` opens a window
+  with the request in full (operation, site, the page's own name, data or its
+  address, batch documents, filters, translated warnings), the certificate
+  chosen as in the Sign tab (card by default, Firefox, file), and Sign and
+  send / Decline (closing declines). It drives `trebaruna afirma
+  --interactive`: JSON proposal lines out, the decision with its secrets in
+  through stdin, `retry` when the page refuses the certificate. The chosen
+  certificate must pass the page's filters (up to three choices, then
+  SAF_19), for every approver. `cli.RunIO` takes the standard input.
+
 - afirma:// batches: JSON and XML batch definitions signed through the site's
   pre- and post-signers (`json=`/`xml=` with `certs=`, the client signing each
   `PRE` into `PK1` and keeping `PRE` only when `NEED_PRE`, `tridata=` to the
