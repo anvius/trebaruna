@@ -24,10 +24,20 @@ type CertificateFilter struct {
 	// holding one matches nothing, so no certificate the page did not mean is
 	// ever offered.
 	Unsupported []string
+	// pairs marks ssl: and qualified:, which look at the store's other
+	// certificates.
+	pairs bool
 }
 
 // condition is one test on a certificate.
-type condition func(certificate *x509.Certificate, now time.Time) bool
+type condition func(certificate *x509.Certificate, in scope) bool
+
+// scope is what a condition sees besides the certificate: the time, and the
+// other certificates of its store, which ssl: and qualified: pair it with.
+type scope struct {
+	now        time.Time
+	neighbours []*x509.Certificate
+}
 
 // FilterFrom reads filter, filters and filters.N from the properties. With
 // no filter at all, expired certificates are hidden.
@@ -59,9 +69,10 @@ func FilterFrom(properties map[string]string) CertificateFilter {
 				continue
 			}
 			parsed, ok := parseCondition(strings.TrimSpace(part))
+			filter.pairs = filter.pairs || ok && pairing(part)
 			if !ok {
 				filter.Unsupported = append(filter.Unsupported, strings.TrimSpace(part))
-				parsed = func(*x509.Certificate, time.Time) bool { return false }
+				parsed = func(*x509.Certificate, scope) bool { return false }
 			}
 			conditions = append(conditions, parsed)
 		}
@@ -70,12 +81,15 @@ func FilterFrom(properties map[string]string) CertificateFilter {
 	return filter
 }
 
-// Accepts reports whether the certificate may be offered.
-func (f CertificateFilter) Accepts(certificate *x509.Certificate, now time.Time) bool {
+// Accepts reports whether the certificate may be offered. Its neighbours
+// are the other certificates of its store, such as a card's other identity;
+// only ssl: and qualified: look at them.
+func (f CertificateFilter) Accepts(certificate *x509.Certificate, neighbours []*x509.Certificate, now time.Time) bool {
+	in := scope{now: now, neighbours: neighbours}
 	for _, conditions := range f.alternatives {
 		matched := true
 		for _, test := range conditions {
-			if !test(certificate, now) {
+			if !test(certificate, in) {
 				matched = false
 				break
 			}
@@ -90,8 +104,11 @@ func (f CertificateFilter) Accepts(certificate *x509.Certificate, now time.Time)
 // Expressions are the page's filters as written, to show the person.
 func (f CertificateFilter) Expressions() []string { return f.expressions }
 
-func notExpired(certificate *x509.Certificate, now time.Time) bool {
-	return !now.After(certificate.NotAfter) && !now.Before(certificate.NotBefore)
+// Pairs reports a filter that needs the store's other certificates.
+func (f CertificateFilter) Pairs() bool { return f.pairs }
+
+func notExpired(certificate *x509.Certificate, in scope) bool {
+	return !in.now.After(certificate.NotAfter) && !in.now.Before(certificate.NotBefore)
 }
 
 // parseCondition reads one condition; prefixes are case-insensitive.
@@ -102,7 +119,7 @@ func parseCondition(text string) (condition, bool) {
 	case lower == "nonexpired:" || lower == "nonexpired:true":
 		return notExpired, true
 	case lower == "nonexpired:false":
-		return func(*x509.Certificate, time.Time) bool { return true }, true
+		return func(*x509.Certificate, scope) bool { return true }, true
 	case strings.HasPrefix(lower, "subject.rfc2254:"):
 		return ldapCondition(after("subject.rfc2254:"), func(c *x509.Certificate) []byte { return c.RawSubject })
 	case strings.HasPrefix(lower, "issuer.rfc2254.recurse:"):
@@ -111,12 +128,12 @@ func parseCondition(text string) (condition, bool) {
 		return ldapCondition(after("issuer.rfc2254:"), func(c *x509.Certificate) []byte { return c.RawIssuer })
 	case strings.HasPrefix(lower, "subject.contains:"):
 		needle := strings.ToLower(after("subject.contains:"))
-		return func(c *x509.Certificate, _ time.Time) bool {
+		return func(c *x509.Certificate, _ scope) bool {
 			return strings.Contains(strings.ToLower(c.Subject.String()), needle)
 		}, true
 	case strings.HasPrefix(lower, "issuer.contains:"):
 		needle := strings.ToLower(after("issuer.contains:"))
-		return func(c *x509.Certificate, _ time.Time) bool {
+		return func(c *x509.Certificate, _ scope) bool {
 			return strings.Contains(strings.ToLower(c.Issuer.String()), needle)
 		}, true
 	case strings.HasPrefix(lower, "keyusage."):
@@ -128,13 +145,13 @@ func parseCondition(text string) (condition, bool) {
 		if err != nil {
 			return nil, false
 		}
-		return func(c *x509.Certificate, _ time.Time) bool { return bytes.Equal(c.Raw, encoded) }, true
+		return func(c *x509.Certificate, _ scope) bool { return bytes.Equal(c.Raw, encoded) }, true
 	case strings.HasPrefix(lower, "policyid:"):
 		var wanted []string
 		for _, oid := range strings.Split(after("policyid:"), ",") {
 			wanted = append(wanted, strings.TrimSpace(oid))
 		}
-		return func(c *x509.Certificate, _ time.Time) bool {
+		return func(c *x509.Certificate, _ scope) bool {
 			declared := make([]string, 0, len(c.Policies)+len(c.PolicyIdentifiers))
 			for _, policy := range c.Policies {
 				declared = append(declared, policy.String())
@@ -152,19 +169,19 @@ func parseCondition(text string) (condition, bool) {
 			return false
 		}, true
 	case lower == "signingcert:" || lower == "signingcert":
-		return func(c *x509.Certificate, _ time.Time) bool { return c.KeyUsage&x509.KeyUsageContentCommitment != 0 }, true
+		return func(c *x509.Certificate, _ scope) bool { return c.KeyUsage&x509.KeyUsageContentCommitment != 0 }, true
 	case lower == "authcert:" || lower == "authcert":
-		return func(c *x509.Certificate, _ time.Time) bool {
+		return func(c *x509.Certificate, _ scope) bool {
 			return c.KeyUsage&x509.KeyUsageDigitalSignature != 0 && c.KeyUsage&x509.KeyUsageContentCommitment == 0
 		}, true
 	case lower == "dnie:" || lower == "dnie":
-		return func(c *x509.Certificate, _ time.Time) bool {
+		return func(c *x509.Certificate, _ scope) bool {
 			return strings.Contains(strings.ToUpper(c.Issuer.String()), "DIRECCION GENERAL DE LA POLICIA") &&
 				c.KeyUsage&x509.KeyUsageContentCommitment != 0
 		}, true
 	case strings.HasPrefix(lower, "pseudonym:"):
 		value := after("pseudonym:")
-		return func(c *x509.Certificate, _ time.Time) bool {
+		return func(c *x509.Certificate, _ scope) bool {
 			for _, attribute := range c.Subject.Names {
 				if attribute.Type.String() == "2.5.4.65" {
 					return value == "" || strings.EqualFold(fmt.Sprint(attribute.Value), value)
@@ -173,9 +190,13 @@ func parseCondition(text string) (condition, bool) {
 			return false
 		}, true
 	case lower == "sscd:" || lower == "sscd":
-		return func(c *x509.Certificate, _ time.Time) bool { return hasQcSSCD(c) }, true
+		return func(c *x509.Certificate, _ scope) bool { return hasQcSSCD(c) }, true
+	case strings.HasPrefix(lower, "ssl:"):
+		return sslCondition(after("ssl:"))
+	case strings.HasPrefix(lower, "qualified:"):
+		return qualifiedCondition(after("qualified:"))
 	case lower == "disableopeningexternalstores":
-		return func(*x509.Certificate, time.Time) bool { return true }, true
+		return func(*x509.Certificate, scope) bool { return true }, true
 	}
 	return nil, false
 }
@@ -198,10 +219,10 @@ func keyUsageCondition(text string) (condition, bool) {
 	}
 	switch value {
 	case "null":
-		return func(*x509.Certificate, time.Time) bool { return true }, true
+		return func(*x509.Certificate, scope) bool { return true }, true
 	case "true", "false":
 		wanted := value == "true"
-		return func(c *x509.Certificate, _ time.Time) bool { return (c.KeyUsage&bit != 0) == wanted }, true
+		return func(c *x509.Certificate, _ scope) bool { return (c.KeyUsage&bit != 0) == wanted }, true
 	}
 	return nil, false
 }
@@ -228,7 +249,7 @@ func thumbprintCondition(text string) (condition, bool) {
 	if !known {
 		return nil, false
 	}
-	return func(c *x509.Certificate, _ time.Time) bool { return bytes.Equal(hash(c.Raw), wanted) }, true
+	return func(c *x509.Certificate, _ scope) bool { return bytes.Equal(hash(c.Raw), wanted) }, true
 }
 
 // hasQcSSCD reports the QcStatement saying the key is in a qualified device.

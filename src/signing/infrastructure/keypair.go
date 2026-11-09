@@ -21,9 +21,12 @@ type KeyPair struct {
 	Signer      crypto.Signer
 	Certificate *x509.Certificate
 	Chain       []*x509.Certificate
-	Name        string
-	SelfSigned  bool
-	KeySource   domain.KeySource
+	// Neighbours are the store's other certificates paired with a key: a
+	// card's other identities. A file holds one.
+	Neighbours []*x509.Certificate
+	Name       string
+	SelfSigned bool
+	KeySource  domain.KeySource
 
 	// release ends the card session the Signer works through; nil for keys
 	// read from a file.

@@ -23,6 +23,8 @@ type certificateSpec struct {
 	notAfter        time.Time
 	policies        []x509.OID
 	sscd            bool
+	// serial is the certificate's serial number; 2 when zero.
+	serial int64
 }
 
 func issue(t *testing.T, spec certificateSpec) *x509.Certificate {
@@ -31,7 +33,11 @@ func issue(t *testing.T, spec certificateSpec) *x509.Certificate {
 	issuerKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	issuer := &x509.Certificate{SerialNumber: big.NewInt(1), Subject: spec.issuer, NotBefore: time.Now().Add(-48 * time.Hour),
 		NotAfter: time.Now().Add(48 * time.Hour), IsCA: true, BasicConstraintsValid: true, KeyUsage: x509.KeyUsageCertSign}
-	template := &x509.Certificate{SerialNumber: big.NewInt(2), Subject: spec.subject, NotBefore: time.Now().Add(-24 * time.Hour),
+	serial := spec.serial
+	if serial == 0 {
+		serial = 2
+	}
+	template := &x509.Certificate{SerialNumber: big.NewInt(serial), Subject: spec.subject, NotBefore: time.Now().Add(-24 * time.Hour),
 		NotAfter: spec.notAfter, KeyUsage: spec.usage, Policies: spec.policies}
 	if spec.sscd {
 		statement, _ := asn1.Marshal([]asn1.RawValue{{FullBytes: mustMarshal(t, struct{ ID asn1.ObjectIdentifier }{asn1.ObjectIdentifier{0, 4, 0, 1862, 1, 4}})}})
@@ -78,7 +84,7 @@ func dnie(t *testing.T, signing bool, notAfter time.Time) *x509.Certificate {
 }
 
 func accepts(properties map[string]string, certificate *x509.Certificate) bool {
-	return domain.FilterFrom(properties).Accepts(certificate, time.Now())
+	return domain.FilterFrom(properties).Accepts(certificate, nil, time.Now())
 }
 
 func TestWithoutAFilterOnlyValidCertificatesAreOffered(t *testing.T) {
@@ -151,8 +157,8 @@ func TestExactCertificateFilters(t *testing.T) {
 // TestAnUnknownConditionOffersNothing: guessing would offer a certificate the
 // page did not ask for.
 func TestAnUnknownConditionOffersNothing(t *testing.T) {
-	filter := domain.FilterFrom(map[string]string{"filter": "ssl:1234;nonexpired:"})
-	if filter.Accepts(dnie(t, true, time.Now().Add(time.Hour)), time.Now()) || len(filter.Unsupported) != 1 {
+	filter := domain.FilterFrom(map[string]string{"filter": "fingerprint:1234;nonexpired:"})
+	if filter.Accepts(dnie(t, true, time.Now().Add(time.Hour)), nil, time.Now()) || len(filter.Unsupported) != 1 {
 		t.Errorf("unsupported %v", filter.Unsupported)
 	}
 }

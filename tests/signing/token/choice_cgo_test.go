@@ -97,6 +97,20 @@ func TestTheSignatureCertificateOfACardSigns(t *testing.T) {
 	}
 }
 
+// TestACardsOtherIdentityIsItsNeighbour: the afirma:// ssl: and qualified:
+// filters pair the chosen certificate with the card's other one.
+func TestACardsOtherIdentityIsItsNeighbour(t *testing.T) {
+	token, authentication, signature := cardWithTwoCertificates(t, "digitalSignature", "nonRepudiation")
+
+	pair, err := loadFromCard(t, token.module, token.label, token.pin, domain.ChooseCertificateBy(""))
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	if !pair.Certificate.Equal(signature) || len(pair.Neighbours) != 1 || !pair.Neighbours[0].Equal(authentication) {
+		t.Errorf("the signing certificate's neighbours: %d", len(pair.Neighbours))
+	}
+}
+
 // TestACardCertificateIsChosenBySerial: the person can still pick the other
 // one, by the serial the listing prints.
 func TestACardCertificateIsChosenBySerial(t *testing.T) {

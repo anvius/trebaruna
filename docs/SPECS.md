@@ -114,7 +114,7 @@ user seeing what is signed and where anything goes.
 |---|---|
 | Local HTTP API and `trebaruna://` handler under ADR-0004 | built |
 | AutoFirma `afirma://` protocol, specified from the free source in [afirma-protocol.md](afirma-protocol.md) | specified (D1) |
-| `afirma://` requests read and answered as AutoFirma 1.9 does (dispatch, parameters, SAF errors, certificate filters) for sign, cosign, countersign, signandsave, selectcert and save, each approved by a person first; CAdES (implicit/explicit, co-, counter-), PAdES (invisible unless placed), XAdES enveloped/enveloping | built (D2) |
+| `afirma://` requests read and answered as AutoFirma 1.9 does (dispatch, parameters, SAF errors, certificate filters, including ssl: and qualified: over the key's store) for sign, cosign, countersign, signandsave, selectcert and save, each approved by a person first; CAdES (implicit/explicit, co-, counter-), PAdES (invisible unless placed), XAdES enveloped/enveloping | built (D2) |
 | `afirma://` through the intermediate server: answers posted ciphered (DES, AES for autoscript 1.10), `#WAIT` while the person decides, uploaded requests fetched; `trebaruna afirma` | built (D3) |
 | `afirma://` batches: JSON and XML through the site's pre- and post-signers (three-phase), and local batches; every document shown before approval | built (D4) |
 | `afirma://` single signatures through the site's server (`CAdEStri`, `XAdEStri`, `PAdEStri`, `FacturaEtri`): pre, the key signs each pre-signature here, post; the page receives the certificate and the signature's id | built |

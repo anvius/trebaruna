@@ -358,8 +358,8 @@ Keys interpreted by the protocol layer itself:
 | Condition | Meaning |
 |---|---|
 | `dnie:` | DNIe signing certificate |
-| `ssl:<serial>` | certificate pairing with a given SSL cert (DNIe family) |
-| `qualified:<serial>` | qualified certificate matching |
+| `ssl:<serial>` | the certificate with that serial (hex); if it is a DNIe authentication certificate, the same card's DNIe signing certificate instead (same holder `SERIALNUMBER`, same expiry date), or nothing (`SSLFilter`) |
+| `qualified:<serial>` | the certificate with that serial if it is a signing certificate (non-repudiation; under ACCV-CA2 digital signature alone); otherwise its signing pair in the same store (same issuer, holder `SERIALNUMBER` and expiry date), or itself when there is none, unless it is a DNIe authentication certificate (`QualifiedCertificatesFilter`) |
 | `signingcert:` / `authcert:` | signing / authentication certificate |
 | `keyusage.<usage>:<true|false|null>` | key usage bits: `digitalsignature nonrepudiation keyencipherment dataencipherment keyagreement keycertsign crlsign encipheronly decipheronly` |
 | `nonexpired:` / `nonexpired:<bool>` | hide expired (bare form = hide) |
@@ -373,6 +373,12 @@ Keys interpreted by the protocol layer itself:
 | `disableopeningexternalstores` | user may not switch to other keystores |
 
 With no filter at all, expired certificates are hidden by default.
+
+trebaruna evaluates every condition above. `ssl:` and `qualified:` look at the
+other certificates of the chosen key's store — a card's other identities; a
+file holds one — and compare expiry dates in UTC, where AutoFirma uses the
+local day. A condition it does not understand matches nothing, and the
+approval says which.
 
 Format-specific keys pass straight through to the signers; the most used by sites
 (names from `PdfExtraParams`, `XAdESExtraParams`, `CAdESExtraParams`):

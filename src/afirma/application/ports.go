@@ -81,9 +81,12 @@ type PageSigner interface {
 	Sign(ctx context.Context, request PageSignature) (Signed, error)
 }
 
-// CertificateReader returns the certificate of a key (selectcert).
+// CertificateReader returns the certificate of a key (selectcert) and the
+// other certificates its store holds, which the ssl: and qualified: filters
+// pair it with.
 type CertificateReader interface {
 	Certificate(key signing.Signer) ([]byte, error)
+	Neighbours(key signing.Signer) ([][]byte, error)
 }
 
 // DataFetcher downloads data a page pointed at, once the person has seen

@@ -477,6 +477,21 @@ func (KeyCertificates) Certificate(key signing.Signer) ([]byte, error) {
 	return pair.Certificate.Raw, nil
 }
 
+// Neighbours returns the other certificates of the key's store: a card's
+// other identities; a file holds one.
+func (KeyCertificates) Neighbours(key signing.Signer) ([][]byte, error) {
+	pair, err := signinfra.LoadKeyPair(key)
+	if err != nil {
+		return nil, err
+	}
+	defer pair.Close()
+	raws := make([][]byte, 0, len(pair.Neighbours))
+	for _, neighbour := range pair.Neighbours {
+		raws = append(raws, neighbour.Raw)
+	}
+	return raws, nil
+}
+
 // compile-time checks.
 var (
 	_ application.PageSigner        = NativePageSigner{}

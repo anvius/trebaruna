@@ -80,10 +80,18 @@ func loadToken(signer domain.Signer) (KeyPair, error) {
 		chain = append(chain, parsed)
 	}
 
+	var neighbours []*x509.Certificate
+	for other, certificate := range leaves {
+		if other != index && certificate != nil {
+			neighbours = append(neighbours, certificate)
+		}
+	}
+
 	return KeyPair{
 		Signer:      pair.Signer,
 		Certificate: leaf,
 		Chain:       chain,
+		Neighbours:  neighbours,
 		Name:        signer.NameFor(identity.FromCertificate(leaf).Name),
 		SelfSigned:  isSelfSigned(leaf),
 		KeySource:   domain.FromToken,

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"codeberg.org/simplicer/trebaruna/src/afirma/domain"
+	signing "codeberg.org/simplicer/trebaruna/src/signing/domain"
 )
 
 // AnswerPage is the use case behind every afirma:// request: AutoFirma's
@@ -80,10 +81,11 @@ func (u *AnswerPage) Execute(ctx context.Context, invocation domain.Invocation) 
 		}
 		return u.batch(ctx, request)
 	case domain.WebSocket, domain.Service:
-		// The local channels are TLS on 127.0.0.1 and need a certificate the
-		// browser trusts; trebaruna installs no root for it (ADR-0013).
+		// A WebSocket channel is served around this use case, by
+		// AnswerLocalChannel (ADR-0019), never from inside a request; the
+		// legacy socket is not offered.
 		return domain.Answer{}, domain.Failure{Code: domain.CannotOpenSocket,
-			Cause: "the local channels need a trusted certificate that trebaruna does not install"}
+			Cause: "a local channel is not opened from inside a request, and the legacy socket is not offered"}
 	case domain.Load:
 		// load has no intermediate-server return path in AutoFirma 1.9.
 		return u.fail(ctx, channelOf(invocation), domain.Failure{Code: domain.UnsupportedOperation})
@@ -204,13 +206,35 @@ func (u *AnswerPage) approve(ctx context.Context, proposal Proposal) (Decision, 
 		if err != nil {
 			return Decision{}, err
 		}
-		if proposal.Filter.Accepts(certificate, time.Now()) {
+		var neighbours []*x509.Certificate
+		if proposal.Filter.Pairs() {
+			if neighbours, err = u.neighbours(decision.Key); err != nil {
+				return Decision{}, err
+			}
+		}
+		if proposal.Filter.Accepts(certificate, neighbours, time.Now()) {
 			return decision, nil
 		}
 		proposal.Rejected = certificate.Subject.CommonName + " is not a certificate this page accepts" +
 			" (expired, or outside its filters)"
 	}
 	return Decision{}, domain.Failure{Code: domain.NoCertificatesKeystore}
+}
+
+// neighbours are the other certificates of the key's store; one that cannot
+// be read pairs with nothing.
+func (u *AnswerPage) neighbours(key signing.Signer) ([]*x509.Certificate, error) {
+	raws, err := u.certificates.Neighbours(key)
+	if err != nil {
+		return nil, err
+	}
+	var neighbours []*x509.Certificate
+	for _, raw := range raws {
+		if certificate, err := x509.ParseCertificate(raw); err == nil {
+			neighbours = append(neighbours, certificate)
+		}
+	}
+	return neighbours, nil
 }
 
 // approvalFailure keeps a failure the approval step decided (SAF_19) and

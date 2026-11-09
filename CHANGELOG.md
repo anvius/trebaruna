@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- afirma:// certificate filters `ssl:<serial>` and `qualified:<serial>`,
+  as AutoFirma's SSLFilter and QualifiedCertificatesFilter: the page names
+  a certificate, usually the identity card's authentication certificate
+  the person logged in with, and the card's signing certificate is the one
+  accepted (same holder serial number and expiry date; for `qualified:`
+  also the same issuer). They look at the other certificates of the chosen
+  key's store; until now they matched nothing.
+
 - afirma:// pages that use AutoFirma's WebSocket channel work (D5;
   ADR-0019, proposed, opt-in): `afirma://websocket?ports=…&v=…&idsession=…`
   starts a WebSocket server, trebaruna's own RFC 6455 implementation, on

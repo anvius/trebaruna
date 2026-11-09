@@ -241,7 +241,9 @@ trebaruna afirma 'afirma://sign?…' --approve --p12 k.p12   # signs and answers
 What a request shows: the operation, the site the answer goes to (the host of
 its storage service) and the name the page gives itself, the format, the data
 (size and SHA-256, or the address it would be downloaded from), the certificate
-filters the page sets, and warnings — the intermediate server's single DES with
+filters the page sets (all of AutoFirma's, including `ssl:` and `qualified:`,
+which offer the signing certificate of the identity card whose authentication
+certificate you logged in with), and warnings — the intermediate server's single DES with
 an eight-digit key protects nothing against anyone who sees the traffic, and
 trebaruna says so.
 

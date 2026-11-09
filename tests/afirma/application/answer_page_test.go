@@ -46,9 +46,13 @@ var holder = func() []byte {
 	return raw
 }()
 
-type fixedCertificate struct{}
+// fixedCertificate gives every key the holder's certificate, in a store
+// with the neighbours given.
+type fixedCertificate struct{ neighbours [][]byte }
 
 func (fixedCertificate) Certificate(signing.Signer) ([]byte, error) { return holder, nil }
+
+func (f fixedCertificate) Neighbours(signing.Signer) ([][]byte, error) { return f.neighbours, nil }
 
 type recordingFetcher struct{ fetched []string }
 
@@ -208,6 +212,30 @@ func TestSelectCertAndSaveAndTheBlockedChannels(t *testing.T) {
 	}
 	if loaded, _ := f.use.Execute(context.Background(), invocation(t, "afirma://load?exts=pdf")); !strings.HasPrefix(loaded.Text(), "SAF_04") {
 		t.Errorf("load %q", loaded.Text())
+	}
+}
+
+// TestPairingFiltersLookAtTheKeysStore: qualified: names the holder's
+// certificate, which is no signing certificate; alone in its store it is
+// offered, but beside its signing pair the pair is offered instead.
+func TestPairingFiltersLookAtTheKeysStore(t *testing.T) {
+	uri := "afirma://selectcert?properties=" + base64.StdEncoding.EncodeToString([]byte("filter=qualified:7"))
+	alone := newFixture(t, true)
+	if answer, _ := alone.use.Execute(context.Background(), invocation(t, uri)); answer.Text() != domain.EncodeBase64URL(holder) {
+		t.Errorf("alone in its store: %q", answer.Text())
+	}
+
+	named, _ := x509.ParseCertificate(holder)
+	key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	template := &x509.Certificate{SerialNumber: big.NewInt(8), Subject: named.Subject, NotBefore: named.NotBefore,
+		NotAfter: named.NotAfter, KeyUsage: x509.KeyUsageContentCommitment}
+	pair, _ := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
+	paired := newFixture(t, true)
+	paired.use = application.NewAnswerPage(paired.approver, paired.signer, fixedCertificate{neighbours: [][]byte{pair}},
+		paired.fetcher, paired.files, paired.courier, nil)
+	answer, _ := paired.use.Execute(context.Background(), invocation(t, uri))
+	if !strings.HasPrefix(answer.Text(), "SAF_19") || len(paired.approver.proposals) != 3 {
+		t.Errorf("beside its signing pair: %q after %d choices", answer.Text(), len(paired.approver.proposals))
 	}
 }
 

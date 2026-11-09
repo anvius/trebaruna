@@ -6,7 +6,6 @@ import (
 	"encoding/asn1"
 	"fmt"
 	"strings"
-	"time"
 )
 
 // ldapAttributes maps the attribute names filters use onto their OIDs.
@@ -25,7 +24,7 @@ func ldapCondition(filter string, name func(*x509.Certificate) []byte) (conditio
 	if !ok || strings.TrimSpace(rest) != "" {
 		return nil, false
 	}
-	return func(certificate *x509.Certificate, _ time.Time) bool {
+	return func(certificate *x509.Certificate, _ scope) bool {
 		var sequence pkix.RDNSequence
 		if _, err := asn1.Unmarshal(name(certificate), &sequence); err != nil {
 			return false
