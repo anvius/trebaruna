@@ -49,8 +49,7 @@ func NewNativePageSigner() NativePageSigner {
 // trebaruna does not honour yet; signing without them would hand the page a
 // signature it did not ask for.
 var unsupportedProperties = map[string]string{
-	"precalculatedHashAlgorithm": "signing a digest the page computed",
-	"useManifest":                "XAdES manifests",
+	"useManifest": "XAdES manifests",
 }
 
 // Sign makes the signature the page asked for.
@@ -64,6 +63,12 @@ func (s NativePageSigner) Sign(ctx context.Context, request application.PageSign
 	if request.Format.Auto() {
 		family = detectFamily(request.Crypto, request.Data)
 		request.Format.Family = family
+	}
+	// A digest the page computed is signed in CAdES; AutoFirma's NONE
+	// ignores the property and signs the bytes as they are, and so does this.
+	if request.Properties["precalculatedHashAlgorithm"] != "" && family != "cades" && family != "none" {
+		return application.Signed{}, domain.Failure{Code: domain.UnsupportedOperation,
+			Cause: "a digest the page computed is signed in CAdES only"}
 	}
 	level, tsa := signing.BES, request.Properties["tsaURL"]
 	if tsa != "" {
@@ -133,6 +138,13 @@ func (s NativePageSigner) signCades(ctx context.Context, request application.Pag
 		return nil, domain.Failure{Code: domain.NoSignData}
 	}
 	cades := signapp.CadesRequest{Content: request.Data, Signer: request.Key, Level: level, TimestampURL: tsa, Policy: policy}
+	if algorithm := request.Properties["precalculatedHashAlgorithm"]; algorithm != "" {
+		digest, err := pageDigest(request, algorithm)
+		if err != nil {
+			return nil, err
+		}
+		cades.ContentDigest, cades.Detached = digest, true
+	}
 	switch request.Crypto {
 	case domain.Sign:
 		cades.Detached = strings.EqualFold(request.Properties["mode"], "explicit")
@@ -146,6 +158,25 @@ func (s NativePageSigner) signCades(ctx context.Context, request application.Pag
 		return nil, domain.Failure{Code: domain.SignatureFailed, Cause: err.Error()}
 	}
 	return signature, nil
+}
+
+// pageDigest reads the data as the document's digest (AutoFirma's
+// precalculatedHashAlgorithm): its algorithm must be the signature
+// algorithm's, as one SignerInfo digests both the document and its
+// attributes, and only a signature is made over it.
+func pageDigest(request application.PageSignature, algorithm string) (signing.ContentDigest, error) {
+	if request.Crypto != domain.Sign {
+		return signing.ContentDigest{}, domain.Failure{Code: domain.UnsupportedOperation, Cause: "a digest is signed, not co- or counter-signed"}
+	}
+	digest, err := signing.NewContentDigest(algorithm, request.Data)
+	if err != nil {
+		return signing.ContentDigest{}, domain.Failure{Code: domain.Params, Cause: err.Error()}
+	}
+	if signed := domain.DigestOf(request.Algorithm); signed != digest.Algorithm() {
+		return signing.ContentDigest{}, domain.Failure{Code: domain.Params,
+			Cause: "the digest is " + digest.Algorithm() + " and the signature algorithm " + request.Algorithm}
+	}
+	return digest, nil
 }
 
 // signPades signs a PDF: invisibly, as AutoFirma does, unless the page gives

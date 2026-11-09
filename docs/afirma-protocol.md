@@ -388,7 +388,10 @@ Format-specific keys pass straight through to the signers; the most used by site
 a PDF's /Location takes the city, an XML signature declares all four in
 `SignatureProductionPlaceV2`; the approval shows them, with the policy and the
 roles, before anything is signed),
-`precalculatedHashAlgorithm` (data is already a digest), `format` (XAdES variant:
+`precalculatedHashAlgorithm` (data is already a digest; trebaruna: CAdES
+only, detached, the digest's length checked, its algorithm that of the
+signature algorithm, SHA-1 refused; the approval shows the digest in hex;
+`NONE` ignores it as `AOPkcs1Signer` does; other families refuse it), `format` (XAdES variant:
 `XAdES Detached`, `XAdES Enveloped`, `XAdES Enveloping`),
 `signatureSubFilter` (`adbe.pkcs7.detached` or `ETSI.CAdES.detached`),
 `signaturePage`, `signaturePositionOnPageLowerLeftX/Y`,

@@ -195,6 +195,18 @@ func TestABareSignatureSaysWhatItRecords(t *testing.T) {
 	}
 }
 
+// TestADigestThePageSentIsShown: the person reads the digest, to compare
+// with the document's.
+func TestADigestThePageSentIsShown(t *testing.T) {
+	proposal := signProposal()
+	proposal.Warnings = append(proposal.Warnings, "the page sends only the SHA-256 digest of a document, 9f86d081884c7d65, not the document: "+
+		"trebaruna cannot show it; compare the digest with the document's if you have it")
+	request, _ := pageFixture(t, proposalStep(proposal))
+	if text := detailText(request); !strings.Contains(text, "La página envía solo el resumen SHA-256 de un documento, 9f86d081884c7d65, no el documento") {
+		t.Errorf("the digest is not shown:\n%s", text)
+	}
+}
+
 func sessionOutcomeStep(answer string) domain.PageStep {
 	return domain.PageStep{Outcome: &domain.PageOutcome{Answer: answer, Delivered: true, Session: true}}
 }

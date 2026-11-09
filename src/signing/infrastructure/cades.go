@@ -39,6 +39,9 @@ func (s *CadesSigner) SignCades(ctx context.Context, request application.CadesRe
 	}
 	defer keyPair.Close()
 	if request.Cosign || request.Countersign != "" {
+		if !request.ContentDigest.IsZero() {
+			return nil, fmt.Errorf("a digest is signed, not co- or counter-signed")
+		}
 		return s.addSignature(ctx, request, keyPair)
 	}
 
@@ -46,7 +49,7 @@ func (s *CadesSigner) SignCades(ctx context.Context, request application.CadesRe
 	if err != nil {
 		return nil, err
 	}
-	signature, err := cms.Sign(cms.Request{
+	cmsRequest := cms.Request{
 		Content:            request.Content,
 		Certificate:        keyPair.Certificate,
 		Chain:              keyPair.Chain,
@@ -54,7 +57,17 @@ func (s *CadesSigner) SignCades(ctx context.Context, request application.CadesRe
 		EmbeddedContent:    !request.Detached,
 		IncludeSigningTime: true,
 		ExtraAttributes:    policy,
-	})
+	}
+	if !request.ContentDigest.IsZero() {
+		// The archive timestamp seals the content, which a digest is not.
+		if request.Level.Archival() {
+			return nil, fmt.Errorf("level %s seals the document, and only its digest is here", request.Level)
+		}
+		cmsRequest.Content, cmsRequest.EmbeddedContent = nil, false
+		cmsRequest.Hash = map[string]crypto.Hash{"SHA256": crypto.SHA256, "SHA384": crypto.SHA384, "SHA512": crypto.SHA512}[request.ContentDigest.Algorithm()]
+		cmsRequest.ContentDigest = request.ContentDigest.Value()
+	}
+	signature, err := cms.Sign(cmsRequest)
 	if err != nil {
 		return nil, err
 	}

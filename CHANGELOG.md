@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- afirma:// `precalculatedHashAlgorithm`: a page that sends the document's
+  digest instead of the document gets a detached CAdES signature over it,
+  as AutoFirma makes it. The digest's length is checked, its algorithm must
+  be the signature algorithm's (SHA-256, SHA-384 or SHA-512; SHA-1 is
+  refused), and the approval shows the digest in hex so the person can
+  compare it with the document's. CMS signatures can now use SHA-384 and
+  SHA-512 throughout, not only SHA-256.
+
 - afirma:// bare signatures, `NONE` and `NONEtri` (AutoFirma's
   AOPkcs1Signer): the page's bytes signed as they are, PKCS#1 v1.5 for RSA
   and ASN.1 for ECDSA, checked against the certificate before the page

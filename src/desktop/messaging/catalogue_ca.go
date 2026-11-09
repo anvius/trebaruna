@@ -169,6 +169,7 @@ var catalan = Catalogue{
 	PageWarnFilters:            "La pàgina posa als certificats condicions que trebaruna no entén; cap certificat no les compleix.",
 	PageWarnTriphase:           "La signatura la prepara el servidor de la seu (%s): signes el que aquest servidor calcula, i trebaruna no te'l pot mostrar.",
 	PageWarnBare:               "Una signatura nua (NONE) no diu res del que signa: si aquests bytes són la part signada d'una altra signatura, signes tot el que aquella cobreix, i trebaruna no t'ho pot mostrar.",
+	PageWarnDigest:             "La pàgina envia només el resum %s d'un document, %s, no el document: trebaruna no el pot mostrar; si tens el document, compara'n el resum amb aquest.",
 	PageListening:              "S'està esperant que la pàgina es connecti amb trebaruna en aquest ordinador (port %d)…",
 	PageNextRequest:            "S'està esperant la petició següent de la pàgina…",
 	PageSessionClosed:          "La pàgina ha tancat la connexió amb trebaruna.",

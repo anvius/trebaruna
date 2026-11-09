@@ -31,6 +31,29 @@ type Request struct {
 	// Countersign carries after its timestamp: validation data, such as its
 	// chain's revocation values (CAdES-LT).
 	Unsigned []Attribute
+	// Hash is the digest of the content and of the signed attributes:
+	// SHA-256 (the zero value), SHA-384 or SHA-512.
+	Hash crypto.Hash
+	// ContentDigest, when given, is the content's digest under Hash, signed
+	// without the content, which then cannot be embedded.
+	ContentDigest []byte
+}
+
+// digests are the digest algorithms Sign makes signatures with, and their
+// identifiers; rsaSignatures and ecdsaSignatures name the signature with
+// each.
+var (
+	digests         = map[crypto.Hash]asn1.ObjectIdentifier{crypto.SHA256: OIDSHA256, crypto.SHA384: oidSHA384, crypto.SHA512: oidSHA512}
+	rsaSignatures   = map[crypto.Hash]asn1.ObjectIdentifier{crypto.SHA256: OIDSHA256WithRSA, crypto.SHA384: OIDSHA384WithRSA, crypto.SHA512: OIDSHA512WithRSA}
+	ecdsaSignatures = map[crypto.Hash]asn1.ObjectIdentifier{crypto.SHA256: OIDSHA256WithECDSA, crypto.SHA384: OIDSHA384WithECDSA, crypto.SHA512: OIDSHA512WithECDSA}
+)
+
+// hash is the request's digest algorithm.
+func (r Request) hash() crypto.Hash {
+	if r.Hash == 0 {
+		return crypto.SHA256
+	}
+	return r.Hash
 }
 
 // Signature is the produced SignedData plus the material needed to timestamp
@@ -45,15 +68,26 @@ type Signature struct {
 
 // Sign produces a CMS SignedData with the CAdES-required signed attributes.
 func Sign(request Request) (Signature, error) {
-	if len(request.Content) == 0 {
-		return Signature{}, ErrEmptyContent
-	}
 	if request.Certificate == nil || request.Signer == nil {
 		return Signature{}, fmt.Errorf("cms: certificate and signer are required")
 	}
+	hash := request.hash()
+	if _, known := digests[hash]; !known {
+		return Signature{}, fmt.Errorf("cms: unsupported digest %v", hash)
+	}
+	contentDigest := request.ContentDigest
+	switch {
+	case contentDigest != nil && request.EmbeddedContent:
+		return Signature{}, fmt.Errorf("cms: a signature over a digest cannot embed the content")
+	case contentDigest != nil && len(contentDigest) != hash.Size():
+		return Signature{}, fmt.Errorf("cms: a %v digest has %d bytes, not %d", hash, hash.Size(), len(contentDigest))
+	case contentDigest == nil && len(request.Content) == 0:
+		return Signature{}, ErrEmptyContent
+	case contentDigest == nil:
+		contentDigest = digestOf(hash, request.Content)
+	}
 
-	contentDigest := sha256.Sum256(request.Content)
-	signedAttrsDER, err := buildSignedAttributes(contentDigest[:], request)
+	signedAttrsDER, err := buildSignedAttributes(contentDigest, request)
 	if err != nil {
 		return Signature{}, err
 	}
@@ -63,8 +97,7 @@ func Sign(request Request) (Signature, error) {
 	// single most common source of broken CMS implementations.
 	signedAttrsForSignature := retagAsSet(signedAttrsDER)
 
-	attrsDigest := sha256.Sum256(signedAttrsForSignature)
-	signatureValue, err := request.Signer.Sign(rand.Reader, attrsDigest[:], crypto.SHA256)
+	signatureValue, err := request.Signer.Sign(rand.Reader, digestOf(hash, signedAttrsForSignature), hash)
 	if err != nil {
 		return Signature{}, fmt.Errorf("cms: sign attributes: %w", err)
 	}
@@ -78,7 +111,7 @@ func Sign(request Request) (Signature, error) {
 		DER:            der,
 		SignatureValue: signatureValue,
 		signedAttrs:    signedAttrsForSignature,
-		digestValue:    contentDigest[:],
+		digestValue:    contentDigest,
 	}, nil
 }
 
@@ -182,8 +215,8 @@ func signingCertificateV2(encoder *der, certificate *x509.Certificate) ([]byte, 
 func assemble(request Request, signedAttrs, signatureValue []byte) ([]byte, error) {
 	encoder := &der{}
 
-	algorithm := digestAlgorithmFor(request.Signer, request.Certificate)
-	signatureAlgorithm, err := signatureAlgorithmFor(request.Certificate)
+	algorithm := digestAlgorithmFor(request.hash())
+	signatureAlgorithm, err := signatureAlgorithmFor(request.Certificate, request.hash())
 	if err != nil {
 		return nil, err
 	}
@@ -272,16 +305,24 @@ func ensurePositiveInteger(value []byte) []byte {
 	return out
 }
 
-// digestAlgorithmFor returns the SHA-256 AlgorithmIdentifier.
-func digestAlgorithmFor(_ crypto.Signer, _ *x509.Certificate) []byte {
-	encoder := &der{}
-	return encoder.seq(encoder.oid(OIDSHA256), encoder.null())
+// digestOf hashes data.
+func digestOf(hash crypto.Hash, data []byte) []byte {
+	hasher := hash.New()
+	hasher.Write(data)
+	return hasher.Sum(nil)
 }
 
-// signatureAlgorithmFor picks the signature OID that matches the key type.
-func signatureAlgorithmFor(certificate *x509.Certificate) ([]byte, error) {
+// digestAlgorithmFor returns the digest's AlgorithmIdentifier.
+func digestAlgorithmFor(hash crypto.Hash) []byte {
 	encoder := &der{}
-	oid, err := signatureOIDFor(certificate.PublicKeyAlgorithm)
+	return encoder.seq(encoder.oid(digests[hash]), encoder.null())
+}
+
+// signatureAlgorithmFor picks the signature OID that matches the key type
+// and the digest.
+func signatureAlgorithmFor(certificate *x509.Certificate, hash crypto.Hash) ([]byte, error) {
+	encoder := &der{}
+	oid, err := signatureOIDFor(certificate.PublicKeyAlgorithm, hash)
 	if err != nil {
 		return nil, err
 	}
@@ -291,14 +332,14 @@ func signatureAlgorithmFor(certificate *x509.Certificate) ([]byte, error) {
 	return encoder.seq(encoder.oid(oid)), nil
 }
 
-func signatureOIDFor(algorithm x509.PublicKeyAlgorithm) (asn1.ObjectIdentifier, error) {
+func signatureOIDFor(algorithm x509.PublicKeyAlgorithm, hash crypto.Hash) (asn1.ObjectIdentifier, error) {
 	switch algorithm {
 	case x509.RSA:
 		// The PSS variant is not used here: interoperable CAdES in Italy is
 		// overwhelmingly RSA-PKCS1v15.
-		return OIDSHA256WithRSA, nil
+		return rsaSignatures[hash], nil
 	case x509.ECDSA:
-		return OIDSHA256WithECDSA, nil
+		return ecdsaSignatures[hash], nil
 	}
 	return nil, fmt.Errorf("cms: unsupported public key algorithm %v (only RSA and ECDSA)", algorithm)
 }

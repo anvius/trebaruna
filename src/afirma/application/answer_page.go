@@ -100,6 +100,10 @@ func (u *AnswerPage) sign(ctx context.Context, request domain.SignRequest) (doma
 
 	proposal := u.proposal(request.Operation, request.Common, request.Format.Name, request.Data)
 	proposal.SuggestedName = request.FileName
+	if algorithm := request.Properties["precalculatedHashAlgorithm"]; algorithm != "" && len(request.Data.Bytes) > 0 {
+		proposal.Warnings = append(proposal.Warnings, fmt.Sprintf("the page sends only the %s digest of a document, %x, not the document: "+
+			"trebaruna cannot show it; compare the digest with the document's if you have it", algorithm, request.Data.Bytes))
+	}
 	switch {
 	case request.Format.Family == "none":
 		// NONEtri's server prepares nothing, which triphaseSign checks.

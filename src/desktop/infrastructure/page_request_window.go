@@ -359,6 +359,10 @@ func (r *pageRequest) warningText(warning string, proposal domain.PageProposal) 
 		return fmt.Sprintf(r.m.PageWarnTriphase, host)
 	case strings.Contains(warning, "a bare signature (NONE)"):
 		return r.m.PageWarnBare
+	case strings.HasPrefix(warning, "the page sends only the "):
+		algorithm, rest, _ := strings.Cut(strings.TrimPrefix(warning, "the page sends only the "), " digest of a document, ")
+		digest, _, _ := strings.Cut(rest, ", not the document")
+		return fmt.Sprintf(r.m.PageWarnDigest, algorithm, digest)
 	case strings.Contains(warning, "filter conditions not understood"):
 		return r.m.PageWarnFilters
 	}

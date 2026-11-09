@@ -193,7 +193,7 @@ func Cosign(envelope, detachedContent []byte, request Request, stamp Stamper) ([
 		return nil, err
 	}
 
-	parsed.addDigestAlgorithm(digestAlgorithmFor(request.Signer, request.Certificate))
+	parsed.addDigestAlgorithm(digestAlgorithmFor(crypto.SHA256))
 	parsed.addCertificates(certificateSet(nil, request)...)
 	parsed.signerInfos = append(parsed.signerInfos, signerInfo)
 	return parsed.encode(), nil
@@ -228,7 +228,7 @@ func Countersign(envelope []byte, request Request, scope CountersignScope, stamp
 	if added == 0 {
 		return nil, 0, fmt.Errorf("cms: the envelope carries no signature to counter-sign")
 	}
-	parsed.addDigestAlgorithm(digestAlgorithmFor(request.Signer, request.Certificate))
+	parsed.addDigestAlgorithm(digestAlgorithmFor(crypto.SHA256))
 	parsed.addCertificates(certificateSet(nil, request)...)
 	return parsed.encode(), added, nil
 }
@@ -340,7 +340,7 @@ func newSignerInfo(digest []byte, request Request, stamp Stamper) ([]byte, error
 	}
 
 	encoder := &der{}
-	signatureAlgorithm, err := signatureAlgorithmFor(request.Certificate)
+	signatureAlgorithm, err := signatureAlgorithmFor(request.Certificate, crypto.SHA256)
 	if err != nil {
 		return nil, err
 	}
@@ -349,7 +349,7 @@ func newSignerInfo(digest []byte, request Request, stamp Stamper) ([]byte, error
 	fields := [][]byte{
 		encoder.integer(1),
 		issuerAndSerial(encoder, request.Certificate),
-		digestAlgorithmFor(request.Signer, request.Certificate),
+		digestAlgorithmFor(crypto.SHA256),
 		implicit,
 		signatureAlgorithm,
 		encoder.octetString(signatureValue),

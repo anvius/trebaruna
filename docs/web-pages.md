@@ -276,6 +276,12 @@ signed part of another signature, you sign whatever that one covers. With
 `NONEtri` the site's server only passes the document back, and trebaruna
 checks that what it is asked to sign is exactly the document it showed you.
 
+Digests instead of documents (`precalculatedHashAlgorithm`): some pages send
+only the document's digest and ask for a CAdES signature over it. trebaruna
+signs it, detached, and shows the digest in the approval, since it cannot
+show the document: if you have the document, compute its digest
+(`sha256sum file`) and compare. A SHA-1 digest is refused.
+
 Operations: `sign`, `cosign`, `countersign`, `signandsave`, `selectcert`,
 `save` and `batch`. A batch (JSON or XML) goes through the site's pre- and
 post-signers: the documents stay on the site, the key signs what its server

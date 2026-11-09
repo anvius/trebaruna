@@ -172,6 +172,7 @@ var basque = Catalogue{
 	PageWarnFilters:            "Orriak baldintzak jartzen dizkie ziurtagiriei, eta trebaruna ez da gai baldintza horiek ulertzeko; ez dago baldintza horiek betetzen dituen ziurtagiririk.",
 	PageWarnTriphase:           "Sinadura egoitzaren zerbitzariak prestatzen du (%s): zerbitzari horrek kalkulatzen duena sinatzen duzu, eta trebarunak ezin dizu erakutsi.",
 	PageWarnBare:               "Sinadura biluzi batek (NONE) ez du ezer esaten sinatzen duenaz: byte hauek beste sinadura baten zati sinatua badira, hark estaltzen duen guztia sinatzen duzu, eta trebarunak ezin dizu erakutsi.",
+	PageWarnDigest:             "Orriak dokumentu baten %s laburpena bakarrik bidaltzen du, %s, ez dokumentua: trebarunak ezin du erakutsi; dokumentua baduzu, alderatu haren laburpena honekin.",
 	PageListening:              "Orria ordenagailu honetan trebarunarekin konektatzeko zain (%d ataka)…",
 	PageNextRequest:            "Orriaren hurrengo eskaeraren zain…",
 	PageSessionClosed:          "Orriak trebarunarekiko konexioa itxi du.",

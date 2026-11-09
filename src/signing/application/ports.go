@@ -70,6 +70,9 @@ type CadesRequest struct {
 	EmbedRevocation bool
 	// Policy is the signature policy declared in the signed attributes.
 	Policy domain.SignaturePolicy
+	// ContentDigest, when given, is signed instead of Content: the
+	// document's digest, computed elsewhere. The signature is detached.
+	ContentDigest domain.ContentDigest
 }
 
 // PadesSigner produces a signed PDF.

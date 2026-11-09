@@ -168,6 +168,7 @@ var galician = Catalogue{
 	PageWarnFilters:            "A páxina pon condicións aos certificados que trebaruna non entende; ningún certificado as cumpre.",
 	PageWarnTriphase:           "A sinatura prepáraa o servidor da sede (%s): asinas o que ese servidor calcula, e trebaruna non cho pode amosar.",
 	PageWarnBare:               "Unha sinatura espida (NONE) non di nada do que asina: se estes bytes son a parte asinada doutra sinatura, asinas todo o que esa cobre, e trebaruna non cho pode amosar.",
+	PageWarnDigest:             "A páxina envía só o resumo %s dun documento, %s, non o documento: trebaruna non o pode amosar; se tes o documento, compara o seu resumo con este.",
 	PageListening:              "Agardando a que a páxina se conecte con trebaruna neste equipo (porto %d)…",
 	PageNextRequest:            "Agardando a seguinte petición da páxina…",
 	PageSessionClosed:          "A páxina pechou a conexión con trebaruna.",
