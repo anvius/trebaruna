@@ -32,11 +32,14 @@ func (s CommandLineSigner) Sign(ctx context.Context, intent domain.SigningIntent
 	command := exec.CommandContext(ctx, s.BinaryPath, signArguments(intent)...)
 	// The passphrase travels in the environment, never as --pass: any local
 	// user can list command lines, only the owner can read the environment.
-	command.Env = append(os.Environ(), "TREBARUNA_PASSPHRASE="+intent.Passphrase)
+	command.Env = append(os.Environ(), "TREBARUNA_PASSPHRASE="+intent.Key.Passphrase)
 	command.Stdout = &stdout
 	command.Stderr = &stderr
 
 	if err := command.Run(); err != nil {
+		if locked(stderr.String()) {
+			return domain.Receipt{}, domain.Problem{Code: domain.ProblemLockedCertificate}
+		}
 		return domain.Receipt{}, errors.New(meaningfulLine(stderr.String(), stdout.String(), err))
 	}
 
@@ -66,15 +69,20 @@ func (s CommandLineSigner) Sign(ctx context.Context, intent domain.SigningIntent
 func signArguments(intent domain.SigningIntent) []string {
 	arguments := []string{
 		"sign", intent.DocumentPath,
-		"--format", intent.Format,
-		"--level", intent.Level,
+		"--format", string(intent.Format),
+		"--level", string(intent.Level),
 		"--json",
 	}
 
-	if strings.HasSuffix(strings.ToLower(intent.KeyPath), ".pem") {
-		arguments = append(arguments, "--pem", intent.KeyPath)
+	if strings.HasSuffix(strings.ToLower(intent.Key.Path), ".pem") {
+		arguments = append(arguments, "--pem", intent.Key.Path)
 	} else {
-		arguments = append(arguments, "--p12", intent.KeyPath)
+		arguments = append(arguments, "--p12", intent.Key.Path)
+	}
+	if intent.Level.NeedsRevocation() {
+		// LT and LTA embed the OCSP answers, which the command only fetches
+		// when told it may use the network.
+		arguments = append(arguments, "--online-revocation")
 	}
 
 	if intent.Seal.Page > 1 {
@@ -93,6 +101,14 @@ func signArguments(intent domain.SigningIntent) []string {
 		arguments = append(arguments, "--location", intent.Location)
 	}
 	return arguments
+}
+
+// locked recognises a passphrase that does not open the certificate, in the
+// words both the certificate and the sign commands use for it.
+func locked(stderr string) bool {
+	lower := strings.ToLower(stderr)
+	return strings.Contains(lower, "passphrase does not open") ||
+		strings.Contains(lower, "decryption password incorrect")
 }
 
 // meaningfulLine picks the line a user can act on: the command explains its

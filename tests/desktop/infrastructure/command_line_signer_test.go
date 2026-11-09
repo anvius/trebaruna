@@ -37,8 +37,7 @@ func recordedArguments(t *testing.T, path string) []string {
 func fullIntent() domain.SigningIntent {
 	return domain.SigningIntent{
 		DocumentPath: "/tmp/contratto.pdf",
-		KeyPath:      "/tmp/mario.p12",
-		Passphrase:   "secret",
+		Key:          domain.CertificateFile{Path: "/tmp/mario.p12", Passphrase: "secret"},
 		Format:       "pades",
 		Level:        "t",
 		Seal: domain.SealChoice{Page: 2, Rect: domain.SealRect{
@@ -85,7 +84,7 @@ func TestTheIntentBecomesTheCommandsFlags(t *testing.T) {
 func TestAPemKeyUsesThePemFlag(t *testing.T) {
 	binary, recorded := fakeCommand(t, "echo '"+receiptJSON+"'")
 	intent := fullIntent()
-	intent.KeyPath = "/tmp/mario.PEM"
+	intent.Key.Path = "/tmp/mario.PEM"
 
 	if _, err := (infrastructure.CommandLineSigner{BinaryPath: binary}).Sign(context.Background(), intent); err != nil {
 		t.Fatalf("Sign: %v", err)
@@ -99,7 +98,7 @@ func TestAPemKeyUsesThePemFlag(t *testing.T) {
 
 func TestOptionalFlagsStayOffWhenEmpty(t *testing.T) {
 	binary, recorded := fakeCommand(t, "echo '"+receiptJSON+"'")
-	intent := domain.SigningIntent{DocumentPath: "/tmp/a.pdf", KeyPath: "/tmp/k.p12", Format: "pades", Level: "bes", Seal: domain.SealChoice{Page: 1}}
+	intent := domain.SigningIntent{DocumentPath: "/tmp/a.pdf", Key: domain.CertificateFile{Path: "/tmp/k.p12"}, Format: "pades", Level: "bes", Seal: domain.SealChoice{Page: 1}}
 
 	if _, err := (infrastructure.CommandLineSigner{BinaryPath: binary}).Sign(context.Background(), intent); err != nil {
 		t.Fatalf("Sign: %v", err)
@@ -130,10 +129,10 @@ func TestTheReceiptIsReadFromTheCommandOutput(t *testing.T) {
 }
 
 func TestAFailureCarriesTheCommandsExplanation(t *testing.T) {
-	binary, _ := fakeCommand(t, "echo 'signing failed: pkcs12: decryption password incorrect' >&2; exit 4")
+	binary, _ := fakeCommand(t, "echo 'signing failed: timestamp: dial tcp: connection refused' >&2; exit 1")
 
 	_, err := (infrastructure.CommandLineSigner{BinaryPath: binary}).Sign(context.Background(), fullIntent())
-	if err == nil || !strings.Contains(err.Error(), "decryption password incorrect") {
+	if err == nil || !strings.Contains(err.Error(), "connection refused") {
 		t.Fatalf("err = %v, want the command's stderr line", err)
 	}
 }

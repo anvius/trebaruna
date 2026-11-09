@@ -11,10 +11,12 @@ package cli
 import (
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -23,6 +25,7 @@ import (
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure"
 	trustdomain "codeberg.org/simplicer/trebaruna/src/trust/domain"
 	verificationinfra "codeberg.org/simplicer/trebaruna/src/verification/infrastructure"
+	pkcs12 "software.sslmate.com/src/go-pkcs12"
 )
 
 // runCertificate implements `trebaruna certificate <file>`.
@@ -95,6 +98,8 @@ func describeCertificateForJSON(
 		"name":         identity.FromCertificate(certificate).Name,
 		"identifier":   identity.FromCertificate(certificate).Identifier,
 		"issuer":       certificate.Issuer.String(),
+		"issuer_name":  firstOf(append(certificate.Issuer.Organization, certificate.Issuer.CommonName)...),
+		"locality":     firstNonEmptyString(slices.Concat(certificate.Subject.Locality, certificate.Subject.Province)...),
 		"serial":       certificate.SerialNumber.String(),
 		"not_before":   certificate.NotBefore.UTC().Format(time.RFC3339),
 		"not_after":    certificate.NotAfter.UTC().Format(time.RFC3339),
@@ -161,6 +166,14 @@ func loadCertificates(path, passphrase string) ([]*x509.Certificate, error) {
 	keyPair, p12Err := infrastructure.LoadKeyPair(mustSigner(path, content, passphrase))
 	if p12Err == nil && keyPair.Certificate != nil {
 		return append([]*x509.Certificate{keyPair.Certificate}, keyPair.Chain...), nil
+	}
+	// A wrong passphrase is not a wrong file: saying "not a certificate" sent
+	// people looking for another file when they had mistyped a password.
+	if errors.Is(p12Err, pkcs12.ErrIncorrectPassword) {
+		if passphrase == "" {
+			return nil, fmt.Errorf("the passphrase does not open %q: it is protected, give it with --pass or $%s", path, passphraseVariable)
+		}
+		return nil, fmt.Errorf("the passphrase does not open %q", path)
 	}
 
 	// A bare DER certificate.

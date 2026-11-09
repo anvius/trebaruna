@@ -82,3 +82,31 @@ func TestWithoutEitherTheBundleStaysLocked(t *testing.T) {
 		t.Fatal("a locked P12 opened without its passphrase")
 	}
 }
+
+// TestAWrongPassphraseIsNamedAsSuch: the command used to answer "is not a
+// certificate, a PEM bundle or a PKCS#12 file", which sent people looking for
+// another file when they had mistyped a password.
+func TestAWrongPassphraseIsNamedAsSuch(t *testing.T) {
+	path := writeProtectedP12(t, "segreto")
+	t.Setenv("TREBARUNA_PASSPHRASE", "")
+
+	_, stderr, code := run("certificate", path, "--pass", "sbagliato", "--territory", "EU")
+	if code == 0 || !strings.Contains(stderr, "passphrase does not open") {
+		t.Errorf("exit %d, stderr %q: want the passphrase named", code, stderr)
+	}
+
+	_, stderr, _ = run("certificate", path, "--territory", "EU")
+	if !strings.Contains(stderr, "TREBARUNA_PASSPHRASE") {
+		t.Errorf("stderr %q: without a passphrase, say how to give one", stderr)
+	}
+}
+
+func TestTheCertificateReportsWhereItsHolderIs(t *testing.T) {
+	path := writeProtectedP12(t, "segreto")
+	t.Setenv("TREBARUNA_PASSPHRASE", "segreto")
+
+	stdout, _, code := run("certificate", path, "--json", "--territory", "EU")
+	if code != 0 || !strings.Contains(stdout, `"locality": ""`) || !strings.Contains(stdout, `"issuer_name": "MARIO ROSSI"`) {
+		t.Errorf("exit %d, stdout %q: want locality and issuer_name fields", code, stdout)
+	}
+}

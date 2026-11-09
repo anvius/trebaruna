@@ -95,7 +95,7 @@ func (v *verificationTab) content() fyne.CanvasObject {
 	v.output.TextStyle = fyne.TextStyle{Monospace: true}
 
 	choose := widget.NewButtonWithIcon(v.ui.ChooseButton, theme.FolderOpenIcon(), func() {
-		pickFile(v.window, []string{".pdf", ".p7m", ".p7s", ".xml", ".xsig"}, v.pathEntry, nil)
+		newFileOpen(v.window, []string{".pdf", ".p7m", ".p7s", ".xml", ".xsig"}, v.check).Show()
 	})
 
 	check := widget.NewButtonWithIcon(v.ui.VerifyButton, theme.ConfirmIcon(), func() {
@@ -122,6 +122,13 @@ func (v *verificationTab) section(text string) fyne.CanvasObject {
 	label.TextSize = 15
 	label.TextStyle = fyne.TextStyle{Bold: true}
 	return container.NewVBox(label, widget.NewSeparator())
+}
+
+// check verifies a file chosen elsewhere: the file dialog, or the signing tab
+// right after a signature.
+func (v *verificationTab) check(path string) {
+	v.pathEntry.SetText(path)
+	v.run()
 }
 
 // run executes the verification and renders the result.

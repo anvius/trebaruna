@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Desktop: the signing form is three steps — document, certificate,
+  signature — with one button that stays in reach. Files are shown as name
+  and folder, wrapping, never cut. The certificate is read as soon as its
+  passphrase is typed: holder, identifier, issuer, expiry and a plain verdict
+  (qualified, trusted, no trusted list, expired, expiring soon). The format is
+  offered from the document type with human labels; the level, reason and
+  place live under "More options", the place prefilled from the certificate.
+  The certificate path, level and TSA are remembered; the passphrase is not.
+  After signing: Open, Folder and Check (which verifies the new file).
+- CLI: `certificate --json` reports `issuer_name` and `locality`, and a wrong
+  passphrase is reported as such instead of "not a certificate".
+- Desktop: LT and LTA are offered and pass `--online-revocation`, which those
+  levels require.
+
 - Desktop: the seal is placed with the mouse. A click on the page centres it
   under the pointer, dragging moves it, the corner handle enlarges it, and the
   arrow keys nudge it. The page and the pointer share one `DisplayFit`, which
@@ -23,6 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- Desktop: the raw JSON "Result" box, the free-text certificate and document
+  path fields, and the `pades`/`bes` technical values in the selectors.
 - Desktop: the page number and `x1,y1,x2,y2` box fields, and the "Show page"
   button. The page renders as soon as a PDF is chosen.
 

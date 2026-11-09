@@ -3,21 +3,15 @@
 package infrastructure
 
 import (
-	"context"
 	_ "embed"
-	"fmt"
 	"os"
-	"strings"
-	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
-	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/theme"
-	"fyne.io/fyne/v2/widget"
 
 	"codeberg.org/simplicer/trebaruna/src/desktop/application"
 	"codeberg.org/simplicer/trebaruna/src/desktop/domain"
@@ -31,12 +25,14 @@ var appIconPNG []byte
 // Window is the Fyne implementation of the desktop window.
 type Window struct {
 	application *application.SignFromDesktop
+	inspect     *application.InspectCertificate
 	preview     *application.PreviewPage
 	window      fyne.Window
 	messages    messaging.Catalogue
 	palette     Palette
 
-	// pages is the right pane, where the seal is placed.
+	// form and pages are the two halves of the signing tab.
+	form  *signForm
 	pages *pagePane
 
 	// binaryPath is the CLI the window drives.
@@ -63,17 +59,7 @@ func NewWindow(options Options) *Window {
 	window := fyneApp.NewWindow(catalogue.WindowTitle)
 	window.Resize(fyne.NewSize(1220, 800))
 
-	desktop := &Window{
-		application: application.NewSignFromDesktop(
-			CommandLineSigner{BinaryPath: options.BinaryPath},
-			fileExists,
-		),
-		preview:    application.NewPreviewPage(NewPopplerRenderer(), application.InkFinder{}),
-		binaryPath: options.BinaryPath,
-		window:     window,
-		messages:   catalogue,
-		palette:    DefaultPalette(),
-	}
+	desktop := newDesktop(window, catalogue, options.BinaryPath)
 
 	// TREBARUNA_SKIP_WELCOME opens the form directly, for the diagnostic runs and
 	// for users who sign several documents a day and find the cover an obstacle.
@@ -93,229 +79,81 @@ func NewWindow(options Options) *Window {
 	return desktop
 }
 
+// newDesktop wires the use cases to their command-line adapters.
+func newDesktop(window fyne.Window, catalogue messaging.Catalogue, binaryPath string) *Window {
+	return &Window{
+		application: application.NewSignFromDesktop(CommandLineSigner{BinaryPath: binaryPath}, fileExists),
+		inspect:     application.NewInspectCertificate(CommandLineCertificateReader{BinaryPath: binaryPath}),
+		preview:     application.NewPreviewPage(NewPopplerRenderer(), application.InkFinder{}),
+		binaryPath:  binaryPath,
+		window:      window,
+		messages:    catalogue,
+		palette:     DefaultPalette(),
+	}
+}
+
 // Run shows the window and blocks until it closes.
 func (w *Window) Run() {
 	w.window.ShowAndRun()
 }
 
-// DebugContent reports the shape of the widget tree, for the diagnostic command.
-func DebugContent(content fyne.CanvasObject) string {
-	var builder strings.Builder
-	var visit func(fyne.CanvasObject, int)
-	visit = func(object fyne.CanvasObject, depth int) {
-		builder.WriteString(strings.Repeat("  ", depth))
-		builder.WriteString(fmt.Sprintf("%T min=%v\n", object, object.MinSize()))
-		if containerObject, ok := object.(*fyne.Container); ok {
-			for _, child := range containerObject.Objects {
-				visit(child, depth+1)
-			}
-			return
-		}
-		if widgetObject, ok := object.(fyne.Widget); ok {
-			if renderer := widgetObject.CreateRenderer(); renderer != nil {
-				for _, child := range renderer.Objects() {
-					visit(child, depth+1)
-				}
-			}
-		}
-	}
-	visit(content, 0)
-	return builder.String()
-}
-
-// buildContent lays out the two-pane window: form on the left, page on the right.
+// buildContent lays out the signing tab: the steps on the left, the page on
+// the right. The window is wide on purpose: a signature is placed while
+// reading the document, so the page must stay visible next to the controls.
 func (w *Window) buildContent(initialDocument string) fyne.CanvasObject {
-	m := w.messages
-
-	documentPath := widget.NewEntry()
-	documentPath.SetPlaceHolder("contratto.pdf")
+	w.pages = newPagePane(w.messages, w.palette, w.preview)
+	w.form = newSignForm(w.window, w.messages, w.palette, fyne.CurrentApp().Preferences(),
+		w.application, w.inspect, w.pages)
 	if initialDocument != "" {
-		documentPath.SetText(initialDocument)
+		w.form.setDocument(initialDocument)
 	}
 
-	keyPath := widget.NewEntry()
-	keyPath.SetPlaceHolder("mario.p12")
-
-	passphrase := widget.NewPasswordEntry()
-	passphrase.SetPlaceHolder(m.PassphraseLabel)
-
-	signatureFormat := widget.NewSelect([]string{"pades", "cades", "xades"}, nil)
-	signatureFormat.SetSelected("pades")
-
-	level := widget.NewSelect([]string{"bes", "t"}, nil)
-	level.SetSelected("bes")
-
-	timestampURL := widget.NewEntry()
-	timestampURL.SetPlaceHolder("https://tsa.example/tsa")
-
-	reason := widget.NewEntry()
-
-	statusLine := widget.NewLabel("")
-	statusLine.Wrapping = fyne.TextWrapWord
-
-	output := widget.NewMultiLineEntry()
-	output.SetMinRowsVisible(6)
-	output.Wrapping = fyne.TextWrapWord
-
-	w.pages = newPagePane(m, w.palette, w.preview)
-
-	// The page follows the document and the format: a PDF signed as PAdES has
-	// a page to put the seal on; CAdES and XAdES carry no visible mark.
-	refreshPage := func() {
-		switch {
-		case signatureFormat.Selected != "pades":
-			w.pages.withoutVisibleSeal()
-		case strings.TrimSpace(documentPath.Text) != "":
-			w.pages.show(documentPath.Text)
-		}
-	}
-	signatureFormat.OnChanged = func(string) { refreshPage() }
-
-	documentButton := widget.NewButtonWithIcon(m.ChooseButton, theme.FolderOpenIcon(), func() {
-		pickFile(w.window, []string{".pdf"}, documentPath, func(string) { refreshPage() })
-	})
-
-	keyButton := widget.NewButtonWithIcon(m.ChooseButton, theme.FolderOpenIcon(), func() {
-		pickFile(w.window, []string{".p12", ".pfx", ".pem"}, keyPath, nil)
-	})
-
-	var signButton *widget.Button
-	signButton = widget.NewButtonWithIcon(m.SignButton, theme.ConfirmIcon(), func() {
-		intent := domain.SigningIntent{
-			DocumentPath: documentPath.Text,
-			KeyPath:      keyPath.Text,
-			Passphrase:   passphrase.Text,
-			Format:       signatureFormat.Selected,
-			Level:        level.Selected,
-			Seal:         w.pages.choice(),
-			TimestampURL: timestampURL.Text,
-			Reason:       reason.Text,
-		}
-
-		if err := intent.Validate(); err != nil {
-			dialog.ShowError(fmt.Errorf("%s", translate(err, m)), w.window)
-			return
-		}
-
-		signButton.Disable()
-		statusLine.SetText(m.SigningMessage)
-
-		go func() {
-			defer fyne.Do(signButton.Enable)
-
-			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
-			defer cancel()
-
-			receipt, err := w.application.Execute(ctx, intent)
-			if err != nil {
-				fyne.Do(func() { statusLine.SetText(translate(err, m)) })
-				return
-			}
-
-			fyne.Do(func() {
-				statusLine.SetText(m.DoneTitle)
-				output.SetText(receipt.SignedPath + "\n" + receipt.Standard + " · " + receipt.Signer)
-				showSuccess(w.window, receipt.SignedPath, m)
-			})
-		}()
-	})
-	signButton.Importance = widget.HighImportance
-
-	// ---- left pane: the form ----
-	//
-	// Buttons live in their own rows instead of being packed into a three-column
-	// grid: a 430 pt pane gives each column ~140 pt, and the three seal buttons
-	// plus two labels did not fit, so the last one was clipped.
-	form := container.NewVBox(
-		w.sectionTitle(m.DocumentSection),
-		container.NewBorder(nil, nil, nil, documentButton, documentPath),
-		container.NewGridWithColumns(2,
-			container.NewVBox(
-				container.NewBorder(nil, nil, nil, keyButton, keyPath),
-			),
-			container.NewVBox(passphrase),
-		),
-
-		w.sectionTitle(m.OptionsSection),
-		container.NewGridWithColumns(2,
-			container.NewVBox(w.label(m.FormatLabel), signatureFormat),
-			container.NewVBox(w.label(m.LevelLabel), level),
-		),
-		w.label(m.TSALabel),
-		timestampURL,
-		w.label(m.ReasonLabel),
-		reason,
-
-		widget.NewSeparator(),
-		signButton,
-		statusLine,
-		widget.NewSeparator(),
-		w.label(m.ResultLabel),
-		output,
-	)
-
-	left := container.NewPadded(container.NewVScroll(form))
-	left.Resize(fyne.NewSize(460, 780))
-
-	if initialDocument != "" {
-		refreshPage()
-	}
-
-	// The window is deliberately wide: a signature tool is used while reading the
-	// document, so the page must always be visible next to the controls.
-	split := container.NewHSplit(left, w.pages.object())
-	// Without an explicit offset Fyne gives the left pane its minimum width, which
-	// on a wide window renders as an almost empty strip.
-	split.SetOffset(0.42)
+	split := container.NewHSplit(w.form.object(), w.pages.object())
+	// Without an explicit offset Fyne gives the left pane its minimum width.
+	split.SetOffset(0.38)
 	return split
 }
 
-// sectionTitle renders a heading with the accent colour.
-func (w *Window) sectionTitle(text string) fyne.CanvasObject {
-	label := canvas.NewText(text, w.palette.Accent)
-	label.TextSize = 15
-	label.TextStyle = fyne.TextStyle{Bold: true}
-	return container.NewVBox(label, widget.NewSeparator())
+// withTabs wraps the signing form and the verification panel in tabs.
+//
+// Two tabs, not two windows: a user who has just signed something usually wants
+// to check it, and making that a separate launch breaks the flow.
+func (w *Window) withTabs(signingContent fyne.CanvasObject) fyne.CanvasObject {
+	report := reportmessaging.For(languageCode(w.messages.Language))
+	verification := newVerificationTab(w.window, w.messages, report, w.palette, w.binaryPath)
+	requests := newRequestsTab(w.window, w.messages, w.palette, w.binaryPath)
+
+	tabs := container.NewAppTabs(
+		container.NewTabItemWithIcon(w.messages.SignTab, theme.DocumentCreateIcon(), signingContent),
+		container.NewTabItemWithIcon(w.messages.VerifyTab, theme.SearchIcon(), verification.content()),
+		container.NewTabItemWithIcon(w.messages.RequestsTab, theme.MailComposeIcon(), requests.content()),
+	)
+	tabs.SetTabLocation(container.TabLocationTop)
+
+	if w.form != nil {
+		w.form.onCheck = func(path string) {
+			tabs.SelectIndex(1)
+			verification.check(path)
+		}
+	}
+	return tabs
 }
 
-// label renders a small field caption.
-func (w *Window) label(text string) fyne.CanvasObject {
-	label := canvas.NewText(text, w.palette.TextMuted)
-	label.TextSize = 12
-	return label
-}
-
-// pickFile opens a filtered file dialog and writes the choice into target.
-func pickFile(parent fyne.Window, extensions []string, target *widget.Entry, after func(string)) {
+// newFileOpen builds a file dialog, filtered when extensions are given.
+func newFileOpen(parent fyne.Window, extensions []string, chosen func(string)) *dialog.FileDialog {
 	picker := dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
 		if err != nil || reader == nil {
 			return
 		}
 		path := reader.URI().Path()
 		_ = reader.Close()
-		target.SetText(path)
-		if after != nil {
-			after(path)
-		}
+		chosen(path)
 	}, parent)
-	picker.SetFilter(storage.NewExtensionFileFilter(extensions))
+	if len(extensions) > 0 {
+		picker.SetFilter(storage.NewExtensionFileFilter(extensions))
+	}
 	picker.Resize(fyne.NewSize(900, 600))
-	picker.Show()
-}
-
-// showSuccess offers to open the signed file in the system viewer.
-func showSuccess(parent fyne.Window, signedPath string, m messaging.Catalogue) {
-	open := dialog.NewConfirm(
-		m.DoneTitle,
-		m.DoneMessage(signedPath),
-		func(confirmed bool) {
-			if confirmed {
-				openWithSystemViewer(signedPath)
-			}
-		},
-		parent,
-	)
-	open.Show()
+	return picker
 }
 
 // openWithSystemViewer delegates to the desktop portal.
@@ -331,12 +169,6 @@ func openWithSystemViewer(path string) {
 		_ = startDetached(candidate[0], candidate[1:])
 		return
 	}
-}
-
-// fileExists reports whether the path exists.
-func fileExists(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil
 }
 
 // translate renders a validation problem in the active language.
@@ -357,48 +189,8 @@ func translate(err error, m messaging.Catalogue) string {
 		return m.InvalidPage
 	case domain.ProblemNoOutput:
 		return m.NoOutputMessage(problem.Detail)
+	case domain.ProblemLockedCertificate:
+		return m.CertificateLocked
 	}
 	return err.Error()
-}
-
-// NewTestWindow builds the window content without starting the event loop, so
-// diagnostics and tests can inspect the widget tree.
-func NewTestWindow(options Options) fyne.Window {
-	fyneApp := app.NewWithID("org.codeberg.simplicer.trebaruna.diagnostics")
-	fyneApp.Settings().SetTheme(NewAppTheme(DefaultPalette()))
-
-	catalogue := messaging.For(options.Language)
-	window := fyneApp.NewWindow(catalogue.WindowTitle)
-
-	desktop := &Window{
-		application: application.NewSignFromDesktop(
-			CommandLineSigner{BinaryPath: options.BinaryPath},
-			fileExists,
-		),
-		preview:    application.NewPreviewPage(NewPopplerRenderer(), application.InkFinder{}),
-		binaryPath: options.BinaryPath,
-		window:     window,
-		messages:   catalogue,
-		palette:    DefaultPalette(),
-	}
-	window.SetContent(desktop.withTabs(desktop.buildContent(options.DocumentPath)))
-	return window
-}
-
-// withTabs wraps the signing form and the verification panel in tabs.
-//
-// Two tabs, not two windows: a user who has just signed something usually wants
-// to check it, and making that a separate launch breaks the flow.
-func (w *Window) withTabs(signingContent fyne.CanvasObject) fyne.CanvasObject {
-	report := reportmessaging.For(languageCode(w.messages.Language))
-	verification := newVerificationTab(w.window, w.messages, report, w.palette, w.binaryPath)
-	requests := newRequestsTab(w.window, w.messages, w.palette, w.binaryPath)
-
-	tabs := container.NewAppTabs(
-		container.NewTabItemWithIcon(w.messages.SignTab, theme.DocumentCreateIcon(), signingContent),
-		container.NewTabItemWithIcon(w.messages.VerifyTab, theme.SearchIcon(), verification.content()),
-		container.NewTabItemWithIcon(w.messages.RequestsTab, theme.MailComposeIcon(), requests.content()),
-	)
-	tabs.SetTabLocation(container.TabLocationTop)
-	return tabs
 }

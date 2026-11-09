@@ -39,7 +39,6 @@ type pagePane struct {
 	next      *widget.Button
 	suggest   *widget.Button
 	hint      *widget.Label
-	toolbar   *fyne.Container
 	root      fyne.CanvasObject
 
 	canvas   *PageCanvas
@@ -73,9 +72,9 @@ func newPagePane(messages messaging.Catalogue, palette Palette, preview *applica
 	backdrop := canvas.NewRectangle(palette.Surface)
 	pane.stage = container.NewStack(backdrop)
 
-	pane.toolbar = container.NewHBox(pane.previous, pane.pageLabel, pane.next, layout.NewSpacer(), pane.suggest)
+	toolbar := container.NewHBox(pane.previous, pane.pageLabel, pane.next, layout.NewSpacer(), pane.suggest)
 	pane.root = container.NewBorder(
-		container.NewPadded(pane.toolbar), container.NewPadded(pane.hint), nil, nil,
+		container.NewPadded(toolbar), container.NewPadded(pane.hint), nil, nil,
 		container.NewStack(backdrop, container.NewPadded(pane.stage)),
 	)
 	pane.empty(messages.NoPreviewYet)
@@ -129,7 +128,6 @@ func (p *pagePane) empty(message string) {
 	p.stage.Refresh()
 
 	p.pageLabel.SetText("")
-	p.toolbar.Refresh()
 	p.hint.SetText("")
 	p.previous.Disable()
 	p.next.Disable()
@@ -198,9 +196,6 @@ func (p *pagePane) present(result application.PreviewResult, page image.Image) {
 	p.stage.Refresh()
 
 	p.pageLabel.SetText(fmt.Sprintf(p.messages.PageOf, p.page, result.Preview.PageCount))
-	// A box layout measures its children once; the label just grew, so the
-	// row is laid out again or the text runs under the arrows.
-	p.toolbar.Refresh()
 	p.previous.Enable()
 	p.next.Enable()
 	if p.page <= 1 {

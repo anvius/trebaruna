@@ -41,21 +41,39 @@ If it cannot find one, the window says so instead of failing silently.
 
 ## Sign tab
 
-The form, in order:
+Three steps on the left, the page on the right, one button at the bottom.
+Nothing the document or the certificate already says is asked for.
 
-| Field | Notes |
-|---|---|
-| **Document** | File picker; the format is inferred from the suffix |
-| **Certificate** | `.p12`, `.pfx` or `.pem` |
-| **Passphrase** | For the P12 or an encrypted key |
-| **Format** | `cades`, `pades`, `xades`; preselected from the suffix |
-| **Level** | `bes`, `t`, `lt`, `lta` |
-| **TSA** | Timestamp authority URL, when the level needs one |
+| Step | What you do | What the window fills in |
+|---|---|---|
+| **1 Document** | Choose any file, or drop it on the window | The formats that fit it, and the name the signed file will get |
+| **2 Certificate** | Choose a `.p12`, `.pfx` or `.pem`; type its passphrase | Holder, identifier, issuer, expiry, and whether a trusted list vouches for it |
+| **3 Signature** | Pick signed PDF or `.p7m` envelope, when both make sense | The seal position, from where it sits on the page |
 
-Press **Sign**. The signing runs off the UI thread, so the window stays
-responsive; a slow smartcard or a distant TSA will not freeze it.
+The certificate is read as soon as the passphrase is typed, so a wrong
+passphrase, an expired certificate or an issuer no trusted list knows is said
+before signing, not after. The verdict line reads, for instance:
 
-When it finishes you can open the result directly in the system viewer.
+- *Qualified certificate: the signature has full legal effect (eIDAS).*
+- *No trusted list vouches for this issuer: the signature will be technically
+  sound but carry no legal weight.*
+- *Expired on 12/03/2026: it can no longer sign.*
+
+The certificate path, the level and the timestamp authority are remembered
+between sessions. The passphrase never is.
+
+**More options** holds what is rarely changed: the level (basic, with
+timestamp, LT, LTA — the authority field appears only when the level needs
+one), the reason, and the place, which is prefilled from the certificate when
+it carries a locality.
+
+Press **Sign**. Signing runs off the UI thread, so a slow smartcard or a
+distant TSA does not freeze the window. The result is reported in place, with
+**Open**, **Folder** and **Check**; the last one opens the verification tab on
+the file just signed.
+
+The passphrase reaches the signing process through its environment, never its
+command line, where other users of the machine could read it.
 
 ### Placing the seal
 

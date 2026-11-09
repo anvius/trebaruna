@@ -44,29 +44,19 @@ func ParseLanguage(raw string) Language {
 type Catalogue struct {
 	Language Language
 
-	WindowTitle          string
-	Subtitle             string
-	DocumentLabel        string
-	CertificateLabel     string
-	PassphraseLabel      string
-	FormatLabel          string
-	LevelLabel           string
-	CaptionLabel         string
-	TSALabel             string
-	ReasonLabel          string
-	LocationLabel        string
-	ResultLabel          string
-	ChooseButton         string
-	SignButton           string
-	SigningMessage       string
-	DoneTitle            string
-	DoneQuestion         string
-	MissingDocument      string
-	MissingKey           string
-	MissingTSA           string
-	InvalidPage          string
-	NoOutput             string
-	SelectOnePlaceholder string
+	WindowTitle     string
+	LevelLabel      string
+	TSALabel        string
+	ReasonLabel     string
+	LocationLabel   string
+	ChooseButton    string
+	SignButton      string
+	SigningMessage  string
+	MissingDocument string
+	MissingKey      string
+	MissingTSA      string
+	InvalidPage     string
+	NoOutput        string
 
 	// Welcome screen.
 	WelcomeTitle   string
@@ -75,11 +65,6 @@ type Catalogue struct {
 	WelcomePoint2  string
 	WelcomePoint3  string
 	WelcomeStart   string
-
-	// Sections of the two-pane window.
-	DocumentSection string
-	OptionsSection  string
-	SealSection     string
 
 	// Verification tab.
 	VerifyTab              string
@@ -110,6 +95,44 @@ type Catalogue struct {
 	SealCoversText        string
 	SealHolderPlaceholder string
 	NoSuggestion          string
+
+	// The signing form.
+	StepDocument               string
+	StepCertificate            string
+	StepSignature              string
+	ChooseDocument             string
+	ChooseCertificate          string
+	ChangeButton               string
+	DropHint                   string
+	CertificateHint            string
+	DocumentSavedAs            string
+	PassphrasePlaceholder      string
+	CertificateReading         string
+	CertificateNeedsPassphrase string
+	CertificateLocked          string
+	IssuedBy                   string
+	ValidUntil                 string
+	StandingQualified          string
+	StandingTrusted            string
+	StandingUntrusted          string
+	StandingExpired            string
+	CertificateExpiresSoon     string
+	FormatPAdESLabel           string
+	FormatCAdESLabel           string
+	FormatXAdESLabel           string
+	FormatOnlyCAdES            string
+	SealOnPagePane             string
+	MoreOptions                string
+	LevelBasicLabel            string
+	LevelTimestampLabel        string
+	LevelLongTermLabel         string
+	LevelArchiveLabel          string
+	LevelHint                  string
+	LocationPlaceholder        string
+	SignedAs                   string
+	OpenSigned                 string
+	ShowFolder                 string
+	CheckSignature             string
 }
 
 // For returns the catalogue for a language.
@@ -142,28 +165,18 @@ var spanish = Catalogue{
 	ExpiresIn:              "Caduca en",
 	NoBinary:               "No se encontró el binario trebaruna",
 	WindowTitle:            "trebaruna — firma electrónica AdES",
-	Subtitle:               "CAdES · PAdES · XAdES — sin código propietario",
-	DocumentLabel:          "Documento",
-	CertificateLabel:       "Certificado (.p12 / .pfx / .pem)",
-	PassphraseLabel:        "Contraseña",
-	FormatLabel:            "Formato",
 	LevelLabel:             "Nivel",
-	CaptionLabel:           "Texto del sello",
 	TSALabel:               "Autoridad de sellado (TSA)",
 	ReasonLabel:            "Motivo",
 	LocationLabel:          "Lugar",
-	ResultLabel:            "Resultado",
 	ChooseButton:           "Elegir…",
 	SignButton:             "Firmar",
 	SigningMessage:         "firmando…",
-	DoneTitle:              "Firma completada",
-	DoneQuestion:           "Documento firmado:\n%s\n\n¿Abrirlo?",
 	MissingDocument:        "Elige un documento para firmar.",
 	MissingKey:             "Elige tu certificado (.p12, .pfx o .pem).",
 	MissingTSA:             "El nivel %s necesita una autoridad de sellado (TSA).",
 	InvalidPage:            "La página del sello empieza en 1.",
 	NoOutput:               "La firma no produjo %s.",
-	SelectOnePlaceholder:   "(elige uno)",
 
 	WelcomeTitle:   "trebaruna",
 	WelcomeTagline: "Firma electrónica CAdES, PAdES y XAdES.\nSin Electron, sin Java, sin código propietario.",
@@ -172,20 +185,52 @@ var spanish = Catalogue{
 	WelcomePoint3:  "· Funciona sin conexión; solo la TSA usa la red.",
 	WelcomeStart:   "Empezar",
 
-	DocumentSection: "Documento y certificado",
-	OptionsSection:  "Formato y sello de tiempo",
-	SealSection:     "Sello visible",
-
-	SuggestButton:         "Buscar hueco libre",
-	NoPreviewYet:          "Elige un PDF para ver la página y colocar el sello.",
-	NoVisibleSeal:         "Este formato no lleva sello visible: la firma viaja en el fichero .p7m o dentro del XML.",
-	RenderingMessage:      "Preparando la página…",
-	PreviewUnavailable:    "No se puede mostrar la página porque falta poppler (pdftoppm). La firma funciona igual: el sello irá en la esquina inferior derecha de la página 1.",
-	PageOf:                "Página %d de %d",
-	SealHint:              "Haz clic en la página para colocar el sello, arrástralo para moverlo y tira de la esquina para ampliarlo. Con el teclado, las flechas lo desplazan.",
-	SealCoversText:        "El sello tapa texto del documento. Muévelo a un hueco o pulsa «Buscar hueco libre».",
-	SealHolderPlaceholder: "Titular del certificado",
-	NoSuggestion:          "No hay otro hueco libre en esta página: coloca el sello a mano o cambia de página.",
+	SuggestButton:              "Buscar hueco libre",
+	NoPreviewYet:               "Elige un PDF para ver la página y colocar el sello.",
+	NoVisibleSeal:              "Este formato no lleva sello visible: la firma viaja en el fichero .p7m o dentro del XML.",
+	RenderingMessage:           "Preparando la página…",
+	PreviewUnavailable:         "No se puede mostrar la página porque falta poppler (pdftoppm). La firma funciona igual: el sello irá en la esquina inferior derecha de la página 1.",
+	PageOf:                     "Página %d de %d",
+	SealHint:                   "Haz clic en la página para colocar el sello, arrástralo para moverlo y tira de la esquina para ampliarlo. Con el teclado, las flechas lo desplazan.",
+	SealCoversText:             "El sello tapa texto del documento. Muévelo a un hueco o pulsa «Buscar hueco libre».",
+	SealHolderPlaceholder:      "Titular del certificado",
+	NoSuggestion:               "No hay otro hueco libre en esta página: coloca el sello a mano o cambia de página.",
+	StepDocument:               "Documento",
+	StepCertificate:            "Certificado",
+	StepSignature:              "Firma",
+	ChooseDocument:             "Elegir documento…",
+	ChooseCertificate:          "Elegir certificado…",
+	ChangeButton:               "Cambiar…",
+	DropHint:                   "PDF, XML o cualquier otro fichero. También puedes arrastrarlo a la ventana.",
+	CertificateHint:            "Fichero .p12, .pfx o .pem con tu certificado y su clave.",
+	DocumentSavedAs:            "Se guardará como %s",
+	PassphrasePlaceholder:      "Contraseña del certificado",
+	CertificateReading:         "Leyendo el certificado…",
+	CertificateNeedsPassphrase: "Escribe la contraseña para leer el certificado.",
+	CertificateLocked:          "La contraseña no abre este certificado.",
+	IssuedBy:                   "Emitido por %s",
+	ValidUntil:                 "Válido hasta el %s",
+	StandingQualified:          "Certificado cualificado: la firma tiene plena validez legal (eIDAS).",
+	StandingTrusted:            "Emisor de confianza: firma avanzada, aunque el certificado no es cualificado.",
+	StandingUntrusted:          "Ninguna lista de confianza respalda a este emisor: la firma será técnicamente correcta, pero sin respaldo legal.",
+	StandingExpired:            "Caducó el %s: ya no sirve para firmar.",
+	CertificateExpiresSoon:     "Caduca en %d días.",
+	FormatPAdESLabel:           "PDF firmado (PAdES): se abre en cualquier lector",
+	FormatCAdESLabel:           "Sobre .p7m (CAdES): el que piden algunas administraciones",
+	FormatXAdESLabel:           "XML firmado (XAdES)",
+	FormatOnlyCAdES:            "Este tipo de fichero se firma dentro de un sobre .p7m (CAdES).",
+	SealOnPagePane:             "El sello irá donde lo ves en la página de la derecha.",
+	MoreOptions:                "Más opciones",
+	LevelBasicLabel:            "Básica, sin sello de tiempo",
+	LevelTimestampLabel:        "Con sello de tiempo (T)",
+	LevelLongTermLabel:         "Validación a largo plazo (LT)",
+	LevelArchiveLabel:          "Archivo a largo plazo (LTA)",
+	LevelHint:                  "El sello de tiempo prueba cuándo se firmó. LT y LTA consultan además por red si el certificado estaba revocado.",
+	LocationPlaceholder:        "Ciudad",
+	SignedAs:                   "Firmado: %s",
+	OpenSigned:                 "Abrir",
+	ShowFolder:                 "Carpeta",
+	CheckSignature:             "Comprobar",
 }
 
 var italian = Catalogue{
@@ -206,28 +251,18 @@ var italian = Catalogue{
 	ExpiresIn:              "Scade tra",
 	NoBinary:               "Binario trebaruna non trovato",
 	WindowTitle:            "trebaruna — firma elettronica AdES",
-	Subtitle:               "CAdES · PAdES · XAdES — senza codice proprietario",
-	DocumentLabel:          "Documento",
-	CertificateLabel:       "Certificato (.p12 / .pfx / .pem)",
-	PassphraseLabel:        "Password",
-	FormatLabel:            "Formato",
 	LevelLabel:             "Livello",
-	CaptionLabel:           "Testo del timbro",
 	TSALabel:               "Autorità di marca temporale (TSA)",
 	ReasonLabel:            "Motivo",
 	LocationLabel:          "Luogo",
-	ResultLabel:            "Risultato",
 	ChooseButton:           "Scegli…",
 	SignButton:             "Firma",
 	SigningMessage:         "firma in corso…",
-	DoneTitle:              "Firma completata",
-	DoneQuestion:           "Documento firmato:\n%s\n\nVuoi aprirlo?",
 	MissingDocument:        "Scegli un documento da firmare.",
 	MissingKey:             "Scegli il tuo certificato (.p12, .pfx o .pem).",
 	MissingTSA:             "Il livello %s richiede un'autorità di marca temporale (TSA).",
 	InvalidPage:            "La pagina del timbro parte da 1.",
 	NoOutput:               "La firma non ha prodotto %s.",
-	SelectOnePlaceholder:   "(scegli)",
 
 	WelcomeTitle:   "trebaruna",
 	WelcomeTagline: "Firma elettronica CAdES, PAdES e XAdES.\nSenza Electron, senza Java, senza codice proprietario.",
@@ -236,20 +271,52 @@ var italian = Catalogue{
 	WelcomePoint3:  "· Funziona offline; solo la TSA usa la rete.",
 	WelcomeStart:   "Inizia",
 
-	DocumentSection: "Documento e certificato",
-	OptionsSection:  "Formato e marca temporale",
-	SealSection:     "Timbro visibile",
-
-	SuggestButton:         "Trova uno spazio libero",
-	NoPreviewYet:          "Scegli un PDF per vedere la pagina e posizionare il timbro.",
-	NoVisibleSeal:         "Questo formato non ha un timbro visibile: la firma è nel file .p7m o dentro l'XML.",
-	RenderingMessage:      "Preparazione della pagina…",
-	PreviewUnavailable:    "Impossibile mostrare la pagina: manca poppler (pdftoppm). La firma funziona comunque: il timbro andrà nell'angolo in basso a destra della pagina 1.",
-	PageOf:                "Pagina %d di %d",
-	SealHint:              "Fai clic sulla pagina per posizionare il timbro, trascinalo per spostarlo e tira l'angolo per ingrandirlo. Da tastiera, le frecce lo spostano.",
-	SealCoversText:        "Il timbro copre del testo. Spostalo in uno spazio vuoto o premi «Trova uno spazio libero».",
-	SealHolderPlaceholder: "Titolare del certificato",
-	NoSuggestion:          "Nessun altro spazio libero in questa pagina: posiziona il timbro a mano o cambia pagina.",
+	SuggestButton:              "Trova uno spazio libero",
+	NoPreviewYet:               "Scegli un PDF per vedere la pagina e posizionare il timbro.",
+	NoVisibleSeal:              "Questo formato non ha un timbro visibile: la firma è nel file .p7m o dentro l'XML.",
+	RenderingMessage:           "Preparazione della pagina…",
+	PreviewUnavailable:         "Impossibile mostrare la pagina: manca poppler (pdftoppm). La firma funziona comunque: il timbro andrà nell'angolo in basso a destra della pagina 1.",
+	PageOf:                     "Pagina %d di %d",
+	SealHint:                   "Fai clic sulla pagina per posizionare il timbro, trascinalo per spostarlo e tira l'angolo per ingrandirlo. Da tastiera, le frecce lo spostano.",
+	SealCoversText:             "Il timbro copre del testo. Spostalo in uno spazio vuoto o premi «Trova uno spazio libero».",
+	SealHolderPlaceholder:      "Titolare del certificato",
+	NoSuggestion:               "Nessun altro spazio libero in questa pagina: posiziona il timbro a mano o cambia pagina.",
+	StepDocument:               "Documento",
+	StepCertificate:            "Certificato",
+	StepSignature:              "Firma",
+	ChooseDocument:             "Scegli documento…",
+	ChooseCertificate:          "Scegli certificato…",
+	ChangeButton:               "Cambia…",
+	DropHint:                   "PDF, XML o qualsiasi altro file. Puoi anche trascinarlo nella finestra.",
+	CertificateHint:            "File .p12, .pfx o .pem con il tuo certificato e la sua chiave.",
+	DocumentSavedAs:            "Verrà salvato come %s",
+	PassphrasePlaceholder:      "Password del certificato",
+	CertificateReading:         "Lettura del certificato…",
+	CertificateNeedsPassphrase: "Scrivi la password per leggere il certificato.",
+	CertificateLocked:          "La password non apre questo certificato.",
+	IssuedBy:                   "Emesso da %s",
+	ValidUntil:                 "Valido fino al %s",
+	StandingQualified:          "Certificato qualificato: la firma ha pieno valore legale (eIDAS).",
+	StandingTrusted:            "Emittente affidabile: firma avanzata, ma il certificato non è qualificato.",
+	StandingUntrusted:          "Nessuna lista di fiducia garantisce questo emittente: la firma sarà tecnicamente corretta, ma senza valore legale.",
+	StandingExpired:            "Scaduto il %s: non può più firmare.",
+	CertificateExpiresSoon:     "Scade tra %d giorni.",
+	FormatPAdESLabel:           "PDF firmato (PAdES): si apre con qualsiasi lettore",
+	FormatCAdESLabel:           "Busta .p7m (CAdES): quella richiesta da molti uffici",
+	FormatXAdESLabel:           "XML firmato (XAdES)",
+	FormatOnlyCAdES:            "Questo tipo di file si firma in una busta .p7m (CAdES).",
+	SealOnPagePane:             "Il timbro andrà dove lo vedi nella pagina a destra.",
+	MoreOptions:                "Altre opzioni",
+	LevelBasicLabel:            "Base, senza marca temporale",
+	LevelTimestampLabel:        "Con marca temporale (T)",
+	LevelLongTermLabel:         "Validazione a lungo termine (LT)",
+	LevelArchiveLabel:          "Archiviazione a lungo termine (LTA)",
+	LevelHint:                  "La marca temporale prova quando è stata apposta la firma. LT e LTA verificano anche in rete se il certificato era revocato.",
+	LocationPlaceholder:        "Città",
+	SignedAs:                   "Firmato: %s",
+	OpenSigned:                 "Apri",
+	ShowFolder:                 "Cartella",
+	CheckSignature:             "Verifica",
 }
 
 var english = Catalogue{
@@ -270,28 +337,18 @@ var english = Catalogue{
 	ExpiresIn:              "Expires in",
 	NoBinary:               "The trebaruna binary was not found",
 	WindowTitle:            "trebaruna — AdES electronic signature",
-	Subtitle:               "CAdES · PAdES · XAdES — no proprietary code",
-	DocumentLabel:          "Document",
-	CertificateLabel:       "Certificate (.p12 / .pfx / .pem)",
-	PassphraseLabel:        "Passphrase",
-	FormatLabel:            "Format",
 	LevelLabel:             "Level",
-	CaptionLabel:           "Seal caption",
 	TSALabel:               "Timestamp authority (TSA)",
 	ReasonLabel:            "Reason",
 	LocationLabel:          "Location",
-	ResultLabel:            "Result",
 	ChooseButton:           "Choose…",
 	SignButton:             "Sign",
 	SigningMessage:         "signing…",
-	DoneTitle:              "Signature completed",
-	DoneQuestion:           "Signed document:\n%s\n\nOpen it?",
 	MissingDocument:        "Choose a document to sign.",
 	MissingKey:             "Choose your certificate (.p12, .pfx or .pem).",
 	MissingTSA:             "Level %s needs a timestamp authority (TSA).",
 	InvalidPage:            "Seal pages start at 1.",
 	NoOutput:               "The signature did not produce %s.",
-	SelectOnePlaceholder:   "(select one)",
 
 	WelcomeTitle:   "trebaruna",
 	WelcomeTagline: "CAdES, PAdES and XAdES electronic signatures.\nNo Electron, no Java, no proprietary code.",
@@ -300,20 +357,52 @@ var english = Catalogue{
 	WelcomePoint3:  "· Works offline; only the TSA uses the network.",
 	WelcomeStart:   "Start",
 
-	DocumentSection: "Document and certificate",
-	OptionsSection:  "Format and timestamp",
-	SealSection:     "Visible seal",
-
-	SuggestButton:         "Find free space",
-	NoPreviewYet:          "Choose a PDF to see the page and place the seal.",
-	NoVisibleSeal:         "This format has no visible seal: the signature travels in the .p7m file or inside the XML.",
-	RenderingMessage:      "Preparing the page…",
-	PreviewUnavailable:    "The page cannot be shown because poppler (pdftoppm) is missing. Signing still works: the seal goes in the bottom-right corner of page 1.",
-	PageOf:                "Page %d of %d",
-	SealHint:              "Click the page to place the seal, drag it to move it and pull its corner to enlarge it. With the keyboard, the arrow keys nudge it.",
-	SealCoversText:        "The seal covers text in the document. Move it to an empty area or press \"Find free space\".",
-	SealHolderPlaceholder: "Certificate holder",
-	NoSuggestion:          "No other free space on this page: place the seal by hand or change page.",
+	SuggestButton:              "Find free space",
+	NoPreviewYet:               "Choose a PDF to see the page and place the seal.",
+	NoVisibleSeal:              "This format has no visible seal: the signature travels in the .p7m file or inside the XML.",
+	RenderingMessage:           "Preparing the page…",
+	PreviewUnavailable:         "The page cannot be shown because poppler (pdftoppm) is missing. Signing still works: the seal goes in the bottom-right corner of page 1.",
+	PageOf:                     "Page %d of %d",
+	SealHint:                   "Click the page to place the seal, drag it to move it and pull its corner to enlarge it. With the keyboard, the arrow keys nudge it.",
+	SealCoversText:             "The seal covers text in the document. Move it to an empty area or press \"Find free space\".",
+	SealHolderPlaceholder:      "Certificate holder",
+	NoSuggestion:               "No other free space on this page: place the seal by hand or change page.",
+	StepDocument:               "Document",
+	StepCertificate:            "Certificate",
+	StepSignature:              "Signature",
+	ChooseDocument:             "Choose document…",
+	ChooseCertificate:          "Choose certificate…",
+	ChangeButton:               "Change…",
+	DropHint:                   "PDF, XML or any other file. You can also drop it on the window.",
+	CertificateHint:            "A .p12, .pfx or .pem file with your certificate and its key.",
+	DocumentSavedAs:            "Will be saved as %s",
+	PassphrasePlaceholder:      "Certificate passphrase",
+	CertificateReading:         "Reading the certificate…",
+	CertificateNeedsPassphrase: "Type the passphrase to read the certificate.",
+	CertificateLocked:          "The passphrase does not open this certificate.",
+	IssuedBy:                   "Issued by %s",
+	ValidUntil:                 "Valid until %s",
+	StandingQualified:          "Qualified certificate: the signature has full legal effect (eIDAS).",
+	StandingTrusted:            "Trusted issuer: an advanced signature, though the certificate is not qualified.",
+	StandingUntrusted:          "No trusted list vouches for this issuer: the signature will be technically sound but carry no legal weight.",
+	StandingExpired:            "Expired on %s: it can no longer sign.",
+	CertificateExpiresSoon:     "Expires in %d days.",
+	FormatPAdESLabel:           "Signed PDF (PAdES): opens in any reader",
+	FormatCAdESLabel:           ".p7m envelope (CAdES): what some offices require",
+	FormatXAdESLabel:           "Signed XML (XAdES)",
+	FormatOnlyCAdES:            "This kind of file is signed inside a .p7m envelope (CAdES).",
+	SealOnPagePane:             "The seal goes where you see it on the page to the right.",
+	MoreOptions:                "More options",
+	LevelBasicLabel:            "Basic, no timestamp",
+	LevelTimestampLabel:        "With timestamp (T)",
+	LevelLongTermLabel:         "Long-term validation (LT)",
+	LevelArchiveLabel:          "Long-term archive (LTA)",
+	LevelHint:                  "A timestamp proves when the signature was made. LT and LTA also ask over the network whether the certificate was revoked.",
+	LocationPlaceholder:        "City",
+	SignedAs:                   "Signed: %s",
+	OpenSigned:                 "Open",
+	ShowFolder:                 "Folder",
+	CheckSignature:             "Check",
 }
 
 // LevelName renders a level name for display.
@@ -334,11 +423,6 @@ func (c Catalogue) LevelNameFor(level string) string {
 // MissingTSAMessage formats the missing-authority error.
 func (c Catalogue) MissingTSAMessage(level string) string {
 	return fmt.Sprintf(c.MissingTSA, c.LevelNameFor(level))
-}
-
-// DoneMessage formats the success question.
-func (c Catalogue) DoneMessage(path string) string {
-	return fmt.Sprintf(c.DoneQuestion, path)
 }
 
 // NoOutputMessage formats the missing-artefact error.

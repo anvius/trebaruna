@@ -9,10 +9,9 @@ import "strings"
 // SigningIntent is everything the user filled in before pressing Sign.
 type SigningIntent struct {
 	DocumentPath string
-	KeyPath      string
-	Passphrase   string
-	Format       string
-	Level        string
+	Key          CertificateFile
+	Format       SignatureFormat
+	Level        SignatureLevel
 	Seal         SealChoice
 	TimestampURL string
 	Reason       string
@@ -31,11 +30,11 @@ func (i SigningIntent) Validate() error {
 	if strings.TrimSpace(i.DocumentPath) == "" {
 		return Problem{Code: ProblemMissingDocument}
 	}
-	if strings.TrimSpace(i.KeyPath) == "" {
+	if strings.TrimSpace(i.Key.Path) == "" {
 		return Problem{Code: ProblemMissingKey}
 	}
-	if (i.Level == "t" || i.Level == "lt") && strings.TrimSpace(i.TimestampURL) == "" {
-		return Problem{Code: ProblemMissingTSA, Detail: i.Level}
+	if i.Level.NeedsTimestamp() && strings.TrimSpace(i.TimestampURL) == "" {
+		return Problem{Code: ProblemMissingTSA, Detail: string(i.Level)}
 	}
 	if i.Seal.Page < 1 {
 		return Problem{Code: ProblemInvalidPage}
@@ -63,9 +62,9 @@ func (c SealChoice) Placed() bool {
 // user presses Sign.
 func (i SigningIntent) OutputName() string {
 	switch i.Format {
-	case "cades":
+	case FormatCAdES:
 		return i.DocumentPath + ".p7m"
-	case "xades":
+	case FormatXAdES:
 		return trimExtension(i.DocumentPath) + "_signed.xml"
 	default:
 		return trimExtension(i.DocumentPath) + "_signed.pdf"
@@ -114,6 +113,10 @@ const (
 	// ProblemNoOutput means the signer reported success but the signed file is
 	// not on disk.
 	ProblemNoOutput ProblemCode = "no_output"
+
+	// ProblemLockedCertificate means the passphrase does not open the
+	// certificate file.
+	ProblemLockedCertificate ProblemCode = "locked_certificate"
 )
 
 // Problem is a translatable validation error.

@@ -9,7 +9,7 @@ import (
 func validIntent() domain.SigningIntent {
 	return domain.SigningIntent{
 		DocumentPath: "/tmp/contratto.pdf",
-		KeyPath:      "/tmp/mario.p12",
+		Key:          domain.CertificateFile{Path: "/tmp/mario.p12"},
 		Format:       "pades",
 		Level:        "bes",
 		Seal:         domain.SealChoice{Page: 1},
@@ -35,7 +35,7 @@ func TestValidateReportsMissingDocument(t *testing.T) {
 
 func TestValidateReportsMissingKey(t *testing.T) {
 	intent := validIntent()
-	intent.KeyPath = ""
+	intent.Key.Path = ""
 
 	err := intent.Validate()
 	problem, ok := err.(domain.Problem)
@@ -101,7 +101,7 @@ func TestOutputNameFollowsTheSameConventionAsTheCLI(t *testing.T) {
 	for _, testCase := range cases {
 		intent := validIntent()
 		intent.DocumentPath = testCase.document
-		intent.Format = testCase.format
+		intent.Format = domain.SignatureFormat(testCase.format)
 		if got := intent.OutputName(); got != testCase.want {
 			t.Errorf("OutputName(%q, %q) = %q, want %q",
 				testCase.document, testCase.format, got, testCase.want)
@@ -113,7 +113,7 @@ func TestItalianErrorMessagesAreTranslatable(t *testing.T) {
 	// The problem carries a code, never a sentence, so the window can render
 	// it in the active language.
 	intent := validIntent()
-	intent.KeyPath = ""
+	intent.Key.Path = ""
 
 	err := intent.Validate()
 	if err == nil {

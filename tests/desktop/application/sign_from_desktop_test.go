@@ -25,7 +25,7 @@ func (s *recordingSigner) Sign(_ context.Context, _ domain.SigningIntent) (domai
 func completeIntent() domain.SigningIntent {
 	return domain.SigningIntent{
 		DocumentPath: "/tmp/contratto.pdf",
-		KeyPath:      "/tmp/mario.p12",
+		Key:          domain.CertificateFile{Path: "/tmp/mario.p12"},
 		Format:       "pades",
 		Level:        "bes",
 		Seal:         domain.SealChoice{Page: 1},
@@ -37,7 +37,7 @@ func TestAnInvalidIntentNeverReachesTheSigner(t *testing.T) {
 	useCase := application.NewSignFromDesktop(signer, func(string) bool { return true })
 
 	intent := completeIntent()
-	intent.KeyPath = ""
+	intent.Key.Path = ""
 
 	_, err := useCase.Execute(context.Background(), intent)
 

@@ -12,6 +12,7 @@ package infrastructure
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"image"
 	"image/png"
@@ -23,8 +24,10 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/test"
+	"fyne.io/fyne/v2/widget"
 
 	"codeberg.org/simplicer/trebaruna/src/desktop/application"
+	"codeberg.org/simplicer/trebaruna/src/desktop/domain"
 	"codeberg.org/simplicer/trebaruna/src/desktop/messaging"
 )
 
@@ -40,22 +43,34 @@ func TestScreenshots(t *testing.T) {
 	app := test.NewTempApp(t)
 	app.Settings().SetTheme(NewAppTheme(DefaultPalette()))
 	document := writeSampleContract(t)
+	InstallTranslations(messaging.Spanish)
 
 	for _, language := range []messaging.Language{messaging.Spanish, messaging.Italian} {
 		window := test.NewTempWindow(t, nil)
-		desktop := &Window{
-			application: application.NewSignFromDesktop(CommandLineSigner{BinaryPath: "trebaruna"}, fileExists),
-			preview:     application.NewPreviewPage(NewPopplerRenderer(), application.InkFinder{}),
-			window:      window,
-			messages:    messaging.For(language),
-			palette:     DefaultPalette(),
-		}
+		desktop := newDesktop(window, messaging.For(language), "trebaruna")
+		desktop.inspect = application.NewInspectCertificate(portraitReader{})
 		window.SetContent(desktop.withTabs(desktop.buildContent(document)))
 		window.Resize(fyne.NewSize(1220, 800))
 
-		waitFor(t, func() bool { return desktop.pages.canvas != nil })
+		desktop.form.setCertificate("/home/mario/Documenti/firma/rossi-mario-infocert.p12")
+		waitFor(t, func() bool { return desktop.pages.canvas != nil && desktop.form.summary != nil })
 		capture(t, window, filepath.Join(directory, fmt.Sprintf("sign-%s.png", language)))
+
+		desktop.form.afterSign.Show()
+		desktop.form.report(fmt.Sprintf(desktop.messages.SignedAs, "contratto-di-locazione_signed.pdf"), widget.SuccessImportance)
+		capture(t, window, filepath.Join(directory, fmt.Sprintf("signed-%s.png", language)))
 	}
+}
+
+// portraitReader stands in for the certificate command with a qualified
+// Italian certificate, so the screenshots show a filled card.
+type portraitReader struct{}
+
+func (portraitReader) Read(context.Context, domain.CertificateFile) (domain.CertificateSummary, error) {
+	return domain.CertificateSummary{
+		Holder: "MARIO ROSSI", Identifier: "TINIT-RSSMRA80A01H501U", Issuer: "InfoCert S.p.A.",
+		NotAfter: time.Date(2028, 3, 12, 0, 0, 0, 0, time.UTC), Trusted: true, Qualified: true, Locality: "Roma",
+	}, nil
 }
 
 // waitFor polls until the preview goroutine has delivered the page.
@@ -73,8 +88,16 @@ func waitFor(t *testing.T, ready func() bool) {
 	t.Fatal("the page preview never arrived (is poppler installed?)")
 }
 
+// capture lays the window out again and writes a PNG. The desktop driver
+// re-measures every container on each frame (Canvas.EnsureMinSize); the test
+// driver does not, so without the nudge a label that grew after the first
+// layout would overlap its neighbours in the picture but not on screen.
 func capture(t *testing.T, window fyne.Window, path string) {
 	t.Helper()
+	size := window.Canvas().Size()
+	window.Resize(size.AddWidthHeight(1, 1))
+	window.Resize(size)
+
 	file, err := os.Create(path)
 	if err != nil {
 		t.Fatal(err)

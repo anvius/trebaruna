@@ -70,7 +70,7 @@ func TestItalianAndSpanishDiffer(t *testing.T) {
 	// comparison uses strings that must differ.
 	pairs := [][2]string{
 		{spanish.SignButton, italian.SignButton},
-		{spanish.CertificateLabel, italian.CertificateLabel},
+		{spanish.CertificateLocked, italian.CertificateLocked},
 		{spanish.WindowTitle, italian.WindowTitle},
 		{spanish.MissingDocument, italian.MissingDocument},
 	}
@@ -89,14 +89,6 @@ func TestMissingTSAMessageNamesTheLevel(t *testing.T) {
 	}
 	if !contains(message, "T") {
 		t.Errorf("message must name the level, got %q", message)
-	}
-}
-
-func TestDoneMessageIncludesThePath(t *testing.T) {
-	spanish := messaging.For(messaging.Spanish)
-	message := spanish.DoneMessage("/tmp/contratto_signed.pdf")
-	if !contains(message, "/tmp/contratto_signed.pdf") {
-		t.Errorf("done message must include the path, got %q", message)
 	}
 }
 
