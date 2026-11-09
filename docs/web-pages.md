@@ -252,10 +252,20 @@ Channels:
   1.10), with `#WAIT` every 10 seconds while the person decides; long requests
   are fetched from its RetrieveService. Pages that force this channel work
   (Sistema RED does).
-- **WebSocket and the legacy socket** (not offered): they are TLS on
-  `127.0.0.1` and need a certificate the browser trusts; AutoFirma installs its
-  own root CA for that, and trebaruna installs none (ADR-0013). Pages that use
-  them by default do not reach trebaruna.
+- **WebSocket** (implemented, opt-in): the page talks to a server trebaruna
+  starts on `127.0.0.1`, over TLS, which the browser accepts only with a
+  certificate it trusts. `trebaruna afirma local-tls install` (or Tools →
+  Local channel for sites in the window) makes one and installs its root in
+  your Firefox and Chromium stores, never the system's: a root whose private
+  key is destroyed at once and whose name constraints allow only
+  `127.0.0.1` and `localhost` (ADR-0019). Until it is installed, pages that
+  use this channel cannot reach trebaruna, and the window offers to install
+  it. Recent Chromium versions also ask you to let the site reach your
+  computer's local network; the page needs that permission, as it does with
+  AutoFirma.
+- **The legacy socket** (`afirma://service`, not offered): AutoFirma's older
+  local channel, which pages choose only for Internet Explorer and Firefox 60
+  or older.
 
 Operations: `sign`, `cosign`, `countersign`, `signandsave`, `selectcert`,
 `save` and `batch`. A batch (JSON or XML) goes through the site's pre- and
