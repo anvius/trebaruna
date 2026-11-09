@@ -64,7 +64,8 @@ func TestASignatureCarriesTheHolderName(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(signed), "/Name (MARIO ROSSI)") {
+	// A literal string or the same in hexadecimal: both are the name.
+	if !strings.Contains(string(signed), "/Name (MARIO ROSSI)") && !strings.Contains(string(signed), "/Name <4D4152494F20524F535349>") {
 		t.Error("the PDF signature dictionary does not name the holder")
 	}
 }

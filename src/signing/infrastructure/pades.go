@@ -14,7 +14,6 @@ import (
 
 	"codeberg.org/simplicer/trebaruna/src/signing/application"
 	"codeberg.org/simplicer/trebaruna/src/signing/domain"
-	"codeberg.org/simplicer/trebaruna/src/signing/domain/identity"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/dss"
 	verificationdomain "codeberg.org/simplicer/trebaruna/src/verification/domain"
 	verificationinfra "codeberg.org/simplicer/trebaruna/src/verification/infrastructure"
@@ -65,10 +64,12 @@ func (s *PadesSigner) SignPades(ctx context.Context, request application.PadesRe
 	}
 	defer keyPair.Close()
 
-	// A signature in an existing field, or with a policy (which goes in the
-	// signed attributes the PDF library's builder cannot add), is written
-	// by trebaruna.
-	if request.Field != "" || !request.Policy.IsZero() {
+	// trebaruna writes the signature itself when it goes in an existing
+	// field, declares a policy (signed attributes the PDF library's builder
+	// cannot add) or shows a seal: the library draws the standard fonts
+	// with every glyph 500 units wide and writes UTF-8 into WinAnsi
+	// strings, so its seals came out spaced apart, "·" as "Â·".
+	if request.Field != "" || !request.Policy.IsZero() || len(sealPlacementsOf(request)) > 0 {
 		signed, err := s.signOwn(ctx, request, keyPair)
 		if err != nil {
 			return nil, err
@@ -81,13 +82,7 @@ func (s *PadesSigner) SignPades(ctx context.Context, request application.PadesRe
 		return nil, fmt.Errorf("open PDF: %w", err)
 	}
 
-	// Every stamp is built before Write because each carries the identity read
-	// from the certificate, never a name typed into a form.
-	stamps, sealErr := buildSeals(request, keyPair)
-	if sealErr != nil {
-		return nil, sealErr
-	}
-
+	// The PDF library writes only invisible signatures without a policy.
 	builder := document.Sign(keyPair.Signer, keyPair.Certificate).
 		Format(pdfFormatFor(request.Level)).
 		Digest(crypto.SHA256).
@@ -108,10 +103,6 @@ func (s *PadesSigner) SignPades(ctx context.Context, request application.PadesRe
 		if request.TimestampUser != "" {
 			builder = builder.TimestampAuth(request.TimestampUser, request.TimestampSecret)
 		}
-	}
-
-	for _, stamp := range stamps {
-		builder = builder.Appearance(stamp.appearance, stamp.lowerLeftX, stamp.lowerLeftY).Page(stamp.page)
 	}
 
 	var output bytes.Buffer
@@ -321,53 +312,13 @@ func pdfFormatFor(level domain.Level) pdfsign.Format {
 	return pdfsign.PAdES_B
 }
 
-// stamp is one drawn mark and where it goes.
-type stamp struct {
-	appearance             *pdfsign.Appearance
-	page                   int
-	lowerLeftX, lowerLeftY float64
-}
-
-// buildSeals renders one appearance per placement, all sharing the same
-// cryptographic signature: several marks, one key, one verifiable value.
-func buildSeals(request application.PadesRequest, keyPair KeyPair) ([]stamp, error) {
-	placements := request.Placements
-	if len(placements) == 0 && !request.Placement.IsZero() {
-		placements = []domain.SealPlacement{request.Placement}
+// sealPlacementsOf is every seal the request asks for, the single
+// placement field folded in.
+func sealPlacementsOf(request application.PadesRequest) []domain.SealPlacement {
+	if len(request.Placements) == 0 && !request.Placement.IsZero() {
+		return []domain.SealPlacement{request.Placement}
 	}
-	placements, err := placeOnPages(request.Content, placements)
-	if err != nil {
-		return nil, err
-	}
-
-	holder := identity.FromCertificate(keyPair.Certificate)
-	moment := request.SignedAt
-	if moment.IsZero() {
-		// Direct callers (tests, future gRPC surface) may omit it; the stamp then
-		// falls back to the wall clock rather than printing year one.
-		moment = time.Now()
-	}
-
-	stamps := make([]stamp, 0, len(placements))
-	for _, placement := range placements {
-		lowerLeftX, lowerLeftY, upperRightX, upperRightY := placement.Box()
-		width, height := upperRightX-lowerLeftX, upperRightY-lowerLeftY
-		if width <= 0 || height <= 0 {
-			return nil, fmt.Errorf("seal box on page %d is empty: %.1fx%.1f pt", placement.Page(), width, height)
-		}
-
-		appearance, err := DrawSealWithRubric(width, height, holder, moment, request.Rubric)
-		if err != nil {
-			return nil, fmt.Errorf("page %d: %w", placement.Page(), err)
-		}
-		stamps = append(stamps, stamp{
-			appearance: appearance,
-			page:       placement.Page(),
-			lowerLeftX: lowerLeftX,
-			lowerLeftY: lowerLeftY,
-		})
-	}
-	return stamps, nil
+	return request.Placements
 }
 
 // placeOnPages resolves the default corner seal against the real size of its

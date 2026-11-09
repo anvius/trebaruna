@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"codeberg.org/simplicer/trebaruna/src/signing/application"
-	"codeberg.org/simplicer/trebaruna/src/signing/domain"
 	"codeberg.org/simplicer/trebaruna/src/signing/domain/identity"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/cms"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/pdffield"
@@ -71,11 +70,7 @@ func (s *PadesSigner) signInField(ctx context.Context, request application.Pades
 // placement or none: the PDF library's job, done here for what it cannot
 // add to the signed attributes, a signature policy (PAdES-EPES).
 func (s *PadesSigner) signInNewField(ctx context.Context, request application.PadesRequest, keyPair KeyPair) ([]byte, error) {
-	placements := request.Placements
-	if len(placements) == 0 && !request.Placement.IsZero() {
-		placements = []domain.SealPlacement{request.Placement}
-	}
-	placements, err := placeOnPages(request.Content, placements)
+	placements, err := placeOnPages(request.Content, sealPlacementsOf(request))
 	if err != nil {
 		return nil, err
 	}

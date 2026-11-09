@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -76,7 +77,7 @@ func TestTheDefaultSealFollowsThePageSize(t *testing.T) {
 	}
 	for _, testCase := range cases {
 		got := signedRect(t, writeSizedPDF(t, testCase.box, testCase.inherited))
-		if strings.Join(got, " ") != strings.Join(testCase.want, " ") {
+		if !sameNumbers(got, testCase.want) {
 			t.Errorf("%s: seal at %v, want %v", testCase.name, got, testCase.want)
 		}
 	}
@@ -117,7 +118,7 @@ func writeRubric(t *testing.T) string {
 func TestARubricWidensTheDefaultSeal(t *testing.T) {
 	document := writeSizedPDF(t, "[0 0 612 792]", false)
 	got := signedRect(t, document, "--rubric", writeRubric(t))
-	if strings.Join(got, " ") != "434.000000 18.000000 594.000000 66.000000" {
+	if !sameNumbers(got, []string{"434", "18", "594", "66"}) {
 		t.Errorf("seal at %v, want 160 pt wide in the corner", got)
 	}
 	signed, _ := os.ReadFile(strings.TrimSuffix(document, ".pdf") + "_signed.pdf")
@@ -137,4 +138,19 @@ func TestARubricNeedsAVisibleSealAndAnImage(t *testing.T) {
 	if _, stderr, code := run("sign", document, "--p12", key, "--invisible", "--rubric", writeRubric(t)); code == 0 || !strings.Contains(stderr, "visible seal") {
 		t.Errorf("an invisible signature with a rubric: exit %d, %s", code, stderr)
 	}
+}
+
+// sameNumbers compares coordinates by value: 530 and 530.000000 are one.
+func sameNumbers(got, want []string) bool {
+	if len(got) != len(want) {
+		return false
+	}
+	for index := range got {
+		a, errA := strconv.ParseFloat(got[index], 64)
+		b, errB := strconv.ParseFloat(want[index], 64)
+		if errA != nil || errB != nil || a != b {
+			return false
+		}
+	}
+	return true
 }

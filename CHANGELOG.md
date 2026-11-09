@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The default visible seal was drawn by the PDF library, which gives the
+  standard fonts every glyph 500 units wide and writes UTF-8 into WinAnsi
+  strings: "MARI O  ROSSI", "TINIT-… Â· 09/11/2026". Every signature with
+  a seal is now written by trebaruna, whose appearance sets the text in
+  Helvetica, WinAnsi encoded, with the fonts' own metrics, as signatures
+  with a policy or in a form's field already were.
+
 ### Added
 
 - afirma:// pages co-sign ASiC-S containers: a `cosign` with
