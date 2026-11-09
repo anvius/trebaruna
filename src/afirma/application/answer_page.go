@@ -22,6 +22,15 @@ type AnswerPage struct {
 	files        FileWriter
 	courier      Courier
 	requests     RequestStore
+	batches      BatchServices
+	raw          RawSigner
+}
+
+// WithBatches adds the batch services and the raw signer; without them a
+// batch is answered as unsupported.
+func (u *AnswerPage) WithBatches(services BatchServices, raw RawSigner) *AnswerPage {
+	u.batches, u.raw = services, raw
+	return u
 }
 
 // NewAnswerPage wires the use case.
@@ -61,6 +70,12 @@ func (u *AnswerPage) Execute(ctx context.Context, invocation domain.Invocation) 
 			return u.fail(ctx, common.Channel, domain.Failure{Code: domain.Params, Cause: "save needs data"})
 		}
 		return u.save(ctx, common, payload, invocation.Param("filename"))
+	case domain.Batch:
+		request, err := domain.ReadBatchRequest(invocation, true)
+		if err != nil {
+			return u.fail(ctx, channelOf(invocation), err)
+		}
+		return u.batch(ctx, request)
 	case domain.WebSocket, domain.Service:
 		// The local channels are TLS on 127.0.0.1 and need a certificate the
 		// browser trusts; trebaruna installs no root for it (ADR-0013).

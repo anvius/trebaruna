@@ -231,11 +231,17 @@ Channels:
   own root CA for that, and trebaruna installs none (ADR-0013). Pages that use
   them by default do not reach trebaruna.
 
-Operations: `sign`, `cosign`, `countersign`, `signandsave`, `selectcert` and
-`save`. Formats: CAdES (implicit or explicit, co- and counter-signatures),
+Operations: `sign`, `cosign`, `countersign`, `signandsave`, `selectcert`,
+`save` and `batch`. A batch (JSON or XML) goes through the site's pre- and
+post-signers: the documents stay on the site, the key signs what its server
+prepares from them (each `PRE`, hashed and signed with RSA or ECDSA), and the
+post-signer's result goes back to the page; the person is shown every document
+of the batch first. A local batch (`localBatchProcess`) is signed document by
+document here. Formats: CAdES (implicit or explicit, co- and counter-signatures),
 PAdES (invisible unless the page places the seal), XAdES enveloped and
 enveloping. Asked for something not done yet — signature policies, XAdES
-Detached, FacturaE, ASiC, a digest the page computed, batches — trebaruna
+Detached, FacturaE, ASiC, a digest the page computed, single signatures through
+the site's server (`CAdEStri` and siblings) — trebaruna
 answers with an AutoFirma error naming it, never with a different signature.
 
 ## What is missing

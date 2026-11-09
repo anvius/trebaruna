@@ -5,6 +5,7 @@ package application
 
 import (
 	"context"
+	"fmt"
 
 	"codeberg.org/simplicer/trebaruna/src/afirma/domain"
 	signing "codeberg.org/simplicer/trebaruna/src/signing/domain"
@@ -28,8 +29,10 @@ type Proposal struct {
 	// SuggestedName is the file name the page proposes for save and
 	// signandsave.
 	SuggestedName string
-	Filter        domain.CertificateFilter
-	Warnings      []string
+	// Items are the documents of a batch.
+	Items    []domain.BatchItem
+	Filter   domain.CertificateFilter
+	Warnings []string
 }
 
 // Decision is the person's answer: approved, with the key to use.
@@ -99,4 +102,27 @@ type Courier interface {
 // because it was too long for a URI (C.1–C.3).
 type RequestStore interface {
 	Fetch(ctx context.Context, retrieveURL, fileID, key, cipher string, asJSON bool) (domain.Invocation, error)
+}
+
+// BatchServices are the site's pre- and post-signers (E.3).
+type BatchServices interface {
+	Presign(ctx context.Context, url string, isJSON bool, batch []byte, chain [][]byte) ([]byte, error)
+	Postsign(ctx context.Context, url string, isJSON bool, batch []byte, chain [][]byte, triphase []byte) ([]byte, error)
+}
+
+// ServiceFailure is an HTTP status a batch service answered with, which
+// decides the AutoFirma code (E.7).
+type ServiceFailure struct {
+	Status int
+	Body   string
+}
+
+// Error describes the failure.
+func (f ServiceFailure) Error() string { return fmt.Sprintf("HTTP %d: %s", f.Status, f.Body) }
+
+// RawSigner signs what a site's server prepared (E.4): the digest of each
+// input, as PKCS#1 v1.5 for RSA or ECDSA, with one opening of the key.
+type RawSigner interface {
+	Chain(key signing.Signer) ([][]byte, error)
+	SignAll(key signing.Signer, inputs [][]byte, digest string) ([][]byte, error)
 }

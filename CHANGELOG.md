@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- afirma:// batches: JSON and XML batch definitions signed through the site's
+  pre- and post-signers (`json=`/`xml=` with `certs=`, the client signing each
+  `PRE` into `PK1` and keeping `PRE` only when `NEED_PRE`, `tridata=` to the
+  post-signer; documents the pre-signer reports as failed reach post-sign as
+  results), answered `result[|cert]`; HTTP 400/4xx/5xx from the services map
+  to SAF_03/26/27. Local batches (`localBatchProcess`) are signed item by item
+  with `stoponerror`. The person sees every document of the batch first.
+
 - afirma:// through the intermediate server: answers posted to the site's
   StorageService (`op=put&v=1_0`), ciphered element by element with the page's
   key — single DES-ECB with zero padding and `N.base64url` (the protocol's

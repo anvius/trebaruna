@@ -53,7 +53,8 @@ func runAfirma(args []string, stdout, stderr io.Writer) int {
 	}
 	courier := infrastructure.NewIntermediateServer()
 	use := application.NewAnswerPage(approver, infrastructure.NewNativePageSigner(), infrastructure.KeyCertificates{},
-		infrastructure.WebData{}, infrastructure.LocalFiles{}, courier, courier)
+		infrastructure.WebData{}, infrastructure.LocalFiles{}, courier, courier).
+		WithBatches(infrastructure.NewBatchServices(), infrastructure.KeyRawSigner{})
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 	answer, err := use.Execute(ctx, invocation)
@@ -91,6 +92,9 @@ func (a *commandLineApprover) Approve(_ context.Context, proposal application.Pr
 		fmt.Fprintf(a.stderr, "  data       to download from %s\n", proposal.DataURL)
 	case proposal.ChooseFile:
 		fmt.Fprintln(a.stderr, "  data       a file you choose (--file)")
+	}
+	for _, item := range proposal.Items {
+		fmt.Fprintf(a.stderr, "  document   %s (%s, %s)\n", item.ID, item.Format, item.Suboperation)
 	}
 	for _, expression := range proposal.Filter.Expressions() {
 		fmt.Fprintf(a.stderr, "  accepts    certificates matching %s\n", expression)
