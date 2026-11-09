@@ -77,7 +77,7 @@ func NewWindow(options Options) *Window {
 
 	desktop := &Window{
 		application: application.NewSignFromDesktop(
-			application.CommandRunner{BinaryPath: options.BinaryPath},
+			CommandLineSigner{BinaryPath: options.BinaryPath},
 			fileExists,
 		),
 		preview:     application.NewPreviewPage(NewPopplerRenderer(), application.InkFinder{}),
@@ -238,21 +238,22 @@ func (w *Window) buildContent(initialDocument string) fyne.CanvasObject {
 		statusLine.SetText(m.SigningMessage)
 
 		go func() {
-			defer signButton.Enable()
+			defer fyne.Do(signButton.Enable)
 
 			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 			defer cancel()
 
-			outcome, err := w.application.Execute(ctx, intent)
+			receipt, err := w.application.Execute(ctx, intent)
 			if err != nil {
-				statusLine.SetText(fmt.Sprintf("%v", err))
-				output.SetText(outcome.RawJSON)
+				fyne.Do(func() { statusLine.SetText(translate(err, m)) })
 				return
 			}
 
-			statusLine.SetText(m.DoneTitle)
-			output.SetText(outcome.RawJSON)
-			showSuccess(w.window, outcome.SignedPath, m)
+			fyne.Do(func() {
+				statusLine.SetText(m.DoneTitle)
+				output.SetText(receipt.SignedPath + "\n" + receipt.Standard + " · " + receipt.Signer)
+				showSuccess(w.window, receipt.SignedPath, m)
+			})
 		}()
 	})
 	signButton.Importance = widget.HighImportance
@@ -541,6 +542,8 @@ func translate(err error, m messaging.Catalogue) string {
 		return m.MissingTSAMessage(problem.Detail)
 	case domain.ProblemInvalidPage:
 		return m.InvalidPage
+	case domain.ProblemNoOutput:
+		return m.NoOutputMessage(problem.Detail)
 	}
 	return err.Error()
 }
@@ -556,7 +559,7 @@ func NewTestWindow(options Options) fyne.Window {
 
 	desktop := &Window{
 		application: application.NewSignFromDesktop(
-			application.CommandRunner{BinaryPath: options.BinaryPath},
+			CommandLineSigner{BinaryPath: options.BinaryPath},
 			fileExists,
 		),
 		preview:     application.NewPreviewPage(NewPopplerRenderer(), application.InkFinder{}),

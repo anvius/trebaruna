@@ -94,52 +94,6 @@ func TestParseBoxRejectsMalformed(t *testing.T) {
 	}
 }
 
-func TestArgumentsTranslateToCLIFlags(t *testing.T) {
-	intent := validIntent()
-	intent.Level = "t"
-	intent.TimestampURL = "https://tsa.example/tsa"
-	intent.Box = "100,600,300,700"
-	intent.Page = 2
-	intent.Passphrase = "secret"
-	intent.Reason = "Contratto"
-
-	arguments := intent.Arguments()
-
-	expected := map[string]string{
-		"sign":     "/tmp/contratto.pdf",
-		"--format": "pades",
-		"--level":  "t",
-		"--p12":    "/tmp/mario.p12",
-		"--pass":   "secret",
-		"--page":   "2",
-		"--box":    "100,600,300,700",
-		"--tsa":    "https://tsa.example/tsa",
-		"--reason": "Contratto",
-	}
-
-	for flag, value := range expected {
-		if !containsPair(arguments, flag, value) {
-			t.Errorf("arguments missing %s %s: %v", flag, value, arguments)
-		}
-	}
-	if !containsValue(arguments, "--json") {
-		t.Error("arguments must request JSON output so the window can parse it")
-	}
-}
-
-func TestArgumentsUsePemFlagForPemKeys(t *testing.T) {
-	intent := validIntent()
-	intent.KeyPath = "/tmp/mario.pem"
-
-	arguments := intent.Arguments()
-	if !containsPair(arguments, "--pem", "/tmp/mario.pem") {
-		t.Errorf("a .pem key must use --pem: %v", arguments)
-	}
-	if containsValue(arguments, "--p12") {
-		t.Error("a .pem key must not also pass --p12")
-	}
-}
-
 func TestOutputNameFollowsTheSameConventionAsTheCLI(t *testing.T) {
 	cases := []struct {
 		document string
@@ -176,15 +130,6 @@ func TestItalianErrorMessagesAreTranslatable(t *testing.T) {
 	if message := err.Error(); containsValue([]string{message}, "certificado") {
 		t.Errorf("error carries Spanish prose instead of a code: %q", message)
 	}
-}
-
-func containsPair(arguments []string, flag, value string) bool {
-	for index := 0; index < len(arguments)-1; index++ {
-		if arguments[index] == flag && arguments[index+1] == value {
-			return true
-		}
-	}
-	return false
 }
 
 func containsValue(values []string, wanted string) bool {

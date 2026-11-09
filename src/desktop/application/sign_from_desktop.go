@@ -3,22 +3,23 @@ package application
 
 import (
 	"context"
-	"fmt"
-	"os/exec"
-	"strings"
 
 	"codeberg.org/simplicer/trebaruna/src/desktop/domain"
 )
 
-// Signer runs the signature command.
+// Signer produces the signature an intent describes.
+//
+// The window never learns how: today the adapter drives the trebaruna command,
+// so the desktop and the console share one implementation, but the use case
+// would not change if it signed in process.
 type Signer interface {
-	Run(ctx context.Context, arguments []string) (output string, err error)
+	Sign(ctx context.Context, intent domain.SigningIntent) (domain.Receipt, error)
 }
 
 // SignFromDesktop is the use case behind the Sign button.
 //
-// It validates, delegates to the command runner, and reports an outcome the
-// window can render. It never touches Fyne.
+// It validates, delegates to the signer, and confirms the signed file exists
+// before telling the user it does. It never touches Fyne.
 type SignFromDesktop struct {
 	signer Signer
 	exists func(path string) bool
@@ -30,55 +31,21 @@ func NewSignFromDesktop(signer Signer, exists func(string) bool) *SignFromDeskto
 }
 
 // Execute validates and signs.
-func (u *SignFromDesktop) Execute(ctx context.Context, intent domain.SigningIntent) (domain.Outcome, error) {
+func (u *SignFromDesktop) Execute(ctx context.Context, intent domain.SigningIntent) (domain.Receipt, error) {
 	if err := intent.Validate(); err != nil {
-		return domain.Outcome{}, err
+		return domain.Receipt{}, err
 	}
 
-	output, err := u.signer.Run(ctx, intent.Arguments())
+	receipt, err := u.signer.Sign(ctx, intent)
 	if err != nil {
-		return domain.Outcome{RawJSON: output, Failed: true}, fmt.Errorf("%s", firstMeaningfulLine(output, err))
+		return domain.Receipt{}, err
 	}
 
-	signedPath := intent.OutputName()
-	if u.exists != nil && !u.exists(signedPath) {
-		return domain.Outcome{RawJSON: output, Failed: true}, fmt.Errorf(
-			"la firma no produjo %s;\n%s", signedPath, output,
-		)
+	// A signer that reports success without leaving a file behind is the one
+	// failure a user cannot diagnose alone, so it is named instead of trusted.
+	if u.exists != nil && !u.exists(receipt.SignedPath) {
+		return domain.Receipt{}, domain.Problem{Code: domain.ProblemNoOutput, Detail: receipt.SignedPath}
 	}
 
-	return domain.Outcome{SignedPath: signedPath, RawJSON: output}, nil
+	return receipt, nil
 }
-
-// firstMeaningfulLine extracts the most useful error line from the CLI output.
-func firstMeaningfulLine(output string, fallback error) string {
-	for _, line := range strings.Split(output, "\n") {
-		trimmed := strings.TrimSpace(line)
-		if trimmed == "" {
-			continue
-		}
-		if strings.Contains(strings.ToLower(trimmed), "error") ||
-			strings.Contains(strings.ToLower(trimmed), "failed") {
-			return trimmed
-		}
-	}
-	if trimmed := strings.TrimSpace(output); trimmed != "" {
-		return trimmed
-	}
-	return fallback.Error()
-}
-
-// CommandRunner executes the trebaruna binary.
-type CommandRunner struct {
-	BinaryPath string
-}
-
-// Run executes the command and returns its combined output.
-func (c CommandRunner) Run(ctx context.Context, arguments []string) (string, error) {
-	command := exec.CommandContext(ctx, c.BinaryPath, arguments...)
-	output, err := command.CombinedOutput()
-	return string(output), err
-}
-
-// compile-time checks.
-var _ Signer = CommandRunner{}

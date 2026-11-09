@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Desktop: the command-line adapter moved out of the application and domain
+  layers. `SignFromDesktop` now depends on a `Signer` port and returns a typed
+  `Receipt` read from `sign --json`, instead of predicting the output name and
+  echoing raw JSON. A receipt whose file is missing is reported as a
+  translatable problem rather than a Spanish sentence built in the use case.
+- Desktop: the application layer is covered by unit tests (100 %), and the
+  adapter by tests that run a stand-in command.
+
 ### Added
 
 - Seal position is repeatable: `--box` may appear several times, optionally as

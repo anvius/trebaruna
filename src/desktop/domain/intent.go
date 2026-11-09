@@ -85,47 +85,9 @@ func ParseBox(raw string) (Box, error) {
 	return Box{values[0], values[1], values[2], values[3]}, nil
 }
 
-// Arguments translates the intent into CLI flags.
-//
-// Keeping this translation in the domain, and not in the window, means the
-// desktop app and the console cannot drift apart: there is one list of flags.
-func (i SigningIntent) Arguments() []string {
-	arguments := []string{
-		"sign", i.DocumentPath,
-		"--format", i.Format,
-		"--level", i.Level,
-		"--json",
-	}
-
-	if strings.HasSuffix(strings.ToLower(i.KeyPath), ".pem") {
-		arguments = append(arguments, "--pem", i.KeyPath)
-	} else {
-		arguments = append(arguments, "--p12", i.KeyPath)
-	}
-
-	if i.Passphrase != "" {
-		arguments = append(arguments, "--pass", i.Passphrase)
-	}
-	if i.Page > 1 {
-		arguments = append(arguments, "--page", fmt.Sprintf("%d", i.Page))
-	}
-	if i.Box != "" {
-		arguments = append(arguments, "--box", i.Box)
-	}
-	if i.TimestampURL != "" {
-		arguments = append(arguments, "--tsa", i.TimestampURL)
-	}
-	if i.Reason != "" {
-		arguments = append(arguments, "--reason", i.Reason)
-	}
-	if i.Location != "" {
-		arguments = append(arguments, "--location", i.Location)
-	}
-	return arguments
-}
-
 // OutputName predicts the signed file name, using the same convention as the
-// signing domain so the window can open the result right away.
+// signing domain, so the window can say where the result will land before the
+// user presses Sign.
 func (i SigningIntent) OutputName() string {
 	switch i.Format {
 	case "cades":
@@ -147,11 +109,17 @@ func trimExtension(path string) string {
 	return path[:dot]
 }
 
-// Outcome is what the user is told after a signature.
-type Outcome struct {
+// Receipt is what a completed signature hands back to the user: the file that
+// now exists and the facts worth repeating about it.
+type Receipt struct {
 	SignedPath string
-	RawJSON    string
-	Failed     bool
+	// Standard names the profile, e.g. "PAdES-B-T", as the signer reported it.
+	Standard string
+	Signer   string
+	// SignedAt is the instant printed in the seal, in RFC 3339.
+	SignedAt   string
+	SealCount  int
+	SelfSigned bool
 }
 
 // ProblemCode identifies a validation failure without tying it to a language.
@@ -172,6 +140,10 @@ const (
 
 	// ProblemInvalidBox means the seal rectangle is malformed.
 	ProblemInvalidBox ProblemCode = "invalid_box"
+
+	// ProblemNoOutput means the signer reported success but the signed file is
+	// not on disk.
+	ProblemNoOutput ProblemCode = "no_output"
 )
 
 // Problem is a translatable validation error.
