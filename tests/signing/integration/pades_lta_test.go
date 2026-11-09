@@ -37,6 +37,7 @@ import (
 	"codeberg.org/simplicer/trebaruna/src/signing/application"
 	"codeberg.org/simplicer/trebaruna/src/signing/domain"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure"
+	"codeberg.org/simplicer/trebaruna/tests/support/tsa"
 	"golang.org/x/crypto/ocsp"
 )
 
@@ -371,9 +372,10 @@ func (t *localTSA) url(test *testing.T) string {
 			writer.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		// The request carries a MessageImprint; the digest is the last OCTET
-		// STRING inside it, which is what the token must cover.
-		digest := lastOctetString(body)
+		// The request is parsed as the RFC 3161 structure it is: scanning the
+		// bytes for an INTEGER now and then took part of the nonce for the
+		// whole of it, and pdfsign refused the token.
+		digest, nonce := tsa.ParseRequest(body)
 		if len(digest) != 32 {
 			writer.WriteHeader(http.StatusBadRequest)
 			return
@@ -381,7 +383,7 @@ func (t *localTSA) url(test *testing.T) string {
 
 		// Echo the nonce: pdfsign rejects a token whose nonce differs, and that
 		// check is what stops a replayed response from another request.
-		response, err := t.tokenWithNonce(digest, requestNonce(body))
+		response, err := t.tokenWithNonce(digest, nonce)
 		if err != nil {
 			writer.WriteHeader(http.StatusInternalServerError)
 			return
@@ -393,76 +395,38 @@ func (t *localTSA) url(test *testing.T) string {
 	return server.URL
 }
 
-// lastOctetString returns the contents of the final OCTET STRING in a DER blob.
-func lastOctetString(der []byte) []byte {
-	position := 0
-	for position < len(der) {
-		if der[position] != 0x04 {
-			position++
-			continue
-		}
-		length, headerSize, ok := readDERLength(der, position+1)
-		if !ok || position+1+headerSize+length > len(der) {
-			return nil
-		}
-		value := der[position+1+headerSize : position+1+headerSize+length]
-		if length >= 32 {
-			return value
-		}
-		position++
-	}
-	return nil
-}
-
-// readDERLength decodes a DER length field.
-func readDERLength(der []byte, offset int) (int, int, bool) {
-	if offset >= len(der) {
-		return 0, 0, false
-	}
-	first := der[offset]
-	if first < 0x80 {
-		return int(first), 1, true
-	}
-	count := int(first & 0x7f)
-	if count == 0 || count > 4 || offset+1+count > len(der) {
-		return 0, 0, false
-	}
-	length := 0
-	for index := 0; index < count; index++ {
-		length = length<<8 | int(der[offset+1+index])
-	}
-	return length, 1 + count, true
-}
-
-// requestNonce extracts the nonce from a TimeStampReq.
-//
-// The nonce is the last INTEGER in the structure, after the policy and before
-// the optional extensions; scanning for the final 0x02 tag is enough for the
-// requests this client emits.
-func requestNonce(der []byte) []byte {
-	var found []byte
-	position := 0
-	for position < len(der) {
-		if der[position] != 0x02 {
-			position++
-			continue
-		}
-		length, headerSize, ok := readDERLength(der, position+1)
-		if !ok || length == 0 || position+1+headerSize+length > len(der) {
-			position++
-			continue
-		}
-		value := der[position+1+headerSize : position+1+headerSize+length]
-		// The version is a small integer; a nonce is long.
-		if length > 4 {
-			found = value
-		}
-		position++
-	}
-	return found
-}
-
 // pemEncodeCertificate renders a certificate as PEM.
 func pemEncodeCertificate(certificate *x509.Certificate) []byte {
 	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certificate.Raw})
+}
+
+// TestTheTestAuthorityReadsTheWholeNonce: a nonce whose bytes look like a
+// shorter INTEGER (02 05 …) was cut by the old byte scan, and about one
+// LTA run in a hundred failed with "nonce does not match".
+func TestTheTestAuthorityReadsTheWholeNonce(t *testing.T) {
+	nonce := []byte{0x7f, 0x10, 0x02, 0x05, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06}
+	request, err := asn1.Marshal(struct {
+		Version        int
+		MessageImprint struct {
+			HashAlgorithm pkix.AlgorithmIdentifier
+			HashedMessage []byte
+		}
+		Nonce   *big.Int
+		CertReq bool
+	}{
+		Version: 1,
+		MessageImprint: struct {
+			HashAlgorithm pkix.AlgorithmIdentifier
+			HashedMessage []byte
+		}{pkix.AlgorithmIdentifier{Algorithm: asn1.ObjectIdentifier{2, 16, 840, 1, 101, 3, 4, 2, 1}}, bytes.Repeat([]byte{0xab}, 32)},
+		Nonce:   new(big.Int).SetBytes(nonce),
+		CertReq: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	digest, read := tsa.ParseRequest(request)
+	if len(digest) != 32 || !bytes.Equal(read, nonce) {
+		t.Errorf("digest %x, nonce %x, want %x", digest, read, nonce)
+	}
 }

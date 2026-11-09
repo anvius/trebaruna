@@ -135,7 +135,7 @@ func (a *Authority) URL(t *testing.T) string {
 			writer.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		digest, nonce := parseRequest(body)
+		digest, nonce := ParseRequest(body)
 		if len(digest) == 0 {
 			writer.WriteHeader(http.StatusBadRequest)
 			return
@@ -152,8 +152,9 @@ func (a *Authority) URL(t *testing.T) string {
 	return server.URL
 }
 
-// parseRequest reads the imprint and the nonce of a TimeStampReq.
-func parseRequest(der []byte) (digest, nonce []byte) {
+// ParseRequest reads the imprint and the nonce of a TimeStampReq (RFC 3161),
+// nil for bytes that are not one.
+func ParseRequest(der []byte) (digest, nonce []byte) {
 	var request struct {
 		Version        int
 		MessageImprint struct {
