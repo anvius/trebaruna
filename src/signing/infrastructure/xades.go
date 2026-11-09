@@ -125,6 +125,9 @@ func (s *XadesSigner) SignXades(ctx context.Context, request application.XadesRe
 	}
 	defer keyPair.Close()
 
+	if request.Plain && (request.Level != domain.BES || !request.Policy.IsZero() || len(request.ClaimedRoles) > 0) {
+		return nil, fmt.Errorf("XMLDSig signatures carry no signed properties: no timestamp, policy or role; use XAdES")
+	}
 	layout, err := layoutFor(request)
 	if err != nil {
 		return nil, err
@@ -135,13 +138,16 @@ func (s *XadesSigner) SignXades(ctx context.Context, request application.XadesRe
 	}
 	tree := layout.tree(ids, request.Content)
 
-	certificateDigest := sha256.Sum256(keyPair.Certificate.Raw)
-	signedProperties := buildSignedProperties(ids,
-		base64.StdEncoding.EncodeToString(certificateDigest[:]),
-		time.Now().UTC().Format(time.RFC3339),
-		layout.dataObjectFormat(),
-		policyProperties(request.Policy)+roleProperties(request.ClaimedRoles),
-	)
+	signedProperties := ""
+	if !layout.plain {
+		certificateDigest := sha256.Sum256(keyPair.Certificate.Raw)
+		signedProperties = buildSignedProperties(ids,
+			base64.StdEncoding.EncodeToString(certificateDigest[:]),
+			time.Now().UTC().Format(time.RFC3339),
+			layout.dataObjectFormat(),
+			policyProperties(request.Policy)+roleProperties(request.ClaimedRoles),
+		)
+	}
 	signedInfo := buildSignedInfo(ids,
 		placeholderDigest, placeholderDigest,
 		keyPair.Certificate.PublicKeyAlgorithm == x509.ECDSA,
@@ -189,8 +195,8 @@ func (s *XadesSigner) SignXades(ctx context.Context, request application.XadesRe
 	// instructions outside the root included), the Object or SignedProperties
 	// for an Id.
 	references := signedInfoElement.SelectElements("Reference")
-	if len(references) != 2 {
-		return nil, fmt.Errorf("SignedInfo has %d references, expected 2", len(references))
+	if expected := layout.referenceCount(); len(references) != expected {
+		return nil, fmt.Errorf("SignedInfo has %d references, expected %d", len(references), expected)
 	}
 	for _, reference := range references {
 		data, err := xmldsig.ReferenceData(tree, signatureElement, reference, resolve)
@@ -432,31 +438,39 @@ func buildSignedInfo(ids signatureIDs, documentDigest, propertiesDigest string, 
 		method = algorithmECDSASHA256
 	}
 
+	properties := ""
+	if !layout.plain {
+		properties = `<ds:Reference Type="` + typeSignedProperties + `" URI="#` + ids.signedProperties() + `">` +
+			`<ds:Transforms>` +
+			`<ds:Transform Algorithm="` + algorithmC14N + `"/>` +
+			`</ds:Transforms>` +
+			`<ds:DigestMethod Algorithm="` + algorithmSHA256 + `"/>` +
+			`<ds:DigestValue>` + propertiesDigest + `</ds:DigestValue>` +
+			`</ds:Reference>`
+	}
 	return `<ds:SignedInfo xmlns:ds="` + namespaceDS + `">` +
 		`<ds:CanonicalizationMethod Algorithm="` + algorithmC14N + `"/>` +
 		`<ds:SignatureMethod Algorithm="` + method + `"/>` +
-		layout.documentReference(ids) +
-		`<ds:Reference Type="` + typeSignedProperties + `" URI="#` + ids.signedProperties() + `">` +
-		`<ds:Transforms>` +
-		`<ds:Transform Algorithm="` + algorithmC14N + `"/>` +
-		`</ds:Transforms>` +
-		`<ds:DigestMethod Algorithm="` + algorithmSHA256 + `"/>` +
-		`<ds:DigestValue>` + propertiesDigest + `</ds:DigestValue>` +
-		`</ds:Reference>` +
+		layout.documentReference(ids) + properties +
 		`</ds:SignedInfo>`
 }
 
 // buildSignature emits ds:Signature in the order XMLDSig mandates:
 // SignedInfo, SignatureValue, KeyInfo, Object.
+//
+// A plain XMLDSig signature (no signed properties) has no QualifyingProperties.
 func buildSignature(ids signatureIDs, signedInfo, signatureValue, certificate, signedProperties, payload string) string {
-	return `<ds:Signature xmlns:ds="` + namespaceDS + `" xmlns:xades="` + namespaceXades +
-		`" Id="` + ids.signature() + `">` + signedInfo +
+	namespaces, qualifying := `xmlns:ds="`+namespaceDS+`"`, ""
+	if signedProperties != "" {
+		namespaces += ` xmlns:xades="` + namespaceXades + `"`
+		qualifying = `<ds:Object><xades:QualifyingProperties Target="#` + ids.signature() + `">` +
+			signedProperties + `</xades:QualifyingProperties></ds:Object>`
+	}
+	return `<ds:Signature ` + namespaces + ` Id="` + ids.signature() + `">` + signedInfo +
 		`<ds:SignatureValue>` + signatureValue + `</ds:SignatureValue>` +
 		`<ds:KeyInfo><ds:X509Data><ds:X509Certificate>` + certificate +
 		`</ds:X509Certificate></ds:X509Data></ds:KeyInfo>` +
-		payload +
-		`<ds:Object><xades:QualifyingProperties Target="#` + ids.signature() + `">` +
-		signedProperties + `</xades:QualifyingProperties></ds:Object>` +
+		payload + qualifying +
 		`</ds:Signature>`
 }
 

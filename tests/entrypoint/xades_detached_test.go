@@ -79,3 +79,21 @@ func hasCode(findings []struct {
 	}
 	return false
 }
+
+// TestPlainXMLDSigFromTheCommandLine: level B only, reported as XMLDSig.
+func TestPlainXMLDSigFromTheCommandLine(t *testing.T) {
+	key := writeProtectedP12(t, "segreto")
+	t.Setenv("TREBARUNA_PASSPHRASE", "segreto")
+	document := writeDocument(t, "acta.xml", "<acta><punto>1</punto></acta>")
+	if _, stderr, code := run("sign", document, "--p12", key, "--format", "xmldsig"); code != 0 {
+		t.Fatalf("exit %d: %s", code, stderr)
+	}
+	signed := strings.TrimSuffix(document, ".xml") + "_signed.xml"
+	stdout, _, _ := run("verify", signed, "--json")
+	if !strings.Contains(stdout, `"format": "XMLDSig"`) || !strings.Contains(stdout, `"integrity": "good"`) {
+		t.Errorf("verify: %s", stdout)
+	}
+	if _, _, code := run("sign", document, "--p12", key, "--format", "xmldsig", "--level", "t", "--tsa", "http://tsa.example.invalid"); code == 0 {
+		t.Error("XMLDSig at level T must be refused")
+	}
+}

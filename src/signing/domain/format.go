@@ -19,7 +19,15 @@ const (
 
 	// Xades produces a signed XML (ETSI EN 319 132-1).
 	Xades Format = "xades"
+
+	// Xmldsig produces a plain XML signature (W3C XML-Signature): no signed
+	// properties, so no signing time, policy or timestamp. Kept for the
+	// systems that still ask for it, as AutoFirma does.
+	Xmldsig Format = "xmldsig"
 )
+
+// IsXML reports an XML signature: XAdES or plain XMLDSig.
+func (f Format) IsXML() bool { return f == Xades || f == Xmldsig }
 
 // Extension is the file suffix the format produces, following the
 // convention observed in existing signing tools.
@@ -29,7 +37,7 @@ func (f Format) Extension() string {
 		return ".p7m"
 	case Pades:
 		return ".pdf"
-	case Xades:
+	case Xades, Xmldsig:
 		return ".xml"
 	}
 	return ""
@@ -44,6 +52,8 @@ func (f Format) Standard() string {
 		return "ETSI EN 319 142-1"
 	case Xades:
 		return "ETSI EN 319 132-1"
+	case Xmldsig:
+		return "W3C XML-Signature 1.1"
 	}
 	return ""
 }
@@ -51,10 +61,10 @@ func (f Format) Standard() string {
 // ParseFormat reads a format from its external name.
 func ParseFormat(raw string) (Format, error) {
 	switch Format(raw) {
-	case Cades, Pades, Xades:
+	case Cades, Pades, Xades, Xmldsig:
 		return Format(raw), nil
 	}
-	return "", fmt.Errorf("unknown signature format %q: use cades, pades or xades", raw)
+	return "", fmt.Errorf("unknown signature format %q: use cades, pades, xades or xmldsig", raw)
 }
 
 // Level is the AdES baseline level. It determines whether a timestamp

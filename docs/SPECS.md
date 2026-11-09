@@ -49,7 +49,7 @@ user seeing what is signed and where anything goes.
 | Signature policies in PAdES | planned (the PDF library cannot add signed attributes; refused meanwhile) |
 | XAdES detached: `<document>.xsig` beside the untouched document, which the signature names; verify finds it there or takes `--content` | built |
 | AutoFirma's "XAdES Detached" (an `AFIRMA` root holding `CONTENT` and the signature) for afirma:// pages | built |
-| Plain XMLDSig (no XAdES properties) | planned (E2b) |
+| Plain XMLDSig (`--format xmldsig`, afirma:// `XMLDSig…`): the same layouts without signed properties, level B only, no policy; verify names it XMLDSig | built |
 | ASiC-S / ASiC-E signed in one step | planned (E3) |
 | Handwritten-signature image next to the certificate data (ADR-0012) | planned (G3) |
 | ODF and OOXML signatures (ADR-0015) | planned (G1, G2) |

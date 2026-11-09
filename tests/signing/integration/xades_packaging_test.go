@@ -146,3 +146,36 @@ func TestAnEnvelopedXadesNeedsXML(t *testing.T) {
 		t.Errorf("an enveloped signature of a PDF: %v", err)
 	}
 }
+
+// TestPlainXMLDSigHasNoSignedProperties: the document reference alone, in
+// every layout, and it verifies.
+func TestPlainXMLDSigHasNoSignedProperties(t *testing.T) {
+	fixture := newFixture(t)
+	signer := buildPemSigner(t, readFile(t, fixture.keyPath), readFile(t, fixture.certPath))
+	for _, packaging := range []domain.XMLPackaging{domain.XMLEnveloped, domain.XMLEnveloping, domain.XMLDetached, domain.XMLInternallyDetached} {
+		output, err := infrastructure.NewXadesSigner(nil).SignXades(t.Context(), application.XadesRequest{
+			Content: []byte(`<acta><punto>1</punto></acta>`), Signer: signer, Level: domain.BES,
+			Packaging: packaging, DocumentName: "acta.xml", Plain: true,
+		})
+		if err != nil {
+			t.Fatalf("%s: %v", packaging, err)
+		}
+		signed := string(output)
+		if strings.Contains(signed, "QualifyingProperties") || strings.Contains(signed, "xmlns:xades") || strings.Count(signed, "<ds:Reference ") != 1 {
+			t.Errorf("%s: plain XMLDSig carries the document reference alone:\n%.500s", packaging, signed)
+		}
+		resolve := func(string) ([]byte, error) { return []byte(`<acta><punto>1</punto></acta>`), nil }
+		if err := checkPackaged(t, signed, resolve); err != nil {
+			t.Errorf("%s: %v", packaging, err)
+		}
+	}
+	for name, request := range map[string]application.XadesRequest{
+		"a timestamp": {Level: domain.T, TimestampURL: "http://tsa.example.invalid"},
+		"a role":      {Level: domain.BES, ClaimedRoles: []string{"emisor"}},
+	} {
+		request.Content, request.Signer, request.Plain = []byte(`<acta/>`), signer, true
+		if _, err := infrastructure.NewXadesSigner(nil).SignXades(t.Context(), request); err == nil {
+			t.Errorf("plain XMLDSig with %s must be refused", name)
+		}
+	}
+}

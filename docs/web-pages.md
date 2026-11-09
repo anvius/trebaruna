@@ -265,7 +265,9 @@ of the batch first. A local batch (`localBatchProcess`) is signed document by
 document here. Formats: CAdES (implicit or explicit, co- and counter-signatures),
 PAdES (invisible unless the page places the seal), XAdES (enveloping when the
 page names no variant, as AutoFirma; enveloped; and "XAdES Detached", the
-`AFIRMA` root holding `CONTENT` and the signature), and FacturaE (named, or recognised by `auto`: the invoice signed
+`AFIRMA` root holding `CONTENT` and the signature), XMLDSig in the same
+variants (no signed properties: a policy or a timestamp is refused, roles are
+left out as AutoFirma does), and FacturaE (named, or recognised by `auto`: the invoice signed
 enveloped with FacturaE 3.1, or the 3.0/3.1 policy the page gives exactly, and
 the role in `signerClaimedRoles`, `emisor` by default; an invoice already
 signed is refused with `SAF_38`, never signed again as plain XAdES). Signature policies are

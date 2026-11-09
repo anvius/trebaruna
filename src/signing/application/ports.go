@@ -110,6 +110,9 @@ type XadesRequest struct {
 	Level   domain.Level
 	// Packaging is how the signature holds Content; empty is enveloped.
 	Packaging domain.XMLPackaging
+	// Plain writes an XMLDSig signature: no XAdES properties, so level B
+	// only, without policy or roles.
+	Plain bool
 	// DocumentName names the document a detached signature references.
 	DocumentName    string
 	TimestampURL    string

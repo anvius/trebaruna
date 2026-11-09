@@ -101,7 +101,7 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 	flags.SetOutput(stderr)
 
 	var (
-		format    = flags.String("format", "", "signature format: cades | pades | xades (default: from the suffix)")
+		format    = flags.String("format", "", "signature format: cades | pades | xades | xmldsig (default: from the suffix)")
 		level     = flags.String("level", "bes", "signature level: bes | t | lt | lta")
 		output    = flags.String("out", "", "output path (default: derived from the input)")
 		keys      = addKeyFlags(flags, "sign with")
@@ -488,7 +488,7 @@ usage:
   trebaruna about [--json]                      (build, revision, dependencies and licences)
 
 flags:
-  --format   cades (.p7m) | pades (.pdf) | xades (.xml)   default: pades
+  --format   cades | pades | xades | xmldsig                default: from the suffix
   --level    bes | t | lt | lta                            default: bes
   --p12      PKCS#12 file (any authority, or self-signed)
   --pem      PEM bundle with certificate and private key

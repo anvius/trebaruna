@@ -125,7 +125,7 @@ func (v *XadesVerifier) Extract(path string) ([]domain.SignerReport, error) {
 func (v *XadesVerifier) report(document *etree.Document, signature *etree.Element, path string) domain.SignerReport {
 	report := domain.SignerReport{
 		FieldName: "XMLSignature",
-		Format:    "XAdES",
+		Format:    xmlSignatureFormat(signature),
 	}
 
 	// The certificate travels inside KeyInfo, which is what the verifier needs
@@ -347,6 +347,18 @@ func walk(element *etree.Element, visit func(*etree.Element)) {
 
 // validate checks the signature with the embedded certificate as the trust anchor.
 //
+// xmlSignatureFormat names the signature: XAdES when it carries qualifying
+// properties, plain XMLDSig otherwise.
+func xmlSignatureFormat(signature *etree.Element) string {
+	format := "XMLDSig"
+	walk(signature, func(element *etree.Element) {
+		if element.Tag == "QualifyingProperties" && strings.HasPrefix(element.NamespaceURI(), "http://uri.etsi.org/01903/") {
+			format = "XAdES"
+		}
+	})
+	return format
+}
+
 // validate checks the XML signature completely: every reference it makes,
 // the signed properties included, and the value over SignedInfo, against the
 // embedded certificate. This answers "does the signature match this

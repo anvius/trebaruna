@@ -149,10 +149,14 @@ func (p SignaturePolicy) Hash() []byte { return p.hash }
 // Qualifier is the URL of the policy document, empty when none is declared.
 func (p SignaturePolicy) Qualifier() string { return p.qualifier }
 
-// FitsFormat refuses a policy the format cannot carry.
+// FitsFormat refuses a policy the format cannot carry: XMLDSig has no
+// signed properties to declare one in.
 func (p SignaturePolicy) FitsFormat(format Format) error {
 	if p.IsZero() || format == Xades {
 		return nil
+	}
+	if format == Xmldsig {
+		return fmt.Errorf("%w: XMLDSig signatures have no signed properties to declare a policy in", ErrPolicyNotForFormat)
 	}
 	if _, ok := p.OID(); !ok {
 		return fmt.Errorf("%w: %s is named by a URL, which only XAdES carries", ErrPolicyNotForFormat, p.identifier)

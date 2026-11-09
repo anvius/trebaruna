@@ -113,3 +113,13 @@ func TestEverySignatureOfAnXMLIsReported(t *testing.T) {
 		t.Errorf("AutoFirma's enveloped order: %s %v", report.Integrity, report.Findings)
 	}
 }
+
+// TestAPlainSignatureIsCalledXMLDSig and a qualified one XAdES.
+func TestAPlainSignatureIsCalledXMLDSig(t *testing.T) {
+	fixtures := filepath.Join("..", "..", "signing", "xmldsig", "testdata")
+	for name, want := range map[string]string{"signxml-enveloped-c14n11.xml": "XMLDSig", "signxml-xades-enveloped.xml": "XAdES"} {
+		if report := extractOne(t, verificationinfra.NewXadesVerifier(), filepath.Join(fixtures, name)); report.Format != want {
+			t.Errorf("%s: %s, want %s", name, report.Format, want)
+		}
+	}
+}

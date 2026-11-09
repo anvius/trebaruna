@@ -174,7 +174,7 @@ func (u *SignDocument) validate(request Request) error {
 	}
 	// Only an enveloped XML signature needs an XML document: detached and
 	// enveloping ones sign any file.
-	anyFile := request.Format == domain.Xades && !request.xmlPackaging().NeedsXML()
+	anyFile := request.Format.IsXML() && !request.xmlPackaging().NeedsXML()
 	if !request.Document.Supports(request.Format) && !anyFile {
 		return fmt.Errorf("%w: %s cannot hold a %s signature",
 			domain.ErrUnsupportedFormat, request.Document.Extension(), request.Format)
@@ -204,11 +204,14 @@ func (u *SignDocument) validate(request Request) error {
 	if (request.Cosign || request.Countersign != "") && request.Level.EmbedsRevocation() {
 		return fmt.Errorf("signatures added to an envelope support levels B and T; %s is not available for them yet", request.Level)
 	}
-	if request.Detached && request.Format != domain.Cades && request.Format != domain.Xades {
-		return fmt.Errorf("only CAdES and XAdES signatures can be detached; %s carries its signature inside the document", request.Format)
+	if request.Detached && request.Format != domain.Cades && !request.Format.IsXML() {
+		return fmt.Errorf("only CAdES and XML signatures can be detached; %s carries its signature inside the document", request.Format)
 	}
-	if request.Enveloping && request.Format != domain.Xades {
-		return fmt.Errorf("only XAdES signatures can be enveloping, not %s", request.Format)
+	if request.Enveloping && !request.Format.IsXML() {
+		return fmt.Errorf("only XML signatures can be enveloping, not %s", request.Format)
+	}
+	if request.Format == domain.Xmldsig && request.Level != domain.BES {
+		return fmt.Errorf("XMLDSig signatures have no properties to hold a timestamp; level %s needs XAdES", request.Level)
 	}
 	if request.Invisible && (len(request.Placements) > 0 || !request.Placement.IsZero()) {
 		return fmt.Errorf("an invisible signature cannot also place a seal")
@@ -223,9 +226,9 @@ func (u *SignDocument) validate(request Request) error {
 		if u.pades == nil {
 			return fmt.Errorf("no PAdES adapter configured")
 		}
-	case domain.Xades:
+	case domain.Xades, domain.Xmldsig:
 		if u.xades == nil {
-			return fmt.Errorf("no XAdES adapter configured")
+			return fmt.Errorf("no XML signature adapter configured")
 		}
 	default:
 		return fmt.Errorf("%w: %q", domain.ErrUnsupportedFormat, request.Format)
@@ -276,8 +279,9 @@ func (u *SignDocument) sign(ctx context.Context, request Request, content []byte
 		})
 		return signed, err
 
-	case domain.Xades:
+	case domain.Xades, domain.Xmldsig:
 		signed, err := u.xades.SignXades(ctx, XadesRequest{
+			Plain:           request.Format == domain.Xmldsig,
 			Content:         content,
 			Signer:          request.Signer,
 			Level:           request.Level,

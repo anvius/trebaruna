@@ -74,7 +74,7 @@ func (s NativePageSigner) Sign(ctx context.Context, request application.PageSign
 		return application.Signed{}, domain.Failure{Code: domain.UnsupportedOperation, Cause: "PAdES signatures with a policy are not supported yet"}
 	case family == "pades":
 		signature, err = s.signPades(ctx, request, level, tsa)
-	case family == "xades", family == "facturae":
+	case family == "xades", family == "facturae", family == "xmldsig":
 		signature, err = s.signXades(ctx, request, level, tsa, policy)
 	default:
 		return application.Signed{}, domain.Failure{Code: domain.UnknownSigner}
@@ -213,7 +213,16 @@ func (s NativePageSigner) signXades(ctx context.Context, request application.Pag
 	default:
 		return nil, domain.Failure{Code: domain.UnsupportedFormat, Cause: "XAdES " + xadesPackaging(request)}
 	}
+	// XMLDSig has no signed properties: AutoFirma leaves the roles out, and so
+	// does this. A policy was refused before, a timestamp is refused here.
+	plain := request.Format.Family == "xmldsig"
+	if plain && level != signing.BES {
+		return nil, domain.Failure{Code: domain.UnsupportedOperation, Cause: "XMLDSig signatures carry no timestamp; ask for XAdES"}
+	}
 	roles := claimedRoles(request.Properties)
+	if plain {
+		roles = nil
+	}
 	if policy.IsFacturaE() {
 		if err := policy.AcceptsInvoice(request.Data); err != nil {
 			return nil, domain.Failure{Code: domain.InvalidFacturaE, Cause: err.Error()}
@@ -224,7 +233,7 @@ func (s NativePageSigner) signXades(ctx context.Context, request application.Pag
 		}
 	}
 	signature, err := s.xades.SignXades(ctx, signapp.XadesRequest{Content: request.Data, Signer: request.Key, Level: level,
-		Packaging: packaging, TimestampURL: tsa, Policy: policy, ClaimedRoles: roles})
+		Packaging: packaging, Plain: plain, TimestampURL: tsa, Policy: policy, ClaimedRoles: roles})
 	if err != nil {
 		return nil, domain.Failure{Code: domain.SignatureFailed, Cause: err.Error()}
 	}
@@ -241,7 +250,11 @@ func xadesPackaging(request application.PageSignature) string {
 	if request.Format.Packaging != "" {
 		return request.Format.Packaging
 	}
-	if variant := strings.TrimPrefix(strings.ToLower(request.Properties["format"]), "xades "); variant != "" {
+	variant := strings.ToLower(strings.TrimSpace(request.Properties["format"]))
+	for _, family := range []string{"xades ", "xmldsig "} {
+		variant = strings.TrimPrefix(variant, family)
+	}
+	if variant != "" {
 		return variant
 	}
 	return "enveloping"

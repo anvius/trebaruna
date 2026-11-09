@@ -174,6 +174,12 @@ new document whose `AFIRMA` root holds the content (`CONTENT`) and, beside it,
 the signature. trebaruna writes it when a page asks for it through
 afirma://, and verifies it like any other.
 
+`--format xmldsig` writes a plain XML-Signature in any of these layouts: the
+same signature without XAdES's signed properties, so it states no signing
+time, policy or role and takes no timestamp (level B only). Some older
+systems still ask for it, and AutoFirma keeps it for them; prefer XAdES
+otherwise. `verify` names such a signature XMLDSig.
+
 Without the document the bytes cannot be compared: the integrity is reported as
 unknown, never as altered (ADR-0005).
 

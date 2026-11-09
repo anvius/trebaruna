@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Plain XMLDSig.
+  - `sign --format xmldsig`, and afirma:// `XMLDSig`, `XMLDSig Enveloped`,
+    `XMLDSig Enveloping`, `XMLDSig Detached` (enveloping by default, as
+    AutoFirma; Detached is the AFIRMA layout).
+  - The XAdES layouts without signed properties: one reference, no
+    QualifyingProperties. Level B only; a policy is refused (SAF_23 on a
+    page), roles are left out on pages as AutoFirma does.
+  - `verify` reports such a signature as XMLDSig.
+  - Checked with xmlsec1 1.3.9 and Java 25.
+
 - XAdES detached: `sign --format xades --detached` writes
   `<document>.xsig` beside the untouched document.
   - The reference names the file (escaped) and digests its bytes.

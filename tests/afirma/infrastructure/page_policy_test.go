@@ -240,3 +240,33 @@ func TestXAdESDetachedIsAutoFirmasLayout(t *testing.T) {
 		}
 	}
 }
+
+// TestXMLDSigPages: enveloping by default as AutoFirma, AFIRMA when
+// detached, never XAdES properties; a policy or a timestamp is refused.
+func TestXMLDSigPages(t *testing.T) {
+	for _, request := range []struct {
+		format, layout string
+		properties     map[string]string
+	}{
+		{"XMLDSig", "<ds:Signature", map[string]string{"signerClaimedRoles": "emisor"}},
+		{"XMLDSig Detached", "<AFIRMA ", map[string]string{}},
+		{"XMLDSig", "<AFIRMA ", map[string]string{"format": "XMLDSig Detached"}},
+		{"XMLDSig Enveloped", "<acta><ds:Signature", map[string]string{}},
+	} {
+		signed, err := signPage(t, request.format, request.properties, []byte("<acta/>"))
+		if err != nil {
+			t.Fatalf("%s %v: %v", request.format, request.properties, err)
+		}
+		output := string(signed.Signature)
+		if !strings.Contains(output, request.layout) || strings.Contains(output, "QualifyingProperties") {
+			t.Errorf("%s %v:\n%.300s", request.format, request.properties, output)
+		}
+	}
+	_, err := signPage(t, "XMLDSig", map[string]string{"expPolicy": "FirmaAGE"}, []byte("<acta/>"))
+	wantFailure(t, err, domain.InvalidPolicy, "FirmaAGE with XMLDSig")
+	_, err = signPage(t, "XMLDSig", map[string]string{"policyIdentifier": "1.2.3.4",
+		"policyIdentifierHash": "G7roucf600+f03r/o0bAOQ6WAs0=", "policyIdentifierHashAlgorithm": "SHA1"}, []byte("<acta/>"))
+	wantFailure(t, err, domain.InvalidPolicy, "a policy with XMLDSig")
+	_, err = signPage(t, "XMLDSig", map[string]string{"tsaURL": "http://tsa.example.invalid"}, []byte("<acta/>"))
+	wantFailure(t, err, domain.UnsupportedOperation, "a timestamp with XMLDSig")
+}

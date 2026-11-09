@@ -116,6 +116,8 @@ func formatOf(family string) signing.Format {
 		return signing.Cades
 	case "pades":
 		return signing.Pades
+	case "xmldsig":
+		return signing.Xmldsig
 	}
 	return signing.Xades
 }

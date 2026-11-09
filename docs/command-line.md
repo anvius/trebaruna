@@ -84,7 +84,7 @@ trebaruna sign <document> [flags]
 
 | Flag | Default | Meaning |
 |---|---|---|
-| `--format` | from the suffix | `cades`, `pades` or `xades` |
+| `--format` | from the suffix | `cades`, `pades`, `xades` or `xmldsig` (plain XML-Signature: level B, no policy) |
 | `--level` | `bes` | `bes`, `t`, `lt` or `lta` — see [Signing](signing.md) |
 | `--p12` | — | PKCS#12 file with the certificate and key |
 | `--pem` | — | PEM bundle containing certificate and key |

@@ -128,3 +128,23 @@ func TestAURLPolicyIsRefusedForCAdES(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 }
+
+// TestXMLDSigIsLevelBWithoutPolicy: it has no properties to hold either.
+func TestXMLDSigIsLevelBWithoutPolicy(t *testing.T) {
+	age := namedPolicy(t, "age", domain.Xades)
+	_, xades, err := signWithPolicy(t, "/tmp/a.xml", "<a/>", domain.Xmldsig, false, age)
+	if !errors.Is(err, domain.ErrPolicyNotForFormat) || xades.called {
+		t.Errorf("a policy in XMLDSig: %v", err)
+	}
+	useCase := application.NewSignDocument(newFakeStore(map[string][]byte{"/tmp/a.xml": []byte("<a/>")}),
+		fakeClock{time.Unix(0, 0)}, selfSignedIdentity(), &fakeCades{}, &fakePades{}, &fakeXades{})
+	_, err = useCase.Execute(context.Background(), application.Request{Document: newDocument(t, "/tmp/a.xml"),
+		Format: domain.Xmldsig, Level: domain.T, TimestampURL: "http://tsa.example.invalid", Signer: newSigner(t)})
+	if err == nil {
+		t.Error("XMLDSig at level T must be refused")
+	}
+	_, xades, err = signWithPolicy(t, "/tmp/a.xml", "<a/>", domain.Xmldsig, false, domain.SignaturePolicy{})
+	if err != nil || !xades.called || !xades.request.Plain {
+		t.Errorf("plain XMLDSig request: %+v, %v", xades.request, err)
+	}
+}

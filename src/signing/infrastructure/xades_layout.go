@@ -21,6 +21,8 @@ const objectType = "http://www.w3.org/2000/09/xmldsig#Object"
 // any XML is written.
 type documentLayout struct {
 	packaging domain.XMLPackaging
+	// plain is XMLDSig: the document reference alone, no signed properties.
+	plain bool
 	// excludeSignatures leaves every signature out of an enveloped reference
 	// (AutoFirma's XPath filter), so a signature added later to the document
 	// does not break this one. FacturaE invoices take one signature and
@@ -41,6 +43,7 @@ type documentLayout struct {
 func layoutFor(request application.XadesRequest) (documentLayout, error) {
 	layout := documentLayout{
 		packaging:         request.Packaging,
+		plain:             request.Plain,
 		excludeSignatures: !request.Policy.IsFacturaE(),
 		uri:               url.PathEscape(request.DocumentName),
 	}
@@ -68,6 +71,15 @@ func mediaType(content []byte) string {
 		detected = detected[:semicolon]
 	}
 	return strings.TrimSpace(detected)
+}
+
+// referenceCount is how many references SignedInfo holds: the document,
+// and the signed properties unless the signature is plain XMLDSig.
+func (l documentLayout) referenceCount() int {
+	if l.plain {
+		return 1
+	}
+	return 2
 }
 
 // inBase64 reports content that travels in Base64 inside the signature.

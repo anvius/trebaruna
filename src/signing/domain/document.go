@@ -70,7 +70,7 @@ func (d Document) AddedSignatureName(marker string) string {
 // document it signs: its name plus .p7s for CAdES, plus .xsig for XAdES (the
 // suffix AutoFirma gives XML signatures).
 func (d Document) DetachedSignatureName(format Format) string {
-	if format == Xades {
+	if format.IsXML() {
 		return d.path + ".xsig"
 	}
 	return d.path + ".p7s"
@@ -81,7 +81,7 @@ func (d Document) Supports(format Format) bool {
 	switch format {
 	case Pades:
 		return d.Extension() == ".pdf"
-	case Xades:
+	case Xades, Xmldsig:
 		return d.Extension() == ".xml" || d.Extension() == ".xsd" || d.Extension() == ".svg"
 	case Cades:
 		return true
