@@ -156,13 +156,20 @@ func sealDetailLines(holder identity.Holder, moment time.Time, width float64, ty
 }
 
 // drawAccentBar paints the vertical rule that anchors the block.
+//
+// It is a thick line, not a filled rectangle: pdfsign v1.0.0 registers
+// DrawRect as a builder type its renderer does not draw, so the rectangle was
+// silently dropped from every seal. Width must come before Stroke, which is
+// the call that commits the line.
 func drawAccentBar(appearance *pdfsign.Appearance, width, height float64) {
 	const barWidth = 1.8
 	const inset = 1.2
 
+	x := inset + barWidth/2
 	appearance.
-		DrawRect(inset, inset, barWidth, height-2*inset).
-		Fill(38, 84, 124)
+		Line(x, inset, x, height-inset).
+		Width(barWidth).
+		Stroke(38, 84, 124)
 }
 
 // drawName renders the bold name, top-aligned.
@@ -175,10 +182,12 @@ func drawName(appearance *pdfsign.Appearance, lines []string, typography sealTyp
 	baseline := height - top - typography.nameSize
 
 	for _, line := range lines {
+		// The colour goes before Position, which commits the element: set
+		// after it, the colour was lost and the line printed pure black.
 		appearance.Text(line).
 			Font(bold, typography.nameSize).
-			Position(typography.padding+3.2, baseline).
-			SetColor(16, 20, 26)
+			SetColor(16, 20, 26).
+			Position(typography.padding+3.2, baseline)
 		baseline -= typography.leading
 	}
 }
@@ -200,8 +209,8 @@ func drawDetails(appearance *pdfsign.Appearance, lines []string, nameLines int, 
 		}
 		appearance.Text(line).
 			Font(regular, size).
-			Position(typography.padding+3.2, baseline).
-			SetColor(78, 86, 96)
+			SetColor(78, 86, 96).
+			Position(typography.padding+3.2, baseline)
 		baseline -= typography.leading
 	}
 }

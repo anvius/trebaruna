@@ -189,3 +189,51 @@ func TestSealNeverOverprintsAWrappedName(t *testing.T) {
 		}
 	}
 }
+
+// TestSealPrintsItsColoursAndRule guards two silent losses in pdfsign v1.0.0:
+// Position() freezes a text element, so a colour set after it is dropped and
+// every line came out pure black; and DrawRect() registers a type the renderer
+// does not draw, so the accent rule never reached the PDF.
+func TestSealPrintsItsColoursAndRule(t *testing.T) {
+	holder := identity.Holder{Name: "MARIO ROSSI", Identifier: "TINIT-RSSMRA80A01H501U"}
+
+	appearance, err := infrastructure.DrawSeal(64, 48, holder, sampleMoment())
+	if err != nil {
+		t.Fatalf("DrawSeal: %v", err)
+	}
+
+	type rgb struct{ r, g, b uint64 }
+	colourOf := func(value reflect.Value) rgb {
+		return rgb{value.FieldByName("R").Uint(), value.FieldByName("G").Uint(), value.FieldByName("B").Uint()}
+	}
+
+	var texts []rgb
+	rule := false
+	for _, element := range appearance.RenderInfo().Elements {
+		value := reflect.ValueOf(element)
+		if value.Kind() != reflect.Struct {
+			continue
+		}
+		switch value.Type().Name() {
+		case "TextElement":
+			texts = append(texts, colourOf(value.FieldByName("Color")))
+		case "LineElement":
+			if colourOf(value.FieldByName("StrokeColor")) == (rgb{38, 84, 124}) && value.FieldByName("StrokeWidth").Float() > 1 {
+				rule = true
+			}
+		}
+	}
+
+	if !rule {
+		t.Error("the accent rule is not among the elements the renderer draws")
+	}
+	if len(texts) < 3 {
+		t.Fatalf("got %d text lines", len(texts))
+	}
+	if texts[0] != (rgb{16, 20, 26}) {
+		t.Errorf("name colour = %v, want 16,20,26", texts[0])
+	}
+	if texts[len(texts)-1] != (rgb{78, 86, 96}) {
+		t.Errorf("detail colour = %v, want the grey 78,86,96", texts[len(texts)-1])
+	}
+}

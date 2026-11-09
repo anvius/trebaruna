@@ -28,6 +28,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The PDF seal never carried its design: every line printed pure black and the
+  blue accent rule was missing. With pdfsign v1.0.0, `Position()` commits a text
+  element, so the colour set after it was dropped; and `DrawRect()` registers a
+  type its renderer does not draw. Colours are now set before the position and
+  the rule is drawn as a thick line. Checked by rendering a signed PDF with
+  poppler; `pdfsig` still reports the signature valid.
 - The PDF seal printed the identifier and the date on top of the second line
   of a name that wrapped (any long name: "MARIA DEL CARMEN LOPEZ GARCIA
   MARTINEZ" overprinted "MARTINEZ"). The details now start below the last name
