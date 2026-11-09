@@ -107,7 +107,7 @@ user seeing what is signed and where anything goes.
 | `afirma://` requests read and answered as AutoFirma 1.9 does (dispatch, parameters, SAF errors, certificate filters) for sign, cosign, countersign, signandsave, selectcert and save, each approved by a person first; CAdES (implicit/explicit, co-, counter-), PAdES (invisible unless placed), XAdES enveloped/enveloping | built (D2) |
 | `afirma://` through the intermediate server: answers posted ciphered (DES, AES for autoscript 1.10), `#WAIT` while the person decides, uploaded requests fetched; `trebaruna afirma` | built (D3) |
 | `afirma://` batches: JSON and XML through the site's pre- and post-signers (three-phase), and local batches; every document shown before approval | built (D4) |
-| `afirma://` single signatures through the site's server (`…tri` formats) | planned |
+| `afirma://` single signatures through the site's server (`CAdEStri`, `XAdEStri`, `PAdEStri`, `FacturaEtri`): pre, the key signs each pre-signature here, post; the page receives the certificate and the signature's id | built |
 | `afirma://` approval window: the request in full, the certificate chosen (card, Firefox, file) and held to the page's filters, decision through a pipe to `trebaruna afirma --interactive` | built (D6) |
 | `afirma://` handler registered next to AutoFirma (desktop entry, macOS bundle); the person chooses the default (`make afirma-default`); no browser preference installed | built (D7) |
 | `afirma://` WebSocket and socket channels: TLS on 127.0.0.1 needs a locally trusted certificate, which ADR-0013 forbids installing as a root; not offered unless the owner chooses a leaf-only peer trust | blocked (D5, owner decision) |

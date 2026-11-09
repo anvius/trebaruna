@@ -97,9 +97,6 @@ func (u *AnswerPage) sign(ctx context.Context, request domain.SignRequest) (doma
 
 	proposal := u.proposal(request.Operation, request.Common, request.Format.Name, request.Data)
 	proposal.SuggestedName = request.FileName
-	if request.Format.Triphase {
-		return u.fail(ctx, request.Channel, domain.Failure{Code: domain.UnsupportedFormat, Cause: request.Format.Name + " (signed through the site's server) is not supported yet"})
-	}
 	decision, err := u.approve(ctx, proposal)
 	if err != nil {
 		return u.fail(ctx, request.Channel, approvalFailure(err))
@@ -111,6 +108,13 @@ func (u *AnswerPage) sign(ctx context.Context, request domain.SignRequest) (doma
 	data, chosen, err := u.data(ctx, request.Data, decision)
 	if err != nil {
 		return u.fail(ctx, request.Channel, err)
+	}
+	if request.Format.Triphase {
+		certificate, id, err := u.triphaseSign(ctx, request, data, decision)
+		if err != nil {
+			return u.fail(ctx, request.Channel, err)
+		}
+		return u.deliver(ctx, request.Channel, domain.SignAnswer(certificate, id, chosen, request.Version))
 	}
 	signed, err := u.signer.Sign(ctx, PageSignature{
 		Crypto: request.Crypto, Format: request.Format, Algorithm: request.Algorithm,

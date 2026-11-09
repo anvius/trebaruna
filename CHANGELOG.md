@@ -73,6 +73,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- afirma:// single signatures through the site's server: the `CAdEStri`,
+  `XAdEStri`, `PAdEStri` and `FacturaEtri` formats (E.8) were refused.
+  After the person approves, trebaruna posts `op=pre` to `serverUrl` (the
+  document id, the chain, the algorithm, the properties but serverUrl and
+  documentId), signs each pre-signature with the key, posts `op=post` with
+  the session, and hands the page the signer's certificate and the id of
+  the signature the server keeps. `ERR-…` answers are SAF_26 with the
+  server's text.
+
 - XAdES counter-signatures inside the document: `sign doc_signed.xml
   --countersign leaves|all` adds, in each chosen signature's
   UnsignedSignatureProperties, an xades:CounterSignature: a XAdES signature

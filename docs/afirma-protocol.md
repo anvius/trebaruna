@@ -1137,6 +1137,11 @@ Used by `sign`/`cosign`/`countersign` when the page asks for a `…tri` format
 - Answer: `OK NEWID=<b64u new id>`; the decoded new id is the "signature"
   returned to the page. Anything else → error (`SAF_40` family).
 
+trebaruna does this after the person approves: the body as above, written in that
+order without percent-encoding as AutoFirma's client does; an `ERR-…` or any
+answer but `OK NEWID=` is `SAF_26` with the server's text, a missing `serverUrl`
+`SAF_03`. Each connection is listed with the signature's report.
+
 ---
 
 ## F. Signature policies

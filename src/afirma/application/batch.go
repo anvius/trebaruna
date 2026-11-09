@@ -86,23 +86,8 @@ func (u *AnswerPage) triphaseBatch(ctx context.Context, request domain.BatchRequ
 		return nil, domain.Failure{Code: domain.BatchSignature, Cause: "the pre-signer prepared no signature"}
 	}
 
-	inputs := make([][]byte, len(data.Signs))
-	for index, sign := range data.Signs {
-		pre, err := base64.StdEncoding.DecodeString(sign.Params["PRE"])
-		if err != nil || len(pre) == 0 {
-			return nil, domain.Failure{Code: domain.BatchSignature, Cause: "a pre-signature is missing or unreadable"}
-		}
-		inputs[index] = pre
-	}
-	signatures, err := u.raw.SignAll(decision.Key, inputs, domain.DigestOf(definition.Algorithm))
-	if err != nil {
-		return nil, domain.Failure{Code: domain.BatchSignature, Cause: err.Error()}
-	}
-	for index, sign := range data.Signs {
-		sign.Params["PK1"] = base64.StdEncoding.EncodeToString(signatures[index])
-		if sign.Params["NEED_PRE"] != "true" {
-			delete(sign.Params, "PRE")
-		}
+	if err := u.signPresignatures(data, decision, definition.Algorithm, domain.BatchSignature); err != nil {
+		return nil, err
 	}
 
 	triphase := data.TriphaseXML()
@@ -196,4 +181,70 @@ func firstOf(values ...string) string {
 		}
 	}
 	return ""
+}
+
+// triphaseSign makes a "…tri" signature through the site's server (E.8):
+// pre prepares what is signed, the key signs each pre-signature here, post
+// assembles the signature on the server, which answers with its id. The
+// page receives the signer's certificate and that id.
+func (u *AnswerPage) triphaseSign(ctx context.Context, request domain.SignRequest, document []byte, decision Decision) ([]byte, []byte, error) {
+	server := request.Properties["serverUrl"]
+	if server == "" {
+		return nil, nil, domain.Failure{Code: domain.Params, Cause: "serverUrl"}
+	}
+	if u.batches == nil || u.raw == nil {
+		return nil, nil, domain.Failure{Code: domain.UnsupportedOperation, Cause: "signing through the site's server"}
+	}
+	chain, err := u.raw.Chain(decision.Key)
+	if err != nil || len(chain) == 0 {
+		return nil, nil, domain.Failure{Code: domain.CannotAccessKeystore, Cause: fmt.Sprint(err)}
+	}
+	call := domain.TriphaseCall{Step: "pre", Crypto: request.Crypto, Format: request.Format, Algorithm: request.Algorithm,
+		Chain: chain, Document: document, Properties: request.Properties}
+	answer, err := u.batches.Triphase(ctx, server, call.Body())
+	if err != nil {
+		return nil, nil, serviceFailure(err)
+	}
+	data, err := domain.ReadTriphasePre(answer)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err := u.signPresignatures(data, decision, request.Algorithm, domain.SignatureFailed); err != nil {
+		return nil, nil, err
+	}
+	call.Step, call.Session = "post", data.TriphaseXML()
+	answer, err = u.batches.Triphase(ctx, server, call.Body())
+	if err != nil {
+		return nil, nil, serviceFailure(err)
+	}
+	id, err := domain.ReadTriphasePost(answer)
+	if err != nil {
+		return nil, nil, err
+	}
+	return chain[0], id, nil
+}
+
+// signPresignatures signs each pre-signature of the triphase data with one
+// opening of the key (E.4) and puts the value in PK1; PRE goes back only
+// when the server asked to keep it. A failure carries code.
+func (u *AnswerPage) signPresignatures(data domain.TriphaseData, decision Decision, algorithm string, code domain.FailureCode) error {
+	inputs := make([][]byte, len(data.Signs))
+	for index, sign := range data.Signs {
+		pre, err := base64.StdEncoding.DecodeString(sign.Params["PRE"])
+		if err != nil || len(pre) == 0 {
+			return domain.Failure{Code: code, Cause: "a pre-signature is missing or unreadable"}
+		}
+		inputs[index] = pre
+	}
+	signatures, err := u.raw.SignAll(decision.Key, inputs, domain.DigestOf(algorithm))
+	if err != nil {
+		return domain.Failure{Code: code, Cause: err.Error()}
+	}
+	for index, sign := range data.Signs {
+		sign.Params["PK1"] = base64.StdEncoding.EncodeToString(signatures[index])
+		if sign.Params["NEED_PRE"] != "true" {
+			delete(sign.Params, "PRE")
+		}
+	}
+	return nil
 }

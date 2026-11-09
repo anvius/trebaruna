@@ -39,6 +39,11 @@ func (s BatchServices) Postsign(ctx context.Context, url string, isJSON bool, ba
 	return s.post(ctx, url, batchBody(isJSON, batch, chain)+"&tridata="+base64.URLEncoding.EncodeToString(triphase))
 }
 
+// Triphase posts a call to the single-signature triphase service.
+func (s BatchServices) Triphase(ctx context.Context, url, body string) ([]byte, error) {
+	return s.post(ctx, url, body)
+}
+
 // batchBody writes the common part of both bodies.
 func batchBody(isJSON bool, batch []byte, chain [][]byte) string {
 	field := "xml="

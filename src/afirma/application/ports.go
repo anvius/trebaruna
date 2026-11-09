@@ -107,10 +107,12 @@ type RequestStore interface {
 	Fetch(ctx context.Context, retrieveURL, fileID, key, cipher string, asJSON bool) (domain.Invocation, error)
 }
 
-// BatchServices are the site's pre- and post-signers (E.3).
+// BatchServices are the site's pre- and post-signers (E.3), and its
+// single-signature triphase service (E.8), which takes a form body.
 type BatchServices interface {
 	Presign(ctx context.Context, url string, isJSON bool, batch []byte, chain [][]byte) ([]byte, error)
 	Postsign(ctx context.Context, url string, isJSON bool, batch []byte, chain [][]byte, triphase []byte) ([]byte, error)
+	Triphase(ctx context.Context, url, body string) ([]byte, error)
 }
 
 // ServiceFailure is an HTTP status a batch service answered with, which

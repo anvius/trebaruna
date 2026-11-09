@@ -261,7 +261,10 @@ Operations: `sign`, `cosign`, `countersign`, `signandsave`, `selectcert`,
 post-signers: the documents stay on the site, the key signs what its server
 prepares from them (each `PRE`, hashed and signed with RSA or ECDSA), and the
 post-signer's result goes back to the page; the person is shown every document
-of the batch first. A local batch (`localBatchProcess`) is signed document by
+of the batch first. A single signature in a `…tri` format (`CAdEStri`,
+`XAdEStri`, `PAdEStri`, `FacturaEtri`) goes through the site's server the same
+way: its `serverUrl` prepares it, the key signs it here, the server keeps it and
+the page receives its id. A local batch (`localBatchProcess`) is signed document by
 document here. Formats: CAdES and XAdES (implicit or explicit, co- and
 counter-signatures; an XML co-signature signs the signed file again, enveloped),
 PAdES (invisible unless the page places the seal; `signatureRubricImage` draws
@@ -287,8 +290,7 @@ with `policyIdentifierHash`, `policyIdentifierHashAlgorithm` and
 page gives no digest; trebaruna answers `SAF_23` instead, because it does not
 fetch what a page points at. XAdES signatures claim the roles in
 `signerClaimedRoles` (several separated by `|`). Asked for something not done
-yet — co-signing an ASiC container, a digest the page computed, single signatures
-through the site's server (`CAdEStri` and siblings) — trebaruna answers with an
+yet — co-signing an ASiC container, a digest the page computed — trebaruna answers with an
 AutoFirma error naming it, never with a different signature.
 
 ## What is missing
