@@ -61,6 +61,7 @@ var basque = Catalogue{
 	DropHint:                   "PDF, XML edo beste edozein fitxategi. Leihora arrastatu ere egin dezakezu.",
 	CertificateHint:            ".p12, .pfx edo .pem fitxategia, zure ziurtagiriarekin eta haren gakoarekin.",
 	DocumentSavedAs:            "Honela gordeko da: %s",
+	DocumentReplaces:           "Izen horretako fitxategi bat badago: sinatzeak ordezkatzen du.",
 	PassphrasePlaceholder:      "Ziurtagiriaren pasahitza",
 	PDFPasswordLabel:           "PDFaren pasahitza",
 	PDFPasswordHint:            "PDF hau babestuta dago: idatzi irekitzen duen pasahitza. Ez da gordetzen, eta orria ezin da aurreikusi: zigilua bere lekura joango da lehenetsita, edo sinatu modu ikusezinean.",

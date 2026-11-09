@@ -114,6 +114,7 @@ type Catalogue struct {
 	DropHint                   string
 	CertificateHint            string
 	DocumentSavedAs            string
+	DocumentReplaces           string
 	PassphrasePlaceholder      string
 	PDFPasswordLabel           string
 	PDFPasswordHint            string
@@ -484,6 +485,7 @@ var spanish = Catalogue{
 	DropHint:                   "PDF, XML o cualquier otro fichero. También puedes arrastrarlo a la ventana.",
 	CertificateHint:            "Fichero .p12, .pfx o .pem con tu certificado y su clave.",
 	DocumentSavedAs:            "Se guardará como %s",
+	DocumentReplaces:           "Ya existe un archivo con ese nombre: firmar lo sustituye.",
 	PassphrasePlaceholder:      "Contraseña del certificado",
 	PDFPasswordLabel:           "Contraseña del PDF",
 	PDFPasswordHint:            "Este PDF está protegido: escribe la contraseña que lo abre. No se guarda, y la página no se puede previsualizar: el sello irá a su sitio por defecto, o firma de forma invisible.",
@@ -828,6 +830,7 @@ var italian = Catalogue{
 	DropHint:                   "PDF, XML o qualsiasi altro file. Puoi anche trascinarlo nella finestra.",
 	CertificateHint:            "File .p12, .pfx o .pem con il tuo certificato e la sua chiave.",
 	DocumentSavedAs:            "Verrà salvato come %s",
+	DocumentReplaces:           "Esiste già un file con quel nome: firmare lo sostituisce.",
 	PassphrasePlaceholder:      "Password del certificato",
 	PDFPasswordLabel:           "Password del PDF",
 	PDFPasswordHint:            "Questo PDF è protetto: scrivi la password che lo apre. Non viene salvata, e la pagina non si può mostrare in anteprima: il sigillo andrà nella posizione predefinita, oppure firma in modo invisibile.",
@@ -1172,6 +1175,7 @@ var english = Catalogue{
 	DropHint:                   "PDF, XML or any other file. You can also drop it on the window.",
 	CertificateHint:            "A .p12, .pfx or .pem file with your certificate and its key.",
 	DocumentSavedAs:            "Will be saved as %s",
+	DocumentReplaces:           "A file with that name already exists: signing replaces it.",
 	PassphrasePlaceholder:      "Certificate passphrase",
 	PDFPasswordLabel:           "PDF password",
 	PDFPasswordHint:            "This PDF is protected: type the password that opens it. It is not stored, and the page cannot be previewed: the seal goes in its default place, or sign invisibly.",

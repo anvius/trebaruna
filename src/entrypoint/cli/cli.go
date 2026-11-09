@@ -149,6 +149,7 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 		format    = flags.String("format", "", "signature format: cades | pades | xades | xmldsig | odf | ooxml (default: from the suffix)")
 		level     = flags.String("level", "bes", "signature level: bes | t | lt | lta")
 		output    = flags.String("out", "", "output path (default: derived from the input)")
+		force     = flags.Bool("force", false, "replace an existing file at the output (never the document itself)")
 		keys      = addKeyFlags(flags, "sign with")
 		name      = flags.String("name", "", "signer display name (default: the holder printed on the certificate)")
 		reason    = flags.String("reason", "", "reason for signing")
@@ -285,6 +286,7 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 			Level:           signatureLevel,
 			Signer:          signer,
 			OutputPath:      *output,
+			Overwrite:       *force,
 			Placements:      placements,
 			Invisible:       *invisible,
 			Field:           *field,

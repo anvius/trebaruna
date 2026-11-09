@@ -43,6 +43,13 @@ func (f *fakeStore) Write(path string, content []byte) error {
 	return nil
 }
 
+// Exists reports the files the store started with: a test that signs
+// twice into the same store replaces what it wrote itself.
+func (f *fakeStore) Exists(path string) bool {
+	_, existing := f.files[path]
+	return existing
+}
+
 // fakeClock freezes time.
 type fakeClock struct{ moment time.Time }
 

@@ -580,3 +580,22 @@ func TestAPDFThatOpensOnlyWithAPasswordAsksForIt(t *testing.T) {
 		t.Error("another document forgets the password")
 	}
 }
+
+// TestAnExistingOutputIsSaidBeforeSigning: the note says the signed file
+// will replace the one already there.
+func TestAnExistingOutputIsSaidBeforeSigning(t *testing.T) {
+	fixture := newFormFixture(t, scriptedCertificate{summary: qualifiedRossi()})
+	form := fixture.desktop.form
+	directory := t.TempDir()
+	document := filepath.Join(directory, "acta.pdf")
+	os.WriteFile(document, []byte("%PDF-1.4"), 0o600)
+	form.setDocument(document)
+	if strings.Contains(form.documentRow.note.Text, form.m.DocumentReplaces) {
+		t.Fatal("nothing to replace yet")
+	}
+	os.WriteFile(filepath.Join(directory, "acta_signed.pdf"), []byte("%PDF-1.4"), 0o600)
+	form.setDocument(document)
+	if !strings.Contains(form.documentRow.note.Text, form.m.DocumentReplaces) {
+		t.Errorf("note %q", form.documentRow.note.Text)
+	}
+}

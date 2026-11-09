@@ -223,6 +223,7 @@ type DetachedDocument struct {
 type FileStore interface {
 	Read(path string) ([]byte, error)
 	Write(path string, content []byte) error
+	Exists(path string) bool
 }
 
 // Clock reports the current time so tests can freeze it.

@@ -20,12 +20,14 @@ func (DiskStore) Read(path string) ([]byte, error) {
 	return content, nil
 }
 
-// Write stores the content, creating parent directories when needed and
-// refusing to overwrite unless the caller allowed it.
-//
-// Overwriting matters: signing twice onto the same name silently destroys the
-// first signature, which is exactly the sort of data loss a signature tool must
-// never cause.
+// Exists reports a file at path.
+func (DiskStore) Exists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
+// Write stores the content, creating parent directories when needed. The
+// use case decides beforehand whether an existing file may be replaced.
 func (DiskStore) Write(path string, content []byte) error {
 	directory := filepath.Dir(path)
 	if err := os.MkdirAll(directory, 0o755); err != nil {

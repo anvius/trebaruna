@@ -83,6 +83,9 @@ func TestTheIntentBecomesTheCommandsFlags(t *testing.T) {
 	if !contains(arguments, "--json") {
 		t.Error("the window parses the receipt, so --json is mandatory")
 	}
+	if !contains(arguments, "--force") {
+		t.Error("the window names the output beforehand, so it may replace it")
+	}
 }
 
 func TestAPemKeyUsesThePemFlag(t *testing.T) {

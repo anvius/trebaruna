@@ -115,6 +115,7 @@ trebaruna sign <document> [flags]
 | `--page` | `1` | Page for the visible seal |
 | `--box` | — | Seal box `x1,y1,x2,y2` in PDF points; repeatable, `PAGE:x1,y1,x2,y2` to pick a page |
 | `--out` | convention | Output path |
+| `--force` | off | replace an existing file at the output; without it an existing file is not touched, and the document itself is never replaced |
 | `--enveloping` | off | XAdES enveloping rather than enveloped: the document inside the signature; any file |
 | `--invisible` | off | PAdES without a visible seal; excludes `--box` |
 | `--field` | — | sign in the PDF's empty signature field of this fully qualified name, the seal in its box (with `--invisible`, none); excludes `--box` |

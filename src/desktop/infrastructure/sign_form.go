@@ -509,6 +509,11 @@ func (f *signForm) formatChanged() {
 func (f *signForm) documentNote() string {
 	output := domain.SigningIntent{DocumentPath: f.document, Format: f.format}.OutputName()
 	note := fmt.Sprintf(f.m.DocumentSavedAs, filepath.Base(output))
+	if len(f.batch) == 0 && fileExists(output) {
+		// The window shows the name before signing, so it replaces the file
+		// the person was told about (the command is given --force).
+		note += "\n" + f.m.DocumentReplaces
+	}
 	if f.fingerprint != "" {
 		note += "\n" + fmt.Sprintf(f.m.DocumentFingerprint, f.fingerprint)
 	}

@@ -57,6 +57,7 @@ var galician = Catalogue{
 	DropHint:                   "PDF, XML ou calquera outro ficheiro. Tamén podes arrastralo á xanela.",
 	CertificateHint:            "Ficheiro .p12, .pfx ou .pem co teu certificado e a súa clave.",
 	DocumentSavedAs:            "Gardarase como %s",
+	DocumentReplaces:           "Xa existe un ficheiro con ese nome: asinar substitúeo.",
 	PassphrasePlaceholder:      "Contrasinal do certificado",
 	PDFPasswordLabel:           "Contrasinal do PDF",
 	PDFPasswordHint:            "Este PDF está protexido: escribe o contrasinal que o abre. Non se garda, e a páxina non se pode previsualizar: o selo irá ao seu sitio por defecto, ou asina de xeito invisible.",

@@ -58,6 +58,7 @@ var catalan = Catalogue{
 	DropHint:                   "PDF, XML o qualsevol altre fitxer. També el pots arrossegar a la finestra.",
 	CertificateHint:            "Fitxer .p12, .pfx o .pem amb el teu certificat i la seva clau.",
 	DocumentSavedAs:            "Es desarà com a %s",
+	DocumentReplaces:           "Ja existeix un fitxer amb aquest nom: signar-lo el substitueix.",
 	PassphrasePlaceholder:      "Contrasenya del certificat",
 	PDFPasswordLabel:           "Contrasenya del PDF",
 	PDFPasswordHint:            "Aquest PDF està protegit: escriu la contrasenya que l'obre. No es desa, i la pàgina no es pot previsualitzar: el segell anirà al lloc per defecte, o signa de manera invisible.",

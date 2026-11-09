@@ -4,11 +4,16 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"codeberg.org/simplicer/trebaruna/src/signing/domain"
 )
+
+// ErrWouldOverwrite means the output already exists, or is the document.
+var ErrWouldOverwrite = errors.New("refusing to overwrite an existing file")
 
 // SignDocument is the single use case of the signing slice.
 //
@@ -67,6 +72,9 @@ type Request struct {
 	Level      domain.Level
 	Signer     domain.Signer
 	OutputPath string
+	// Overwrite allows replacing an existing file at the output; the
+	// document itself is never replaced.
+	Overwrite  bool
 	Placement  domain.SealPlacement
 	Placements []domain.SealPlacement
 	// Invisible signs a PDF without any mark on its pages. It excludes
@@ -150,6 +158,15 @@ func (u *SignDocument) Execute(ctx context.Context, request Request) (Artefact, 
 		output = request.Document.DetachedSignatureName(request.Format)
 	default:
 		output = request.Document.SignedName(request.Format)
+	}
+
+	// Signing twice onto the same name would silently destroy the first
+	// signature; writing onto the document would destroy the document.
+	if filepath.Clean(output) == filepath.Clean(request.Document.Path()) {
+		return Artefact{}, fmt.Errorf("%w: %s is the document being signed", ErrWouldOverwrite, output)
+	}
+	if !request.Overwrite && u.files.Exists(output) {
+		return Artefact{}, fmt.Errorf("%w: %s (choose another --out, or --force to replace it)", ErrWouldOverwrite, output)
 	}
 
 	if err := request.Policy.AcceptsInvoice(content); err != nil {

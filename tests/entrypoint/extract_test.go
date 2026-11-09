@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -60,7 +61,32 @@ func TestExtractionRefusesToOverwrite(t *testing.T) {
 	if _, _, code := run("sign", document, "--p12", key, "--format", "cades"); code != 0 {
 		t.Fatal("sign failed")
 	}
-	if _, _, code := run("extract", document+".p7m"); code != 2 {
-		t.Errorf("exit %d, want 2: the original sits where the extract would go", code)
+	if _, _, code := run("extract", document+".p7m"); code != 1 {
+		t.Errorf("exit %d, want 1: the original sits where the extract would go", code)
+	}
+}
+
+// TestSigningRefusesToOverwrite: a second signature onto the same name is
+// refused, as extracting and decrypting refuse; --force replaces it, and
+// nothing ever replaces the document being signed.
+func TestSigningRefusesToOverwrite(t *testing.T) {
+	key := writeProtectedP12(t, "segreto")
+	t.Setenv("TREBARUNA_PASSPHRASE", "segreto")
+	document := writeOnePagePDF(t)
+	if _, _, code := run("sign", document, "--p12", key, "--invisible"); code != 0 {
+		t.Fatal("the first signature failed")
+	}
+	if _, stderr, code := run("sign", document, "--p12", key, "--invisible"); code != 1 || !strings.Contains(stderr, "--force") {
+		t.Errorf("a second signature onto the same name: exit %d, %q", code, stderr)
+	}
+	if _, _, code := run("sign", document, "--p12", key, "--invisible", "--force"); code != 0 {
+		t.Errorf("--force replaces it: exit %d", code)
+	}
+	original, _ := os.ReadFile(document)
+	if _, stderr, code := run("sign", document, "--p12", key, "--invisible", "--force", "--out", document); code != 1 || !strings.Contains(stderr, "the document being signed") {
+		t.Errorf("signing onto the document: exit %d, %q", code, stderr)
+	}
+	if after, _ := os.ReadFile(document); string(after) != string(original) {
+		t.Error("the document was replaced")
 	}
 }

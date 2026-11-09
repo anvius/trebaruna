@@ -4,7 +4,6 @@ package cli
 // of several nested ones (contratto.pdf.p7m.p7m), in DER, BER, PEM or Base64.
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -39,9 +38,6 @@ func runExtract(args []string, stdout, stderr io.Writer) int {
 		Execute(application.ExtractRequest{Envelope: envelope, Output: *output})
 	if err != nil {
 		fmt.Fprintf(stderr, "%v\n", err)
-		if errors.Is(err, application.ErrWouldOverwrite) {
-			return exitUsage
-		}
 		return exitInvalid
 	}
 

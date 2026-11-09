@@ -81,10 +81,13 @@ func signArguments(intent domain.SigningIntent) []string {
 		format = string(domain.FormatXAdES)
 	}
 	arguments := append([]string{"sign", intent.DocumentPath}, intent.MoreDocuments...)
+	// The window names the output before signing and says when it replaces
+	// a file, so the command may replace it.
 	arguments = append(arguments,
 		"--format", format,
 		"--level", string(intent.Level),
 		"--json",
+		"--force",
 	)
 	if intent.Policy != domain.PolicyNone {
 		arguments = append(arguments, "--policy", string(intent.Policy))

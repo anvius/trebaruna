@@ -920,6 +920,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `sign` replaced an existing file at its output without a word, the
+  previous signed file included, while `extract` and `decrypt` refused.
+  It now refuses (exit 1, naming the file and `--force`), `--force`
+  replaces it, and nothing replaces the document being signed. `extract`
+  refusing to overwrite now exits 1, as an operation that failed, not 2
+  (a usage error). The window names the output before signing, says when
+  it replaces a file, and passes `--force`.
+
 - With `--json`, a failure left nothing on stdout, only text on stderr:
   any command that fails without writing its own result now prints
   `{"error", "exit_code"}` on stdout, the reason it gives on stderr,
