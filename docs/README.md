@@ -17,6 +17,8 @@ Everything about using this tool, in the order you are likely to need it.
 | [Smartcards](smartcards.md) | PKCS#11 tokens: setup, PINs, what is tested |
 | [Troubleshooting](troubleshooting.md) | The errors you will actually hit, and what each one means |
 | [Becoming a CA](becoming-a-ca.md) | What it takes to issue qualified certificates in Spain |
+| [Specification](SPECS.md) | What the program does, as business rules, and what is planned |
+| [Decisions](adrs/README.md) | Architecture decision records |
 
 New here? Read [Installation](installation.md), then
 [Signing](signing.md).

@@ -134,10 +134,11 @@ signing failed: page 1: the identity does not fit the seal box
 A truncated name on a signature is worse than no seal at all: it looks like a
 different person.
 
-### Invisible signature
+### Without `--box`
 
-Omit `--box`. The signature is still a full signature; only the visible mark is
-missing. Common for machine-to-machine documents.
+Omitting `--box` does **not** make the signature invisible: a default seal is
+placed at the bottom-right corner of the page given by `--page`. An explicit
+invisible option is planned (see `SPECS.md`).
 
 ---
 
