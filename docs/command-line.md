@@ -307,7 +307,7 @@ The `!` lines are findings, and each has a code in the JSON form. See
 ## `timestamp`
 
 ```
-trebaruna timestamp <file> --tsa <url> [--tsd]
+trebaruna timestamp <file> --tsa <url> [--tsd | --asic]
 trebaruna timestamp --hash <hex> --tsa <url>
 ```
 
@@ -316,7 +316,9 @@ whether the authority is a qualified one according to the cached trusted list
 of your territory (`qualified`, `qualified_by` in `--json`; offline). With
 `--tsd` the document and its token travel together in `<file>.tsd`
 (time-stamped data, RFC 5544: what Italian offices keep as
-`name.pdf.p7m.tsd`), the file name and media type recorded beside them.
+`name.pdf.p7m.tsd`), the file name and media type recorded beside them. With
+`--asic` they go in `<file>.asics`, an ASiC-S time-stamped container (ETSI EN
+319 162-1): the document and `META-INF/timestamp.tst`, the token over it.
 
 | Flag | Meaning |
 |---|---|

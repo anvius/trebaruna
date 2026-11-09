@@ -54,6 +54,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.56.0-unstable" date="2026-11-09">
+      <description>
+        <p>ASiC time-stamped containers are made and verified.</p>
+      </description>
+    </release>
     <release version="0.55.0-unstable" date="2026-11-09">
       <description>
         <p>XML signatures declare where they were made, and web page approvals show the policy, roles and place a signature will declare.</p>

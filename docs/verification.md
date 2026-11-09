@@ -76,7 +76,11 @@ covers:
 - a CAdES `signature*.p7s` against the one document of an ASiC-S, or against
   the `ASiCManifest` that names it, whose digests must match the files;
 - a XAdES `signatures*.xml`, its references resolved from the container's
-  root.
+  root;
+- a time-stamp token `timestamp*.tst` against the one document of an ASiC-S,
+  or against the `ASiCManifest` that names it: it proves the files existed at
+  its time, not who signed them, so its report (format `RFC 3161`) names the
+  timestamp authority, whose certificate is checked like a signer's.
 
 Files no signature covers are reported as `container.unsigned_files`: a
 document added to a signed container is not signed.

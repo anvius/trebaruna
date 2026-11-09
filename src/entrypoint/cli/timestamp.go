@@ -20,10 +20,14 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
+	"codeberg.org/simplicer/trebaruna/src/signing/domain"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure"
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/asic"
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/cms"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/tsd"
 	verificationinfra "codeberg.org/simplicer/trebaruna/src/verification/infrastructure"
 	"github.com/digitorus/timestamp"
@@ -41,11 +45,12 @@ func runTimestamp(args []string, stdout, stderr io.Writer) int {
 		tsaPass = flags.String("tsa-pass", "", "TSA basic-auth password (or $TREBARUNA_TSA_PASS)")
 		hashHex = flags.String("hash", "", "timestamp this hex digest instead of a file")
 		asTSD   = flags.Bool("tsd", false, "write <file>.tsd: the document and its token together (RFC 5544)")
+		asASiC  = flags.Bool("asic", false, "write <file>.asics: the document and META-INF/timestamp.tst (ASiC-S, EN 319 162-1)")
 		asJSON  = flags.Bool("json", false, "machine-readable output")
 	)
 
 	flags.Usage = func() {
-		fmt.Fprintln(stderr, "usage: trebaruna timestamp <file> --tsa <url> [--tsd] [flags]")
+		fmt.Fprintln(stderr, "usage: trebaruna timestamp <file> --tsa <url> [--tsd | --asic] [flags]")
 		fmt.Fprintln(stderr, "       trebaruna timestamp --hash <hex> --tsa <url> [flags]")
 		flags.PrintDefaults()
 	}
@@ -77,8 +82,12 @@ func runTimestamp(args []string, stdout, stderr io.Writer) int {
 		return exitUsage
 	}
 
-	if *asTSD && path == "" {
-		fmt.Fprintln(stderr, "--tsd keeps the document with its token, so it needs the document, not --hash")
+	if (*asTSD || *asASiC) && path == "" {
+		fmt.Fprintln(stderr, "--tsd and --asic keep the document with its token, so they need the document, not --hash")
+		return exitUsage
+	}
+	if *asTSD && *asASiC {
+		fmt.Fprintln(stderr, "--tsd and --asic exclude each other: one container or the other")
 		return exitUsage
 	}
 
@@ -125,15 +134,23 @@ func runTimestamp(args []string, stdout, stderr io.Writer) int {
 	case destination != "":
 	case *asTSD:
 		destination = path + ".tsd"
+	case *asASiC:
+		destination = path + ".asics"
 	case path != "":
 		destination = path + ".tsr"
 	default:
 		destination = "timestamp.tsr"
 	}
 	written := response
-	if *asTSD {
+	switch {
+	case *asTSD:
 		if written, err = timeStampedData(content, path, response); err != nil {
 			fmt.Fprintf(stderr, "build the .tsd: %v\n", err)
+			return exitInvalid
+		}
+	case *asASiC:
+		if written, err = timeStampedContainer(content, path, response); err != nil {
+			fmt.Fprintf(stderr, "build the .asics: %v\n", err)
 			return exitInvalid
 		}
 	}
@@ -355,4 +372,18 @@ func encodeJSONValue(writer io.Writer, value any) {
 	encoder.SetIndent("", "  ")
 	encoder.SetEscapeHTML(false)
 	_ = encoder.Encode(value)
+}
+
+// timeStampedContainer is an ASiC-S time-stamped container (ETSI EN 319
+// 162-1, 4.3): the document and, in META-INF/timestamp.tst, the token over
+// it (the TimeStampToken, not the authority's whole response).
+func timeStampedContainer(content []byte, path string, response []byte) ([]byte, error) {
+	token, err := cms.ExtractToken(response)
+	if err != nil {
+		return nil, err
+	}
+	return asic.Write(domain.ASiCS.MediaType(), []asic.Entry{
+		{Name: filepath.Base(path), Content: content},
+		{Name: "META-INF/timestamp.tst", Content: token},
+	})
 }

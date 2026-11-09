@@ -73,6 +73,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- ASiC time-stamp tokens (ETSI EN 319 162-1): `timestamp <file> --asic`
+  writes `<file>.asics` with the document and `META-INF/timestamp.tst` (the
+  TimeStampToken); verify judges each `timestamp*.tst` of a container,
+  against the one document of an ASiC-S or the ASiCManifest that names it
+  (whose digests must still match the files), reporting the timestamp
+  authority (format RFC 3161) with its certificate checked like a signer's.
+  Containers holding only timestamps were refused.
+
 - XAdES signatures declare where they were made: SignatureProductionPlaceV2
   (city, province, postal code, country) between the policy and the roles,
   from `--location` (the city) and from afirma:// pages

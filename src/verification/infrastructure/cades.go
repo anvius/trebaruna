@@ -249,32 +249,38 @@ func (v *CadesVerifier) extractEnvelope(content []byte) ([]domain.SignerReport, 
 	// A certificate valid when the signature was made but expired since must not
 	// turn into an untrusted issuer: that is the whole point of a timestamp.
 	if signer != nil {
-		switch {
-		case report.SelfSigned:
-			report.Findings = append(report.Findings, domain.Finding{
-				Code:    "certificate.self_signed",
-				Status:  domain.StatusWarn,
-				Message: "the certificate is self-signed: valid cryptography, no third-party trust",
-			})
-		case v.chainOf(signer, parsed.Certificates, chainInstant(&report, v.Now)) == nil:
-			report.CertificateStatus = domain.StatusGood
-			report.Findings = append(report.Findings, domain.Finding{
-				Code:    "certificate.trusted",
-				Status:  domain.StatusGood,
-				Message: "the issuer is a recognised authority",
-			})
-		default:
-			report.CertificateStatus = domain.StatusUnknown
-			report.Findings = append(report.Findings, domain.Finding{
-				Code:    "certificate.untrusted_issuer",
-				Status:  domain.StatusUnknown,
-				Message: "the issuer is not in any trusted list",
-			})
-		}
+		v.describeIssuer(signer, parsed.Certificates, chainInstant(&report, v.Now), &report)
 	}
 
 	report.Trust = trustFromReport(report)
 	return []domain.SignerReport{report}, nil
+}
+
+// describeIssuer says whether a certificate's issuer is recognised: a
+// chain to the anchors at the instant given, or self-signed.
+func (v *CadesVerifier) describeIssuer(certificate *x509.Certificate, carried []*x509.Certificate, at time.Time, report *domain.SignerReport) {
+	switch {
+	case report.SelfSigned:
+		report.Findings = append(report.Findings, domain.Finding{
+			Code:    "certificate.self_signed",
+			Status:  domain.StatusWarn,
+			Message: "the certificate is self-signed: valid cryptography, no third-party trust",
+		})
+	case v.chainOf(certificate, carried, at) == nil:
+		report.CertificateStatus = domain.StatusGood
+		report.Findings = append(report.Findings, domain.Finding{
+			Code:    "certificate.trusted",
+			Status:  domain.StatusGood,
+			Message: "the issuer is a recognised authority",
+		})
+	default:
+		report.CertificateStatus = domain.StatusUnknown
+		report.Findings = append(report.Findings, domain.Finding{
+			Code:    "certificate.untrusted_issuer",
+			Status:  domain.StatusUnknown,
+			Message: "the issuer is not in any trusted list",
+		})
+	}
 }
 
 // issuerFromSet finds the certificate that signed the leaf among those the

@@ -105,6 +105,8 @@ func (v *AsicVerifier) Extract(archivePath string) ([]domain.SignerReport, error
 			found, covers, err = v.cadesSignature(unpacked, entry)
 		case strings.Contains(base, "signatures") && strings.HasSuffix(base, ".xml"):
 			found, covers, err = v.xadesSignatures(unpacked, entry)
+		case strings.HasPrefix(base, "timestamp") && strings.HasSuffix(base, ".tst"):
+			found, covers, err = v.timeStamp(unpacked, entry)
 		default:
 			continue
 		}
@@ -133,7 +135,7 @@ func (v *AsicVerifier) Extract(archivePath string) ([]domain.SignerReport, error
 		// An OpenDocument file without signatures is an ordinary document.
 		return nil, nil
 	case len(reports) == 0:
-		return nil, fmt.Errorf("%q is a container with no CAdES or XAdES signature under META-INF", archivePath)
+		return nil, fmt.Errorf("%q is a container with no signature or timestamp under META-INF", archivePath)
 	}
 
 	var unsigned []string
