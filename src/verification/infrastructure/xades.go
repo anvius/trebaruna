@@ -191,7 +191,9 @@ func (v *XadesVerifier) report(document *etree.Document, signature *etree.Elemen
 	describeIntegrity(err, &report)
 	if report.Integrity == domain.StatusGood {
 		describeSigningCertificate(signature, certificate, &report)
-		describeCoverage(document, signature, &report)
+		describeCoverage(document, signature, func(other *etree.Element) bool {
+			return validate(document, other, extractCertificate(other), resolve) == nil
+		}, &report)
 	}
 
 	v.describeSigningTime(signature, &report)

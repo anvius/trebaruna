@@ -85,4 +85,26 @@ func TestAnXMLSignatureOverOnePartNamesTheRest(t *testing.T) {
 	if report.Integrity != verificationdomain.StatusGood || detail != "/root/extra, /root/more" {
 		t.Errorf("integrity %s, unsigned parts %q, findings %+v", report.Integrity, detail, report.Findings)
 	}
+
+	// Content hidden in an element that only looks like a signature is
+	// unsigned too: only a signature that holds is left out.
+	fake := etree.NewDocument()
+	fake.ReadFromString(`<ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#"><ds:SignedInfo/><ds:SignatureValue/>` +
+		`<ds:Object><importe>1000000</importe></ds:Object></ds:Signature>`)
+	document.Root().AddChild(fake.Root())
+	written, _ = document.WriteToBytes()
+	os.WriteFile(path, written, 0o600)
+	reports, err = verificationinfra.NewXadesVerifier().Extract(path)
+	if err != nil || len(reports) != 2 {
+		t.Fatalf("%v %v", reports, err)
+	}
+	detail = ""
+	for _, finding := range reports[0].Findings {
+		if finding.Code == "content.partly_signed" {
+			detail = finding.Detail
+		}
+	}
+	if detail != "/root/extra, /root/more, /root/ds:Signature" || reports[1].Integrity == verificationdomain.StatusGood {
+		t.Errorf("unsigned parts %q; the look-alike: %s", detail, reports[1].Integrity)
+	}
 }

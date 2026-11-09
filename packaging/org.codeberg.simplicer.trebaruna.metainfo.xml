@@ -55,6 +55,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.63.5-unstable" date="2026-11-09">
+      <description>
+        <p>Content hidden in an element that only looks like an XML signature is reported as unsigned.</p>
+      </description>
+    </release>
     <release version="0.63.4-unstable" date="2026-11-09">
       <description>
         <p>Only a token that declares itself a timestamp is read as one.</p>

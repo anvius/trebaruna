@@ -14,8 +14,10 @@ import (
 // element by Id leaves the rest unsigned, and that rest is what a reader
 // sees too: the ground of signature wrapping attacks. Nothing is said when
 // a reference covers the whole document (URI=""), or when the document is
-// the signature itself (detached and enveloping signatures).
-func describeCoverage(document *etree.Document, signature *etree.Element, report *domain.SignerReport) {
+// the signature itself (detached and enveloping signatures). Another
+// signature is left out of the parts unsigned only when it holds
+// (holds): an element that merely looks like one could hide anything.
+func describeCoverage(document *etree.Document, signature *etree.Element, holds func(*etree.Element) bool, report *domain.SignerReport) {
 	root := document.Root()
 	if root == nil || root == signature || countersigned(document, signature) != nil {
 		return
@@ -49,7 +51,7 @@ func describeCoverage(document *etree.Document, signature *etree.Element, report
 		for _, child := range element.ChildElements() {
 			childPath := path + "/" + qualifiedTag(child)
 			switch {
-			case covered[child] || isSignature(child):
+			case covered[child] || isSignature(child) && holds(child):
 			case holdsCovered[child]:
 				visit(child, childPath)
 			default:
