@@ -87,6 +87,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- XAdES signatures lacked `xades:DataObjectFormat`, which the XAdES baseline
+  (EN 319 132-1, B-B) asks for. It now declares `text/xml` for enveloped
+  signatures and `application/octet-stream` with base64 encoding for
+  enveloping ones, bound to the document reference. Checked with signxml.
 - PDF signatures carried `/Name (signer)` — or `handler`, or `api`, depending on
   the entry point — and the JSON receipt reported the same placeholder. A signer
   nobody named now takes the holder printed on the certificate, as other signing

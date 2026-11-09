@@ -55,7 +55,10 @@ const (
 	signedPropertiesID  = "trebaruna-signed-properties"
 	signatureID         = "trebaruna-signature"
 	documentReferenceID = "trebaruna-reference"
-	payloadObjectID     = "trebaruna-payload"
+
+	// encodingBase64 names the transfer encoding of an enveloped payload.
+	encodingBase64  = "http://www.w3.org/2000/09/xmldsig#base64"
+	payloadObjectID = "trebaruna-payload"
 )
 
 // SignXades signs the document in place (enveloped) or as a payload (enveloping).
@@ -97,6 +100,7 @@ func (s *XadesSigner) SignXades(ctx context.Context, request application.XadesRe
 	signedProperties := buildSignedProperties(
 		base64.StdEncoding.EncodeToString(certificateDigest[:]),
 		time.Now().UTC().Format(time.RFC3339),
+		request.Enveloping,
 	)
 	signedInfo := buildSignedInfo(
 		placeholderDigest, placeholderDigest,
@@ -316,7 +320,18 @@ func canonicalDigest(element *etree.Element) ([]byte, error) {
 }
 
 // buildSignedProperties emits xades:SignedProperties with the namespaces it needs.
-func buildSignedProperties(certificateDigest, signingTime string) string {
+//
+// DataObjectFormat states the media type of what was signed, bound to the
+// document reference: the XAdES baseline profile (ETSI EN 319 132-1, B-B)
+// requires it, and validators such as the EU DSS check for it. An enveloped
+// signature signs the XML it sits in; an enveloping one carries the file as
+// base64 inside its own Object.
+func buildSignedProperties(certificateDigest, signingTime string, enveloping bool) string {
+	format := `<xades:MimeType>text/xml</xades:MimeType>`
+	if enveloping {
+		format = `<xades:MimeType>application/octet-stream</xades:MimeType>` +
+			`<xades:Encoding>` + encodingBase64 + `</xades:Encoding>`
+	}
 	return `<xades:SignedProperties xmlns:xades="` + namespaceXades + `" xmlns:ds="` + namespaceDS +
 		`" Id="` + signedPropertiesID + `">` +
 		`<xades:SignedSignatureProperties>` +
@@ -330,6 +345,10 @@ func buildSignedProperties(certificateDigest, signingTime string) string {
 		`</xades:Cert>` +
 		`</xades:SigningCertificateV2>` +
 		`</xades:SignedSignatureProperties>` +
+		`<xades:SignedDataObjectProperties>` +
+		`<xades:DataObjectFormat ObjectReference="#` + documentReferenceID + `">` + format +
+		`</xades:DataObjectFormat>` +
+		`</xades:SignedDataObjectProperties>` +
 		`</xades:SignedProperties>`
 }
 

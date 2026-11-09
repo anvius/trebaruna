@@ -194,3 +194,20 @@ func buildXadesRequest(signer domain.Signer, content []byte, enveloping bool) ap
 		Enveloping: enveloping,
 	}
 }
+
+// TestXadesDeclaresTheFormatOfWhatItSigns: the XAdES baseline (EN 319 132-1,
+// B-B) asks for a DataObjectFormat bound to the signed data reference.
+func TestXadesDeclaresTheFormatOfWhatItSigns(t *testing.T) {
+	enveloped := signXades(t, `<fattura/>`, false)
+	if !strings.Contains(enveloped, `<xades:DataObjectFormat ObjectReference="#trebaruna-reference"><xades:MimeType>text/xml</xades:MimeType>`) {
+		t.Error("an enveloped signature must declare that it signs text/xml")
+	}
+	if !strings.Contains(enveloped, `Id="trebaruna-reference"`) {
+		t.Error("the format must point at a reference that exists")
+	}
+
+	enveloping := signXades(t, `<fattura/>`, true)
+	if !strings.Contains(enveloping, `<xades:MimeType>application/octet-stream</xades:MimeType><xades:Encoding>http://www.w3.org/2000/09/xmldsig#base64</xades:Encoding>`) {
+		t.Error("an enveloping signature carries base64 and must say so")
+	}
+}
