@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -12,6 +14,7 @@ import (
 	"codeberg.org/simplicer/trebaruna/src/verification/application"
 	verification "codeberg.org/simplicer/trebaruna/src/verification/domain"
 	verificationinfra "codeberg.org/simplicer/trebaruna/src/verification/infrastructure"
+	"codeberg.org/simplicer/trebaruna/src/verification/infrastructure/report"
 	"codeberg.org/simplicer/trebaruna/src/verification/messaging"
 
 	transparencydomain "codeberg.org/simplicer/trebaruna/src/transparency/domain"
@@ -37,6 +40,7 @@ func runVerify(args []string, stdout, stderr io.Writer) int {
 		asJSON    = flags.Bool("json", false, "machine-readable output")
 		offline   = flags.Bool("offline", true, "do not contact OCSP/CRL responders")
 		lang      = flags.String("lang", "", "language for messages: es | it | en")
+		reportTo  = flags.String("report", "", "also write the verification as a report: <file>.md, .html or .pdf")
 		content   = flags.String("content", "", "the document a detached signature signs (default: beside it, the same name without .p7s, or the name a .xsig gives)")
 	)
 
@@ -86,7 +90,14 @@ func runVerify(args []string, stdout, stderr io.Writer) int {
 		return exitUnverified
 	}
 
-	catalogue := messaging.For(firstNonEmptyString(*lang, os.Getenv("LANG")))
+	locale := firstNonEmptyString(*lang, os.Getenv("LANG"))
+	catalogue := messaging.For(locale)
+	if *reportTo != "" {
+		if err := writeReport(*reportTo, path, report, catalogue, locale); err != nil {
+			fmt.Fprintf(stderr, "report: %v\n", err)
+			return exitUsage
+		}
+	}
 
 	if *asJSON {
 		encodeVerificationJSON(stdout, report)
@@ -107,6 +118,43 @@ func runVerify(args []string, stdout, stderr io.Writer) int {
 		return exitUnverified
 	}
 	return exitVerified
+}
+
+// writeReport writes the verification as a Markdown, HTML or PDF report,
+// tied to the verified bytes by their SHA-256.
+func writeReport(destination, verified string, verificationReport verification.DocumentReport, catalogue messaging.Catalogue, locale string) error {
+	format, err := report.FormatFor(destination)
+	if err != nil {
+		return err
+	}
+	content, err := os.ReadFile(verified)
+	if err != nil {
+		return err
+	}
+	digest := sha256.Sum256(content)
+	rendered, err := report.Render(format, report.Input{
+		Report:    verificationReport,
+		Catalogue: catalogue,
+		Language:  languageTag(locale),
+		Digest:    hex.EncodeToString(digest[:]),
+		Tool:      "trebaruna " + version,
+		Network:   connections(),
+	})
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(destination, rendered, 0o644)
+}
+
+// languageTag is the language a locale names, among the catalogue's.
+func languageTag(locale string) string {
+	locale = strings.ToLower(locale)
+	for _, tag := range []string{"es", "it"} {
+		if strings.HasPrefix(locale, tag) {
+			return tag
+		}
+	}
+	return "en"
 }
 
 // systemClock is the production clock.

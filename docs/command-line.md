@@ -245,11 +245,25 @@ trebaruna verify <document> [flags]
 
 | Flag | Default | Meaning |
 |---|---|---|
-| `--format` | from the suffix | `pdf`, `cades` or `xades` |
+| `--format` | from the suffix | `pdf`, `cades`, `xades` or `asic` |
 | `--territory` | from `$LANG` | Trust list to use, e.g. `IT`, `ES`, `EU` |
 | `--offline` | `true` | Set `--offline=false` to query OCSP and CRL responders |
-| `--lang` | from `$LANG` | `es`, `it` or `en` for human output |
+| `--lang` | from `$LANG` | `es`, `it` or `en` for human output and the report |
 | `--json` | off | Machine-readable report |
+| `--report` | — | Also write the verification as a document to keep or send: `<file>.md`, `.html` or `.pdf` |
+| `--content` | beside it | The document a detached signature signs |
+
+The report states what was checked and when: the file and its SHA-256, the
+verdict, every signature (signer, certificate validity, signing time,
+integrity, trust, each finding in the chosen language), the connections
+the check made, and the trebaruna version. The three formats say the same.
+The PDF is written by trebaruna itself in Helvetica; the HTML is one page
+with no scripts and no external resources. The home directory reads as `~`
+in any path, because a report is made to be sent.
+
+```bash
+trebaruna verify contratto_signed.pdf --report verifica.pdf --lang it
+```
 
 ### Recognised suffixes
 

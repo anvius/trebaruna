@@ -28,6 +28,18 @@ type Catalogue struct {
 	LabelIntegrity   string
 	NoSignatures     string
 
+	// The exported report (verify --report).
+	ReportTitle      string
+	LabelDocument    string
+	LabelVerifiedAt  string
+	LabelTool        string
+	LabelValidity    string
+	LabelTrust       string
+	LabelFindings    string
+	LabelConnections string
+	NoConnections    string
+	ReportNote       string
+
 	// Verdicts.
 	VerdictQualified string
 	VerdictAdvanced  string
@@ -58,6 +70,17 @@ var Spanish = Catalogue{
 	LabelTimestamped: "Sellado",
 	LabelIntegrity:   "Integridad",
 	NoSignatures:     "El documento no tiene firmas.",
+
+	ReportTitle:      "Informe de verificación",
+	LabelDocument:    "Documento",
+	LabelVerifiedAt:  "Comprobado el",
+	LabelTool:        "Herramienta",
+	LabelValidity:    "Certificado válido",
+	LabelTrust:       "Confianza",
+	LabelFindings:    "Hallazgos",
+	LabelConnections: "Conexiones",
+	NoConnections:    "ninguna: comprobado sin red",
+	ReportNote:       "Este informe describe lo que trebaruna comprobó y cuándo. La prueba es el documento firmado: cualquiera puede volver a comprobarlo.",
 
 	VerdictQualified: "cualificada",
 	VerdictAdvanced:  "avanzada",
@@ -119,6 +142,17 @@ var Italian = Catalogue{
 	LabelIntegrity:   "Integrità",
 	NoSignatures:     "Il documento non contiene firme.",
 
+	ReportTitle:      "Rapporto di verifica",
+	LabelDocument:    "Documento",
+	LabelVerifiedAt:  "Verificato il",
+	LabelTool:        "Strumento",
+	LabelValidity:    "Certificato valido",
+	LabelTrust:       "Affidabilità",
+	LabelFindings:    "Esiti",
+	LabelConnections: "Connessioni",
+	NoConnections:    "nessuna: verificato senza rete",
+	ReportNote:       "Questo rapporto descrive ciò che trebaruna ha verificato e quando. La prova è il documento firmato: chiunque può verificarlo di nuovo.",
+
 	VerdictQualified: "qualificata",
 	VerdictAdvanced:  "avanzata",
 	VerdictUntrusted: "emittente non riconosciuto",
@@ -178,6 +212,17 @@ var English = Catalogue{
 	LabelTimestamped: "Timestamped",
 	LabelIntegrity:   "Integrity",
 	NoSignatures:     "The document has no signatures.",
+
+	ReportTitle:      "Verification report",
+	LabelDocument:    "Document",
+	LabelVerifiedAt:  "Verified on",
+	LabelTool:        "Tool",
+	LabelValidity:    "Certificate valid",
+	LabelTrust:       "Trust",
+	LabelFindings:    "Findings",
+	LabelConnections: "Connections",
+	NoConnections:    "none: checked offline",
+	ReportNote:       "This report describes what trebaruna checked and when. The evidence is the signed document: anyone can check it again.",
 
 	VerdictQualified: "qualified",
 	VerdictAdvanced:  "advanced",

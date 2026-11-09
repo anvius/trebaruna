@@ -292,7 +292,7 @@ func extractDocument(args []string) (documentPath string, remaining []string, er
 // be told apart from flag values wherever the flags appear.
 var signValueFlags = valueFlagsWith("format", "level", "lang", "territory", "out", "name",
 	"reason", "location", "tsa", "tsa-user", "tsa-pass", "page", "box", "content", "countersign",
-	"policy", "policy-id", "policy-hash", "policy-hash-alg", "policy-qualifier", "role", "asic")
+	"policy", "policy-id", "policy-hash", "policy-hash-alg", "policy-qualifier", "role", "asic", "report")
 
 // splitSignArguments separates the documents from the flags of `sign`.
 func splitSignArguments(args []string) (positional, remaining []string) {

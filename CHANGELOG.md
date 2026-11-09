@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `verify --report <file>.md|.html|.pdf` writes the verification as a
+  document to keep or send.
+  - It holds the file and its SHA-256, the verdict, every signature
+    (signer, issuer, certificate validity, signing time, format, integrity,
+    trust, each finding in the `--lang` language), the connections made and
+    the version. The three formats are built from one content model.
+  - The PDF is written by trebaruna: Helvetica with WinAnsi encoding, A4,
+    page footers. The HTML is one well-formed page, with no scripts and no
+    external resources.
+  - Certificate text is escaped in each format; the home directory reads
+    as `~`.
+  - Judged with qpdf --check, pdfinfo, pdftotext (accents, parentheses and
+    the footer across pages) and an XML parser for the HTML.
+
 - ASiC-E signed in one step: `sign a b c --asic e [--out x.asice]` puts
   every document under one signature.
   - XAdES and XMLDSig: one detached signature with a reference and a

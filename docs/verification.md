@@ -100,6 +100,16 @@ signature. One made in 2022 with a certificate that expired in 2020 is not.
 
 ---
 
+## A report to keep or send
+
+`--report verifica.pdf` (or `.html`, `.md`) writes the verification as a
+document: the file and its SHA-256, the verdict, every signature with its
+findings in the chosen language, the connections made, and the trebaruna
+version. It describes the check; the signed file remains the evidence, and
+anyone can verify it again.
+
+---
+
 ## Finding codes
 
 ### Integrity
