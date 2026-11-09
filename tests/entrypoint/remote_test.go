@@ -2,6 +2,7 @@ package cli_test
 
 import (
 	"net/url"
+	"slices"
 	"strings"
 	"testing"
 
@@ -19,6 +20,11 @@ func TestSignWithARemoteKeyAndSaySo(t *testing.T) {
 	stdout, stderr, code := run("sign", document, "--csc", server.URL, "--credential", "rsa-explicit", "--format", "cades")
 	if code != 0 {
 		t.Fatalf("exit %d: %s", code, stderr)
+	}
+	// The identity shown and the signature come from one reading of the
+	// credential: the provider is asked once.
+	if info := countOf(server.Calls(), "credentials/info"); info != 1 {
+		t.Errorf("credentials/info asked %d times: %v", info, server.Calls())
 	}
 	address, _ := url.Parse(server.URL)
 	if !strings.Contains(stdout, "key     remote, kept by "+address.Host+" (CSC)") {
@@ -47,5 +53,33 @@ func TestSignWithARemoteKeyAndSaySo(t *testing.T) {
 
 	if _, stderr, code := run("sign", document, "--csc", server.URL, "--p12", "x.p12"); code == 0 || !strings.Contains(stderr, "ambiguous") {
 		t.Errorf("two key sources: exit %d, %s", code, stderr)
+	}
+}
+
+func countOf(calls []string, endpoint string) int {
+	count := 0
+	for _, call := range calls {
+		if call == endpoint {
+			count++
+		}
+	}
+	return count
+}
+
+// TestAnotherCredentialIsReadAgain: what is remembered is one service's
+// credential; another credential of the same service is asked for.
+func TestAnotherCredentialIsReadAgain(t *testing.T) {
+	server := csc.Start(t)
+	t.Setenv("TREBARUNA_CSC_TOKEN", csc.Token)
+	t.Setenv("TREBARUNA_PIN", csc.PIN)
+	document := writeDocument(t, "solicitud.txt", "solicitud\n")
+	for _, credential := range []string{"rsa-explicit", "ecdsa-implicit"} {
+		if _, stderr, code := run("sign", document, "--csc", server.URL, "--credential", credential, "--format", "cades",
+			"--out", document+"."+credential+".p7m"); code != 0 {
+			t.Fatalf("%s: %s", credential, stderr)
+		}
+	}
+	if info := countOf(server.Calls(), "credentials/info"); info != 2 || !slices.Contains(server.Calls(), "signatures/signHash") {
+		t.Errorf("calls: %v", server.Calls())
 	}
 }

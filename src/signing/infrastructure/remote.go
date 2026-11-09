@@ -13,6 +13,7 @@ import (
 	"math/big"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"codeberg.org/simplicer/trebaruna/src/signing/domain"
@@ -25,11 +26,70 @@ import (
 // remoteTimeout bounds each call to the remote service.
 const remoteTimeout = time.Minute
 
-// loadRemote reaches a CSC credential (ADR-0014): sign in, find the one
+// loadRemote is the CSC credential of the signer's service, as a key pair.
+func loadRemote(signer domain.Signer) (KeyPair, error) {
+	credential, err := rememberedCredentials.load(signer.Remote())
+	if err != nil {
+		return KeyPair{}, err
+	}
+	return KeyPair{
+		Signer:      credential.key,
+		Certificate: credential.certificate,
+		Chain:       credential.chain,
+		Name:        signer.NameFor(identity.FromCertificate(credential.certificate).Name),
+		SelfSigned:  isSelfSigned(credential.certificate),
+		KeySource:   domain.FromRemote,
+	}, nil
+}
+
+// remoteCredential is a credential read from its service: the key that
+// signs through it and its certificates.
+type remoteCredential struct {
+	key         remoteKey
+	certificate *x509.Certificate
+	chain       []*x509.Certificate
+}
+
+// credentialMemory keeps a credential read for as long as one call to the
+// service may last: signing a document reads the signer's identity and then
+// signs, and each loads the key, but the provider is asked once.
+type credentialMemory struct {
+	mutex       sync.Mutex
+	credentials map[domain.RemoteService]rememberedCredential
+}
+
+type rememberedCredential struct {
+	credential remoteCredential
+	until      time.Time
+}
+
+var rememberedCredentials = &credentialMemory{credentials: map[domain.RemoteService]rememberedCredential{}}
+
+// load is the service's credential, read again once its moment is past.
+func (m *credentialMemory) load(service domain.RemoteService) (remoteCredential, error) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	now := time.Now()
+	for known, remembered := range m.credentials {
+		if now.After(remembered.until) {
+			delete(m.credentials, known)
+		}
+	}
+	if remembered, ok := m.credentials[service]; ok {
+		return remembered.credential, nil
+	}
+	credential, err := readCredential(service)
+	if err != nil {
+		return remoteCredential{}, err
+	}
+	m.credentials[service] = rememberedCredential{credential: credential, until: now.Add(remoteTimeout)}
+	return credential, nil
+}
+
+// readCredential reaches a CSC credential (ADR-0014): sign in, find the one
 // credential or the one named, read its certificates, and check it can sign
 // before any document is touched.
-func loadRemote(signer domain.Signer) (KeyPair, error) {
-	service := signer.Remote()
+func readCredential(service domain.RemoteService) (remoteCredential, error) {
 	client := csc.NewClient(service.Address, transparency.Client(transparencydomain.PurposeRemoteSigning, remoteTimeout))
 	ctx, cancel := context.WithTimeout(context.Background(), remoteTimeout)
 	defer cancel()
@@ -39,36 +99,36 @@ func loadRemote(signer domain.Signer) (KeyPair, error) {
 		client.UseToken(service.Token)
 	case service.User != "":
 		if err := client.Login(ctx, service.User, service.Password); err != nil {
-			return KeyPair{}, err
+			return remoteCredential{}, err
 		}
 	default:
-		return KeyPair{}, errors.New("a remote signing service needs $TREBARUNA_CSC_TOKEN, or $TREBARUNA_CSC_USER and $TREBARUNA_CSC_PASSWORD")
+		return remoteCredential{}, errors.New("a remote signing service needs $TREBARUNA_CSC_TOKEN, or $TREBARUNA_CSC_USER and $TREBARUNA_CSC_PASSWORD")
 	}
 
 	credentialID, err := chooseCredential(ctx, client, service.Credential)
 	if err != nil {
-		return KeyPair{}, err
+		return remoteCredential{}, err
 	}
 	credential, err := client.Credential(ctx, credentialID)
 	if err != nil {
-		return KeyPair{}, err
+		return remoteCredential{}, err
 	}
 	switch {
 	case !credential.KeyEnabled:
-		return KeyPair{}, fmt.Errorf("the key of credential %s is not enabled", credentialID)
+		return remoteCredential{}, fmt.Errorf("the key of credential %s is not enabled", credentialID)
 	case !credential.CertValid:
-		return KeyPair{}, fmt.Errorf("the certificate of credential %s is not valid", credentialID)
+		return remoteCredential{}, fmt.Errorf("the certificate of credential %s is not valid", credentialID)
 	case len(credential.Certificates) == 0:
-		return KeyPair{}, fmt.Errorf("credential %s carries no certificate", credentialID)
+		return remoteCredential{}, fmt.Errorf("credential %s carries no certificate", credentialID)
 	case credential.Explicit && credential.NeedsPIN && service.PIN == "":
-		return KeyPair{}, fmt.Errorf("credential %s asks for a PIN for each signature: set $TREBARUNA_PIN", credentialID)
+		return remoteCredential{}, fmt.Errorf("credential %s asks for a PIN for each signature: set $TREBARUNA_PIN", credentialID)
 	case credential.Explicit && credential.NeedsOTP && service.OTP == "":
-		return KeyPair{}, fmt.Errorf("credential %s asks for a one-time password: set $TREBARUNA_OTP", credentialID)
+		return remoteCredential{}, fmt.Errorf("credential %s asks for a one-time password: set $TREBARUNA_OTP", credentialID)
 	}
 
 	certificate, err := x509.ParseCertificate(credential.Certificates[0])
 	if err != nil {
-		return KeyPair{}, fmt.Errorf("the certificate of credential %s: %w", credentialID, err)
+		return remoteCredential{}, fmt.Errorf("the certificate of credential %s: %w", credentialID, err)
 	}
 	var chain []*x509.Certificate
 	for _, der := range credential.Certificates[1:] {
@@ -78,14 +138,7 @@ func loadRemote(signer domain.Signer) (KeyPair, error) {
 	}
 	key := remoteKey{client: client, credential: credentialID, public: certificate.PublicKey,
 		algorithms: credential.KeyAlgorithms, explicit: credential.Explicit, pin: service.PIN, otp: service.OTP}
-	return KeyPair{
-		Signer:      key,
-		Certificate: certificate,
-		Chain:       chain,
-		Name:        signer.NameFor(identity.FromCertificate(certificate).Name),
-		SelfSigned:  isSelfSigned(certificate),
-		KeySource:   domain.FromRemote,
-	}, nil
+	return remoteCredential{key: key, certificate: certificate, chain: chain}, nil
 }
 
 // chooseCredential is the credential named, or the account's only one.

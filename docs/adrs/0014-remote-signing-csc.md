@@ -28,6 +28,9 @@ Providers without a CSC endpoint are not supported.
   algorithm. ECDSA answers in `r||s` are converted to DER.
 - The remote key is a `crypto.Signer`, so every format and level signs
   through it unchanged.
+- A credential read is remembered for a minute, per service, credential
+  and secrets (0.60.1): reading the signer's identity and signing ask the
+  provider once.
 - The receipt carries `key_source: csc` and the provider's host, in text
   and JSON.
 - Not implemented: the OAuth2 authorization-code flow (`oauth2code`

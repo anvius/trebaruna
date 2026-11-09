@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- A remote signature asked the CSC service for the credential twice
+  (credentials/info, and the sign-in before it): once to show the signer,
+  once to sign. A credential read is remembered for as long as one call
+  may last (a minute), per service, credential and secrets, so a
+  signature asks once; another credential is read again.
+
 ### Added
 
 - The window encrypts and opens `.p7e` envelopes, in a window of its own
