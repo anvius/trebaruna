@@ -12,6 +12,9 @@ import (
 
 	"codeberg.org/simplicer/trebaruna/src/signing/domain/identity"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure"
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/helvetica"
+	"github.com/digitorus/pdfsign"
+	"github.com/digitorus/pdfsign/fonts"
 )
 
 // TestSealKeepsTheWholeNameInTwoLines checks that a long name wraps instead of
@@ -157,22 +160,7 @@ func TestSealNeverOverprintsAWrappedName(t *testing.T) {
 		t.Fatalf("DrawSeal: %v", err)
 	}
 
-	type line struct {
-		text    string
-		y, size float64
-	}
-	var lines []line
-	for _, element := range appearance.RenderInfo().Elements {
-		value := reflect.ValueOf(element)
-		if value.Kind() != reflect.Struct || !value.FieldByName("Content").IsValid() {
-			continue
-		}
-		lines = append(lines, line{
-			text: value.FieldByName("Content").String(),
-			y:    value.FieldByName("Y").Float(),
-			size: value.FieldByName("Size").Float(),
-		})
-	}
+	lines := textLines(appearance)
 	if len(lines) < 4 {
 		t.Fatalf("got %d lines, want a wrapped name plus details", len(lines))
 	}
@@ -236,4 +224,53 @@ func TestSealPrintsItsColoursAndRule(t *testing.T) {
 	if texts[len(texts)-1] != (rgb{78, 86, 96}) {
 		t.Errorf("detail colour = %v, want the grey 78,86,96", texts[len(texts)-1])
 	}
+}
+
+// TestSealKeepsItsTextInsideTheBox: every line ends inside the inner margin
+// (2.6 pt on every side). Lines were wrapped to the box minus both margins
+// but drawn 3.2 pt further right, past the accent rule, so a line that filled
+// its width ran off the box and was clipped.
+func TestSealKeepsItsTextInsideTheBox(t *testing.T) {
+	for _, name := range []string{"MARIA DEL CARMEN LOPEZ GARCIA MARTINEZ", "WWWWWWWW WWWWWWWW", "Maria Lopez"} {
+		for _, box := range [][2]float64{{64, 48}, {120, 48}, {200, 80}} {
+			holder := identity.Holder{Name: name, Identifier: "IDCES-00000000X"}
+			appearance, err := infrastructure.DrawSeal(box[0], box[1], holder, sampleMoment())
+			if err != nil {
+				continue
+			}
+			for _, line := range textLines(appearance) {
+				right := line.x + helvetica.Width(line.text, line.size, line.bold)
+				if right > box[0]-2.6+0.01 {
+					t.Errorf("%.0fx%.0f: %q ends at %.2f pt, past the margin at %.2f", box[0], box[1], line.text, right, box[0]-2.6)
+				}
+			}
+		}
+	}
+}
+
+// textLine is a line of text a seal draws.
+type textLine struct {
+	text       string
+	x, y, size float64
+	bold       bool
+}
+
+// textLines reads the text elements of an appearance, in drawing order.
+func textLines(appearance *pdfsign.Appearance) []textLine {
+	var lines []textLine
+	for _, element := range appearance.RenderInfo().Elements {
+		value := reflect.ValueOf(element)
+		if value.Kind() != reflect.Struct || !value.FieldByName("Content").IsValid() {
+			continue
+		}
+		font, _ := value.FieldByName("Font").Interface().(*fonts.Font)
+		lines = append(lines, textLine{
+			text: value.FieldByName("Content").String(),
+			x:    value.FieldByName("X").Float(),
+			y:    value.FieldByName("Y").Float(),
+			size: value.FieldByName("Size").Float(),
+			bold: font != nil && strings.Contains(font.Name, "Bold"),
+		})
+	}
+	return lines
 }

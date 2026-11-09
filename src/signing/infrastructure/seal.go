@@ -34,6 +34,10 @@ import (
 	"github.com/digitorus/pdfsign"
 )
 
+// textIndent is the room the accent rule takes before the text, beyond the
+// padding.
+const textIndent = 3.2
+
 // sealTypography holds the type scale for the stamp, in points.
 type sealTypography struct {
 	// padding is the inner margin on every side.
@@ -95,7 +99,10 @@ func DrawSeal(width, height float64, holder identity.Holder, moment time.Time) (
 	typography := typographyFor(width, height)
 	appearance := pdfsign.NewAppearance(width, height)
 
-	innerWidth := width - 2*typography.padding
+	// The text starts after the accent rule and ends at the right padding:
+	// wrapping it to the box minus both paddings let a full line run past
+	// the edge.
+	innerWidth := width - textIndent - 2*typography.padding
 	if innerWidth < 20 {
 		return nil, fmt.Errorf("seal %.0f pt wide leaves no room for text", width)
 	}
@@ -188,7 +195,7 @@ func drawName(appearance *pdfsign.Appearance, lines []string, typography sealTyp
 		appearance.Text(line).
 			Font(bold, typography.nameSize).
 			SetColor(16, 20, 26).
-			Position(typography.padding+3.2, baseline)
+			Position(typography.padding+textIndent, baseline)
 		baseline -= typography.leading
 	}
 }
@@ -211,7 +218,7 @@ func drawDetails(appearance *pdfsign.Appearance, lines []string, nameLines int, 
 		appearance.Text(line).
 			Font(regular, size).
 			SetColor(78, 86, 96).
-			Position(typography.padding+3.2, baseline)
+			Position(typography.padding+textIndent, baseline)
 		baseline -= typography.leading
 	}
 }

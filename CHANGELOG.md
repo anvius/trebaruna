@@ -180,6 +180,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The visible seal keeps every line inside its right margin. Lines were
+  wrapped to the box minus both paddings but drawn after the accent rule,
+  3.2 pt further right, so a line that filled its width ran past the edge
+  and the end of a name could be clipped.
 - The local API (`trebaruna serve` and the `trebaruna://` handler) signs and
   verifies every format the command line does: it was wired with PAdES,
   CAdES and XAdES only, so ASiC containers, OpenDocument and Office Open
