@@ -20,6 +20,7 @@ import (
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
 	"codeberg.org/simplicer/trebaruna/src/desktop/messaging"
@@ -81,7 +82,7 @@ func newRequestsTab(window fyne.Window, ui messaging.Catalogue, palette Palette,
 		tab.showDetail()
 	}
 
-	tab.refresh = widget.NewButton("⟳", func() { go tab.load() })
+	tab.refresh = widget.NewButtonWithIcon(ui.RefreshButton, theme.ViewRefreshIcon(), func() { go tab.load() })
 	tab.approve = widget.NewButton(ui.Approve, func() { tab.decide(true) })
 	tab.reject = widget.NewButton(ui.Reject, func() { tab.decide(false) })
 	tab.approve.Importance = widget.HighImportance

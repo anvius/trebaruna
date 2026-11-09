@@ -3,15 +3,24 @@
 package infrastructure
 
 import (
+	"context"
 	_ "embed"
+	"fmt"
+	"net/url"
 	"os"
+	"path/filepath"
+	"strings"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/theme"
+	"fyne.io/fyne/v2/widget"
 
 	"codeberg.org/simplicer/trebaruna/src/desktop/application"
 	"codeberg.org/simplicer/trebaruna/src/desktop/domain"
@@ -114,29 +123,151 @@ func (w *Window) buildContent(initialDocument string) fyne.CanvasObject {
 	return split
 }
 
-// withTabs wraps the signing form and the verification panel in tabs.
+// withTabs wraps the signing form and the verification panel in tabs, and
+// installs what reaches both: the menu and the drop target.
 //
 // Two tabs, not two windows: a user who has just signed something usually wants
-// to check it, and making that a separate launch breaks the flow.
+// to check it, and making that a separate launch breaks the flow. Web-page
+// requests are not a tab: they are rare, they arrive from a browser, and a
+// third tab that is empty almost always only adds noise. They live in the menu.
 func (w *Window) withTabs(signingContent fyne.CanvasObject) fyne.CanvasObject {
 	report := reportmessaging.For(languageCode(w.messages.Language))
 	verification := newVerificationTab(w.window, w.messages, report, w.palette, w.binaryPath)
-	requests := newRequestsTab(w.window, w.messages, w.palette, w.binaryPath)
 
 	tabs := container.NewAppTabs(
 		container.NewTabItemWithIcon(w.messages.SignTab, theme.DocumentCreateIcon(), signingContent),
 		container.NewTabItemWithIcon(w.messages.VerifyTab, theme.SearchIcon(), verification.content()),
-		container.NewTabItemWithIcon(w.messages.RequestsTab, theme.MailComposeIcon(), requests.content()),
 	)
 	tabs.SetTabLocation(container.TabLocationTop)
 
-	if w.form != nil {
-		w.form.onCheck = func(path string) {
-			tabs.SelectIndex(1)
-			verification.check(path)
-		}
+	checkFile := func(path string) {
+		tabs.SelectIndex(1)
+		verification.verifyFile(path)
 	}
+	if w.form != nil {
+		w.form.onCheck = checkFile
+	}
+
+	w.window.SetMainMenu(w.mainMenu(tabs, checkFile))
+	w.window.SetOnDropped(func(_ fyne.Position, items []fyne.URI) {
+		if len(items) == 0 || w.form == nil {
+			return
+		}
+		w.dropped(items[0].Path(), tabs.SelectedIndex() == 1, checkFile)
+	})
 	return tabs
+}
+
+// dropped routes a file dropped on the window: a certificate goes to step 2,
+// anything on the verification tab is checked, anything else is signed.
+func (w *Window) dropped(path string, verifying bool, checkFile func(string)) {
+	switch {
+	case isCertificateFile(path):
+		w.form.setCertificate(path)
+	case verifying:
+		checkFile(path)
+	default:
+		w.form.setDocument(path)
+	}
+}
+
+// isCertificateFile recognises a key bundle by its suffix.
+func isCertificateFile(path string) bool {
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".p12", ".pfx", ".pem":
+		return true
+	}
+	return false
+}
+
+// mainMenu lists every action once, with its shortcut, so the window can be
+// driven from the keyboard and a user can find what a button does by name.
+func (w *Window) mainMenu(tabs *container.AppTabs, checkFile func(string)) *fyne.MainMenu {
+	m := w.messages
+	control := fyne.KeyModifierShortcutDefault
+
+	openDocument := fyne.NewMenuItem(m.MenuOpenDocument, func() {
+		tabs.SelectIndex(0)
+		w.form.pickDocument()
+	})
+	openDocument.Shortcut = &desktop.CustomShortcut{KeyName: fyne.KeyO, Modifier: control}
+
+	chooseCertificate := fyne.NewMenuItem(m.MenuChooseCertificate, func() {
+		tabs.SelectIndex(0)
+		w.form.pickCertificate()
+	})
+	chooseCertificate.Shortcut = &desktop.CustomShortcut{KeyName: fyne.KeyK, Modifier: control}
+
+	checkDocument := fyne.NewMenuItem(m.MenuCheckDocument, func() {
+		newFileOpen(w.window, signedExtensions, checkFile).Show()
+	})
+	checkDocument.Shortcut = &desktop.CustomShortcut{KeyName: fyne.KeyO, Modifier: control | fyne.KeyModifierShift}
+
+	sign := fyne.NewMenuItem(m.SignButton, func() {
+		tabs.SelectIndex(0)
+		w.form.sign()
+	})
+	sign.Shortcut = &desktop.CustomShortcut{KeyName: fyne.KeyReturn, Modifier: control}
+
+	previous := fyne.NewMenuItem(m.MenuPreviousPage, func() { w.pages.turn(-1) })
+	previous.Shortcut = &desktop.CustomShortcut{KeyName: fyne.KeyPageUp, Modifier: control}
+	next := fyne.NewMenuItem(m.MenuNextPage, func() { w.pages.turn(+1) })
+	next.Shortcut = &desktop.CustomShortcut{KeyName: fyne.KeyPageDown, Modifier: control}
+	freeSpace := fyne.NewMenuItem(m.SuggestButton, w.pages.suggestAnother)
+	freeSpace.Shortcut = &desktop.CustomShortcut{KeyName: fyne.KeyF, Modifier: control}
+
+	return fyne.NewMainMenu(
+		fyne.NewMenu(m.MenuFile, openDocument, chooseCertificate, fyne.NewMenuItemSeparator(), checkDocument),
+		fyne.NewMenu(m.MenuSignature, sign, fyne.NewMenuItemSeparator(), previous, next, freeSpace),
+		fyne.NewMenu(m.MenuTools, fyne.NewMenuItem(m.MenuRequests, w.showRequests)),
+		fyne.NewMenu(m.MenuHelp,
+			fyne.NewMenuItem(m.MenuManual, func() { _ = fyne.CurrentApp().OpenURL(manualURL()) }),
+			fyne.NewMenuItem(m.MenuAbout, w.showAbout),
+		),
+	)
+}
+
+// showRequests opens the web-page requests in their own window.
+func (w *Window) showRequests() {
+	requests := newRequestsTab(w.window, w.messages, w.palette, w.binaryPath)
+	window := fyne.CurrentApp().NewWindow(w.messages.RequestsTab)
+	requests.window = window
+	window.SetContent(requests.content())
+	window.Resize(fyne.NewSize(760, 440))
+	window.Show()
+	go requests.load()
+}
+
+// showAbout states what the program is, which version, and under which licence.
+func (w *Window) showAbout() {
+	version := w.messages.UnknownVersion
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if output, err := runCommand(ctx, w.binaryPath, []string{"version"}); err == nil {
+		version = strings.TrimSpace(output)
+	}
+
+	text := widget.NewLabel(fmt.Sprintf(w.messages.AboutText, version))
+	text.Wrapping = fyne.TextWrapWord
+	source := widget.NewHyperlink(sourceURL().String(), sourceURL())
+	logo := canvas.NewImageFromImage(decodeIcon())
+	logo.FillMode = canvas.ImageFillContain
+	logo.SetMinSize(fyne.NewSize(96, 96))
+
+	about := dialog.NewCustom(w.messages.MenuAbout, w.messages.CloseButton,
+		container.NewVBox(logo, text, source), w.window)
+	about.Resize(fyne.NewSize(460, 360))
+	about.Show()
+}
+
+func sourceURL() *url.URL {
+	parsed, _ := url.Parse("https://codeberg.org/simplicer/trebaruna")
+	return parsed
+}
+
+func manualURL() *url.URL {
+	parsed, _ := url.Parse("https://codeberg.org/simplicer/trebaruna/src/branch/main/docs/desktop.md")
+	return parsed
 }
 
 // newFileOpen builds a file dialog, filtered when extensions are given.

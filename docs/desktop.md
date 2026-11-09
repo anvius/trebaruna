@@ -104,39 +104,61 @@ of showing a page you cannot use.
 
 ---
 
-## Verify tab
+## Check tab
 
-Drop a file, press **Verify**. The result is rendered as:
+Choose a signed file, or drop it on the window while this tab is open. The
+result reads top to bottom:
 
-- a large verdict, coloured: green (`advanced`, `qualified`), amber (`untrusted`,
-  `unknown`), red (`broken`);
-- one block per signature: signer, issuer, identifier, signing time, integrity;
-- the findings, in the window language.
+- **the verdict**, as a word and a sentence, coloured as a second signal:
+  green (qualified, advanced), amber (no trusted list vouches for the issuer,
+  undetermined), red (the document changed, or the signer could not sign at
+  that moment);
+- **one block per signature**: signer, identifier, issuer, signing time (as the
+  seal prints it, with the offset), integrity, and the findings that are not
+  good, in the window language.
 
-The raw JSON is available in a collapsible panel, for copying into a report.
-
-Verification in the window runs **offline** by default, like the CLI. Turning on
-network revocation is a checkbox that says what it does.
+Checking runs **offline** by default, like the CLI. The checkbox *Ask over the
+network whether the certificate was revoked (OCSP)* turns revocation on and
+checks again.
 
 ---
 
-## Requests tab
+## Requests from web pages
 
-This is where a person approves what a web page asked for. It exists because the
-URI handler cannot approve itself: the secret lives here, not in the process that
-received the URI.
+**Tools → Requests from web pages…** opens a separate window. It is where a
+person approves what a web page asked for; it is not a tab because requests are
+rare and arrive from a browser, and an empty third tab was noise the rest of
+the time.
 
-The tab shows:
-
-- what is waiting, with the file name and the time left before it expires;
-- on selection: the full path, the format, and the countdown;
-- **Approve** and **Reject** buttons.
-
-Pressing either asks for the **approval secret**, which `trebaruna handler` printed
-in a terminal. The window does not hold it, so a window that lists requests still
+The window shows what is waiting, with the file name and the time left; on
+selection, the full path and the format; and **Approve** and **Reject**.
+Either asks for the **approval secret**, which `trebaruna handler` printed in a
+terminal. The window does not hold it, so a window that lists requests still
 cannot approve one on its own.
 
 See [Web pages](web-pages.md) for the full flow.
+
+---
+
+## Menus, shortcuts and drag and drop
+
+Every action has a menu entry; the frequent ones have a shortcut (`Ctrl` on
+Linux and Windows, `Cmd` on macOS):
+
+| Menu | Entry | Shortcut |
+|---|---|---|
+| File | Open document to sign… | `Ctrl+O` |
+| File | Choose certificate… | `Ctrl+K` |
+| File | Check a signed document… | `Ctrl+Shift+O` |
+| Signature | Sign | `Ctrl+Enter` |
+| Signature | Previous page / Next page | `Ctrl+PgUp` / `Ctrl+PgDn` |
+| Signature | Find free space | `Ctrl+F` |
+| Tools | Requests from web pages… | — |
+| Help | Manual, About trebaruna | — |
+
+Dropping a file on the window does what the file suggests: a `.p12`, `.pfx` or
+`.pem` becomes the certificate; on the Check tab any file is checked; anywhere
+else it becomes the document to sign.
 
 ---
 
@@ -183,7 +205,8 @@ The cost is one extra process per operation, a few milliseconds, which is
 irrelevant next to a smartcard or a TSA round trip.
 
 The visible consequence: if `trebaruna` is not on `PATH` and `TREBARUNA_BIN` is not
-set, the window cannot sign. That is why it checks at start and tells you.
+set, the window cannot sign or check. Signing then reports the missing program,
+and **Help → About** shows the version as unknown.
 
 ---
 
@@ -196,8 +219,9 @@ Stated rather than hidden:
   produced here.
 - **No Windows build of the window.** The CLI works on Windows; the window does
   not ship.
-- **Keyboard navigation is partial.** Tab order follows the form and the buttons
-  are reachable, but it has not been audited against a screen reader.
+- **Keyboard navigation is partial.** Every action is in the menu with a
+  shortcut, the seal moves with the arrow keys and the form follows the tab
+  order, but nothing has been audited against a screen reader.
 
 ---
 

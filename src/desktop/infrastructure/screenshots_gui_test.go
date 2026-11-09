@@ -13,6 +13,7 @@ package infrastructure
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"image"
 	"image/png"
@@ -23,12 +24,14 @@ import (
 	"time"
 
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/test"
 	"fyne.io/fyne/v2/widget"
 
 	"codeberg.org/simplicer/trebaruna/src/desktop/application"
 	"codeberg.org/simplicer/trebaruna/src/desktop/domain"
 	"codeberg.org/simplicer/trebaruna/src/desktop/messaging"
+	reportmessaging "codeberg.org/simplicer/trebaruna/src/verification/messaging"
 )
 
 func TestScreenshots(t *testing.T) {
@@ -59,6 +62,18 @@ func TestScreenshots(t *testing.T) {
 		desktop.form.afterSign.Show()
 		desktop.form.report(fmt.Sprintf(desktop.messages.SignedAs, "contratto-di-locazione_signed.pdf"), widget.SuccessImportance)
 		capture(t, window, filepath.Join(directory, fmt.Sprintf("signed-%s.png", language)))
+
+		tabs := window.Content().(*container.AppTabs)
+		tabs.SelectIndex(1)
+		verification := newVerificationTab(window, desktop.messages, reportmessaging.For(languageCode(language)), desktop.palette, "trebaruna")
+		tabs.Items[1].Content = verification.content()
+		verification.path = "/home/mario/Documenti/contratto-di-locazione_signed.pdf"
+		verification.file.show(verification.path, "")
+		var report verifyReport
+		_ = json.Unmarshal([]byte(sampleReport), &report)
+		verification.render(report)
+		tabs.Refresh()
+		capture(t, window, filepath.Join(directory, fmt.Sprintf("check-%s.png", language)))
 	}
 }
 
@@ -178,3 +193,10 @@ func TestScreenshotOfTheSeal(t *testing.T) {
 	window.Resize(fyne.NewSize(1200, 1700))
 	capture(t, window, filepath.Join(directory, "seal-large.png"))
 }
+
+const sampleReport = `{"signed":true,"verdict":"untrusted","signers":[{"field":"Signature1",
+"signer":"MARIO ROSSI","identifier":"TINIT-RSSMRA80A01H501U","issuer":"MARIO ROSSI",
+"signed_at":"2026-11-09T10:12:03+01:00","timestamped":false,"integrity":"good","trust":"untrusted",
+"self_signed":true,"findings":[{"code":"certificate.self_signed","status":"bad","message":"the certificate is its own issuer"},
+{"code":"timestamp.missing","status":"warn","message":"no timestamp: the signing time is the signer's claim"}]}],
+"warnings":[{"code":"revocation.offline","status":"warn","message":"revocation not checked: offline"}]}`

@@ -133,6 +133,34 @@ type Catalogue struct {
 	OpenSigned                 string
 	ShowFolder                 string
 	CheckSignature             string
+
+	// Menus and dialogs.
+	MenuFile              string
+	MenuOpenDocument      string
+	MenuChooseCertificate string
+	MenuCheckDocument     string
+	MenuSignature         string
+	MenuPreviousPage      string
+	MenuNextPage          string
+	MenuTools             string
+	MenuRequests          string
+	MenuHelp              string
+	MenuManual            string
+	MenuAbout             string
+	AboutText             string
+	UnknownVersion        string
+	CloseButton           string
+	RefreshButton         string
+
+	// Verification results in plain words.
+	OnlineRevocation string
+	CheckingMessage  string
+	ExplainQualified string
+	ExplainAdvanced  string
+	ExplainUntrusted string
+	ExplainInvalid   string
+	ExplainBroken    string
+	ExplainUnknown   string
 }
 
 // For returns the catalogue for a language.
@@ -153,8 +181,8 @@ var spanish = Catalogue{
 	VerifyHint:             "Elige o arrastra un documento firmado: PDF, .p7m, .p7s o XML. Se comprueba sin conexión contra las listas de confianza europeas.",
 	VerifyButton:           "Comprobar",
 	VerificationUnreadable: "No se pudo leer el informe de verificación.",
-	SignTab:                "Firma",
-	VerifyTab:              "Verificar",
+	SignTab:                "Firmar",
+	VerifyTab:              "Comprobar",
 	RequestsTab:            "Peticiones",
 	Approve:                "Aprobar",
 	Reject:                 "Rechazar",
@@ -231,6 +259,30 @@ var spanish = Catalogue{
 	OpenSigned:                 "Abrir",
 	ShowFolder:                 "Carpeta",
 	CheckSignature:             "Comprobar",
+	MenuFile:                   "Archivo",
+	MenuOpenDocument:           "Abrir documento para firmar…",
+	MenuChooseCertificate:      "Elegir certificado…",
+	MenuCheckDocument:          "Comprobar un documento firmado…",
+	MenuSignature:              "Firma",
+	MenuPreviousPage:           "Página anterior",
+	MenuNextPage:               "Página siguiente",
+	MenuTools:                  "Herramientas",
+	MenuRequests:               "Peticiones de páginas web…",
+	MenuHelp:                   "Ayuda",
+	MenuManual:                 "Manual",
+	MenuAbout:                  "Acerca de trebaruna",
+	AboutText:                  "Firma electrónica CAdES, PAdES y XAdES sin código propietario.\nVersión %s\nLicencia AGPL-3.0-or-later.",
+	UnknownVersion:             "desconocida (no se encontró el programa trebaruna)",
+	CloseButton:                "Cerrar",
+	RefreshButton:              "Actualizar",
+	OnlineRevocation:           "Consultar por red si el certificado estaba revocado (OCSP)",
+	CheckingMessage:            "Comprobando…",
+	ExplainQualified:           "El documento no ha cambiado y la firma es cualificada: equivale a una firma manuscrita en toda la Unión Europea.",
+	ExplainAdvanced:            "El documento no ha cambiado y una lista de confianza europea respalda al emisor del certificado.",
+	ExplainUntrusted:           "El documento no ha cambiado, pero ninguna lista de confianza respalda al emisor del certificado.",
+	ExplainInvalid:             "El documento no ha cambiado, pero el certificado no servía para firmar en ese momento: estaba caducado o revocado.",
+	ExplainBroken:              "El documento cambió después de firmarse: la firma ya no corresponde a su contenido.",
+	ExplainUnknown:             "Con la información disponible no se puede decidir si la firma es válida.",
 }
 
 var italian = Catalogue{
@@ -317,6 +369,30 @@ var italian = Catalogue{
 	OpenSigned:                 "Apri",
 	ShowFolder:                 "Cartella",
 	CheckSignature:             "Verifica",
+	MenuFile:                   "File",
+	MenuOpenDocument:           "Apri documento da firmare…",
+	MenuChooseCertificate:      "Scegli certificato…",
+	MenuCheckDocument:          "Verifica un documento firmato…",
+	MenuSignature:              "Firma",
+	MenuPreviousPage:           "Pagina precedente",
+	MenuNextPage:               "Pagina successiva",
+	MenuTools:                  "Strumenti",
+	MenuRequests:               "Richieste dalle pagine web…",
+	MenuHelp:                   "Aiuto",
+	MenuManual:                 "Manuale",
+	MenuAbout:                  "Informazioni su trebaruna",
+	AboutText:                  "Firma elettronica CAdES, PAdES e XAdES senza codice proprietario.\nVersione %s\nLicenza AGPL-3.0-or-later.",
+	UnknownVersion:             "sconosciuta (programma trebaruna non trovato)",
+	CloseButton:                "Chiudi",
+	RefreshButton:              "Aggiorna",
+	OnlineRevocation:           "Verifica in rete se il certificato era revocato (OCSP)",
+	CheckingMessage:            "Verifica in corso…",
+	ExplainQualified:           "Il documento non è cambiato e la firma è qualificata: equivale a una firma autografa in tutta l'Unione europea.",
+	ExplainAdvanced:            "Il documento non è cambiato e una lista di fiducia europea garantisce l'emittente del certificato.",
+	ExplainUntrusted:           "Il documento non è cambiato, ma nessuna lista di fiducia garantisce l'emittente del certificato.",
+	ExplainInvalid:             "Il documento non è cambiato, ma il certificato non poteva firmare in quel momento: era scaduto o revocato.",
+	ExplainBroken:              "Il documento è cambiato dopo la firma: la firma non corrisponde più al contenuto.",
+	ExplainUnknown:             "Con le informazioni disponibili non si può stabilire se la firma è valida.",
 }
 
 var english = Catalogue{
@@ -326,7 +402,7 @@ var english = Catalogue{
 	VerifyButton:           "Check",
 	VerificationUnreadable: "The verification report could not be read.",
 	SignTab:                "Sign",
-	VerifyTab:              "Verify",
+	VerifyTab:              "Check",
 	RequestsTab:            "Requests",
 	Approve:                "Approve",
 	Reject:                 "Reject",
@@ -403,6 +479,30 @@ var english = Catalogue{
 	OpenSigned:                 "Open",
 	ShowFolder:                 "Folder",
 	CheckSignature:             "Check",
+	MenuFile:                   "File",
+	MenuOpenDocument:           "Open document to sign…",
+	MenuChooseCertificate:      "Choose certificate…",
+	MenuCheckDocument:          "Check a signed document…",
+	MenuSignature:              "Signature",
+	MenuPreviousPage:           "Previous page",
+	MenuNextPage:               "Next page",
+	MenuTools:                  "Tools",
+	MenuRequests:               "Requests from web pages…",
+	MenuHelp:                   "Help",
+	MenuManual:                 "Manual",
+	MenuAbout:                  "About trebaruna",
+	AboutText:                  "CAdES, PAdES and XAdES electronic signatures without proprietary code.\nVersion %s\nLicensed AGPL-3.0-or-later.",
+	UnknownVersion:             "unknown (the trebaruna program was not found)",
+	CloseButton:                "Close",
+	RefreshButton:              "Refresh",
+	OnlineRevocation:           "Ask over the network whether the certificate was revoked (OCSP)",
+	CheckingMessage:            "Checking…",
+	ExplainQualified:           "The document has not changed and the signature is qualified: it equals a handwritten signature throughout the European Union.",
+	ExplainAdvanced:            "The document has not changed and a European trusted list vouches for the certificate's issuer.",
+	ExplainUntrusted:           "The document has not changed, but no trusted list vouches for the certificate's issuer.",
+	ExplainInvalid:             "The document has not changed, but the certificate could not sign at that moment: it was expired or revoked.",
+	ExplainBroken:              "The document changed after it was signed: the signature no longer matches its content.",
+	ExplainUnknown:             "The available information is not enough to decide whether the signature is valid.",
 }
 
 // LevelName renders a level name for display.

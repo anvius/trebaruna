@@ -22,6 +22,7 @@ type Palette struct {
 	Accent        color.Color
 	AccentMuted   color.Color
 	Danger        color.Color
+	Warning       color.Color
 	Success       color.Color
 	Text          color.Color
 	TextMuted     color.Color
@@ -32,17 +33,20 @@ type Palette struct {
 // DefaultPalette is the shipped identity.
 func DefaultPalette() Palette {
 	return Palette{
-		Background:    color.NRGBA{R: 24, G: 28, B: 33, A: 255},
-		Surface:       color.NRGBA{R: 31, G: 36, B: 42, A: 255},
-		SurfaceRaised: color.NRGBA{R: 40, G: 46, B: 54, A: 255},
+		// A blue slate rather than a neutral grey: the desk under a sheet of
+		// paper, and the same family as the seal's ink.
+		Background:    color.NRGBA{R: 26, G: 32, B: 43, A: 255},
+		Surface:       color.NRGBA{R: 34, G: 42, B: 55, A: 255},
+		SurfaceRaised: color.NRGBA{R: 43, G: 53, B: 69, A: 255},
 		// A muted teal: reads as "official document" rather than as a warning.
 		Accent:      color.NRGBA{R: 45, G: 164, B: 160, A: 255},
 		AccentMuted: color.NRGBA{R: 45, G: 164, B: 160, A: 70},
-		Danger:      color.NRGBA{R: 224, G: 92, B: 92, A: 255},
-		Success:     color.NRGBA{R: 106, G: 190, B: 120, A: 255},
-		Text:        color.NRGBA{R: 236, G: 240, B: 244, A: 255},
-		TextMuted:   color.NRGBA{R: 158, G: 170, B: 182, A: 255},
-		Border:      color.NRGBA{R: 58, G: 66, B: 76, A: 255},
+		Danger:      color.NRGBA{R: 232, G: 104, B: 100, A: 255},
+		Warning:     color.NRGBA{R: 226, G: 170, B: 84, A: 255},
+		Success:     color.NRGBA{R: 110, G: 196, B: 128, A: 255},
+		Text:        color.NRGBA{R: 236, G: 240, B: 245, A: 255},
+		TextMuted:   color.NRGBA{R: 160, G: 172, B: 188, A: 255},
+		Border:      color.NRGBA{R: 58, G: 70, B: 88, A: 255},
 		Overlay:     color.NRGBA{R: 0, G: 0, B: 0, A: 160},
 	}
 }
@@ -96,7 +100,7 @@ func (t *AppTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) co
 	case theme.ColorNameSuccess:
 		return p.Success
 	case theme.ColorNameWarning:
-		return p.Danger
+		return p.Warning
 	case theme.ColorNameHover:
 		return p.AccentMuted
 	case theme.ColorNameFocus:

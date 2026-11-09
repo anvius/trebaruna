@@ -59,6 +59,9 @@ type verifyReport struct {
 	} `json:"warnings"`
 }
 
+// signedExtensions are the containers a signed document arrives in.
+var signedExtensions = []string{".pdf", ".p7m", ".p7s", ".xml", ".xsig", ".asice", ".asics"}
+
 // verificationTab is the second tab of the window.
 type verificationTab struct {
 	window fyne.Window
@@ -70,9 +73,13 @@ type verificationTab struct {
 	palette Palette
 	binary  string
 
-	pathEntry *widget.Entry
-	output    *widget.Entry
-	verdict   *canvas.Text
+	file        *fileRow
+	path        string
+	online      *widget.Check
+	check       *widget.Button
+	verdict     *canvas.Text
+	explanation *widget.Label
+	signers     *fyne.Container
 }
 
 // newVerificationTab builds the tab.
@@ -80,166 +87,198 @@ func newVerificationTab(window fyne.Window, ui messaging.Catalogue, report repor
 	return &verificationTab{window: window, ui: ui, report: report, palette: palette, binary: binary}
 }
 
-// content lays out the tab.
+// content lays out the tab: what to check, then what was found.
 func (v *verificationTab) content() fyne.CanvasObject {
-	v.pathEntry = widget.NewEntry()
-	v.pathEntry.SetPlaceHolder("contratto_signed.pdf")
+	v.file = newFileRow(v.ui.ChooseDocument, v.ui.ChangeButton, v.ui.VerifyHint, func() {
+		newFileOpen(v.window, signedExtensions, v.verifyFile).Show()
+	})
+
+	v.online = widget.NewCheck(v.ui.OnlineRevocation, func(bool) {
+		if v.path != "" {
+			v.run()
+		}
+	})
+	v.check = widget.NewButtonWithIcon(v.ui.VerifyButton, theme.SearchIcon(), v.run)
+	v.check.Importance = widget.HighImportance
 
 	v.verdict = canvas.NewText("", v.palette.TextMuted)
-	v.verdict.TextSize = 16
+	v.verdict.TextSize = 22
 	v.verdict.TextStyle = fyne.TextStyle{Bold: true}
+	v.explanation = widget.NewLabel("")
+	v.explanation.Wrapping = fyne.TextWrapWord
+	v.signers = container.NewVBox()
 
-	v.output = widget.NewMultiLineEntry()
-	v.output.SetMinRowsVisible(18)
-	v.output.Wrapping = fyne.TextWrapWord
-	v.output.TextStyle = fyne.TextStyle{Monospace: true}
+	heading := canvas.NewText(v.ui.VerifySection, v.palette.Text)
+	heading.TextSize = 16
+	heading.TextStyle = fyne.TextStyle{Bold: true}
 
-	choose := widget.NewButtonWithIcon(v.ui.ChooseButton, theme.FolderOpenIcon(), func() {
-		newFileOpen(v.window, []string{".pdf", ".p7m", ".p7s", ".xml", ".xsig"}, v.check).Show()
-	})
-
-	check := widget.NewButtonWithIcon(v.ui.VerifyButton, theme.ConfirmIcon(), func() {
-		v.run()
-	})
-	check.Importance = widget.HighImportance
-
-	form := container.NewVBox(
-		v.section(v.ui.VerifySection),
-		widget.NewLabel(v.ui.VerifyHint),
-		container.NewBorder(nil, nil, nil, choose, v.pathEntry),
-		check,
-		container.NewCenter(v.verdict),
+	column := container.NewVBox(
+		heading,
+		v.file.object(),
+		v.online,
+		v.check,
 		widget.NewSeparator(),
-		v.output,
+		v.verdict,
+		v.explanation,
+		v.signers,
 	)
-
-	return container.NewPadded(container.NewVScroll(form))
+	// A reading column, not a full-width sheet: findings are prose, and lines
+	// of 160 characters are not read, they are skimmed.
+	return container.NewVScroll(container.NewPadded(container.New(readingColumn{width: 760}, column)))
 }
 
-// section renders a heading in the accent colour.
-func (v *verificationTab) section(text string) fyne.CanvasObject {
-	label := canvas.NewText(text, v.palette.Accent)
-	label.TextSize = 15
-	label.TextStyle = fyne.TextStyle{Bold: true}
-	return container.NewVBox(label, widget.NewSeparator())
-}
-
-// check verifies a file chosen elsewhere: the file dialog, or the signing tab
-// right after a signature.
-func (v *verificationTab) check(path string) {
-	v.pathEntry.SetText(path)
+// verifyFile checks a file chosen elsewhere: the file dialog, a drop on the
+// window, or the signing tab right after a signature.
+func (v *verificationTab) verifyFile(path string) {
+	v.path = path
+	v.file.show(path, "")
 	v.run()
 }
 
 // run executes the verification and renders the result.
 func (v *verificationTab) run() {
-	path := strings.TrimSpace(v.pathEntry.Text)
-	if path == "" {
-		v.verdict.Text = v.ui.MissingDocument
-		v.verdict.Color = v.palette.Danger
-		v.verdict.Refresh()
+	if strings.TrimSpace(v.path) == "" {
+		v.showVerdict(v.ui.MissingDocument, "", v.palette.Danger)
 		return
 	}
 
-	v.verdict.Text = v.ui.SigningMessage
-	v.verdict.Color = v.palette.TextMuted
-	v.verdict.Refresh()
-	v.output.SetText("")
+	v.showVerdict(v.ui.CheckingMessage, "", v.palette.TextMuted)
+	v.signers.Objects = nil
+	v.signers.Refresh()
+	v.check.Disable()
 
+	path, offline := v.path, !v.online.Checked
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 		defer cancel()
 
-		arguments := []string{"verify", path, "--json", "--offline", "--lang", languageCode(v.ui.Language)}
+		arguments := []string{"verify", path, "--json", fmt.Sprintf("--offline=%t", offline), "--lang", languageCode(v.ui.Language)}
 		raw, err := runCommand(ctx, v.binary, arguments)
-		if err != nil && strings.TrimSpace(raw) == "" {
-			fyne.Do(func() {
-				v.verdict.Text = fmt.Sprintf("%v", err)
-				v.verdict.Color = v.palette.Danger
-				v.verdict.Refresh()
-			})
-			return
-		}
 
 		var report verifyReport
-		if err := json.Unmarshal([]byte(raw), &report); err != nil {
-			fyne.Do(func() {
-				v.output.SetText(raw)
-				v.verdict.Text = v.ui.VerificationUnreadable
-				v.verdict.Color = v.palette.Danger
-				v.verdict.Refresh()
-			})
-			return
-		}
-
+		decodeErr := json.Unmarshal([]byte(raw), &report)
 		fyne.Do(func() {
-			v.render(report)
+			v.check.Enable()
+			switch {
+			case err != nil && strings.TrimSpace(raw) == "":
+				v.showVerdict(err.Error(), "", v.palette.Danger)
+			case decodeErr != nil:
+				v.showVerdict(v.ui.VerificationUnreadable, strings.TrimSpace(raw), v.palette.Danger)
+			default:
+				v.render(report)
+			}
 		})
 	}()
 }
 
-// render prints the report in the window.
+func (v *verificationTab) showVerdict(verdict, explanation string, colour color.Color) {
+	v.verdict.Text = verdict
+	v.verdict.Color = colour
+	v.verdict.Refresh()
+	v.explanation.SetText(explanation)
+}
+
+// render shows the verdict in words, then one block per signature.
 func (v *verificationTab) render(report verifyReport) {
 	m := v.report
-
-	v.verdict.Text = m.VerdictName(domain.TrustLevel(report.Verdict))
-	v.verdict.Color = v.colourForVerdict(report.Verdict)
-	v.verdict.Refresh()
+	verdict := domain.TrustLevel(report.Verdict)
 
 	if !report.Signed {
-		v.output.SetText(m.NoSignatures)
+		v.showVerdict(m.NoSignatures, "", v.palette.TextMuted)
 		return
 	}
+	// The verdict is a word and a sentence, and the colour only repeats it: a
+	// colour-blind user must get the same answer.
+	v.showVerdict(m.VerdictName(verdict), v.explain(verdict), v.colourFor(verdict))
 
-	var builder strings.Builder
-	for index, signer := range report.Signers {
-		fmt.Fprintf(&builder, "%s %d — %s\n", m.LabelSignature, index+1, signer.Field)
-		fmt.Fprintf(&builder, "  %-14s %s\n", m.LabelSigner, signer.Signer)
+	blocks := make([]fyne.CanvasObject, 0, len(report.Signers)+1)
+	for _, signer := range report.Signers {
+		name := widget.NewLabelWithStyle(signer.Signer, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+		name.Wrapping = fyne.TextWrapWord
+
+		var facts []string
 		if signer.ID != "" {
-			fmt.Fprintf(&builder, "  %-14s %s\n", m.LabelIdentifier, signer.ID)
+			facts = append(facts, m.LabelIdentifier+": "+signer.ID)
 		}
 		if signer.Issuer != "" {
-			fmt.Fprintf(&builder, "  %-14s %s\n", m.LabelIssuer, signer.Issuer)
+			facts = append(facts, m.LabelIssuer+": "+signer.Issuer)
 		}
 		if signer.SignedAt != "" {
 			label := m.LabelSignedAt
 			if signer.Timestamp {
 				label = m.LabelTimestamped
 			}
-			fmt.Fprintf(&builder, "  %-14s %s\n", label, signer.SignedAt)
+			facts = append(facts, label+": "+readableInstant(signer.SignedAt))
 		}
-		fmt.Fprintf(&builder, "  %-14s %s\n\n", m.LabelIntegrity, m.StatusName(domain.Status(signer.Integrity)))
+		facts = append(facts, m.LabelIntegrity+": "+m.StatusName(domain.Status(signer.Integrity)))
 
+		var findings []string
 		for _, finding := range signer.Findings {
 			if finding.Status == "good" {
 				continue
 			}
-			fmt.Fprintf(&builder, "  %s %s\n", m.StatusMark(domain.Status(finding.Status)),
-				m.FindingName(finding.Code, finding.Message))
+			findings = append(findings, m.StatusMark(domain.Status(finding.Status))+" "+m.FindingName(finding.Code, finding.Message))
 		}
-		builder.WriteString("\n")
+
+		block := container.NewVBox(widget.NewSeparator(), name, caption(strings.Join(facts, "\n")))
+		if len(findings) > 0 {
+			list := widget.NewLabel(strings.Join(findings, "\n"))
+			list.Wrapping = fyne.TextWrapWord
+			block.Add(list)
+		}
+		blocks = append(blocks, block)
 	}
 
+	var warnings []string
 	for _, warning := range report.Warnings {
-		fmt.Fprintf(&builder, "  %s %s\n", m.StatusMark(domain.Status(warning.Status)),
-			m.FindingName(warning.Code, warning.Message))
+		warnings = append(warnings, m.StatusMark(domain.Status(warning.Status))+" "+m.FindingName(warning.Code, warning.Message))
+	}
+	if len(warnings) > 0 {
+		blocks = append(blocks, widget.NewSeparator(), caption(strings.Join(warnings, "\n")))
 	}
 
-	v.output.SetText(builder.String())
+	v.signers.Objects = blocks
+	v.signers.Refresh()
 }
 
-// colourForVerdict maps a verdict onto the palette.
-//
-// Colour is a second signal, never the only one: the verdict is also printed as
-// text, because a colour-blind user must get the same information.
-func (v *verificationTab) colourForVerdict(verdict string) color.Color {
+// readableInstant writes a signing time the way the seal prints it, keeping
+// the offset; anything unparsable is shown as received.
+func readableInstant(value string) string {
+	instant, err := time.Parse(time.RFC3339, value)
+	if err != nil {
+		return value
+	}
+	return instant.Format("02/01/2006 15:04:05 -07:00")
+}
+
+// explain says in one sentence what the verdict means for the document.
+func (v *verificationTab) explain(verdict domain.TrustLevel) string {
+	switch verdict {
+	case "qualified":
+		return v.ui.ExplainQualified
+	case "advanced":
+		return v.ui.ExplainAdvanced
+	case "untrusted":
+		return v.ui.ExplainUntrusted
+	case "invalid":
+		return v.ui.ExplainInvalid
+	case "broken":
+		return v.ui.ExplainBroken
+	}
+	return v.ui.ExplainUnknown
+}
+
+// colourFor separates "the document changed" and "the signer had no right to
+// sign" (red) from "nobody vouches for the issuer" (amber): the first two are
+// failures, the third is missing evidence.
+func (v *verificationTab) colourFor(verdict domain.TrustLevel) color.Color {
 	switch verdict {
 	case "qualified", "advanced":
 		return v.palette.Success
-	case "broken":
+	case "broken", "invalid":
 		return v.palette.Danger
-	case "untrusted":
-		return v.palette.Danger
+	case "untrusted", "unknown":
+		return v.palette.Warning
 	}
 	return v.palette.TextMuted
 }
@@ -253,4 +292,28 @@ func languageCode(language messaging.Language) string {
 		return "en"
 	}
 	return "es"
+}
+
+// readingColumn centres one child and caps its width, so text keeps a
+// readable measure on a wide window while still shrinking on a narrow one.
+type readingColumn struct {
+	width float32
+}
+
+// Layout places the child in the middle, no wider than the column.
+func (c readingColumn) Layout(objects []fyne.CanvasObject, size fyne.Size) {
+	width := min(size.Width, c.width)
+	for _, object := range objects {
+		object.Resize(fyne.NewSize(width, size.Height))
+		object.Move(fyne.NewPos((size.Width-width)/2, 0))
+	}
+}
+
+// MinSize is the child's own minimum.
+func (c readingColumn) MinSize(objects []fyne.CanvasObject) fyne.Size {
+	var size fyne.Size
+	for _, object := range objects {
+		size = size.Max(object.MinSize())
+	}
+	return size
 }

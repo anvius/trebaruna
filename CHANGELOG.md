@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Desktop: a main menu (File, Signature, Tools, Help) with every action and
+  shortcuts for the frequent ones; dropping a file on the window routes it
+  (certificate, file to check, or document to sign); an About dialog with the
+  version and licence.
+- Desktop: the Check tab states the verdict as a word, a sentence and a
+  colour, with one readable block per signature and an OCSP checkbox.
+  "Signer not entitled to sign" is now red instead of grey; "no trusted list"
+  is amber instead of red.
+
 - Desktop: the signing form is three steps — document, certificate,
   signature — with one button that stays in reach. Files are shown as name
   and folder, wrapping, never cut. The certificate is read as soon as its
@@ -37,6 +46,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- Desktop: the Requests tab; web-page requests open from Tools in their own
+  window. The editable monospaced report box in the Check tab.
 - Desktop: the raw JSON "Result" box, the free-text certificate and document
   path fields, and the `pades`/`bes` technical values in the selectors.
 - Desktop: the page number and `x1,y1,x2,y2` box fields, and the "Show page"
