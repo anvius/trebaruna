@@ -47,6 +47,10 @@ type Proposal struct {
 	Remembered string
 	// keep is the page's sticky: the key approved now is kept.
 	keep bool
+	// PlaceSeal is the page's visibleSignature, "want" or "optional": the
+	// person places the seal on SealDocument, the PDF the page sent.
+	PlaceSeal    string
+	SealDocument []byte
 }
 
 // Decision is the person's answer: approved, with the key to use.
@@ -62,6 +66,8 @@ type Decision struct {
 	// UseRemembered approves with the key kept from the page's earlier
 	// request, which Proposal.Remembered names, instead of Key.
 	UseRemembered bool
+	// Seal is where the person placed the seal, when asked to.
+	Seal domain.SealBox
 }
 
 // Approver shows a proposal to the person and returns their decision.

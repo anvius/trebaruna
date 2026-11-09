@@ -73,6 +73,8 @@ type stepLine struct {
 	Roles         []string `json:"roles"`
 	Place         string   `json:"place"`
 	Remembered    string   `json:"remembered"`
+	Seal          string   `json:"seal"`
+	SealDocument  string   `json:"seal_document"`
 	Items         []struct {
 		ID           string `json:"id"`
 		Format       string `json:"format"`
@@ -107,7 +109,8 @@ func (s *commandSession) Next() (domain.PageStep, error) {
 	proposal := domain.PageProposal{Operation: line.Operation, Site: line.Site, AppName: line.AppName, Format: line.Format,
 		DataSize: line.DataSize, DataSHA256: line.DataSHA256, DataURL: line.DataURL, ChooseFile: line.ChooseFile,
 		SuggestedName: line.SuggestedName, Filters: line.Filters, Warnings: line.Warnings, Rejected: line.Rejected,
-		Policy: line.Policy, Roles: line.Roles, Place: line.Place, Remembered: line.Remembered}
+		Policy: line.Policy, Roles: line.Roles, Place: line.Place, Remembered: line.Remembered,
+		Seal: line.Seal, SealDocument: line.SealDocument}
 	for _, item := range line.Items {
 		proposal.Items = append(proposal.Items, domain.PageItem{ID: item.ID, Format: item.Format, Suboperation: item.Suboperation})
 	}
@@ -133,6 +136,11 @@ func (s *commandSession) Decide(decision domain.PageDecision) error {
 		}
 		line["key"], line["passphrase"], line["pin"] = key, decision.KeyFile.Passphrase, decision.Card.PIN
 		line["file"], line["save_to"] = decision.Document, decision.SaveTo
+	}
+	if decision.Approved && decision.Seal.Placed() {
+		rect := decision.Seal.Rect
+		line["seal"] = map[string]any{"page": decision.Seal.Page, "llx": rect.LowerLeftX, "lly": rect.LowerLeftY,
+			"urx": rect.UpperRightX, "ury": rect.UpperRightY}
 	}
 	encoded, err := json.Marshal(line)
 	if err != nil {

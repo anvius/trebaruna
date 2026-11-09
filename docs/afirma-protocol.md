@@ -406,7 +406,12 @@ signature algorithm, SHA-1 refused; the approval shows the digest in hex;
 `signaturePositionOnPageUpperRightX/Y`, `layer2Text`, `layer2FontFamily/Size/Style/Color`,
 `signatureRubricImage`, `signatureField` (the form's empty signature field to
 sign in, the seal in its box; trebaruna refuses a name the form lacks),
-`visibleSignature` (`want`/`optional` opens a placement dialog), `signReason`, `signerContact`, `ownerPassword`, `tsaURL`, `tsaPolicy`,
+`visibleSignature` (`want`/`optional` opens a placement dialog; trebaruna: the
+approval window shows the PDF the page sent, or the one the person picks,
+with the main window's seal canvas, and the box becomes the position
+parameters; `optional` can be unticked; a page that fixed the place or a field
+asks nothing; a PDF fetched after the approval is signed invisibly, and the
+approval says so), `signReason`, `signerContact`, `ownerPassword`, `tsaURL`, `tsaPolicy`,
 `tsaHashAlgorithm`, `includeOnlySignningCertificate`, `signingCertificateV2`,
 `allowShadowAttack`, `pagesToCheckShadowAttack` (default `10` when checking).
 Note the CAdES constant for the hash-algorithm key is misspelt

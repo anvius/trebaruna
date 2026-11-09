@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- afirma:// `visibleSignature=want|optional`: when a page asks for a
+  visible seal without fixing its place, the approval window shows the PDF
+  with the main window's seal canvas (drag, draw, find free space, turn
+  pages) and the box becomes AutoFirma's position parameters; an optional
+  seal can be unticked. The window works on a private copy of the PDF
+  (0600, in a 0700 directory), removed once it has decided; a PDF the
+  person picks is shown instead when the page sends none; one fetched only
+  after approval is signed invisibly, and the approval says so.
+
 - afirma:// XAdES Externally Detached and `useManifest`: an XML signature
   over documents that stay on the site, named by address and digest (`uri`
   with the data as its digest, or `uri1`/`md1`/`mimeType1`… for a

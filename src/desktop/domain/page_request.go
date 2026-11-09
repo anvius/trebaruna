@@ -27,6 +27,11 @@ type PageProposal struct {
 	// Remembered is the holder of the certificate kept from the page's
 	// earlier request (sticky), which may be used again without choosing.
 	Remembered string
+	// Seal is the page's visibleSignature, "want" or "optional": the person
+	// places the seal on SealDocument, a copy of the PDF the page sent, or
+	// on the document they choose.
+	Seal         string
+	SealDocument string
 }
 
 // PageItem is one document of a batch.
@@ -56,6 +61,8 @@ type PageDecision struct {
 	// Remembered approves with the certificate kept from the page's
 	// earlier request, instead of Card or KeyFile.
 	Remembered bool
+	// Seal is where the person placed the seal, when the page asked.
+	Seal SealChoice
 }
 
 // Validate refuses an approval that misses something the proposal needs,

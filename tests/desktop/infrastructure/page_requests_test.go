@@ -95,3 +95,30 @@ func TestAKeptCertificateTravelsWithoutTheKey(t *testing.T) {
 		t.Errorf("decision %s", decision)
 	}
 }
+
+// TestThePlacedSealTravelsInPoints: the page asks for a seal on a copy of
+// its PDF, and the box goes back in PDF points.
+func TestThePlacedSealTravelsInPoints(t *testing.T) {
+	received := filepath.Join(t.TempDir(), "decision")
+	proposal := `{"type":"proposal","operation":"sign","site":"sede.example","format":"PAdES","data_size":4,"items":[],"seal":"want","seal_document":"/tmp/x/document.pdf"}`
+	outcome := `{"type":"outcome","answer":"Y2VydA==|c2ln","delivered":true}`
+	binary, _ := fakeCommand(t, "echo '"+proposal+"'; read line; printf '%s' \"$line\" > "+received+"; echo '"+outcome+"'")
+	session, err := infrastructure.CommandLinePageRequests{BinaryPath: binary}.Open(context.Background(), "afirma://sign?x=1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	step, err := session.Next()
+	if err != nil || step.Proposal == nil || step.Proposal.Seal != "want" || step.Proposal.SealDocument != "/tmp/x/document.pdf" {
+		t.Fatalf("proposal %+v, %v", step.Proposal, err)
+	}
+	seal := domain.SealChoice{Page: 2, Rect: domain.SealRect{LowerLeftX: 300, LowerLeftY: 60.5, UpperRightX: 520, UpperRightY: 120}}
+	if err := session.Decide(domain.PageDecision{Approved: true, KeyFile: domain.CertificateFile{Path: "/k.p12"}, Seal: seal}); err != nil {
+		t.Fatal(err)
+	}
+	session.Next()
+	session.Close()
+	decision, _ := os.ReadFile(received)
+	if !strings.Contains(string(decision), `"seal":{"llx":300,"lly":60.5,"page":2,"urx":520,"ury":120}`) {
+		t.Errorf("decision %s", decision)
+	}
+}

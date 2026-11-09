@@ -295,6 +295,12 @@ documents; the approval lists every address with its digest, so you can
 compare them with copies you have. With `useManifest` the references go in a
 manifest inside the signature, as AutoFirma writes them.
 
+Placing the seal (`visibleSignature`): when a page asks for a visible
+signature without saying where, the approval window shows the PDF's page
+with the seal, as the main window does: drag it, or draw its box, then
+approve. If the page made the seal optional, you can untick it. The window
+works on a private copy of the PDF, removed once you decide.
+
 Operations: `sign`, `cosign`, `countersign`, `signandsave`, `selectcert`,
 `save` and `batch`. A batch (JSON or XML) goes through the site's pre- and
 post-signers: the documents stay on the site, the key signs what its server

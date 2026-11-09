@@ -233,6 +233,13 @@ or typing its PIN again; unticking shows the key choice. Recent Chromium
 versions ask once to let the site reach this computer ("local network
 access").
 
+When a page asks for a visible seal without saying where
+(`visibleSignature`), the approval window shows the PDF's page below the
+certificate choice, with the same seal canvas as the main window: click,
+drag or draw the box, use **Find free space**, turn pages. An optional seal
+comes with *Add a visible seal*, ticked; unticked, the signature is
+invisible.
+
 When a Spanish administration page starts AutoFirma's protocol, the system
 opens `trebaruna-desktop` with the `afirma://` URI, and an approval window
 shows the request before anything happens: what the page asks (sign, sign a

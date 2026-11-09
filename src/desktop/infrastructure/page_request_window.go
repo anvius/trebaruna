@@ -67,6 +67,14 @@ type pageRequest struct {
 	installLocal *widget.Button
 	// deciding is true while a proposal waits for the person.
 	deciding bool
+
+	// preview renders the PDF the seal is placed on when the page asks for
+	// a visible seal; sealPane shows it with the main window's canvas, and
+	// sealWanted, for "optional", lets the person do without one.
+	preview    *application.PreviewPage
+	sealPane   *pagePane
+	sealWanted *widget.Check
+	sealBox    *fyne.Container
 }
 
 // RunPageRequest opens the approval window for a URI and blocks until it closes.
@@ -83,6 +91,7 @@ func RunPageRequest(options Options, uri string) {
 		application.NewListCards(CommandLineCardReader{BinaryPath: options.BinaryPath}),
 		application.NewListCards(CommandLineCardReader{BinaryPath: options.BinaryPath, Store: domain.StoreFirefox}))
 	request.localChannel = application.NewManageLocalChannel(CommandLineLocalChannel{BinaryPath: options.BinaryPath})
+	request.preview = application.NewPreviewPage(FirstAvailableRenderer{NewPopplerRenderer(), NewBuiltInRenderer()}, application.InkFinder{})
 	window.SetContent(request.object())
 	request.start(uri)
 	window.ShowAndRun()
@@ -108,6 +117,9 @@ func newPageRequest(window fyne.Window, m messaging.Catalogue, review *applicati
 	request.rememberedFor = wrapped("", widget.LowImportance)
 	request.rememberedBox = container.NewVBox(request.remembered, request.rememberedFor)
 	request.rememberedBox.Hide()
+	request.sealWanted = widget.NewCheck(m.PageSealOptional, func(bool) { request.sealChanged() })
+	request.sealBox = container.NewVBox()
+	request.sealBox.Hide()
 	request.documentRow = newFileRow(m.PageDocument, m.ChangeButton, m.PageChooseFile, request.pickDocument)
 	request.saveRow = newFileRow(m.PageSaveTo, m.ChangeButton, "", request.pickSaveTo)
 	request.status = widget.NewLabel("")
@@ -138,7 +150,7 @@ func newPageRequest(window fyne.Window, m messaging.Catalogue, review *applicati
 }
 
 func (r *pageRequest) object() fyne.CanvasObject {
-	body := container.NewVBox(r.details, r.rememberedBox, r.keyBox, r.documentRow.object(), r.saveRow.object(), r.status)
+	body := container.NewVBox(r.details, r.rememberedBox, r.keyBox, r.documentRow.object(), r.saveRow.object(), r.sealBox, r.status)
 	actions := container.NewHBox(r.decline, r.closing, layout.NewSpacer(), r.approve, r.installLocal)
 	return container.NewBorder(nil, container.NewPadded(actions), nil, nil, container.NewVScroll(container.NewPadded(body)))
 }
@@ -312,6 +324,10 @@ func (r *pageRequest) present(proposal domain.PageProposal) {
 		r.remembered.SetChecked(true)
 	}
 	r.rememberedChanged()
+	r.sealBox.Hide()
+	if proposal.Seal != "" && proposal.NeedsKey() && proposal.SealDocument != "" {
+		r.showSeal(proposal.SealDocument)
+	}
 	r.documentRow.object().Hide()
 	if proposal.ChooseFile {
 		r.documentRow.object().Show()
@@ -408,6 +424,53 @@ func (r *pageRequest) keySourceChanged() {
 	}
 }
 
+// showSeal shows the page of the PDF the seal goes on, with the seal the
+// person moves and resizes, as in the main window; the window grows to hold
+// the page.
+func (r *pageRequest) showSeal(path string) {
+	if r.preview == nil {
+		return
+	}
+	if r.sealPane == nil {
+		r.sealPane = newPagePane(r.m, currentPalette(), r.preview)
+		r.sealPane.run = r.run
+	}
+	objects := []fyne.CanvasObject{wrapped(r.m.PageSealTitle, widget.MediumImportance)}
+	if r.proposal.Seal == "optional" {
+		r.sealWanted.SetChecked(true)
+		objects = append(objects, r.sealWanted)
+	}
+	r.sealBox.Objects = append(objects, r.sealPane.object())
+	r.sealBox.Show()
+	r.sealBox.Refresh()
+	r.sealPane.show(path)
+	if size := r.window.Canvas().Size(); size.Width < 760 || size.Height < 960 {
+		r.window.Resize(fyne.NewSize(max(size.Width, 760), max(size.Height, 960)))
+	}
+}
+
+// sealChanged hides the page when the person does without the optional seal.
+func (r *pageRequest) sealChanged() {
+	if r.sealPane == nil {
+		return
+	}
+	if r.sealWanted.Checked {
+		r.sealPane.object().Show()
+	} else {
+		r.sealPane.object().Hide()
+	}
+	r.sealBox.Refresh()
+}
+
+// placedSeal is the seal the person placed, when the page asked for one and
+// it is wanted.
+func (r *pageRequest) placedSeal() domain.SealChoice {
+	if r.sealPane == nil || !r.sealBox.Visible() || (r.proposal.Seal == "optional" && !r.sealWanted.Checked) {
+		return domain.SealChoice{}
+	}
+	return r.sealPane.choice()
+}
+
 // rememberedChanged hides the key choice while the kept certificate is
 // used, and shows it when the person wants another.
 func (r *pageRequest) rememberedChanged() {
@@ -420,7 +483,7 @@ func (r *pageRequest) usesRemembered() bool { return r.rememberedBox.Visible() &
 
 // decision builds what the person chose.
 func (r *pageRequest) decision() domain.PageDecision {
-	decision := domain.PageDecision{Approved: true, Document: r.document, SaveTo: r.saveTo}
+	decision := domain.PageDecision{Approved: true, Document: r.document, SaveTo: r.saveTo, Seal: r.placedSeal()}
 	switch {
 	case r.usesRemembered():
 		decision.Remembered = true
@@ -513,6 +576,9 @@ func (r *pageRequest) pickDocument() {
 	newFileOpen(r.window, nil, func(path string) {
 		r.document = path
 		r.documentRow.show(path, "")
+		if r.proposal.Seal != "" && strings.HasSuffix(strings.ToLower(path), ".pdf") {
+			r.showSeal(path)
+		}
 	}).Show()
 }
 

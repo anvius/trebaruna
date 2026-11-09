@@ -4,6 +4,7 @@ package infrastructure
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"testing"
 
@@ -66,6 +67,7 @@ func pageFixture(t *testing.T, steps ...domain.PageStep) (*pageRequest, *scripte
 	request := newPageRequest(window, messaging.For(messaging.Spanish),
 		application.NewReviewPageRequest(scriptedRequests{session: session}), cards, cards)
 	request.run, request.cards.run = inLine, inLine
+	request.preview = application.NewPreviewPage(NewBuiltInRenderer(), application.InkFinder{})
 	window.SetContent(request.object())
 	window.Resize(fyne.NewSize(640, 720))
 	request.start("afirma://sign?x=1")
@@ -241,6 +243,46 @@ func TestDocumentsNamedByAddressAreListed(t *testing.T) {
 	if text := detailText(request); !strings.Contains(text, "La firma cubre documentos que trebaruna no ve, solo su dirección y su resumen: "+
 		"https://sede.example/anexo.pdf (SHA-512 9f86d081)") {
 		t.Errorf("the documents are not listed:\n%s", text)
+	}
+}
+
+// TestThePersonPlacesTheSealThePageWants: the page of the PDF is shown
+// with the seal, as in the main window, and the box goes back with the
+// approval; an optional seal can be left out.
+func TestThePersonPlacesTheSealThePageWants(t *testing.T) {
+	proposal := signProposal()
+	proposal.Format, proposal.Seal, proposal.SealDocument = "PAdES", "want", writeSampleContract(t)
+	request, session := pageFixture(t, proposalStep(proposal), domain.PageStep{Outcome: &domain.PageOutcome{Answer: "Y2VydA==|c2ln", Delivered: true}})
+	waitFor(t, func() bool { return request.sealPane != nil && request.sealPane.canvas != nil })
+	if !request.sealBox.Visible() || slices.Contains(request.sealBox.Objects, fyne.CanvasObject(request.sealWanted)) {
+		t.Fatalf("the page is shown, with no way to leave a wanted seal out")
+	}
+	if text := request.sealBox.Objects[0].(*widget.Label).Text; !strings.Contains(text, "Coloca el sello en la página") {
+		t.Errorf("the box says what to do: %q", text)
+	}
+	request.cards.pin.SetText("123456")
+	test.Tap(request.approve)
+	if len(session.decisions) != 1 || !session.decisions[0].Seal.Placed() || session.decisions[0].Seal.Page != 1 {
+		t.Errorf("the placed seal goes back: %+v", session.decisions)
+	}
+}
+
+func TestAnOptionalSealCanBeLeftOut(t *testing.T) {
+	proposal := signProposal()
+	proposal.Format, proposal.Seal, proposal.SealDocument = "PAdES", "optional", writeSampleContract(t)
+	request, session := pageFixture(t, proposalStep(proposal), domain.PageStep{Outcome: &domain.PageOutcome{Answer: "Y2VydA==|c2ln", Delivered: true}})
+	waitFor(t, func() bool { return request.sealPane != nil && request.sealPane.canvas != nil })
+	if !slices.Contains(request.sealBox.Objects, fyne.CanvasObject(request.sealWanted)) || !request.sealWanted.Checked {
+		t.Fatal("an optional seal is offered, ticked")
+	}
+	test.Tap(request.sealWanted)
+	if request.sealPane.object().Visible() {
+		t.Error("unticked, the page goes away")
+	}
+	request.cards.pin.SetText("123456")
+	test.Tap(request.approve)
+	if len(session.decisions) != 1 || session.decisions[0].Seal.Placed() {
+		t.Errorf("no seal goes back: %+v", session.decisions)
 	}
 }
 

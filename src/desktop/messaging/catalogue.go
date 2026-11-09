@@ -234,6 +234,9 @@ type Catalogue struct {
 	PageWarnBare             string
 	PageWarnDigest           string
 	PageWarnReferenced       string
+	PageSealTitle            string
+	PageSealOptional         string
+	PageWarnSealLater        string
 	PageUseRemembered        string
 	PageRememberedHolder     string
 	PageListening            string
@@ -560,6 +563,9 @@ var spanish = Catalogue{
 	PageWarnBare:               "Una firma desnuda (NONE) no dice nada de lo que firma: si estos bytes son la parte firmada de otra firma, firmas todo lo que esa cubre, y trebaruna no puede enseñártelo.",
 	PageWarnDigest:             "La página envía solo el resumen %s de un documento, %s, no el documento: trebaruna no puede enseñarlo; si tienes el documento, compara su resumen con este.",
 	PageWarnReferenced:         "La firma cubre documentos que trebaruna no ve, solo su dirección y su resumen: %s. Compara los resúmenes con los de los documentos si los tienes.",
+	PageSealTitle:              "Coloca el sello en la página: arrástralo o dibuja su caja. La página pidió una firma visible.",
+	PageSealOptional:           "Añadir un sello visible",
+	PageWarnSealLater:          "La página pide un sello visible, pero el documento se descarga solo después de aprobar: la firma será invisible.",
 	PageUseRemembered:          "Usar el mismo certificado que en la petición anterior",
 	PageRememberedHolder:       "%s: la página pidió conservarlo mientras dure la conexión.",
 	PageListening:              "Esperando a que la página se conecte con trebaruna en este equipo (puerto %d)…",
@@ -867,6 +873,9 @@ var italian = Catalogue{
 	PageWarnBare:               "Una firma nuda (NONE) non dice nulla di ciò che firma: se questi byte sono la parte firmata di un'altra firma, firmi tutto ciò che quella copre, e trebaruna non può mostrartelo.",
 	PageWarnDigest:             "La pagina invia solo l'impronta %s di un documento, %s, non il documento: trebaruna non può mostrarlo; se hai il documento, confronta la sua impronta con questa.",
 	PageWarnReferenced:         "La firma copre documenti che trebaruna non vede, solo il loro indirizzo e la loro impronta: %s. Confronta le impronte con quelle dei documenti, se li hai.",
+	PageSealTitle:              "Posiziona il sigillo sulla pagina: trascinalo o disegna il suo riquadro. La pagina ha chiesto una firma visibile.",
+	PageSealOptional:           "Aggiungi un sigillo visibile",
+	PageWarnSealLater:          "La pagina chiede un sigillo visibile, ma il documento si scarica solo dopo l'approvazione: la firma sarà invisibile.",
 	PageUseRemembered:          "Usa lo stesso certificato della richiesta precedente",
 	PageRememberedHolder:       "%s: la pagina ha chiesto di conservarlo finché dura la connessione.",
 	PageListening:              "In attesa che la pagina si colleghi a trebaruna su questo computer (porta %d)…",
@@ -1174,6 +1183,9 @@ var english = Catalogue{
 	PageWarnBare:               "A bare signature (NONE) records nothing of what it signs: if these bytes are the signed part of another signature, you sign whatever that one covers, which trebaruna cannot show you.",
 	PageWarnDigest:             "The page sends only the %s digest of a document, %s, not the document: trebaruna cannot show it; if you have the document, compare its digest with this one.",
 	PageWarnReferenced:         "The signature covers documents trebaruna does not see, only their address and digest: %s. Compare the digests with the documents' if you have them.",
+	PageSealTitle:              "Place the seal on the page: drag it or draw its box. The page asked for a visible signature.",
+	PageSealOptional:           "Add a visible seal",
+	PageWarnSealLater:          "The page asks for a visible seal, but the document is fetched only after you approve: the signature will be invisible.",
 	PageUseRemembered:          "Use the same certificate as in the previous request",
 	PageRememberedHolder:       "%s: the page asked to keep it while the connection lasts.",
 	PageListening:              "Waiting for the page to connect to trebaruna on this computer (port %d)…",

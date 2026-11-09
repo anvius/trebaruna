@@ -1,6 +1,7 @@
 package application
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"crypto/x509"
@@ -110,6 +111,17 @@ func (u *AnswerPage) sign(ctx context.Context, request domain.SignRequest) (doma
 
 	proposal := u.proposal(request.Operation, request.Common, request.Format.Name, request.Data)
 	proposal.SuggestedName = request.FileName
+	if wanted := domain.SealWanted(request.Properties); wanted != "" && signsPDF(request) {
+		// The seal goes on the PDF the page sent, or on the one the person
+		// chooses; a PDF fetched after the approval cannot have it placed.
+		proposal.PlaceSeal = wanted
+		switch {
+		case bytes.HasPrefix(request.Data.Bytes, []byte("%PDF")):
+			proposal.SealDocument = request.Data.Bytes
+		case request.Data.URL != "":
+			proposal.Warnings = append(proposal.Warnings, sealLaterWarning)
+		}
+	}
 	switch algorithm := request.Properties["precalculatedHashAlgorithm"]; {
 	case request.Format.Family == "xades" && domain.ExternallyDetached(request.Properties):
 		// The documents are named by address and digest; an invalid list
@@ -157,9 +169,13 @@ func (u *AnswerPage) sign(ctx context.Context, request domain.SignRequest) (doma
 		}
 		return u.deliver(ctx, request.Channel, domain.SignAnswer(certificate, id, chosen, request.Version))
 	}
+	properties := request.Properties
+	if proposal.PlaceSeal != "" && !decision.Seal.IsZero() {
+		properties = decision.Seal.Into(properties)
+	}
 	signed, err := u.signer.Sign(ctx, PageSignature{
 		Crypto: request.Crypto, Format: request.Format, Algorithm: request.Algorithm,
-		Properties: request.Properties, Data: data, Key: decision.Key,
+		Properties: properties, Data: data, Key: decision.Key,
 	})
 	if err != nil {
 		var failure domain.Failure
@@ -174,6 +190,21 @@ func (u *AnswerPage) sign(ctx context.Context, request domain.SignRequest) (doma
 		}
 	}
 	return u.deliver(ctx, request.Channel, domain.SignAnswer(signed.Certificate, signed.Signature, chosen, request.Version))
+}
+
+// sealLaterWarning is said when the page wants a visible seal on a PDF that
+// arrives only after the approval: there is nothing to place it on yet.
+const sealLaterWarning = "the page asks for a visible seal, but the document is fetched only after you approve: the signature will be invisible"
+
+// signsPDF reports a PDF signature: PAdES, or auto over a PDF.
+func signsPDF(request domain.SignRequest) bool {
+	switch {
+	case request.Crypto == domain.Countersign:
+		return false
+	case request.Format.Family == "pades":
+		return true
+	}
+	return request.Format.Auto() && (bytes.HasPrefix(request.Data.Bytes, []byte("%PDF")) || len(request.Data.Bytes) == 0)
 }
 
 // referencedWarning opens the list of documents an Externally Detached

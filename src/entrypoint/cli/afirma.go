@@ -143,6 +143,9 @@ func (a *commandLineApprover) Approve(_ context.Context, proposal application.Pr
 	for _, warning := range proposal.Warnings {
 		fmt.Fprintf(a.stderr, "  warning    %s\n", warning)
 	}
+	if proposal.PlaceSeal != "" {
+		fmt.Fprintf(a.stderr, "  seal       the page asks for a visible seal (%s); the command line places none, so the signature is invisible\n", proposal.PlaceSeal)
+	}
 	if proposal.Remembered != "" {
 		fmt.Fprintf(a.stderr, "  kept       %s's key, from the page's earlier request (the key given here is used)\n", proposal.Remembered)
 	}
@@ -190,6 +193,19 @@ type proposalLine struct {
 	// Remembered is the holder of the key kept from the page's earlier
 	// request (sticky), which the window may approve with again.
 	Remembered string `json:"remembered,omitempty"`
+	// Seal is the page's visibleSignature (want, optional); SealDocument a
+	// private copy of the PDF to place it on, removed once decided.
+	Seal         string `json:"seal,omitempty"`
+	SealDocument string `json:"seal_document,omitempty"`
+}
+
+// sealLine is where the window placed the seal, in PDF points.
+type sealLine struct {
+	Page        int     `json:"page"`
+	LowerLeftX  float64 `json:"llx"`
+	LowerLeftY  float64 `json:"lly"`
+	UpperRightX float64 `json:"urx"`
+	UpperRightY float64 `json:"ury"`
 }
 
 type itemLine struct {
@@ -218,6 +234,8 @@ type decisionLine struct {
 	SaveTo     string `json:"save_to"`
 	// Remembered approves with the kept key instead of one named here.
 	Remembered bool `json:"remembered"`
+	// Seal is where the person placed the seal, when asked to.
+	Seal *sealLine `json:"seal"`
 }
 
 // Approve writes the proposal and reads the decision.
@@ -226,9 +244,18 @@ func (a *interactiveApprover) Approve(_ context.Context, proposal application.Pr
 		Format: proposal.Format, DataSize: proposal.DataSize, DataSHA256: proposal.DataSHA256, DataURL: proposal.DataURL,
 		ChooseFile: proposal.ChooseFile, SuggestedName: proposal.SuggestedName, Filters: proposal.Filter.Expressions(),
 		Warnings: proposal.Warnings, Rejected: proposal.Rejected, Items: []itemLine{},
-		Policy: proposal.Policy, Roles: proposal.Roles, Place: proposal.Place, Remembered: proposal.Remembered}
+		Policy: proposal.Policy, Roles: proposal.Roles, Place: proposal.Place, Remembered: proposal.Remembered,
+		Seal: proposal.PlaceSeal}
 	for _, item := range proposal.Items {
 		line.Items = append(line.Items, itemLine{ID: item.ID, Format: item.Format, Suboperation: item.Suboperation})
+	}
+	if len(proposal.SealDocument) > 0 {
+		path, remove, err := privateCopy(proposal.SealDocument)
+		if err != nil {
+			return application.Decision{}, err
+		}
+		defer remove()
+		line.SealDocument = path
 	}
 	encodeJSONLine(a.output, line)
 
@@ -243,6 +270,10 @@ func (a *interactiveApprover) Approve(_ context.Context, proposal application.Pr
 		return application.Decision{}, nil
 	}
 	result := application.Decision{Approved: true, SavePath: decision.SaveTo, UseRemembered: decision.Remembered}
+	if decision.Seal != nil {
+		result.Seal = domain.SealBox{Page: decision.Seal.Page, LowerLeftX: decision.Seal.LowerLeftX, LowerLeftY: decision.Seal.LowerLeftY,
+			UpperRightX: decision.Seal.UpperRightX, UpperRightY: decision.Seal.UpperRightY}
+	}
 	if decision.File != "" {
 		content, err := os.ReadFile(decision.File)
 		if err != nil {
@@ -263,6 +294,22 @@ func (a *interactiveApprover) Approve(_ context.Context, proposal application.Pr
 	}
 	result.Key = key
 	return result, nil
+}
+
+// privateCopy writes the document the window places the seal on where only
+// this user reads it; remove deletes it.
+func privateCopy(content []byte) (string, func(), error) {
+	directory, err := os.MkdirTemp("", "trebaruna-seal-")
+	if err != nil {
+		return "", nil, err
+	}
+	remove := func() { _ = os.RemoveAll(directory) }
+	path := filepath.Join(directory, "document.pdf")
+	if err := os.WriteFile(path, content, 0o600); err != nil {
+		remove()
+		return "", nil, err
+	}
+	return path, remove, nil
 }
 
 // encodeJSONLine writes one JSON object on one line.

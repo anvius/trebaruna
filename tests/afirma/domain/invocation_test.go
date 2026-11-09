@@ -236,3 +236,29 @@ func TestReferencedDocumentsAreReadAsAutoFirmaReadsThem(t *testing.T) {
 		t.Error("the variant is read case-insensitively, and only that one")
 	}
 }
+
+// TestAVisibleSealIsAskedUnlessThePagePlacedIt: visibleSignature want or
+// optional, case-insensitively; a page that gives the place or a field
+// asks nothing of the person.
+func TestAVisibleSealIsAskedUnlessThePagePlacedIt(t *testing.T) {
+	for properties, want := range map[string]string{
+		"visibleSignature=Want":     "want",
+		"visibleSignature=optional": "optional",
+		"visibleSignature=true":     "",
+		"visibleSignature=want\nsignaturePositionOnPageLowerLeftX=10": "",
+		"visibleSignature=want\nsignatureField=Firma1":                "",
+		"": "",
+	} {
+		if got := domain.SealWanted(domain.DecodeProperties(base64.StdEncoding.EncodeToString([]byte(properties)))); got != want {
+			t.Errorf("%q: %q, want %q", properties, got, want)
+		}
+	}
+	placed := domain.SealBox{Page: 2, LowerLeftX: 72.5, LowerLeftY: 90, UpperRightX: 272.5, UpperRightY: 150}.Into(map[string]string{"signReason": "x"})
+	if placed["signaturePage"] != "2" || placed["signaturePositionOnPageLowerLeftX"] != "72.5" || placed["signaturePositionOnPageUpperRightY"] != "150" ||
+		placed["signReason"] != "x" {
+		t.Errorf("the box as AutoFirma's parameters: %v", placed)
+	}
+	if !(domain.SealBox{}).IsZero() {
+		t.Error("no box")
+	}
+}

@@ -55,6 +55,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.73.0-unstable" date="2026-11-09">
+      <description>
+        <p>When a page asks for a visible signature, you place the seal on its PDF in the approval window.</p>
+      </description>
+    </release>
     <release version="0.72.0-unstable" date="2026-11-09">
       <description>
         <p>XML signatures over documents a page names by address and digest (Externally Detached, manifests), every one listed before you approve.</p>
