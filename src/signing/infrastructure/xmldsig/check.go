@@ -355,6 +355,12 @@ func walkElements(element *etree.Element, visit func(*etree.Element)) {
 
 // elementByID finds the one element whose Id (or ID, or id) is id; two
 // carrying it is how wrapping attacks start, and is refused.
+// ElementByID finds the one element of a tree whose Id (or ID, or id) is
+// id, as a same-document reference resolves it.
+func ElementByID(root *etree.Element, id string) (*etree.Element, error) {
+	return elementByID(root, id)
+}
+
 func elementByID(root *etree.Element, id string) (*etree.Element, error) {
 	var found []*etree.Element
 	walkElements(root, func(element *etree.Element) {

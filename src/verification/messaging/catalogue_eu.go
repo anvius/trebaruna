@@ -42,6 +42,7 @@ var Basque = Catalogue{
 		"signing_certificate.mismatch":           "erakutsitako ziurtagiria ez da sinadurak izendatzen duena: ematen duen identitatea ez zen sinatu",
 		"signing_certificate.missing":            "sinadurak ez du bere ziurtagiria izendatzen sinatutako propietateetan: erakutsitako ziurtagiria ez dago harekin lotuta",
 		"timestamp.archive_unbound":              "artxibo-zigiluak ez du sinadura hau estaltzen EN 319 132-1 arauak dioen moduan: ez du ezer frogatzen haren gainean",
+		"content.partly_signed":                  "sinadurak dokumentuaren zati bat baino ez du estaltzen: zati hauek ez daude sinatuta",
 		"signature.intact":                       "sinatutako edukia ez da aldatu",
 		"content.detached":                       "sinadura bereizia: ondoan duen dokumentuarekin egiaztatua",
 		"content.missing":                        "sinadura bereizia: sinatutako dokumentua behar da haren byteak alderatzeko (jarri sinaduraren ondoan: izen bera .p7s gabe, edo XML sinadurak aipatzen duen izena; edo adierazi --content aukerarekin)",

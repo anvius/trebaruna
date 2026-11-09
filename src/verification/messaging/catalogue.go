@@ -100,6 +100,7 @@ var Spanish = Catalogue{
 		"signing_certificate.mismatch":           "el certificado mostrado no es el que nombra la firma: la identidad que da no se firmó",
 		"signing_certificate.missing":            "la firma no nombra su certificado en las propiedades firmadas: el certificado mostrado no queda vinculado a ella",
 		"timestamp.archive_unbound":              "el sello de archivo no cubre esta firma como dice EN 319 132-1: no prueba nada sobre ella",
+		"content.partly_signed":                  "la firma cubre solo parte del documento: estas partes no están firmadas",
 		"signature.intact":                       "el contenido firmado no se ha modificado",
 		"content.detached":                       "firma separada: comprobada con el documento que tiene al lado",
 		"content.missing":                        "firma separada: hace falta el documento firmado para comparar sus bytes (ponlo al lado de la firma: el mismo nombre sin .p7s, o el que nombra la firma XML; o indícalo con --content)",
@@ -177,6 +178,7 @@ var Italian = Catalogue{
 		"signing_certificate.mismatch":           "il certificato mostrato non è quello indicato dalla firma: l'identità che riporta non è stata firmata",
 		"signing_certificate.missing":            "la firma non indica il suo certificato nelle proprietà firmate: il certificato mostrato non è legato a essa",
 		"timestamp.archive_unbound":              "la marca di archiviazione non copre questa firma come stabilisce EN 319 132-1: non prova nulla su di essa",
+		"content.partly_signed":                  "la firma copre solo una parte del documento: queste parti non sono firmate",
 		"signature.intact":                       "il contenuto firmato non è stato modificato",
 		"content.detached":                       "firma separata: verificata con il documento che le sta accanto",
 		"content.missing":                        "firma separata: serve il documento firmato per confrontarne i byte (mettilo accanto alla firma: lo stesso nome senza .p7s, o quello che la firma XML indica; oppure indicalo con --content)",
@@ -254,6 +256,7 @@ var English = Catalogue{
 		"signing_certificate.mismatch":           "the certificate shown is not the one the signature names: the identity it gives was not signed",
 		"signing_certificate.missing":            "the signature names no signing certificate in its signed properties: the certificate shown is not bound to it",
 		"timestamp.archive_unbound":              "the archive timestamp does not cover this signature as EN 319 132-1 reads: it proves nothing about it",
+		"content.partly_signed":                  "the signature covers only part of the document: these parts are not signed",
 		"signature.intact":                       "the signed content is unaltered",
 		"content.detached":                       "detached signature: checked against the document beside it",
 		"content.missing":                        "detached signature: the signed document is needed to compare its bytes (put it beside the signature: the same name without .p7s, or the name an XML signature gives; or name it with --content)",
@@ -358,7 +361,7 @@ func init() {
 		"trustlist.stale", "format.unsupported", "verification.warning",
 		"signature.qualified", "signature.not_qualified",
 		"signature.unverifiable", "container.covers", "container.unsigned_files", "relationships.libxmlsec_form", "timestamp.legacy_form",
-		"signing_certificate.bound", "signing_certificate.mismatch", "signing_certificate.missing", "timestamp.archive_unbound",
+		"signing_certificate.bound", "signing_certificate.mismatch", "signing_certificate.missing", "timestamp.archive_unbound", "content.partly_signed",
 	}
 
 	for name, catalogue := range languages {

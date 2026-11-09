@@ -17,6 +17,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- verify names the parts of an XML document its signature does not cover:
+  a signature whose references point at one element by Id, none at the
+  whole document, leaves the rest unsigned and readable as if signed (the
+  ground of signature wrapping). `content.partly_signed`, with the paths
+  of the unsigned elements; detached and enveloping signatures, and
+  references to the whole document, are not concerned.
+
 - verify checks that the certificate a signature carries is the one it
   names in its signed attributes: signing-certificate-v2 or v1 in CAdES and
   PAdES (read from each PDF signature field's envelope, which the PDF

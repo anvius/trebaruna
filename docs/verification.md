@@ -122,6 +122,7 @@ anyone can verify it again.
 | `content.missing` | unknown | A detached signature without the document it signs |
 | `container.covers` | good | The files of an ASiC container a signature covers |
 | `container.unsigned_files` | warn | Files of the container no signature covers: they are not signed, whatever else the container says |
+| `content.partly_signed` | warn | An XML signature covers only some elements of the document around it (references by Id, none to the whole document): the parts named are not signed, whatever they say |
 | `signature.not_qualified` | warn | A valid advanced signature that is not a QES |
 | `signature.qualified` | good | The QES conditions all held |
 
