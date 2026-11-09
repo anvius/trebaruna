@@ -30,9 +30,12 @@ type CommandLineSigner struct {
 func (s CommandLineSigner) Sign(ctx context.Context, intent domain.SigningIntent) (domain.Receipt, error) {
 	var stdout, stderr bytes.Buffer
 	command := exec.CommandContext(ctx, s.BinaryPath, signArguments(intent)...)
-	// The passphrase travels in the environment, never as --pass: any local
-	// user can list command lines, only the owner can read the environment.
-	command.Env = append(os.Environ(), "TREBARUNA_PASSPHRASE="+intent.Key.Passphrase)
+	// Secrets travel in the environment, never as --pass or --tsa-pass: any
+	// local user can list command lines, only the owner can read the environment.
+	command.Env = append(os.Environ(),
+		"TREBARUNA_PASSPHRASE="+intent.Key.Passphrase,
+		"TREBARUNA_TSA_PASS="+intent.TimestampPassword,
+	)
 	command.Stdout = &stdout
 	command.Stderr = &stderr
 
@@ -93,6 +96,9 @@ func signArguments(intent domain.SigningIntent) []string {
 	}
 	if intent.TimestampURL != "" {
 		arguments = append(arguments, "--tsa", intent.TimestampURL)
+	}
+	if intent.TimestampUser != "" {
+		arguments = append(arguments, "--tsa-user", intent.TimestampUser)
 	}
 	if intent.Reason != "" {
 		arguments = append(arguments, "--reason", intent.Reason)

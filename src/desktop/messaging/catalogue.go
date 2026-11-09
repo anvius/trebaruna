@@ -133,6 +133,9 @@ type Catalogue struct {
 	OpenSigned                 string
 	ShowFolder                 string
 	CheckSignature             string
+	TSAUserLabel               string
+	TSAPasswordLabel           string
+	TSAAccountHint             string
 
 	// Menus and dialogs.
 	MenuFile              string
@@ -259,6 +262,9 @@ var spanish = Catalogue{
 	OpenSigned:                 "Abrir",
 	ShowFolder:                 "Carpeta",
 	CheckSignature:             "Comprobar",
+	TSAUserLabel:               "Usuario de la TSA (si la autoridad lo pide)",
+	TSAPasswordLabel:           "Contraseña de la TSA",
+	TSAAccountHint:             "Algunas autoridades, como las de Aruba o InfoCert, solo sellan con una cuenta. El usuario se recuerda; la contraseña, no.",
 	MenuFile:                   "Archivo",
 	MenuOpenDocument:           "Abrir documento para firmar…",
 	MenuChooseCertificate:      "Elegir certificado…",
@@ -369,6 +375,9 @@ var italian = Catalogue{
 	OpenSigned:                 "Apri",
 	ShowFolder:                 "Cartella",
 	CheckSignature:             "Verifica",
+	TSAUserLabel:               "Utente TSA (se l'autorità lo richiede)",
+	TSAPasswordLabel:           "Password TSA",
+	TSAAccountHint:             "Alcune autorità, come quelle di Aruba o InfoCert, appongono la marca solo con un account. L'utente viene ricordato, la password no.",
 	MenuFile:                   "File",
 	MenuOpenDocument:           "Apri documento da firmare…",
 	MenuChooseCertificate:      "Scegli certificato…",
@@ -479,6 +488,9 @@ var english = Catalogue{
 	OpenSigned:                 "Open",
 	ShowFolder:                 "Folder",
 	CheckSignature:             "Check",
+	TSAUserLabel:               "TSA user (if the authority asks for one)",
+	TSAPasswordLabel:           "TSA password",
+	TSAAccountHint:             "Some authorities, such as Aruba's or InfoCert's, only timestamp with an account. The user is remembered; the password is not.",
 	MenuFile:                   "File",
 	MenuOpenDocument:           "Open document to sign…",
 	MenuChooseCertificate:      "Choose certificate…",

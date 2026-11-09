@@ -22,12 +22,13 @@ import (
 	"codeberg.org/simplicer/trebaruna/src/desktop/messaging"
 )
 
-// Preference keys. The certificate path and the timestamp authority are
-// remembered because people sign with the same card through the same TSA for
-// years; the passphrase never is.
+// Preference keys. The certificate path, the timestamp authority and its
+// account name are remembered because people sign with the same card through
+// the same TSA for years; passphrases and passwords never are.
 const (
 	preferenceCertificate = "certificate.path"
 	preferenceTimestamp   = "timestamp.url"
+	preferenceTSAUser     = "timestamp.user"
 	preferenceLevel       = "signature.level"
 )
 
@@ -66,6 +67,8 @@ type signForm struct {
 	sealNote       *widget.Label
 	level          *widget.Select
 	timestamp      *widget.Entry
+	tsaUser        *widget.Entry
+	tsaPassword    *widget.Entry
 	timestampBox   *fyne.Container
 	reason         *widget.Entry
 	location       *widget.Entry
@@ -114,7 +117,17 @@ func newSignForm(
 	form.timestamp = widget.NewEntry()
 	form.timestamp.SetPlaceHolder("https://")
 	form.timestamp.SetText(preferences.String(preferenceTimestamp))
-	form.timestampBox = container.NewVBox(fieldLabel(m.TSALabel), form.timestamp, caption(m.LevelHint))
+	form.tsaUser = widget.NewEntry()
+	form.tsaUser.SetText(preferences.String(preferenceTSAUser))
+	form.tsaPassword = widget.NewPasswordEntry()
+	// Aruba's and InfoCert's authorities answer 401 without an account, which
+	// is why the account sits next to the address instead of in a dialog.
+	form.timestampBox = container.NewVBox(
+		fieldLabel(m.TSALabel), form.timestamp, caption(m.LevelHint),
+		fieldLabel(m.TSAUserLabel), form.tsaUser,
+		fieldLabel(m.TSAPasswordLabel), form.tsaPassword,
+		caption(m.TSAAccountHint),
+	)
 	form.level.SetSelected(form.labelFor(domain.SignatureLevel(preferences.StringWithFallback(preferenceLevel, string(domain.LevelBasic)))))
 
 	form.reason = widget.NewEntry()
@@ -424,14 +437,16 @@ func (f *signForm) levelChanged() {
 // sign validates, signs off the UI thread, and reports in place.
 func (f *signForm) sign() {
 	intent := domain.SigningIntent{
-		DocumentPath: f.document,
-		Key:          domain.CertificateFile{Path: f.certificate, Passphrase: f.passphrase.Text},
-		Format:       f.format,
-		Level:        f.selectedLevel(),
-		Seal:         domain.SealChoice{Page: 1},
-		TimestampURL: strings.TrimSpace(f.timestamp.Text),
-		Reason:       strings.TrimSpace(f.reason.Text),
-		Location:     strings.TrimSpace(f.location.Text),
+		DocumentPath:      f.document,
+		Key:               domain.CertificateFile{Path: f.certificate, Passphrase: f.passphrase.Text},
+		Format:            f.format,
+		Level:             f.selectedLevel(),
+		Seal:              domain.SealChoice{Page: 1},
+		TimestampURL:      strings.TrimSpace(f.timestamp.Text),
+		TimestampUser:     strings.TrimSpace(f.tsaUser.Text),
+		TimestampPassword: f.tsaPassword.Text,
+		Reason:            strings.TrimSpace(f.reason.Text),
+		Location:          strings.TrimSpace(f.location.Text),
 	}
 	if f.format.HasVisibleSeal() {
 		intent.Seal = f.pages.choice()
@@ -459,6 +474,7 @@ func (f *signForm) sign() {
 			f.preferences.SetString(preferenceLevel, string(intent.Level))
 			if intent.TimestampURL != "" {
 				f.preferences.SetString(preferenceTimestamp, intent.TimestampURL)
+				f.preferences.SetString(preferenceTSAUser, intent.TimestampUser)
 			}
 			f.signedPath = receipt.SignedPath
 			f.report(fmt.Sprintf(f.m.SignedAs, filepath.Base(receipt.SignedPath)), widget.SuccessImportance)

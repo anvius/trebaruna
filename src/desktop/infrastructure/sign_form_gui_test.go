@@ -247,3 +247,31 @@ func TestASigningFailureIsReportedInPlace(t *testing.T) {
 		t.Errorf("status %q", form.status.Text)
 	}
 }
+
+func TestTheTimestampAccountReachesTheSigner(t *testing.T) {
+	fixture := newFormFixture(t, scriptedCertificate{summary: qualifiedRossi()})
+	form := fixture.desktop.form
+	form.setDocument("/tmp/offerta.docx")
+	form.setCertificate("/tmp/rossi.p12")
+	form.level.SetSelected(form.m.LevelTimestampLabel)
+	form.timestamp.SetText("https://servizi.arubapec.it/tsa/ngrequest.php")
+	form.tsaUser.SetText("studio.rossi")
+	form.tsaPassword.SetText("tsa-segreta")
+
+	test.Tap(form.signButton)
+	intent := <-fixture.signer.intents
+
+	if intent.TimestampUser != "studio.rossi" || intent.TimestampPassword != "tsa-segreta" {
+		t.Errorf("account = %q / %q", intent.TimestampUser, intent.TimestampPassword)
+	}
+	settle(t, func() bool { return form.afterSign.Visible() })
+	preferences := fyne.CurrentApp().Preferences()
+	if preferences.String(preferenceTSAUser) != "studio.rossi" {
+		t.Error("the TSA user must be remembered")
+	}
+	for _, key := range []string{preferenceCertificate, preferenceTimestamp, preferenceTSAUser, preferenceLevel} {
+		if preferences.String(key) == "tsa-segreta" {
+			t.Errorf("the TSA password was stored under %q", key)
+		}
+	}
+}

@@ -194,3 +194,26 @@ func TestThePassphraseNeverAppearsOnTheCommandLine(t *testing.T) {
 		t.Errorf("TREBARUNA_PASSPHRASE = %q, want the passphrase", got)
 	}
 }
+
+func TestTheTimestampAccountTravelsWithoutItsPasswordOnTheCommandLine(t *testing.T) {
+	seen := filepath.Join(t.TempDir(), "environment")
+	binary, recorded := fakeCommand(t, "printf '%s' \"$TREBARUNA_TSA_PASS\" > "+seen+"; echo '"+receiptJSON+"'")
+	intent := fullIntent()
+	intent.TimestampUser = "studio.rossi"
+	intent.TimestampPassword = "tsa-segreta"
+
+	if _, err := (infrastructure.CommandLineSigner{BinaryPath: binary}).Sign(context.Background(), intent); err != nil {
+		t.Fatalf("Sign: %v", err)
+	}
+
+	arguments := recordedArguments(t, recorded)
+	if !containsPair(arguments, "--tsa-user", "studio.rossi") {
+		t.Errorf("arguments = %v, want --tsa-user", arguments)
+	}
+	if contains(arguments, "tsa-segreta") || contains(arguments, "--tsa-pass") {
+		t.Errorf("the TSA password leaked into the command line: %v", arguments)
+	}
+	if got, _ := os.ReadFile(seen); string(got) != "tsa-segreta" {
+		t.Errorf("TREBARUNA_TSA_PASS = %q", got)
+	}
+}

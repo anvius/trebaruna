@@ -63,9 +63,13 @@ The certificate path, the level and the timestamp authority are remembered
 between sessions. The passphrase never is.
 
 **More options** holds what is rarely changed: the level (basic, with
-timestamp, LT, LTA — the authority field appears only when the level needs
-one), the reason, and the place, which is prefilled from the certificate when
-it carries a locality.
+timestamp, LT, LTA — the authority fields appear only when the level needs
+them), the reason, and the place, which is prefilled from the certificate when
+it carries a locality. Next to the authority address go its user and password,
+for authorities that only timestamp with an account (Aruba's
+`https://servizi.arubapec.it/tsa/ngrequest.php` answers 401 without one). The
+user is remembered; the password travels in the environment and is never
+stored.
 
 Press **Sign**. Signing runs off the UI thread, so a slow smartcard or a
 distant TSA does not freeze the window. The result is reported in place, with

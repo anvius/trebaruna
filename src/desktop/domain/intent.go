@@ -14,8 +14,12 @@ type SigningIntent struct {
 	Level        SignatureLevel
 	Seal         SealChoice
 	TimestampURL string
-	Reason       string
-	Location     string
+	// TimestampUser and TimestampPassword are the account some authorities
+	// require (Aruba's and InfoCert's, among others). Both may be empty.
+	TimestampUser     string
+	TimestampPassword string
+	Reason            string
+	Location          string
 }
 
 // Validate reports what is missing, before any process is spawned.

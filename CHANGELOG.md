@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Desktop: user and password for timestamp authorities that require an
+  account, such as Aruba's and InfoCert's. The user is remembered; the password
+  is passed as `TREBARUNA_TSA_PASS`, never on the command line, and not stored.
+
 - Desktop: a main menu (File, Signature, Tools, Help) with every action and
   shortcuts for the frequent ones; dropping a file on the window routes it
   (certificate, file to check, or document to sign); an About dialog with the
