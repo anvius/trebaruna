@@ -226,8 +226,12 @@ valid for 127.0.0.1 alone. When a page asks for the channel and the
 certificate is missing, the approval window offers to install it and opens
 the channel again. While the page keeps the channel, the window shows each
 of its requests in turn and waits for the next; it closes when the page
-leaves. Recent Chromium versions ask once to let the site reach this
-computer ("local network access").
+leaves. When the page asks to keep the certificate (`sticky`), its next
+request offers *Use the same certificate as in the previous request*,
+ticked, with the holder's name below: approving uses it without choosing it
+or typing its PIN again; unticking shows the key choice. Recent Chromium
+versions ask once to let the site reach this computer ("local network
+access").
 
 When a Spanish administration page starts AutoFirma's protocol, the system
 opens `trebaruna-desktop` with the `afirma://` URI, and an approval window

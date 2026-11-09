@@ -72,6 +72,7 @@ type stepLine struct {
 	Policy        string   `json:"policy"`
 	Roles         []string `json:"roles"`
 	Place         string   `json:"place"`
+	Remembered    string   `json:"remembered"`
 	Items         []struct {
 		ID           string `json:"id"`
 		Format       string `json:"format"`
@@ -106,7 +107,7 @@ func (s *commandSession) Next() (domain.PageStep, error) {
 	proposal := domain.PageProposal{Operation: line.Operation, Site: line.Site, AppName: line.AppName, Format: line.Format,
 		DataSize: line.DataSize, DataSHA256: line.DataSHA256, DataURL: line.DataURL, ChooseFile: line.ChooseFile,
 		SuggestedName: line.SuggestedName, Filters: line.Filters, Warnings: line.Warnings, Rejected: line.Rejected,
-		Policy: line.Policy, Roles: line.Roles, Place: line.Place}
+		Policy: line.Policy, Roles: line.Roles, Place: line.Place, Remembered: line.Remembered}
 	for _, item := range line.Items {
 		proposal.Items = append(proposal.Items, domain.PageItem{ID: item.ID, Format: item.Format, Suboperation: item.Suboperation})
 	}
@@ -116,7 +117,9 @@ func (s *commandSession) Next() (domain.PageStep, error) {
 // Decide writes the decision line.
 func (s *commandSession) Decide(decision domain.PageDecision) error {
 	line := map[string]any{"approved": decision.Approved}
-	if decision.Approved {
+	if decision.Approved && decision.Remembered {
+		line["remembered"], line["file"], line["save_to"] = true, decision.Document, decision.SaveTo
+	} else if decision.Approved {
 		key := map[string]any{}
 		switch {
 		case decision.Card.Chosen() && decision.Card.Store == domain.StoreFirefox:

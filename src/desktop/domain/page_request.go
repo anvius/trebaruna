@@ -24,6 +24,9 @@ type PageProposal struct {
 	Policy string
 	Roles  []string
 	Place  string
+	// Remembered is the holder of the certificate kept from the page's
+	// earlier request (sticky), which may be used again without choosing.
+	Remembered string
 }
 
 // PageItem is one document of a batch.
@@ -50,6 +53,9 @@ type PageDecision struct {
 	Document string
 	// SaveTo is where save and signandsave write.
 	SaveTo string
+	// Remembered approves with the certificate kept from the page's
+	// earlier request, instead of Card or KeyFile.
+	Remembered bool
 }
 
 // Validate refuses an approval that misses something the proposal needs,
@@ -58,7 +64,7 @@ func (d PageDecision) Validate(proposal PageProposal) error {
 	if !d.Approved {
 		return nil
 	}
-	if proposal.NeedsKey() {
+	if proposal.NeedsKey() && !(d.Remembered && proposal.Remembered != "") {
 		switch {
 		case d.Card.Chosen():
 			if err := d.Card.problem(); err != nil {

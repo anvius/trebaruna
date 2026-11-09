@@ -207,6 +207,30 @@ func TestADigestThePageSentIsShown(t *testing.T) {
 	}
 }
 
+// TestAKeptCertificateIsOfferedFirst: the certificate the page asked to
+// keep is offered, ticked, the key choice hidden until the person wants
+// another one.
+func TestAKeptCertificateIsOfferedFirst(t *testing.T) {
+	proposal := signProposal()
+	proposal.Remembered = "GARCIA LOPEZ, MARIA"
+	request, session := pageFixture(t, proposalStep(proposal), domain.PageStep{Outcome: &domain.PageOutcome{Answer: "Y2VydA==|c2ln", Delivered: true}})
+	if !request.rememberedBox.Visible() || !request.remembered.Checked || request.keyBox.Visible() {
+		t.Fatalf("offered %t, ticked %t, key choice shown %t", request.rememberedBox.Visible(), request.remembered.Checked, request.keyBox.Visible())
+	}
+	if !strings.Contains(request.rememberedFor.Text, "GARCIA LOPEZ, MARIA: la página pidió conservarlo") {
+		t.Errorf("the holder is not named: %q", request.rememberedFor.Text)
+	}
+	test.Tap(request.remembered)
+	if !request.keyBox.Visible() {
+		t.Error("unticked, the key choice comes back")
+	}
+	test.Tap(request.remembered)
+	test.Tap(request.approve)
+	if len(session.decisions) != 1 || !session.decisions[0].Remembered || session.decisions[0].Card.Chosen() {
+		t.Errorf("decision %+v", session.decisions)
+	}
+}
+
 func sessionOutcomeStep(answer string) domain.PageStep {
 	return domain.PageStep{Outcome: &domain.PageOutcome{Answer: answer, Delivered: true, Session: true}}
 }

@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- afirma:// `sticky` and `resetsticky`: within one process, a WebSocket
+  session, the key approved for a sticky request is kept in memory (with
+  its PIN or passphrase) and the window offers it, ticked, at the page's
+  next sticky request: the person need not choose it again, but still
+  approves every request, and the page's filters still apply.
+  `resetsticky`, or the session ending, forgets it. The holder's name
+  wraps in the window.
+
 - afirma:// `CAdES-ASiC-S-tri` and `XAdES-ASiC-S-tri`: the ASiC-S
   container made through the site's server, which receives the format as
   AutoFirma's ASiC triphase signers send it (`CAdES-ASiC-S`,

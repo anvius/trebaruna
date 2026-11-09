@@ -69,3 +69,29 @@ func TestAnIncompleteApprovalNeverReachesTheCommand(t *testing.T) {
 		t.Errorf("declining needs nothing: %v", err)
 	}
 }
+
+// TestAKeptCertificateTravelsWithoutTheKey: the window approves with the
+// certificate the page asked to keep, and no key or secret goes back.
+func TestAKeptCertificateTravelsWithoutTheKey(t *testing.T) {
+	received := filepath.Join(t.TempDir(), "decision")
+	proposal := `{"type":"proposal","operation":"sign","site":"sede.example","format":"CAdES","data_size":4,"items":[],"remembered":"MARIA GARCIA"}`
+	outcome := `{"type":"outcome","answer":"Y2VydA==|c2ln","delivered":true,"session":true}`
+	binary, _ := fakeCommand(t, "echo '"+proposal+"'; read line; printf '%s' \"$line\" > "+received+"; echo '"+outcome+"'")
+	session, err := infrastructure.CommandLinePageRequests{BinaryPath: binary}.Open(context.Background(), "afirma://websocket?v=4")
+	if err != nil {
+		t.Fatal(err)
+	}
+	step, err := session.Next()
+	if err != nil || step.Proposal == nil || step.Proposal.Remembered != "MARIA GARCIA" {
+		t.Fatalf("proposal %+v, %v", step.Proposal, err)
+	}
+	if err := session.Decide(domain.PageDecision{Approved: true, Remembered: true}); err != nil {
+		t.Fatal(err)
+	}
+	session.Next()
+	session.Close()
+	decision, _ := os.ReadFile(received)
+	if !strings.Contains(string(decision), `"remembered":true`) || strings.Contains(string(decision), `"key"`) || strings.Contains(string(decision), `"pin"`) {
+		t.Errorf("decision %s", decision)
+	}
+}

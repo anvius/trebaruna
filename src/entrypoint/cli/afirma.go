@@ -143,6 +143,9 @@ func (a *commandLineApprover) Approve(_ context.Context, proposal application.Pr
 	for _, warning := range proposal.Warnings {
 		fmt.Fprintf(a.stderr, "  warning    %s\n", warning)
 	}
+	if proposal.Remembered != "" {
+		fmt.Fprintf(a.stderr, "  kept       %s's key, from the page's earlier request (the key given here is used)\n", proposal.Remembered)
+	}
 	if !a.approve {
 		fmt.Fprintln(a.stderr, "  not approved: answering CANCEL (approve with --approve and a key)")
 		return application.Decision{}, nil
@@ -184,6 +187,9 @@ type proposalLine struct {
 	Policy        string     `json:"policy,omitempty"`
 	Roles         []string   `json:"roles,omitempty"`
 	Place         string     `json:"place,omitempty"`
+	// Remembered is the holder of the key kept from the page's earlier
+	// request (sticky), which the window may approve with again.
+	Remembered string `json:"remembered,omitempty"`
 }
 
 type itemLine struct {
@@ -210,6 +216,8 @@ type decisionLine struct {
 	PIN        string `json:"pin"`
 	File       string `json:"file"`
 	SaveTo     string `json:"save_to"`
+	// Remembered approves with the kept key instead of one named here.
+	Remembered bool `json:"remembered"`
 }
 
 // Approve writes the proposal and reads the decision.
@@ -218,7 +226,7 @@ func (a *interactiveApprover) Approve(_ context.Context, proposal application.Pr
 		Format: proposal.Format, DataSize: proposal.DataSize, DataSHA256: proposal.DataSHA256, DataURL: proposal.DataURL,
 		ChooseFile: proposal.ChooseFile, SuggestedName: proposal.SuggestedName, Filters: proposal.Filter.Expressions(),
 		Warnings: proposal.Warnings, Rejected: proposal.Rejected, Items: []itemLine{},
-		Policy: proposal.Policy, Roles: proposal.Roles, Place: proposal.Place}
+		Policy: proposal.Policy, Roles: proposal.Roles, Place: proposal.Place, Remembered: proposal.Remembered}
 	for _, item := range proposal.Items {
 		line.Items = append(line.Items, itemLine{ID: item.ID, Format: item.Format, Suboperation: item.Suboperation})
 	}
@@ -234,6 +242,17 @@ func (a *interactiveApprover) Approve(_ context.Context, proposal application.Pr
 	if !decision.Approved {
 		return application.Decision{}, nil
 	}
+	result := application.Decision{Approved: true, SavePath: decision.SaveTo, UseRemembered: decision.Remembered}
+	if decision.File != "" {
+		content, err := os.ReadFile(decision.File)
+		if err != nil {
+			return application.Decision{}, err
+		}
+		result.File, result.FileName = content, filepath.Base(decision.File)
+	}
+	if decision.Remembered {
+		return result, nil
+	}
 	key, err := buildSigner(signerOptions{
 		p12Path: decision.Key.P12, pemPath: decision.Key.PEM, passphrase: decision.Passphrase, pin: decision.PIN,
 		card: decision.Key.Card, tokenLabel: decision.Key.Token, certificate: decision.Key.Certificate,
@@ -242,14 +261,7 @@ func (a *interactiveApprover) Approve(_ context.Context, proposal application.Pr
 	if err != nil {
 		return application.Decision{}, err
 	}
-	result := application.Decision{Approved: true, Key: key, SavePath: decision.SaveTo}
-	if decision.File != "" {
-		content, err := os.ReadFile(decision.File)
-		if err != nil {
-			return application.Decision{}, err
-		}
-		result.File, result.FileName = content, filepath.Base(decision.File)
-	}
+	result.Key = key
 	return result, nil
 }
 

@@ -41,6 +41,12 @@ type Proposal struct {
 	Policy string
 	Roles  []string
 	Place  string
+	// Remembered names the holder of the key the page asked to keep at an
+	// earlier request (sticky): the person may approve with it again
+	// without choosing it.
+	Remembered string
+	// keep is the page's sticky: the key approved now is kept.
+	keep bool
 }
 
 // Decision is the person's answer: approved, with the key to use.
@@ -53,6 +59,9 @@ type Decision struct {
 	FileName string
 	// SavePath is where save and signandsave write, chosen by the person.
 	SavePath string
+	// UseRemembered approves with the key kept from the page's earlier
+	// request, which Proposal.Remembered names, instead of Key.
+	UseRemembered bool
 }
 
 // Approver shows a proposal to the person and returns their decision.

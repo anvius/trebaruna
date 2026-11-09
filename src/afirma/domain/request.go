@@ -36,6 +36,10 @@ type Common struct {
 	Keystore string
 	// Properties are the decoded extraParams (A.7).
 	Properties map[string]string
+	// Sticky asks to keep the key chosen now for the page's next request
+	// in this process; ResetSticky forgets a key kept earlier.
+	Sticky      bool
+	ResetSticky bool
 }
 
 // Site names the page for the person approving: the host of its storage
@@ -72,8 +76,10 @@ func CounterTarget(properties map[string]string) string {
 // ReadCommon validates what every operation carries.
 func ReadCommon(invocation Invocation, servicesRequired bool) (Common, error) {
 	common := Common{
-		AppName:    invocation.Param("appname"),
-		Properties: DecodeProperties(invocation.Param("properties")),
+		AppName:     invocation.Param("appname"),
+		Properties:  DecodeProperties(invocation.Param("properties")),
+		Sticky:      strings.EqualFold(invocation.Param("sticky"), "true"),
+		ResetSticky: strings.EqualFold(invocation.Param("resetsticky"), "true"),
 	}
 
 	version, err := readVersion(invocation.Param("ver"))

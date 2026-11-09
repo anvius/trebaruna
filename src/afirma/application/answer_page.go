@@ -28,6 +28,15 @@ type AnswerPage struct {
 	requests     RequestStore
 	batches      BatchServices
 	raw          RawSigner
+	// kept is the key a page asked to keep (sticky) for its next request
+	// in this process, a WebSocket session's.
+	kept *keptKey
+}
+
+// keptKey is a kept key and the holder its certificate names.
+type keptKey struct {
+	key    signing.Signer
+	holder string
 }
 
 // WithBatches adds the batch services and the raw signer; without them a
@@ -211,6 +220,12 @@ func (u *AnswerPage) approve(ctx context.Context, proposal Proposal) (Decision, 
 		if err != nil || !decision.Approved || proposal.Operation == domain.Save {
 			return decision, err
 		}
+		if decision.UseRemembered {
+			if u.kept == nil || proposal.Remembered == "" {
+				return Decision{}, domain.Failure{Code: domain.CannotAccessKeystore, Cause: "no key was kept for this page"}
+			}
+			decision.Key = u.kept.key
+		}
 		raw, err := u.certificates.Certificate(decision.Key)
 		if err != nil {
 			return Decision{}, err
@@ -226,6 +241,9 @@ func (u *AnswerPage) approve(ctx context.Context, proposal Proposal) (Decision, 
 			}
 		}
 		if proposal.Filter.Accepts(certificate, neighbours, time.Now()) {
+			if proposal.keep {
+				u.kept = &keptKey{key: decision.Key, holder: certificate.Subject.CommonName}
+			}
 			return decision, nil
 		}
 		proposal.Rejected = certificate.Subject.CommonName + " is not a certificate this page accepts" +
@@ -266,7 +284,13 @@ func (u *AnswerPage) proposal(operation domain.Operation, common domain.Common, 
 		Operation: operation, Site: common.Site(), AppName: common.AppName, Format: format,
 		DataURL: payload.URL, ChooseFile: payload.Absent(), Filter: domain.FilterFrom(common.Properties),
 		Policy: domain.DeclaredPolicy(common.Properties), Roles: domain.ClaimedRoles(common.Properties),
-		Place: domain.DeclaredPlace(common.Properties),
+		Place: domain.DeclaredPlace(common.Properties), keep: common.Sticky,
+	}
+	if common.ResetSticky {
+		u.kept = nil
+	}
+	if common.Sticky && u.kept != nil {
+		proposal.Remembered = u.kept.holder
 	}
 	if len(payload.Bytes) > 0 {
 		sum := sha256.Sum256(payload.Bytes)

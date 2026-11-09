@@ -36,23 +36,29 @@ type pageRequest struct {
 	saveTo   string
 	keyFile  string
 
-	details     *fyne.Container
-	keySource   *widget.RadioGroup
-	fileRow     *fileRow
-	passphrase  *widget.Entry
-	fileSource  *fyne.Container
-	cards       *cardSource
-	cardList    *application.ListCards
-	storeList   *application.ListCards
-	keyBox      *fyne.Container
-	documentRow *fileRow
-	saveRow     *fileRow
-	status      *widget.Label
-	approve     *widget.Button
-	decline     *widget.Button
-	closing     *widget.Button
-	finished    bool
-	cancel      context.CancelFunc
+	details    *fyne.Container
+	keySource  *widget.RadioGroup
+	fileRow    *fileRow
+	passphrase *widget.Entry
+	fileSource *fyne.Container
+	cards      *cardSource
+	cardList   *application.ListCards
+	storeList  *application.ListCards
+	keyBox     *fyne.Container
+	// remembered offers the certificate kept from the page's earlier
+	// request (sticky) instead of choosing one; rememberedBox holds it with
+	// the holder's name, which wraps.
+	remembered    *widget.Check
+	rememberedFor *widget.Label
+	rememberedBox *fyne.Container
+	documentRow   *fileRow
+	saveRow       *fileRow
+	status        *widget.Label
+	approve       *widget.Button
+	decline       *widget.Button
+	closing       *widget.Button
+	finished      bool
+	cancel        context.CancelFunc
 
 	// uri is the request, started again once the local certificate is
 	// installed; localChannel installs it; installLocal offers to.
@@ -98,6 +104,10 @@ func newPageRequest(window fyne.Window, m messaging.Catalogue, review *applicati
 	request.keySource = widget.NewRadioGroup([]string{m.KeyFromFile, m.KeyFromCard, m.KeyFromFirefox}, func(string) { request.keySourceChanged() })
 	request.keySource.Horizontal = true
 	request.keyBox = container.NewVBox(fieldLabel(m.PageKeyTitle), request.keySource, request.fileSource, request.cards.object())
+	request.remembered = widget.NewCheck(m.PageUseRemembered, func(bool) { request.rememberedChanged() })
+	request.rememberedFor = wrapped("", widget.LowImportance)
+	request.rememberedBox = container.NewVBox(request.remembered, request.rememberedFor)
+	request.rememberedBox.Hide()
 	request.documentRow = newFileRow(m.PageDocument, m.ChangeButton, m.PageChooseFile, request.pickDocument)
 	request.saveRow = newFileRow(m.PageSaveTo, m.ChangeButton, "", request.pickSaveTo)
 	request.status = widget.NewLabel("")
@@ -128,7 +138,7 @@ func newPageRequest(window fyne.Window, m messaging.Catalogue, review *applicati
 }
 
 func (r *pageRequest) object() fyne.CanvasObject {
-	body := container.NewVBox(r.details, r.keyBox, r.documentRow.object(), r.saveRow.object(), r.status)
+	body := container.NewVBox(r.details, r.rememberedBox, r.keyBox, r.documentRow.object(), r.saveRow.object(), r.status)
 	actions := container.NewHBox(r.decline, r.closing, layout.NewSpacer(), r.approve, r.installLocal)
 	return container.NewBorder(nil, container.NewPadded(actions), nil, nil, container.NewVScroll(container.NewPadded(body)))
 }
@@ -295,7 +305,13 @@ func (r *pageRequest) present(proposal domain.PageProposal) {
 	r.details.Objects = lines
 	r.details.Refresh()
 
-	r.keyBox.Hidden = !proposal.NeedsKey()
+	r.rememberedBox.Hide()
+	if proposal.NeedsKey() && proposal.Remembered != "" {
+		r.rememberedFor.SetText(fmt.Sprintf(m.PageRememberedHolder, proposal.Remembered))
+		r.rememberedBox.Show()
+		r.remembered.SetChecked(true)
+	}
+	r.rememberedChanged()
 	r.documentRow.object().Hide()
 	if proposal.ChooseFile {
 		r.documentRow.object().Show()
@@ -386,12 +402,25 @@ func (r *pageRequest) keySourceChanged() {
 	}
 }
 
+// rememberedChanged hides the key choice while the kept certificate is
+// used, and shows it when the person wants another.
+func (r *pageRequest) rememberedChanged() {
+	r.keyBox.Hidden = !r.proposal.NeedsKey() || r.usesRemembered()
+	r.keyBox.Refresh()
+}
+
+// usesRemembered reports the kept certificate offered and accepted.
+func (r *pageRequest) usesRemembered() bool { return r.rememberedBox.Visible() && r.remembered.Checked }
+
 // decision builds what the person chose.
 func (r *pageRequest) decision() domain.PageDecision {
 	decision := domain.PageDecision{Approved: true, Document: r.document, SaveTo: r.saveTo}
-	if r.keySource.Selected == r.m.KeyFromFile {
+	switch {
+	case r.usesRemembered():
+		decision.Remembered = true
+	case r.keySource.Selected == r.m.KeyFromFile:
 		decision.KeyFile = domain.CertificateFile{Path: r.keyFile, Passphrase: r.passphrase.Text}
-	} else {
+	default:
 		decision.Card = r.cards.key()
 	}
 	return decision

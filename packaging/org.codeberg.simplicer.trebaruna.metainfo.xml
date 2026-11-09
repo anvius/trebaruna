@@ -55,6 +55,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.71.0-unstable" date="2026-11-09">
+      <description>
+        <p>In a session with a page, the certificate it asked to keep is offered again, ticked; you still approve every request.</p>
+      </description>
+    </release>
     <release version="0.70.0-unstable" date="2026-11-09">
       <description>
         <p>ASiC-S containers made through the site's server (CAdES-ASiC-S-tri, XAdES-ASiC-S-tri).</p>

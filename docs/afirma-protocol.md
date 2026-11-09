@@ -249,6 +249,13 @@ everything else comes from the downloaded XML ([C.3](#c3-the-request-envelope-xm
 | `ver` | no | Minimum protocol version; default `0` |
 | `sticky` | no | `true` = remember the chosen key for the next operation in the same process |
 | `resetsticky` | no | `true` = ignore a remembered key this time |
+
+trebaruna: within one process — a WebSocket session; each request through
+the intermediate server is a process of its own, as in AutoFirma — the key
+approved for a `sticky` request is kept in memory with its PIN or passphrase.
+At the page's next `sticky` request the approval offers it, ticked, but the
+person still approves, and the page's filters still apply. `resetsticky`
+forgets it; the process ending forgets it too.
 | `appname` | no | Calling application name |
 | any other key | — | collected as "another params" for plugins; ignored by the native processor |
 

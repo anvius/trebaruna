@@ -282,6 +282,12 @@ signs it, detached, and shows the digest in the approval, since it cannot
 show the document: if you have the document, compute its digest
 (`sha256sum file`) and compare. A SHA-1 digest is refused.
 
+Keeping the certificate (`sticky`): within one WebSocket session, a page may
+ask to keep the certificate you chose for its next request. The window then
+offers it already ticked, so you need not choose it and type its PIN again;
+you still approve every request, and you can untick it to choose another.
+Nothing is kept once the page leaves.
+
 Operations: `sign`, `cosign`, `countersign`, `signandsave`, `selectcert`,
 `save` and `batch`. A batch (JSON or XML) goes through the site's pre- and
 post-signers: the documents stay on the site, the key signs what its server
