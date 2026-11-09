@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- The desktop app no longer passes the certificate passphrase as `--pass`,
+  where every local user could read it in the process list. The CLI accepts
+  `TREBARUNA_PASSPHRASE`, `TREBARUNA_PIN` and `TREBARUNA_TSA_PASS` when the
+  matching flag is absent (`sign`, `certificate`, `timestamp`, `token`,
+  `handler`); an explicit flag still wins.
+
 ### Changed
 
 - Desktop: the command-line adapter moved out of the application and domain

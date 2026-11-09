@@ -22,7 +22,7 @@ func runToken(args []string, stdout, stderr io.Writer) int {
 
 	var (
 		module = flags.String("module", "", "path of the PKCS#11 module")
-		pin    = flags.String("pin", "", "PIN of the token (optional for listing)")
+		pin    = flags.String("pin", "", "PIN of the token, optional for listing (or $TREBARUNA_PIN)")
 		asJSON = flags.Bool("json", false, "machine-readable output")
 	)
 
@@ -32,7 +32,7 @@ func runToken(args []string, stdout, stderr io.Writer) int {
 
 	inspector := infrastructure.TokenInspector{
 		Module: *module,
-		PIN:    *pin,
+		PIN:    secretFrom(*pin, pinVariable),
 	}
 
 	slots, err := inspector.Inspect()

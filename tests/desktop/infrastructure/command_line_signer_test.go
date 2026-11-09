@@ -171,3 +171,26 @@ func contains(values []string, wanted string) bool {
 	}
 	return false
 }
+
+func TestThePassphraseNeverAppearsOnTheCommandLine(t *testing.T) {
+	directory := t.TempDir()
+	seen := filepath.Join(directory, "environment")
+	binary, recorded := fakeCommand(t, "printf '%s' \"$TREBARUNA_PASSPHRASE\" > "+seen+"; echo '"+receiptJSON+"'")
+
+	if _, err := (infrastructure.CommandLineSigner{BinaryPath: binary}).Sign(context.Background(), fullIntent()); err != nil {
+		t.Fatalf("Sign: %v", err)
+	}
+
+	for _, argument := range recordedArguments(t, recorded) {
+		if argument == "--pass" || argument == "secret" {
+			t.Fatalf("the passphrase leaked into the command line: %v", recordedArguments(t, recorded))
+		}
+	}
+	got, err := os.ReadFile(seen)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != "secret" {
+		t.Errorf("TREBARUNA_PASSPHRASE = %q, want the passphrase", got)
+	}
+}

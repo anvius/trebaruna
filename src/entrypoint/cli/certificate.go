@@ -31,7 +31,7 @@ func runCertificate(args []string, stdout, stderr io.Writer) int {
 	flags.SetOutput(stderr)
 
 	var (
-		passphrase = flags.String("pass", "", "passphrase for a P12 or PEM bundle")
+		passphrase = flags.String("pass", "", "passphrase for a P12 or PEM bundle (or $TREBARUNA_PASSPHRASE)")
 		territory  = flags.String("territory", defaultTerritory(), "trust list for the issuer verdict")
 		asJSON     = flags.Bool("json", false, "machine-readable output")
 	)
@@ -51,7 +51,7 @@ func runCertificate(args []string, stdout, stderr io.Writer) int {
 		return exitUsage
 	}
 
-	certificates, err := loadCertificates(path, *passphrase)
+	certificates, err := loadCertificates(path, secretFrom(*passphrase, passphraseVariable))
 	if err != nil {
 		fmt.Fprintf(stderr, "%v\n", err)
 		return exitUsage

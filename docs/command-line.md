@@ -104,6 +104,26 @@ trebaruna sign <document> [flags]
 | `--enveloping` | off | XAdES enveloping rather than enveloped |
 | `--json` | off | Machine-readable result |
 
+#### Secrets without the command line
+
+Any local user can read the command line of any process (`ps -ef`), so a
+passphrase given as `--pass` is visible to everyone on the machine while the
+command runs. Every secret flag has an environment variable that is used when
+the flag is absent; a process's environment is readable only by its owner.
+
+| Flag | Variable |
+|---|---|
+| `--pass` | `TREBARUNA_PASSPHRASE` |
+| `--pin` | `TREBARUNA_PIN` |
+| `--tsa-pass` | `TREBARUNA_TSA_PASS` |
+
+The flag wins when both are present. The desktop app always uses the variables.
+
+```bash
+read -rs TREBARUNA_PASSPHRASE && export TREBARUNA_PASSPHRASE
+trebaruna sign contratto.pdf --p12 mia-chiave.p12
+```
+
 ### What it produces
 
 | Format | Output name |

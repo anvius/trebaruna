@@ -83,8 +83,8 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 		output     = flags.String("out", "", "output path (default: derived from the input)")
 		p12Path    = flags.String("p12", "", "PKCS#12 file with the signing certificate")
 		pemPath    = flags.String("pem", "", "PEM bundle with certificate and private key")
-		passphrase = flags.String("pass", "", "passphrase for the P12 or PEM file")
-		pin        = flags.String("pin", "", "PIN for PKCS#11 tokens")
+		passphrase = flags.String("pass", "", "passphrase for the P12 or PEM file (or $TREBARUNA_PASSPHRASE)")
+		pin        = flags.String("pin", "", "PIN for PKCS#11 tokens (or $TREBARUNA_PIN)")
 		tokenLabel = flags.String("token", "", "PKCS#11 token label (smartcard)")
 		module     = flags.String("module", defaultPKCS11Module, "PKCS#11 module path")
 		name       = flags.String("name", "", "signer display name (default: certificate CN)")
@@ -92,7 +92,7 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 		location   = flags.String("location", "", "location of signing")
 		tsaURL     = flags.String("tsa", "", "RFC 3161 timestamp authority URL")
 		tsaUser    = flags.String("tsa-user", "", "TSA basic-auth username")
-		tsaSecret  = flags.String("tsa-pass", "", "TSA basic-auth password")
+		tsaSecret  = flags.String("tsa-pass", "", "TSA basic-auth password (or $TREBARUNA_TSA_PASS)")
 		onlineRev  = flags.Bool("online-revocation", false,
 			"query OCSP and embed the answers in /DSS (required for --level lt)")
 		page       = flags.Int("page", 1, "page for the visible seal (1-based)")
@@ -182,7 +182,7 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 		Location:        *location,
 		TimestampURL:    *tsaURL,
 		TimestampUser:   *tsaUser,
-		TimestampSecret: *tsaSecret,
+		TimestampSecret: secretFrom(*tsaSecret, tsaSecretVariable),
 		Enveloping:      *enveloping,
 		EmbedRevocation: *onlineRev,
 	})
@@ -274,7 +274,7 @@ func buildSigner(options signerOptions) (domain.Signer, error) {
 
 	if options.tokenLabel != "" {
 		return domain.NewSigner(displayName, domain.FromToken,
-			domain.WithToken(options.module, options.tokenLabel, options.pin))
+			domain.WithToken(options.module, options.tokenLabel, secretFrom(options.pin, pinVariable)))
 	}
 
 	path := options.p12Path
@@ -291,7 +291,7 @@ func buildSigner(options signerOptions) (domain.Signer, error) {
 
 	return domain.NewSigner(displayName, source,
 		domain.WithKeyMaterial(content),
-		domain.WithPassphrase(options.passphrase))
+		domain.WithPassphrase(secretFrom(options.passphrase, passphraseVariable)))
 }
 
 // boxList collects repeated --box flags.

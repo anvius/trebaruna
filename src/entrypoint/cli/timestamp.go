@@ -36,7 +36,7 @@ func runTimestamp(args []string, stdout, stderr io.Writer) int {
 		output  = flags.String("out", "", "where to write the .tsr (default: <file>.tsr)")
 		tsaURL  = flags.String("tsa", "", "timestamp authority URL (required)")
 		tsaUser = flags.String("tsa-user", "", "TSA basic-auth username")
-		tsaPass = flags.String("tsa-pass", "", "TSA basic-auth password")
+		tsaPass = flags.String("tsa-pass", "", "TSA basic-auth password (or $TREBARUNA_TSA_PASS)")
 		hashHex = flags.String("hash", "", "timestamp this hex digest instead of a file")
 		asJSON  = flags.Bool("json", false, "machine-readable output")
 	)
@@ -97,7 +97,7 @@ func runTimestamp(args []string, stdout, stderr io.Writer) int {
 
 	timestamper := infrastructure.NewRfc3161Timestamper()
 	response, err := timestamper.Token(
-		contextWithTimeout(60*time.Second), digest, *tsaURL, *tsaUser, *tsaPass,
+		contextWithTimeout(60*time.Second), digest, *tsaURL, *tsaUser, secretFrom(*tsaPass, tsaSecretVariable),
 	)
 	if err != nil {
 		fmt.Fprintf(stderr, "timestamp failed: %v\n", err)

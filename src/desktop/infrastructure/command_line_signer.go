@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -29,6 +30,9 @@ type CommandLineSigner struct {
 func (s CommandLineSigner) Sign(ctx context.Context, intent domain.SigningIntent) (domain.Receipt, error) {
 	var stdout, stderr bytes.Buffer
 	command := exec.CommandContext(ctx, s.BinaryPath, signArguments(intent)...)
+	// The passphrase travels in the environment, never as --pass: any local
+	// user can list command lines, only the owner can read the environment.
+	command.Env = append(os.Environ(), "TREBARUNA_PASSPHRASE="+intent.Passphrase)
 	command.Stdout = &stdout
 	command.Stderr = &stderr
 
@@ -73,9 +77,6 @@ func signArguments(intent domain.SigningIntent) []string {
 		arguments = append(arguments, "--p12", intent.KeyPath)
 	}
 
-	if intent.Passphrase != "" {
-		arguments = append(arguments, "--pass", intent.Passphrase)
-	}
 	if intent.Page > 1 {
 		arguments = append(arguments, "--page", strconv.Itoa(intent.Page))
 	}
