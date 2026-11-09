@@ -9,7 +9,7 @@ var (
 	ErrSignerWithoutName = errors.New("signer needs a name")
 
 	// ErrSignerWithoutSource means no key source was declared.
-	ErrSignerWithoutSource = errors.New("signer needs a key source: p12, pem or token")
+	ErrSignerWithoutSource = errors.New("signer needs a key source: p12, pem, token or csc")
 
 	// ErrP12WithoutContent means the P12 source carries no bytes.
 	ErrP12WithoutContent = errors.New("p12 signer needs the file content")

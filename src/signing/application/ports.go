@@ -25,6 +25,10 @@ type Artefact struct {
 	// what was written, in lower-case hex: the receipt a person can compare.
 	DocumentDigest string
 	SignedDigest   string
+	// KeySource says where the key was; RemoteService names the provider of
+	// a remote key, so a remote signature says so (ADR-0014).
+	KeySource     domain.KeySource
+	RemoteService string
 }
 
 // KeyMaterial is what the infrastructure resolved from a Signer.

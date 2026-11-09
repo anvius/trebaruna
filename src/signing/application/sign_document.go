@@ -177,7 +177,17 @@ func (u *SignDocument) Execute(ctx context.Context, request Request) (Artefact, 
 		SelfSigned:     identity.SelfSigned,
 		DocumentDigest: fingerprint(content),
 		SignedDigest:   fingerprint(signed),
+		KeySource:      request.Signer.KeySource(),
+		RemoteService:  remoteHost(request.Signer),
 	}, nil
+}
+
+// remoteHost names the provider of a remote key; empty for any other.
+func remoteHost(signer domain.Signer) string {
+	if signer.KeySource() != domain.FromRemote {
+		return ""
+	}
+	return signer.Remote().Host()
 }
 
 // fingerprint is the SHA-256 of a byte string in lower-case hex.

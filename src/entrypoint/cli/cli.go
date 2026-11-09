@@ -312,6 +312,9 @@ type signerOptions struct {
 	certificate string
 	module      string
 	store       storeOptions
+	// remote and credential name a CSC service and its credential.
+	remote     string
+	credential string
 }
 
 // buildSigner resolves the key source from the flags, enforcing exactly one.
@@ -320,21 +323,30 @@ func buildSigner(options signerOptions) (domain.Signer, error) {
 	card := options.card || options.tokenLabel != "" || options.certificate != "" || options.module != "" ||
 		options.store.chosen()
 	sources := 0
-	for _, chosen := range []bool{options.p12Path != "", options.pemPath != "", card} {
+	remote := options.remote != ""
+	for _, chosen := range []bool{options.p12Path != "", options.pemPath != "", card, remote} {
 		if chosen {
 			sources++
 		}
 	}
 	if sources == 0 {
-		return domain.Signer{}, errors.New("no key source: use --p12, --pem, or --card (with --token / --certificate to choose)")
+		return domain.Signer{}, errors.New("no key source: use --p12, --pem, --card (with --token / --certificate to choose), or --csc")
 	}
 	if sources > 1 {
-		return domain.Signer{}, errors.New("ambiguous key source: use only one of --p12, --pem, or a card (--card, --token, --certificate, --module)")
+		return domain.Signer{}, errors.New("ambiguous key source: use only one of --p12, --pem, a card (--card, --token, --certificate, --module), or --csc")
 	}
 
 	displayName := options.name
 	if displayName == "" {
 		displayName = domain.NameFromCertificate
+	}
+
+	if remote {
+		return domain.NewSigner(displayName, domain.FromRemote, domain.WithRemoteService(domain.RemoteService{
+			Address: options.remote, Credential: options.credential,
+			Token: os.Getenv("TREBARUNA_CSC_TOKEN"), User: os.Getenv("TREBARUNA_CSC_USER"), Password: os.Getenv("TREBARUNA_CSC_PASSWORD"),
+			PIN: secretFrom(options.pin, pinVariable), OTP: os.Getenv("TREBARUNA_OTP"),
+		}))
 	}
 
 	if card {
@@ -452,6 +464,10 @@ type artefactJSON struct {
 	HasSeal    bool   `json:"has_seal"`
 	SealCount  int    `json:"seal_count"`
 	SelfSigned bool   `json:"self_signed"`
+	// KeySource says where the key was (p12, pem, token, csc);
+	// RemoteService names the provider of a remote key (ADR-0014).
+	KeySource     string `json:"key_source"`
+	RemoteService string `json:"remote_service,omitempty"`
 	// DocumentSHA256 and SignedSHA256 let a person compare what was signed.
 	DocumentSHA256 string `json:"document_sha256"`
 	SignedSHA256   string `json:"signed_sha256"`
@@ -477,6 +493,9 @@ func printArtefact(writer io.Writer, artefact application.Artefact) {
 	fmt.Fprintf(writer, "  output  sha256 %s\n", artefact.SignedDigest)
 	if artefact.SealCount > 0 {
 		fmt.Fprintf(writer, "  seals   %d visible\n", artefact.SealCount)
+	}
+	if artefact.KeySource == domain.FromRemote {
+		fmt.Fprintf(writer, "  key     remote, kept by %s (CSC): the hash left this computer, the key did not come to it\n", artefact.RemoteService)
 	}
 	if artefact.SelfSigned {
 		fmt.Fprintf(writer, "  warning self-signed certificate: valid cryptography, no third-party trust\n")

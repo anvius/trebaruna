@@ -185,6 +185,33 @@ unknown, never as altered (ADR-0005).
 
 ---
 
+## Remote signing (CSC)
+
+Some providers keep the key on their server and sign for you. trebaruna
+speaks their open interface, the Cloud Signature Consortium API v2, and no
+vendor's software (ADR-0014):
+
+```bash
+export TREBARUNA_CSC_TOKEN=…            # or TREBARUNA_CSC_USER and _PASSWORD
+read -rs TREBARUNA_PIN && export TREBARUNA_PIN
+trebaruna sign contratto.pdf --csc https://provider.example/csc/v2 --credential firma-qualificata
+```
+
+- The document stays here. What travels is its hash, and the provider
+  returns the signature over it.
+- A credential that asks for a PIN (or a one-time password,
+  `TREBARUNA_OTP`) is authorised for that one hash before each signature.
+- `--credential` can be left out when the account holds a single
+  credential; otherwise the error lists them.
+- The receipt says the key is remote and names the provider, and every
+  connection appears with the purpose `remote-signing` (ADR-0010). Neither
+  the token nor the PIN is ever printed.
+- Every format and level works, and the timestamps are fetched as usual.
+- Providers that only authorise through an OAuth2 browser flow are not
+  supported.
+
+---
+
 ## ASiC containers
 
 `--asic s` packs the document and its detached signature into one file, an

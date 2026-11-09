@@ -94,6 +94,8 @@ trebaruna sign <document> [flags]
 | `--module` | OpenSC, found on the system | PKCS#11 module path |
 | `--firefox` | — | Sign with a certificate of the Firefox store, in place (PIN: the primary password) |
 | `--nss-db` | — | Sign with a certificate of this NSS store directory (`~/.pki/nssdb` for Chromium) |
+| `--csc` | — | Sign with a key a provider keeps, through its Cloud Signature Consortium API v2 (`https://…/csc/v2`) |
+| `--credential` | the only one | The provider's credential to sign with |
 | `--pin` | — | Smartcard PIN |
 | `--pass` | — | Passphrase for the P12 or PEM |
 | `--name` | from the certificate | Signer name recorded in the signature |
@@ -141,6 +143,7 @@ the flag is absent; a process's environment is readable only by its owner.
 | `--pass` | `TREBARUNA_PASSPHRASE` |
 | `--pin` | `TREBARUNA_PIN` |
 | `--tsa-pass` | `TREBARUNA_TSA_PASS` |
+| — | `TREBARUNA_CSC_TOKEN`, `TREBARUNA_CSC_USER`, `TREBARUNA_CSC_PASSWORD`, `TREBARUNA_OTP` (remote signing; no flag exists) |
 
 The flag wins when both are present. The desktop app always uses the variables.
 
@@ -549,6 +552,9 @@ Trust lists: `~/.cache/trebaruna/`. Nothing else is cached.
 | `TREBARUNA_PUK` | `pin unlock` | Card PUK (no flag exists) |
 | `TREBARUNA_NEW_PIN` | `pin change`, `pin unlock` | The new PIN (no flag exists) |
 | `TREBARUNA_TSA_PASS` | `sign`, `timestamp` | Timestamp authority password |
+| `TREBARUNA_CSC_TOKEN` | `sign --csc` | Access token of the remote signing service |
+| `TREBARUNA_CSC_USER`, `TREBARUNA_CSC_PASSWORD` | `sign --csc` | Sign in to the service when there is no token |
+| `TREBARUNA_OTP` | `sign --csc` | One-time password a credential asks for |
 | `SOFTHSM2_MODULE` | tests only | PKCS#11 module for the test suite |
 
 ---

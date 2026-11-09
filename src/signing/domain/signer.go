@@ -17,6 +17,7 @@ type Signer struct {
 	pkcs11PIN    string
 	pkcs11Params string
 	choice       CertificateChoice
+	remote       RemoteService
 }
 
 // KeySource says where the private key lives.
@@ -31,6 +32,10 @@ const (
 
 	// FromToken is a smartcard reached through PKCS#11.
 	FromToken KeySource = "token"
+	// FromRemote is a key kept by a provider and used through the Cloud
+	// Signature Consortium API (ADR-0014): the hash leaves this computer,
+	// the key never comes to it.
+	FromRemote KeySource = "csc"
 )
 
 // NewSigner describes a signer without loading anything.
@@ -75,6 +80,10 @@ func NewSigner(name string, source KeySource, options ...SignerOption) (Signer, 
 		if strings.TrimSpace(s.pkcs11Module) == "" {
 			return Signer{}, ErrTokenWithoutModule
 		}
+	case FromRemote:
+		if err := s.remote.validate(); err != nil {
+			return Signer{}, err
+		}
 	case "":
 		return Signer{}, ErrSignerWithoutSource
 	default:
@@ -110,6 +119,11 @@ func WithToken(module, tokenLabel, pin string) SignerOption {
 // needs to open, such as the profile directory of a Firefox (NSS) store.
 func WithModuleParameters(parameters string) SignerOption {
 	return func(s *Signer) { s.pkcs11Params = parameters }
+}
+
+// WithRemoteService points at a CSC service and the credential to use.
+func WithRemoteService(service RemoteService) SignerOption {
+	return func(s *Signer) { s.remote = service }
 }
 
 // WithCertificateChoice says which certificate of the card signs. Without it
@@ -151,3 +165,6 @@ func (s Signer) Choosing(choice CertificateChoice) Signer {
 
 // CertificateChoice returns how the certificate of the card is chosen.
 func (s Signer) CertificateChoice() CertificateChoice { return s.choice }
+
+// Remote is the CSC service a remote signer uses.
+func (s Signer) Remote() RemoteService { return s.remote }

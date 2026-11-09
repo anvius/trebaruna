@@ -56,6 +56,8 @@ func LoadKeyPair(signer domain.Signer) (KeyPair, error) {
 		return loadPEM(signer)
 	case domain.FromToken:
 		return loadToken(signer)
+	case domain.FromRemote:
+		return loadRemote(signer)
 	}
 	return KeyPair{}, domain.ErrSignerWithoutSource
 }

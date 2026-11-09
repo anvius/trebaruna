@@ -8,6 +8,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Remote signing through the Cloud Signature Consortium API v2
+  (ADR-0014): `sign --csc https://…/csc/v2 [--credential id]`.
+  - The access token (`TREBARUNA_CSC_TOKEN`), or user and password for
+    `auth/login`, and the PIN and OTP come from the environment.
+  - An explicit credential is authorised for each hash before it is signed;
+    an implicit one is not.
+  - The combined signature OID is used unless the credential lists only the
+    key's algorithm; ECDSA `r||s` answers become DER.
+  - Every format and level signs through it.
+  - The receipt says the key is remote and names the provider
+    (`key_source`, `remote_service` in JSON); the connections are recorded
+    as `remote-signing`, and no secret is printed.
+  - Tested against a CSC service in tests/support/csc (RSA under a CA with a
+    PIN and v2 descriptions; ECDSA implicit with v1 descriptions and raw
+    signatures). Its CAdES verifies in OpenSSL against the CA, its PAdES in
+    pdfsig. A wrong or missing PIN, a wrong token, an ambiguous credential,
+    a missing token and plain HTTP to another host each fail with their
+    reason.
+
 - Check tab:
   - signatures as a tree: each counter-signature indented under the
     signature it signs (SignatureTree in the desktop domain: report order

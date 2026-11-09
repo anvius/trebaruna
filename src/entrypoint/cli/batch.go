@@ -96,6 +96,8 @@ func receiptOf(artefact application.Artefact) artefactJSON {
 		HasSeal:        artefact.HasSeal,
 		SealCount:      artefact.SealCount,
 		SelfSigned:     artefact.SelfSigned,
+		KeySource:      string(artefact.KeySource),
+		RemoteService:  artefact.RemoteService,
 		DocumentSHA256: artefact.DocumentDigest,
 		SignedSHA256:   artefact.SignedDigest,
 	}

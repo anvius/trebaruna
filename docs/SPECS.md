@@ -67,7 +67,7 @@ user seeing what is signed and where anything goes.
 | Firefox / NSS store used in place, without exporting: read-only, primary password as PIN, CLI (`--firefox`, `--nss-db`) and window | built |
 | Change PIN, unlock with PUK: state and length checked before any attempt, secrets only in the environment, CLI (`pin`) and window (Card menu) | built |
 | Windows and macOS system stores | planned (C5) |
-| Remote signing through the CSC API v2 only (ADR-0014) | planned (F5) |
+| Remote signing through the CSC API v2 only (ADR-0014): `--csc` and `--credential`; token or user/password; PIN and OTP per signature for explicit credentials; the receipt names the provider; every connection recorded | built (no OAuth2 browser flow; desktop: CLI only for now) |
 
 ### Timestamps
 
