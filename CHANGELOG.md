@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- AutoFirma protocol engine (new slice `afirma`, docs/afirma-protocol.md):
+  afirma:// URIs read as AutoFirma 1.9 reads them (literal dispatch, query
+  rules, tolerant Base64, the AutoFirma test for `dat`, Java properties),
+  validated (session id, servlet URLs, versions, `mcv`, algorithms, formats)
+  and answered (`cert|signature`, `CANCEL`, `SAF_NN` with AutoFirma's
+  texts). Certificate filters (RFC 2254 on subject/issuer, `dnie:`, key usage,
+  thumbprint, policy, SSCD…) with unknown conditions matching nothing. Use
+  case `AnswerPage`: nothing is signed, downloaded or sent before a person
+  approves, and the DES weakness is stated. Page signatures: CAdES implicit or
+  explicit, co- and counter-signatures, PAdES invisible unless placed, XAdES
+  enveloped/enveloping; policies, XAdES Detached, FacturaE, ASiC and
+  precalculated digests are refused by name. The local WebSocket/socket
+  channels are not offered (ADR-0013).
+
 - Qualified timestamping from the trusted list: `trebaruna trust tsa
   [territory]` lists the granted TSA/QTST services (and their addresses when a
   list publishes them, which IT, ES, AT and BE do not), and `trebaruna
