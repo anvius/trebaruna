@@ -58,6 +58,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runPIN(args[1:], stdout, stderr)
 	case "encrypt":
 		return runEncrypt(args[1:], stdout, stderr)
+	case "afirma":
+		return runAfirma(args[1:], stdout, stderr)
 	case "decrypt":
 		return runDecrypt(args[1:], stdout, stderr)
 	case "asic":
@@ -459,6 +461,7 @@ usage:
   trebaruna extract <document.p7m> [--out path]  (the document inside one or more envelopes)
   trebaruna encrypt <file> --to <cert> [--to …]   (a .p7e only the recipients open)
   trebaruna decrypt <file.p7e> --p12|--card|…     (open a .p7e with your key)
+  trebaruna afirma '<afirma://…>' [--approve]    (answer an AutoFirma request; shown first)
   trebaruna about [--json]                      (build, revision, dependencies and licences)
 
 flags:

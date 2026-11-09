@@ -94,3 +94,9 @@ type Courier interface {
 	// Wait sends "#WAIT" until stop is called.
 	Wait(channel domain.Channel) (stop func())
 }
+
+// RequestStore fetches a request the page uploaded to the intermediate server
+// because it was too long for a URI (C.1–C.3).
+type RequestStore interface {
+	Fetch(ctx context.Context, retrieveURL, fileID, key, cipher string, asJSON bool) (domain.Invocation, error)
+}

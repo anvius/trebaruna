@@ -82,7 +82,7 @@ func newFixture(t *testing.T, approved bool) fixture {
 		approver: &scriptedApprover{decision: application.Decision{Approved: approved, Key: key, SavePath: "/tmp/out"}},
 		signer:   &recordingSigner{}, fetcher: &recordingFetcher{}, files: memoryFiles{}, courier: &recordingCourier{},
 	}
-	f.use = application.NewAnswerPage(f.approver, f.signer, fixedCertificate{}, f.fetcher, f.files, f.courier)
+	f.use = application.NewAnswerPage(f.approver, f.signer, fixedCertificate{}, f.fetcher, f.files, f.courier, nil)
 	return f
 }
 

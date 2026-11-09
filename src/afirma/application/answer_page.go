@@ -21,18 +21,23 @@ type AnswerPage struct {
 	fetcher      DataFetcher
 	files        FileWriter
 	courier      Courier
+	requests     RequestStore
 }
 
 // NewAnswerPage wires the use case.
 func NewAnswerPage(approver Approver, signer PageSigner, certificates CertificateReader,
-	fetcher DataFetcher, files FileWriter, courier Courier) *AnswerPage {
+	fetcher DataFetcher, files FileWriter, courier Courier, requests RequestStore) *AnswerPage {
 	return &AnswerPage{approver: approver, signer: signer, certificates: certificates,
-		fetcher: fetcher, files: files, courier: courier}
+		fetcher: fetcher, files: files, courier: courier, requests: requests}
 }
 
 // Execute answers one request and returns the answer it delivered (or would
 // deliver, when the page waits on no channel).
 func (u *AnswerPage) Execute(ctx context.Context, invocation domain.Invocation) (domain.Answer, error) {
+	invocation, err := u.uploaded(ctx, invocation)
+	if err != nil {
+		return u.fail(ctx, channelOf(invocation), err)
+	}
 	switch invocation.Operation {
 	case domain.Sign, domain.Cosign, domain.Countersign, domain.SignAndSave:
 		request, err := domain.ReadSignRequest(invocation, true)
@@ -225,6 +230,37 @@ func (u *AnswerPage) fail(ctx context.Context, channel domain.Channel, err error
 		return answer, deliverErr
 	}
 	return answer, failure
+}
+
+// uploaded replaces a URI that only names an uploaded request (fileid and
+// rtservlet, no data) with the request itself (C.1); the URI's key and
+// cipher stay, since the page puts them only there.
+func (u *AnswerPage) uploaded(ctx context.Context, invocation domain.Invocation) (domain.Invocation, error) {
+	fileID, retrieve := invocation.Param("fileid"), invocation.Param("rtservlet")
+	if fileID == "" || invocation.Param("dat") != "" {
+		return invocation, nil
+	}
+	if retrieve == "" || u.requests == nil {
+		return invocation, domain.Failure{Code: domain.Params, Cause: "fileid without rtservlet"}
+	}
+	if err := domain.ValidServletURL(retrieve); err != nil {
+		return invocation, err
+	}
+	fetched, err := u.requests.Fetch(ctx, retrieve, fileID, invocation.Param("key"), invocation.Param("cipher"),
+		invocation.Param("jsonbatch") == "true")
+	if err != nil {
+		return invocation, err
+	}
+	merged := map[string]string{}
+	for _, name := range fetched.Names() {
+		merged[name] = fetched.Param(name)
+	}
+	for _, name := range []string{"key", "cipher", "stservlet", "aw"} {
+		if merged[name] == "" && invocation.Param(name) != "" {
+			merged[name] = invocation.Param(name)
+		}
+	}
+	return domain.InvocationOf(fetched.Operation, merged), nil
 }
 
 // channelOf reads the channel of a request that failed validation, so the

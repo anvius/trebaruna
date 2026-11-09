@@ -9,6 +9,7 @@ its own.
 - [Approving](#approving)
 - [Delivery](#delivery)
 - [Registering the scheme](#registering-the-scheme)
+- [AutoFirma's afirma:// protocol](#autofirmas-afirma-protocol)
 - [What is missing](#what-is-missing)
 - [Why approval is not automatic](#why-approval-is-not-automatic)
 
@@ -197,6 +198,45 @@ trebaruna handler "%1" --root ~/Documents --p12 ~/Documents/key.p12 --pass secre
 ```
 
 ---
+
+## AutoFirma's afirma:// protocol
+
+Spanish administration pages start AutoFirma with `afirma://` URIs.
+trebaruna reads and answers them as AutoFirma 1.9 does, from the protocol's
+free source ([afirma-protocol.md](afirma-protocol.md)), with the difference
+that matters here: nothing is signed, downloaded or sent before a person has
+seen the request and approved it.
+
+```bash
+trebaruna afirma 'afirma://sign?…'                       # shows the request, answers CANCEL
+trebaruna afirma 'afirma://sign?…' --approve --p12 k.p12   # signs and answers the site
+```
+
+What a request shows: the operation, the site the answer goes to (the host of
+its storage service) and the name the page gives itself, the format, the data
+(size and SHA-256, or the address it would be downloaded from), the certificate
+filters the page sets, and warnings — the intermediate server's single DES with
+an eight-digit key protects nothing against anyone who sees the traffic, and
+trebaruna says so.
+
+Channels:
+
+- **Intermediate server** (implemented): the answer is posted to the site's
+  StorageService, ciphered with the page's key (DES, or AES for autoscript
+  1.10), with `#WAIT` every 10 seconds while the person decides; long requests
+  are fetched from its RetrieveService. Pages that force this channel work
+  (Sistema RED does).
+- **WebSocket and the legacy socket** (not offered): they are TLS on
+  `127.0.0.1` and need a certificate the browser trusts; AutoFirma installs its
+  own root CA for that, and trebaruna installs none (ADR-0013). Pages that use
+  them by default do not reach trebaruna.
+
+Operations: `sign`, `cosign`, `countersign`, `signandsave`, `selectcert` and
+`save`. Formats: CAdES (implicit or explicit, co- and counter-signatures),
+PAdES (invisible unless the page places the seal), XAdES enveloped and
+enveloping. Asked for something not done yet — signature policies, XAdES
+Detached, FacturaE, ASiC, a digest the page computed, batches — trebaruna
+answers with an AutoFirma error naming it, never with a different signature.
 
 ## What is missing
 

@@ -531,6 +531,19 @@ only by its owner. Envelopes made by `openssl cms -encrypt` (PKCS#1 v1.5 or
 OAEP with SHA-1 or SHA-256) open, and ours open with `openssl cms -decrypt`.
 Many cards decrypt OAEP only with SHA-1; the error says so.
 
+## `afirma`
+
+```bash
+trebaruna afirma '<afirma://…>' [--approve] [--p12 key.p12 | --card | --firefox …] [--file path] [--save-to path]
+```
+
+Answers an AutoFirma request (see [Web pages](web-pages.md#autofirmas-afirma-protocol)).
+The request is printed on stderr in full; without `--approve` the site hears
+`CANCEL`. `--file` is the document to sign when the page sends none, `--save-to`
+where `save` and `signandsave` write. The answer is printed on stdout (and
+posted to the site when the request names its storage service); failures are
+AutoFirma's `SAF_NN` codes.
+
 ## `pin`
 
 ```bash

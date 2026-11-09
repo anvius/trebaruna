@@ -94,7 +94,8 @@ user seeing what is signed and where anything goes.
 | Local HTTP API and `trebaruna://` handler under ADR-0004 | built |
 | AutoFirma `afirma://` protocol, specified from the free source in [afirma-protocol.md](afirma-protocol.md) | specified (D1) |
 | `afirma://` requests read and answered as AutoFirma 1.9 does (dispatch, parameters, SAF errors, certificate filters) for sign, cosign, countersign, signandsave, selectcert and save, each approved by a person first; CAdES (implicit/explicit, co-, counter-), PAdES (invisible unless placed), XAdES enveloped/enveloping | built (D2) |
-| `afirma://` delivery through the intermediate server (DES, and AES for autoscript 1.10), and batches (JSON/XML, three-phase) | planned (D3, D4) |
+| `afirma://` through the intermediate server: answers posted ciphered (DES, AES for autoscript 1.10), `#WAIT` while the person decides, uploaded requests fetched; `trebaruna afirma` | built (D3) |
+| `afirma://` batches (JSON/XML, three-phase) | planned (D4) |
 | `afirma://` WebSocket and socket channels: TLS on 127.0.0.1 needs a locally trusted certificate, which ADR-0013 forbids installing as a root; not offered unless the owner chooses a leaf-only peer trust | blocked (D5, owner decision) |
 
 ### Transparency

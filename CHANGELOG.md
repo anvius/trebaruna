@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- afirma:// through the intermediate server: answers posted to the site's
+  StorageService (`op=put&v=1_0`), ciphered element by element with the page's
+  key — single DES-ECB with zero padding and `N.base64url` (the protocol's
+  vector reproduced) or AES-256-CBC for autoscript 1.10's `cipher` — failures
+  URL-encoded; `#WAIT` every 10 s while the person decides, never after the
+  result; requests uploaded by the page fetched from the RetrieveService
+  (`op=get`) and read from their XML (or JSON). `trebaruna afirma '<uri>'`
+  shows the request and answers it, signing only with `--approve` and a key.
+
 - AutoFirma protocol engine (new slice `afirma`, docs/afirma-protocol.md):
   afirma:// URIs read as AutoFirma 1.9 reads them (literal dispatch, query
   rules, tolerant Base64, the AutoFirma test for `dat`, Java properties),
