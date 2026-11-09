@@ -71,6 +71,14 @@ func (s *PadesSigner) SignPades(ctx context.Context, request application.PadesRe
 		return nil, fmt.Errorf("%w: PAdES signatures with a policy are not supported yet", domain.ErrPolicyNotForFormat)
 	}
 
+	if request.Field != "" {
+		signed, err := s.signInField(ctx, request, keyPair)
+		if err != nil {
+			return nil, err
+		}
+		return s.complete(ctx, signed, request, keyPair)
+	}
+
 	document, err := pdfsign.Open(bytes.NewReader(request.Content), int64(len(request.Content)))
 	if err != nil {
 		return nil, fmt.Errorf("open PDF: %w", err)
@@ -114,7 +122,11 @@ func (s *PadesSigner) SignPades(ctx context.Context, request application.PadesRe
 		return nil, fmt.Errorf("write signed PDF: %w", err)
 	}
 
-	signed := output.Bytes()
+	return s.complete(ctx, output.Bytes(), request, keyPair)
+}
+
+// complete adds what levels LT and LTA ask for to a signed PDF.
+func (s *PadesSigner) complete(ctx context.Context, signed []byte, request application.PadesRequest, keyPair KeyPair) ([]byte, error) {
 	if !request.Level.EmbedsRevocation() || !request.EmbedRevocation {
 		return signed, nil
 	}

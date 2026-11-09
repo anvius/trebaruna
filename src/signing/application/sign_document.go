@@ -72,6 +72,10 @@ type Request struct {
 	// Invisible signs a PDF without any mark on its pages. It excludes
 	// Placement and Placements.
 	Invisible bool
+	// Field signs a PDF in its empty signature field of this fully
+	// qualified name, the seal in the field's box: a form prepared for its
+	// signers. It excludes Placement and Placements.
+	Field string
 	// Rubric is the image of a handwritten signature each seal shows beside
 	// the certificate data (ADR-0012); a default seal widens for it.
 	Rubric domain.Rubric
@@ -284,6 +288,12 @@ func (u *SignDocument) validate(request Request) error {
 	if request.Invisible && (len(request.Placements) > 0 || !request.Placement.IsZero()) {
 		return fmt.Errorf("an invisible signature cannot also place a seal")
 	}
+	if request.Field != "" && request.Format != domain.Pades {
+		return fmt.Errorf("a signature field is part of a PDF; %s has none", request.Format)
+	}
+	if request.Field != "" && (len(request.Placements) > 0 || !request.Placement.IsZero()) {
+		return fmt.Errorf("a signature field already says where the seal goes: no box is placed with it")
+	}
 	if !request.Rubric.IsZero() && (request.Format != domain.Pades || request.Invisible) {
 		return fmt.Errorf("a rubric goes in the visible seal of a PDF signature (PAdES), beside the certificate data")
 	}
@@ -376,6 +386,8 @@ func (u *SignDocument) sign(ctx context.Context, request Request, content []byte
 			TimestampUser:   request.TimestampUser,
 			TimestampSecret: request.TimestampSecret,
 			Policy:          request.Policy,
+			Field:           request.Field,
+			Invisible:       request.Invisible,
 		})
 		return signed, err
 
@@ -514,8 +526,11 @@ func sealPlacements(request Request) []domain.SealPlacement {
 
 // sealCount reports how many visible marks the artefact carries.
 func sealCount(request Request) int {
-	if request.Format != domain.Pades {
+	switch {
+	case request.Format != domain.Pades:
 		return 0
+	case request.Field != "" && !request.Invisible:
+		return 1
 	}
 	return len(sealPlacements(request))
 }

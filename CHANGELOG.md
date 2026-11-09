@@ -55,6 +55,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `sign --field <name>` signs a PDF form in its empty signature field (by
+  its fully qualified name), the seal drawn in the field's box, or none
+  with `--invisible`; an unknown name is refused with the empty fields the
+  form has. The PDF library always adds a field of its own, so trebaruna
+  writes this signature itself (pdffield): an incremental update with the
+  signature dictionary, the field's /V and /AP, the appearance (the seal
+  as a form XObject: Helvetica in WinAnsi, the rubric as an image with its
+  soft mask), /SigFlags 3, and cross-references of the file's kind (table
+  or stream); its own CMS envelope (PAdES baseline, timestamped for T;
+  LT/LTA added after). A field too small for a legible seal, encrypted
+  documents and documents certified against any change are refused.
+
 - CMS (CAdES) and PDF (PAdES) signatures made with RSASSA-PSS (RFC 4055,
   with its parameters) are verified: the CMS and PDF libraries do not
   implement it, and a valid PSS signature was reported as altered. A PDF

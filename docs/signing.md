@@ -165,8 +165,30 @@ tree when needed): a Letter or landscape page gets the seal in its own corner.
 every reader lists it in its signature panel, but its widget is empty
 (`/Rect [0 0 0 0]`). It excludes `--box`.
 
-Signing into an existing empty signature field of a form is not supported yet:
-the PDF library always adds a new field.
+### Signing in a form's field
+
+A form prepared for its signers has an empty signature field for each:
+`--field <name>` signs in that one, by its fully qualified name (the partial
+names of the field and its parents joined by dots, `form.Firma1`), and draws
+the seal in the field's box. With `--invisible` the field is signed without a
+seal. A name the form lacks is refused with the empty fields it has.
+
+```bash
+trebaruna sign solicitud.pdf --field Firma1
+trebaruna sign solicitud-signed.pdf --field form.Firma2 --level t --tsa https://…
+```
+
+The PDF library always adds a field of its own, so this signature is written by
+trebaruna: an incremental update that leaves every earlier byte, and every
+earlier signature, intact. It holds the signature dictionary (PAdES baseline,
+`ETSI.CAdES.detached`, the time in `/M`), the field with its value and
+appearance, the appearance's objects, and `/SigFlags 3` on the form when it
+lacked them; its cross-references are a table or a stream, as the file's are.
+The CMS envelope is trebaruna's own (signing-certificate-v2, no signing-time
+attribute), timestamped for level T; levels LT and LTA are added after it as
+for any PDF signature. A field too small for a legible seal (type under 3 pt) is
+refused, with `--invisible` offered; encrypted documents, and documents their
+author certified against any change, are refused. `--field` excludes `--box`.
 
 ---
 

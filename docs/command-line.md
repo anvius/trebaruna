@@ -109,6 +109,7 @@ trebaruna sign <document> [flags]
 | `--out` | convention | Output path |
 | `--enveloping` | off | XAdES enveloping rather than enveloped: the document inside the signature; any file |
 | `--invisible` | off | PAdES without a visible seal; excludes `--box` |
+| `--field` | — | sign in the PDF's empty signature field of this fully qualified name, the seal in its box (with `--invisible`, none); excludes `--box` |
 | `--detached` | off | The signature beside the untouched document: `<document>.p7s` (CAdES) or `<document>.xsig` (XAdES) |
 | `--cosign` | off | Add a parallel signature to the `.p7m`/`.p7s` given as document |
 | `--countersign` | — | Counter-sign the envelope's signatures: `leaves` or `all` |

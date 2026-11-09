@@ -102,6 +102,11 @@ type PadesRequest struct {
 	EmbedRevocation bool
 	// Policy is the signature policy declared in the signed attributes.
 	Policy domain.SignaturePolicy
+	// Field is the document's empty signature field to sign in, by its
+	// fully qualified name; empty adds a field. The seal goes in its box
+	// unless Invisible.
+	Field     string
+	Invisible bool
 }
 
 // XadesSigner produces a signed XML document.

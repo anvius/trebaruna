@@ -499,3 +499,36 @@ func TestARubricOutsideAVisiblePDFSealIsRefused(t *testing.T) {
 		}
 	}
 }
+
+// TestASignatureFieldBelongsToAPDFAndPlacesTheSeal: the field goes to the
+// PDF adapter with whether to draw the seal, counts as one seal, and
+// excludes a box and any format but PAdES.
+func TestASignatureFieldBelongsToAPDFAndPlacesTheSeal(t *testing.T) {
+	store := newFakeStore(map[string][]byte{"/tmp/a.pdf": []byte("%PDF"), "/tmp/a.xml": []byte("<a/>")})
+	pades := &fakePades{}
+	useCase := application.NewSignDocument(store, fakeClock{time.Unix(0, 0)},
+		selfSignedIdentity(), &fakeCades{}, pades, &fakeXades{})
+
+	for _, invisible := range []bool{false, true} {
+		artefact, err := useCase.Execute(context.Background(), application.Request{
+			Document: newDocument(t, "/tmp/a.pdf"), Format: domain.Pades, Level: domain.BES, Signer: newSigner(t),
+			Field: "form.Firma1", Invisible: invisible,
+		})
+		if err != nil {
+			t.Fatalf("Execute: %v", err)
+		}
+		if pades.request.Field != "form.Firma1" || pades.request.Invisible != invisible || len(pades.request.Placements) != 0 ||
+			artefact.HasSeal == invisible {
+			t.Errorf("invisible %v: request %+v, artefact %+v", invisible, pades.request, artefact)
+		}
+	}
+	for name, request := range map[string]application.Request{
+		"an XML document": {Document: newDocument(t, "/tmp/a.xml"), Format: domain.Xades, Field: "Firma1"},
+		"a box as well":   {Document: newDocument(t, "/tmp/a.pdf"), Format: domain.Pades, Field: "Firma1", Placements: []domain.SealPlacement{domain.DefaultSeal(1)}},
+	} {
+		request.Level, request.Signer = domain.BES, newSigner(t)
+		if _, err := useCase.Execute(context.Background(), request); err == nil {
+			t.Errorf("%s: a field must be refused", name)
+		}
+	}
+}

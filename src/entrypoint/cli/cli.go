@@ -118,6 +118,7 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 		enveloping = flags.Bool("enveloping", false, "XAdES enveloping (default: enveloped)")
 		asicType   = flags.String("asic", "", "pack documents and their detached signature: s (one document, <document>.asics) or e (all the documents under one signature, <first>.asice)")
 		invisible  = flags.Bool("invisible", false, "PAdES without any visible seal (excludes --box)")
+		field      = flags.String("field", "", "sign in the PDF's empty signature field of this name, the seal in its box (excludes --box)")
 		rubricPath = flags.String("rubric", "", "PNG or JPEG of a handwritten signature, drawn in the seal beside the certificate data")
 		detached   = flags.Bool("detached", false, "the signature beside the document, which stays untouched: <document>.p7s (CAdES) or <document>.xsig (XAdES)")
 		cosign     = flags.Bool("cosign", false, "add a parallel signature to the .p7m/.p7s given as document")
@@ -187,8 +188,12 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 			return exitUsage
 		}
 	}
+	if *field != "" && len(boxes) > 0 {
+		fmt.Fprintln(stderr, "--field and --box exclude each other: the field already says where the seal goes")
+		return exitUsage
+	}
 	var placements []domain.SealPlacement
-	if !*invisible {
+	if !*invisible && *field == "" {
 		if placements, err = buildPlacements(*page, boxes); err != nil {
 			fmt.Fprintf(stderr, "%v\n", err)
 			return exitUsage
@@ -237,6 +242,7 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 			OutputPath:      *output,
 			Placements:      placements,
 			Invisible:       *invisible,
+			Field:           *field,
 			Rubric:          rubric,
 			Detached:        *detached,
 			Cosign:          *cosign,
@@ -293,7 +299,7 @@ func extractDocument(args []string) (documentPath string, remaining []string, er
 // be told apart from flag values wherever the flags appear.
 var signValueFlags = valueFlagsWith("format", "level", "lang", "territory", "out", "name",
 	"reason", "location", "tsa", "tsa-user", "tsa-pass", "page", "box", "content", "countersign",
-	"policy", "policy-id", "policy-hash", "policy-hash-alg", "policy-qualifier", "role", "asic", "report", "rubric")
+	"policy", "policy-id", "policy-hash", "policy-hash-alg", "policy-qualifier", "role", "asic", "report", "rubric", "field")
 
 // splitSignArguments separates the documents from the flags of `sign`.
 func splitSignArguments(args []string) (positional, remaining []string) {
