@@ -18,9 +18,20 @@ command) before being kept.
 | `xmlsec-autofirma-order.xml` | xmlsec1 1.3.9 | AutoFirma's enveloped transforms in its order: enveloped signature, C14N, then the XPath filter on the canonical octets; RSA-SHA512 |
 | `xmlsec-cosigned.xml` | xmlsec1 1.3.9 | the same document signed again with ECDSA (`--node-id Signature-B`): both signatures exclude every signature, so both hold |
 | `xmlsec-xpath-other.xml` | xmlsec1 1.3.9 | an XPath expression trebaruna does not evaluate: must read as unverifiable, not modified |
+| `xmlsec-pss-sha256.xml` | xmlsec1 1.3.9 | RSA-PSS (`sha256-rsa-MGF1`, RFC 6931) by a key its certificate publishes as id-RSASSA-PSS, as the German trusted list is signed |
+| `xmlsec-pss-sha3.xml` | xmlsec1 1.3.9 | RSA-PSS over SHA3-512, SHA3-256 digests |
+| `xmlsec-ecdsa-sha3.xml` | xmlsec1 1.3.9 | ECDSA P-256 over SHA3-256 (RFC 9231), SHA3-384 digests |
 
-`rsa.pem` and `ec.pem` are the self-signed test certificates (their keys were
-thrown away). The xmlsec1 files come from the templates in `templates/`:
+`rsa.pem`, `ec.pem`, `pss.pem` and `ec-sha3.pem` are the self-signed test
+certificates (their keys were thrown away). `pss.pem` and `ec-sha3.pem` were
+made with OpenSSL 3:
+
+```bash
+openssl req -x509 -newkey rsa-pss -pkeyopt rsa_keygen_bits:2048 -nodes \
+    -keyout pss.key -out pss.pem -subj "/CN=trebaruna RSA-PSS test" -days 3650
+openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes \
+    -keyout ec-sha3.key -out ec-sha3.pem -subj "/CN=trebaruna ECDSA SHA-3 test" -days 3650
+``` The xmlsec1 files come from the templates in `templates/`:
 
 The co-signed file adds the second template to the signed first file and
 signs that node alone:
@@ -36,6 +47,9 @@ xmlsec1 --sign --lax-key-search --privkey-pem rsa.key,rsa.pem --id-attr:Id CONTE
     --output xmlsec-<name>.xml templates/t-<name>.xml
 xmlsec1 --verify --trusted-pem rsa.pem --id-attr:Id CONTENT xmlsec-<name>.xml
 ```
+
+The PSS and SHA-3 files the same way, with `pss.key,pss.pem` and
+`ec-sha3.key,ec-sha3.pem`.
 
 The signxml files come from `templates/signxml_fixtures.py`
 (`python -I signxml_fixtures.py <directory holding rsa.key, rsa.pem, ec.key, ec.pem>`).

@@ -71,7 +71,7 @@ func InspectListSignatureWithAnchors(content []byte, anchors []*x509.Certificate
 		integrity.Reason = "the signature does not cover the whole list"
 		return integrity
 	}
-	if err := xmldsig.Check(document, signature, signer.PublicKey, nil); err != nil {
+	if err := xmldsig.Check(document, signature, xmldsig.KeyOf(signer), nil); err != nil {
 		integrity.Reason = fmt.Sprintf("the signature does not verify: %v", err)
 		return integrity
 	}

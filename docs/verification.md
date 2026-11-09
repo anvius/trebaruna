@@ -54,7 +54,9 @@ then the signature value over `SignedInfo`. A change to any of them is
 trebaruna does not implement (an XPath expression other than the
 `not(ancestor-or-self::ds:Signature)` filter, XPointer, XSLT) is
 `signature.unverifiable`: unknown, not broken. SHA-1 signatures, still found
-in older files, are checked. A document with several signatures (co-signed,
+in older files, are checked; so are RSA-PSS (`…-rsa-MGF1`, RFC 6931, with a
+key published as id-RSASSA-PSS or as plain RSA) and SHA-3 digests and
+signatures (RFC 9231). A document with several signatures (co-signed,
 or counter-signed inside) gets one report per signature.
 
 An ASiC container (`.asics`, `.asice`, ETSI EN 319 162-1) is unpacked into a

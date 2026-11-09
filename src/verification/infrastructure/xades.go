@@ -397,7 +397,7 @@ func validate(document *etree.Document, signature *etree.Element, certificate *x
 	if certificate == nil {
 		return fmt.Errorf("%w: no signing certificate to validate against", xmldsig.ErrUnverifiable)
 	}
-	return xmldsig.Check(document, signature, certificate.PublicKey, resolve)
+	return xmldsig.Check(document, signature, xmldsig.KeyOf(certificate), resolve)
 }
 
 // beside resolves a detached reference: the document the person named, or

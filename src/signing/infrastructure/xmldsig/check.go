@@ -7,6 +7,7 @@ import (
 	"crypto/rsa"
 	_ "crypto/sha1" // XML signatures made before 2015 use SHA-1; they are still checked
 	_ "crypto/sha256"
+	_ "crypto/sha3"
 	_ "crypto/sha512"
 	"encoding/base64"
 	"errors"
@@ -37,11 +38,15 @@ type Resolver func(uri string) ([]byte, error)
 
 // digests are the reference digest algorithms.
 var digests = map[string]crypto.Hash{
-	"http://www.w3.org/2000/09/xmldsig#sha1":        crypto.SHA1,
-	"http://www.w3.org/2001/04/xmldsig-more#sha224": crypto.SHA224,
-	"http://www.w3.org/2001/04/xmlenc#sha256":       crypto.SHA256,
-	"http://www.w3.org/2001/04/xmldsig-more#sha384": crypto.SHA384,
-	"http://www.w3.org/2001/04/xmlenc#sha512":       crypto.SHA512,
+	"http://www.w3.org/2000/09/xmldsig#sha1":          crypto.SHA1,
+	"http://www.w3.org/2001/04/xmldsig-more#sha224":   crypto.SHA224,
+	"http://www.w3.org/2001/04/xmlenc#sha256":         crypto.SHA256,
+	"http://www.w3.org/2001/04/xmldsig-more#sha384":   crypto.SHA384,
+	"http://www.w3.org/2001/04/xmlenc#sha512":         crypto.SHA512,
+	"http://www.w3.org/2007/05/xmldsig-more#sha3-224": crypto.SHA3_224,
+	"http://www.w3.org/2007/05/xmldsig-more#sha3-256": crypto.SHA3_256,
+	"http://www.w3.org/2007/05/xmldsig-more#sha3-384": crypto.SHA3_384,
+	"http://www.w3.org/2007/05/xmldsig-more#sha3-512": crypto.SHA3_512,
 }
 
 // Digest computes data's digest with an XML-Signature DigestMethod, as an
@@ -56,23 +61,49 @@ func Digest(algorithm string, data []byte) ([]byte, error) {
 	return digest.Sum(nil), nil
 }
 
-// signatureMethod is a SignatureMethod: the digest and the key it needs.
+// scheme is how a signature value is made from the digest.
+type scheme int
+
+const (
+	// rsaPKCS1 is RSASSA-PKCS1-v1_5.
+	rsaPKCS1 scheme = iota
+	// rsaPSS is RSASSA-PSS with MGF1 over the same digest, a salt as long
+	// as the digest and the trailer 0xBC (RFC 6931, 2.3.10).
+	rsaPSS
+	// ecdsaRS is ECDSA, its value r||s or, from some producers, DER.
+	ecdsaRS
+)
+
+// signatureMethod is a SignatureMethod: the digest and the scheme.
 type signatureMethod struct {
-	hash  crypto.Hash
-	ecdsa bool
+	hash   crypto.Hash
+	scheme scheme
 }
 
 var signatureMethods = map[string]signatureMethod{
-	"http://www.w3.org/2000/09/xmldsig#rsa-sha1":          {crypto.SHA1, false},
-	"http://www.w3.org/2001/04/xmldsig-more#rsa-sha224":   {crypto.SHA224, false},
-	"http://www.w3.org/2001/04/xmldsig-more#rsa-sha256":   {crypto.SHA256, false},
-	"http://www.w3.org/2001/04/xmldsig-more#rsa-sha384":   {crypto.SHA384, false},
-	"http://www.w3.org/2001/04/xmldsig-more#rsa-sha512":   {crypto.SHA512, false},
-	"http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha1":   {crypto.SHA1, true},
-	"http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha224": {crypto.SHA224, true},
-	"http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha256": {crypto.SHA256, true},
-	"http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha384": {crypto.SHA384, true},
-	"http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha512": {crypto.SHA512, true},
+	"http://www.w3.org/2000/09/xmldsig#rsa-sha1":               {crypto.SHA1, rsaPKCS1},
+	"http://www.w3.org/2001/04/xmldsig-more#rsa-sha224":        {crypto.SHA224, rsaPKCS1},
+	"http://www.w3.org/2001/04/xmldsig-more#rsa-sha256":        {crypto.SHA256, rsaPKCS1},
+	"http://www.w3.org/2001/04/xmldsig-more#rsa-sha384":        {crypto.SHA384, rsaPKCS1},
+	"http://www.w3.org/2001/04/xmldsig-more#rsa-sha512":        {crypto.SHA512, rsaPKCS1},
+	"http://www.w3.org/2007/05/xmldsig-more#sha1-rsa-MGF1":     {crypto.SHA1, rsaPSS},
+	"http://www.w3.org/2007/05/xmldsig-more#sha224-rsa-MGF1":   {crypto.SHA224, rsaPSS},
+	"http://www.w3.org/2007/05/xmldsig-more#sha256-rsa-MGF1":   {crypto.SHA256, rsaPSS},
+	"http://www.w3.org/2007/05/xmldsig-more#sha384-rsa-MGF1":   {crypto.SHA384, rsaPSS},
+	"http://www.w3.org/2007/05/xmldsig-more#sha512-rsa-MGF1":   {crypto.SHA512, rsaPSS},
+	"http://www.w3.org/2007/05/xmldsig-more#sha3-224-rsa-MGF1": {crypto.SHA3_224, rsaPSS},
+	"http://www.w3.org/2007/05/xmldsig-more#sha3-256-rsa-MGF1": {crypto.SHA3_256, rsaPSS},
+	"http://www.w3.org/2007/05/xmldsig-more#sha3-384-rsa-MGF1": {crypto.SHA3_384, rsaPSS},
+	"http://www.w3.org/2007/05/xmldsig-more#sha3-512-rsa-MGF1": {crypto.SHA3_512, rsaPSS},
+	"http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha1":        {crypto.SHA1, ecdsaRS},
+	"http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha224":      {crypto.SHA224, ecdsaRS},
+	"http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha256":      {crypto.SHA256, ecdsaRS},
+	"http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha384":      {crypto.SHA384, ecdsaRS},
+	"http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha512":      {crypto.SHA512, ecdsaRS},
+	"http://www.w3.org/2021/04/xmldsig-more#ecdsa-sha3-224":    {crypto.SHA3_224, ecdsaRS},
+	"http://www.w3.org/2021/04/xmldsig-more#ecdsa-sha3-256":    {crypto.SHA3_256, ecdsaRS},
+	"http://www.w3.org/2021/04/xmldsig-more#ecdsa-sha3-384":    {crypto.SHA3_384, ecdsaRS},
+	"http://www.w3.org/2021/04/xmldsig-more#ecdsa-sha3-512":    {crypto.SHA3_512, ecdsaRS},
 }
 
 // Check verifies an XML signature completely (XML-Signature 3.2): every
@@ -307,24 +338,30 @@ func checkSignatureValue(signature, signedInfo *etree.Element, key crypto.Public
 	digest.Write(canonical)
 	sum := digest.Sum(nil)
 
+	var valid bool
 	switch public := key.(type) {
 	case *rsa.PublicKey:
-		if method.ecdsa || rsa.VerifyPKCS1v15(public, method.hash, sum, value) != nil {
-			return fmt.Errorf("%w: the signature value does not verify", ErrModified)
+		switch method.scheme {
+		case rsaPKCS1:
+			valid = rsa.VerifyPKCS1v15(public, method.hash, sum, value) == nil
+		case rsaPSS:
+			valid = rsa.VerifyPSS(public, method.hash, sum, value, &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash}) == nil
 		}
 	case *ecdsa.PublicKey:
 		size := (public.Curve.Params().BitSize + 7) / 8
-		var valid bool
-		if len(value) == 2*size {
+		switch {
+		case method.scheme != ecdsaRS:
+			// An RSA method with an EC key: valid stays false.
+		case len(value) == 2*size:
 			valid = ecdsa.Verify(public, sum, new(big.Int).SetBytes(value[:size]), new(big.Int).SetBytes(value[size:]))
-		} else {
+		default:
 			valid = ecdsa.VerifyASN1(public, sum, value)
-		}
-		if !method.ecdsa || !valid {
-			return fmt.Errorf("%w: the signature value does not verify", ErrModified)
 		}
 	default:
 		return fmt.Errorf("%w: a %T key", ErrUnverifiable, key)
+	}
+	if !valid {
+		return fmt.Errorf("%w: the signature value does not verify", ErrModified)
 	}
 	return nil
 }

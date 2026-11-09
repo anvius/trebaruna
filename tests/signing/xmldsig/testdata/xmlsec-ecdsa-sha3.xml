@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lista xmlns="urn:example:lista">
+  <entrada>Prestador cualificado</entrada>
+<ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#"><ds:SignedInfo><ds:CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/><ds:SignatureMethod Algorithm="http://www.w3.org/2021/04/xmldsig-more#ecdsa-sha3-256"/><ds:Reference URI=""><ds:Transforms><ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/><ds:Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/></ds:Transforms><ds:DigestMethod Algorithm="http://www.w3.org/2007/05/xmldsig-more#sha3-384"/><ds:DigestValue>BEieTBrkIWmqL1iXsrwTEv24dV4VdFN1ueK4mIX68inI0ZOq5T97eLi+AdicMdVc</ds:DigestValue></ds:Reference></ds:SignedInfo><ds:SignatureValue>EKWyn9Xnlj6ovMUks22R9yf81bqrbnYFEzjjpjykgsQwM7eo8ur/3J01T+9Mk1cz
+spagggyB+vFgVhrxmJTkXQ==</ds:SignatureValue><ds:KeyInfo><ds:X509Data>
+<ds:X509Certificate>MIIBnzCCAUWgAwIBAgIUQ59e6oNFZupXRwSJX4v4jWmYXOIwCgYIKoZIzj0EAwIw
+JTEjMCEGA1UEAwwadHJlYmFydW5hIEVDRFNBIFNIQS0zIHRlc3QwHhcNMjYxMTA5
+MTcwOTQxWhcNMzYxMTA2MTcwOTQxWjAlMSMwIQYDVQQDDBp0cmViYXJ1bmEgRUNE
+U0EgU0hBLTMgdGVzdDBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABGP1tNGMtoyx
+Kf7NTWhX8HqaCwLlFJVI+UD5RvlICCzS89eP9UVn6Hli6Xs6uJHRnvM7BZ9cp3QR
+oo1pfQeXXJCjUzBRMB0GA1UdDgQWBBSIaIg9Ck3+2RowWhwlISoO92lfjjAfBgNV
+HSMEGDAWgBSIaIg9Ck3+2RowWhwlISoO92lfjjAPBgNVHRMBAf8EBTADAQH/MAoG
+CCqGSM49BAMCA0gAMEUCIQC1AgYr1IQUUzz6q2BiI4dnm8chisCHt4r6hHOLd5au
+IgIgFwJSChc1olVgi6C8x9usk61QcVHUqI06UNnQQW0OMUQ=
+</ds:X509Certificate>
+</ds:X509Data></ds:KeyInfo></ds:Signature></lista>

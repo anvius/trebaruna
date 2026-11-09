@@ -48,6 +48,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- XML signatures made with RSA-PSS (`sha1/224/256/384/512-rsa-MGF1` and
+  `sha3-*-rsa-MGF1`, RFC 6931: MGF1 over the same digest, a salt as long as
+  the digest) and with SHA-3 (digests `sha3-224/256/384/512`, ECDSA
+  `ecdsa-sha3-*`, RFC 9231) are verified, in documents and in trusted
+  lists, the algorithms xmlsec1 implements. An RSA key a certificate
+  publishes as id-RSASSA-PSS (RFC 4055), which crypto/x509 leaves unread,
+  is read (`xmldsig.KeyOf`). The German trusted list, signed that way and
+  refused until now, authenticates: 979 services, 93 qualified.
+
 - Accessibility (plan G8), after a WCAG 2.2 AA review of the window
   (docs/accessibility.md):
   - + and − resize the seal from the keyboard, as the corner handle does

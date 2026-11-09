@@ -27,7 +27,7 @@ func publicKey(t *testing.T, name string) crypto.PublicKey {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return certificate.PublicKey
+	return xmldsig.KeyOf(certificate)
 }
 
 func read(t *testing.T, name string) []byte {
@@ -55,7 +55,12 @@ func check(t *testing.T, name string, change func(string) string, resolve xmldsi
 		t.Fatal(err)
 	}
 	key := publicKey(t, "rsa.pem")
-	if strings.Contains(name, "ecdsa") {
+	switch {
+	case strings.Contains(name, "pss"):
+		key = publicKey(t, "pss.pem")
+	case strings.Contains(name, "ecdsa-sha3"):
+		key = publicKey(t, "ec-sha3.pem")
+	case strings.Contains(name, "ecdsa"):
 		key = publicKey(t, "ec.pem")
 	}
 	return xmldsig.Check(document, findSignature(document.Root()), key, resolve)
@@ -85,6 +90,9 @@ var sameDocument = []string{
 	"xmlsec-sha1-xpath.xml",
 	"xmlsec-detached-base64.xml",
 	"xmlsec-detached-xml.xml",
+	"xmlsec-pss-sha256.xml",
+	"xmlsec-pss-sha3.xml",
+	"xmlsec-ecdsa-sha3.xml",
 }
 
 // TestSignaturesFromOtherImplementationsVerify.
@@ -112,6 +120,9 @@ func TestAnyChangeToWhatIsSignedIsCaught(t *testing.T) {
 		{"xmlsec-detached-base64.xml", replace("JVBERi0xLjQgZml4dHVyZSBkb2N1bW", "JVBERi0xLjUgZml4dHVyZSBkb2N1bW")},
 		{"xmlsec-detached-xml.xml", replace("Licencia", "Licencio")},
 		{"xmlsec-detached-xml.xml", replace(`MimeType="text/xml"`, `MimeType="text/plain"`)},
+		{"xmlsec-pss-sha256.xml", replace("Prestador cualificado", "Prestador falso")},
+		{"xmlsec-pss-sha3.xml", replace("Prestador cualificado", "Prestador falso")},
+		{"xmlsec-ecdsa-sha3.xml", replace("Prestador cualificado", "Prestador falso")},
 	}
 	for index, entry := range changes {
 		if err := check(t, entry.name, entry.change, nil); !errors.Is(err, xmldsig.ErrModified) {
