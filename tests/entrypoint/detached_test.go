@@ -14,8 +14,10 @@ import (
 type verifyResult struct {
 	Verdict string `json:"verdict"`
 	Signers []struct {
-		Integrity string `json:"integrity"`
-		Findings  []struct {
+		Field        string `json:"field"`
+		Countersigns string `json:"countersigns"`
+		Integrity    string `json:"integrity"`
+		Findings     []struct {
 			Code string `json:"code"`
 		} `json:"findings"`
 	} `json:"signers"`
@@ -30,15 +32,23 @@ func writeDocument(t *testing.T, name, content string) string {
 	return path
 }
 
+// verifyJSON is verify's JSON for a file holding one signature.
 func verifyJSON(t *testing.T, arguments ...string) verifyResult {
+	t.Helper()
+	result := verifyEveryJSON(t, arguments...)
+	if len(result.Signers) != 1 {
+		t.Fatalf("signers = %d", len(result.Signers))
+	}
+	return result
+}
+
+// verifyEveryJSON is verify's JSON, whatever the number of signatures.
+func verifyEveryJSON(t *testing.T, arguments ...string) verifyResult {
 	t.Helper()
 	stdout, stderr, _ := run(append([]string{"verify"}, append(arguments, "--json")...)...)
 	var result verifyResult
 	if err := json.Unmarshal([]byte(stdout), &result); err != nil {
 		t.Fatalf("verify printed %q (stderr %q)", stdout, stderr)
-	}
-	if len(result.Signers) != 1 {
-		t.Fatalf("signers = %d", len(result.Signers))
 	}
 	return result
 }

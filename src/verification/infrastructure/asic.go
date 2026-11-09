@@ -116,8 +116,20 @@ func (v *AsicVerifier) Extract(archivePath string) ([]domain.SignerReport, error
 		for _, name := range covers {
 			covered[name] = true
 		}
+		// Each signature is named after its entry; several in one entry (a
+		// co-signed signatures.xml, a counter-signature) keep their own names
+		// after it, and whom they counter-sign follows.
+		within := func(name string) string {
+			if len(found) == 1 || name == "" {
+				return entry
+			}
+			return entry + " › " + name
+		}
 		for index := range found {
-			found[index].FieldName = entry
+			if found[index].Countersigns != "" {
+				found[index].Countersigns = within(found[index].Countersigns)
+			}
+			found[index].FieldName = within(found[index].FieldName)
 			// The unpacked copies' paths mean nothing to the person; which
 			// files of the container are covered is said below.
 			found[index].Findings = withoutFinding(found[index].Findings, "content.detached")

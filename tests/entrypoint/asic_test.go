@@ -81,6 +81,77 @@ func TestTheAsicCommandPacksADetachedSignatureUnderMETAINF(t *testing.T) {
 	}
 }
 
+// TestCosignedSignaturesKeepTheirNamesInsideAnASiC: an ASiC-S's
+// signatures.xml co-signed in place holds two signatures, each named after
+// the entry and its own name, not both after the entry alone.
+func TestCosignedSignaturesKeepTheirNamesInsideAnASiC(t *testing.T) {
+	key := writeProtectedP12(t, "segreto")
+	t.Setenv("TREBARUNA_PASSPHRASE", "segreto")
+	document := writeDocument(t, "acta.txt", "acta\n")
+	container := document + ".asics"
+	if _, stderr, code := run("sign", document, "--p12", key, "--format", "xades", "--asic", "s", "--out", container); code != 0 {
+		t.Fatalf("exit %d: %s", code, stderr)
+	}
+	if _, stderr, code := run("sign", container, "--p12", key, "--cosign"); code != 0 {
+		t.Fatalf("cosign: exit %d: %s", code, stderr)
+	}
+	result := verifyEveryJSON(t, filepath.Join(filepath.Dir(document), "acta.txt_cosigned.asics"))
+	var fields []string
+	for _, signer := range result.Signers {
+		fields = append(fields, signer.Field)
+		if signer.Integrity != "good" {
+			t.Errorf("%s: %s", signer.Field, signer.Integrity)
+		}
+	}
+	if strings.Join(fields, "|") != "META-INF/signatures.xml › XMLSignature #1|META-INF/signatures.xml › XMLSignature #2" {
+		t.Errorf("fields: %q", fields)
+	}
+
+	// A counter-signature inside the entry is named after the one it signs,
+	// and says so with the entry's name.
+	unpacked := filepath.Join(t.TempDir(), "META-INF")
+	if err := os.MkdirAll(unpacked, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	writeEntry(t, container, "acta.txt", filepath.Join(filepath.Dir(unpacked), "acta.txt"))
+	signatures := filepath.Join(unpacked, "signatures.xml")
+	writeEntry(t, container, "META-INF/signatures.xml", signatures)
+	if _, stderr, code := run("sign", signatures, "--p12", key, "--countersign", "leaves"); code != 0 {
+		t.Fatalf("countersign: exit %d: %s", code, stderr)
+	}
+	countersigned, err := os.ReadFile(filepath.Join(unpacked, "signatures_countersigned.xml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	result = verifyEveryJSON(t, rewriteEntry(t, container, "META-INF/signatures.xml", countersigned))
+	if len(result.Signers) != 2 || result.Signers[1].Field != "META-INF/signatures.xml › XMLSignature › countersignature 1" ||
+		result.Signers[1].Countersigns != "META-INF/signatures.xml › XMLSignature" || result.Signers[1].Integrity != "good" {
+		t.Errorf("counter-signed inside the container: %+v", result.Signers)
+	}
+}
+
+// writeEntry copies one entry of a container to a file.
+func writeEntry(t *testing.T, container, name, path string) {
+	t.Helper()
+	archive, err := zip.OpenReader(container)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer archive.Close()
+	reader, err := archive.Open(name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer reader.Close()
+	content, err := io.ReadAll(reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, content, 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
+
 // TestSignSeveralDocumentsIntoAnASiCE: one signature over all of them, and a
 // changed one inside the container is caught.
 func TestSignSeveralDocumentsIntoAnASiCE(t *testing.T) {

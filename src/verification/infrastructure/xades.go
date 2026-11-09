@@ -138,23 +138,53 @@ func (v *XadesVerifier) Extract(path string) ([]domain.SignerReport, error) {
 	}
 	// Every signature is judged: a co-signed document carries several, and
 	// reporting the first alone would vouch for the others unseen.
-	names := map[*etree.Element]string{}
-	for index, signature := range signatures {
-		names[signature] = "XMLSignature"
-		if len(signatures) > 1 {
-			names[signature] = fmt.Sprintf("XMLSignature #%d", index+1)
-		}
-	}
+	targets := counterSignedTargets(document, signatures)
+	names := signatureNames(signatures, targets)
 	reports := make([]domain.SignerReport, 0, len(signatures))
 	for _, signature := range signatures {
 		report := v.report(document, signature, path)
 		report.FieldName = names[signature]
-		if target := countersigned(document, signature); target != nil {
+		if target, ok := targets[signature]; ok {
 			report.Countersigns = names[target]
 		}
 		reports = append(reports, report)
 	}
 	return reports, nil
+}
+
+// counterSignedTargets maps each counter-signature to the signature it
+// signs: the one holding it, so always earlier in document order.
+func counterSignedTargets(document *etree.Document, signatures []*etree.Element) map[*etree.Element]*etree.Element {
+	targets := map[*etree.Element]*etree.Element{}
+	for _, signature := range signatures {
+		if target := countersigned(document, signature); target != nil {
+			targets[signature] = target
+		}
+	}
+	return targets
+}
+
+// signatureNames names the signatures as CMS's are named: a counter-signature
+// after the one it signs ("XMLSignature #1 › countersignature 1"), the
+// others "XMLSignature", numbered when there are several.
+func signatureNames(signatures []*etree.Element, targets map[*etree.Element]*etree.Element) map[*etree.Element]string {
+	numbered := len(signatures)-len(targets) > 1
+	names := map[*etree.Element]string{}
+	counters := map[*etree.Element]int{}
+	primary := 0
+	for _, signature := range signatures {
+		if target, ok := targets[signature]; ok {
+			counters[target]++
+			names[signature] = fmt.Sprintf("%s › countersignature %d", names[target], counters[target])
+			continue
+		}
+		primary++
+		names[signature] = "XMLSignature"
+		if numbered {
+			names[signature] = fmt.Sprintf("XMLSignature #%d", primary)
+		}
+	}
+	return names
 }
 
 // report judges one signature of the document.

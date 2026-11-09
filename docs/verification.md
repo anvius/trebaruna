@@ -204,7 +204,12 @@ trebaruna verify atto.pdf --json
 ```
 
 `field` is the signature field's name in a PDF (its fully qualified name),
-the signature's place in other formats. Times are UTC in the JSON and the
+the signature's place in other formats: `Signer 2` in a CMS envelope,
+`XMLSignature #2` in an XML document. A counter-signature is named after the
+one it signs (`Signer 1 › countersignature 1`, `XMLSignature ›
+countersignature 1`) and `countersigns` names that one; inside an ASiC the
+entry comes first (`META-INF/signatures.xml › XMLSignature #2`), alone when
+it holds one signature. Times are UTC in the JSON and the
 reader's local time in the human output and the reports, whatever zone the
 format stored. The human output also shows what the signature declares:
 policy, roles, place and, for a PDF, the reason.

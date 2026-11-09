@@ -27,8 +27,8 @@ import (
 	verificationinfra "codeberg.org/simplicer/trebaruna/src/verification/infrastructure"
 )
 
-// verifyXML returns, for each signature in document order, whom it
-// counter-signs, failing on any that is not intact.
+// verifyXML returns the name of each signature in document order, failing
+// on any that is not intact or does not say whom it counter-signs.
 func verifyXML(t *testing.T, content []byte) []string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "signed.xml")
@@ -39,7 +39,7 @@ func verifyXML(t *testing.T, content []byte) []string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var countersigns []string
+	var fields []string
 	for _, report := range reports {
 		if report.Integrity != verificationdomain.StatusGood {
 			t.Errorf("%s: %s %+v", report.FieldName, report.Integrity, report.Findings)
@@ -49,9 +49,18 @@ func verifyXML(t *testing.T, content []byte) []string {
 				t.Errorf("%s is read as a partial signature, not a counter-signature", report.FieldName)
 			}
 		}
-		countersigns = append(countersigns, report.Countersigns)
+		// A counter-signature is named after the one it signs, as CMS's are,
+		// and says which one that is.
+		signs := ""
+		if cut := strings.LastIndex(report.FieldName, " › countersignature "); cut > 0 {
+			signs = report.FieldName[:cut]
+		}
+		if report.Countersigns != signs {
+			t.Errorf("%s counter-signs %q", report.FieldName, report.Countersigns)
+		}
+		fields = append(fields, report.FieldName)
 	}
-	return countersigns
+	return fields
 }
 
 func countersignXML(t *testing.T, signer domain.Signer, authority *localTSA, content []byte, scope string, level domain.Level) ([]byte, error) {
@@ -71,7 +80,7 @@ func TestXadesSignaturesAreCounterSignedInside(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := verifyXML(t, once); strings.Join(got, "|") != "|XMLSignature #1" {
+	if got := verifyXML(t, once); strings.Join(got, "|") != "XMLSignature|XMLSignature › countersignature 1" {
 		t.Errorf("counter-signed: %q", got)
 	}
 	if strings.Count(string(once), "<xades:SignatureTimeStamp") != 1 || !strings.Contains(string(once), "01903#CountersignedSignature") {
@@ -82,14 +91,14 @@ func TestXadesSignaturesAreCounterSignedInside(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := verifyXML(t, nested); strings.Join(got, "|") != "|XMLSignature #1|XMLSignature #2" {
+	if got := verifyXML(t, nested); strings.Join(got, "|") != "XMLSignature|XMLSignature › countersignature 1|XMLSignature › countersignature 1 › countersignature 1" {
 		t.Errorf("the leaves of a counter-signed document: %q", got)
 	}
 	all, err := countersignXML(t, signer, authority, once, "all", domain.BES)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := verifyXML(t, all); strings.Join(got, "|") != "|XMLSignature #1|XMLSignature #2|XMLSignature #1" {
+	if got := verifyXML(t, all); strings.Join(got, "|") != "XMLSignature|XMLSignature › countersignature 1|XMLSignature › countersignature 1 › countersignature 1|XMLSignature › countersignature 2" {
 		t.Errorf("every signature: %q", got)
 	}
 

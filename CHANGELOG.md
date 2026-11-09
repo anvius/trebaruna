@@ -920,6 +920,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `verify` named an XML counter-signature "XMLSignature #2", like a second
+  signature of the document; it is now named after the one it signs
+  ("XMLSignature › countersignature 1"), as CMS counter-signatures were.
+  Inside an ASiC every signature of an entry took the entry's name alone,
+  so the two of a co-signed `signatures.xml` read the same: each now keeps
+  its own after the entry, and `countersigns` follows.
+
 - A detached signature verified without its document (a `.p7s` or an
   `.xsig` alone) said "untrusted", the word for cryptography that holds
   under an unknown issuer, although no byte was compared. Its trust and
