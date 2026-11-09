@@ -18,6 +18,8 @@ func TestOpenSCIsLookedForWhereEachSystemInstallsIt(t *testing.T) {
 		{"linux", "arm64", "/usr/lib/aarch64-linux-gnu/opensc-pkcs11.so"},
 		{"linux", "amd64", "/usr/lib64/opensc-pkcs11.so"},
 		{"linux", "amd64", "/usr/lib/opensc-pkcs11.so"},
+		// The Flatpak carries its own: the runtime has none.
+		{"linux", "amd64", "/app/lib/opensc-pkcs11.so"},
 		{"freebsd", "amd64", "/usr/local/lib/opensc-pkcs11.so"},
 		{"darwin", "arm64", "/Library/OpenSC/lib/opensc-pkcs11.so"},
 		{"darwin", "arm64", "/opt/homebrew/lib/opensc-pkcs11.so"},
@@ -34,6 +36,11 @@ func TestOpenSCIsLookedForWhereEachSystemInstallsIt(t *testing.T) {
 		if strings.Contains(location, "x86_64") {
 			t.Errorf("an arm64 system must not try %s", location)
 		}
+	}
+	// The system's own OpenSC comes before the Flatpak's place.
+	linux := infrastructure.OpenSCLocations("linux", "amd64")
+	if linux[len(linux)-1] != "/app/lib/opensc-pkcs11.so" {
+		t.Errorf("/app/lib is tried last: %v", linux)
 	}
 }
 

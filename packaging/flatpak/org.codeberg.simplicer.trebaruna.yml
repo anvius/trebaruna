@@ -2,14 +2,13 @@
 # without network, so packaging/build-flatpak.sh vendors the Go modules
 # first, and the Go toolchain the project needs comes as a checked archive.
 #
-# Not yet built: flatpak-builder was not available where this manifest was
-# written; CI builds it (plan G6). Smart cards need OpenSC inside the
-# sandbox, which this manifest does not carry yet: the Flatpak signs with a
-# certificate file, Firefox's store or a remote service; the .deb and the
-# AppImage also do cards.
+# Smart cards: the runtime has no PC/SC, so the sandbox carries OpenSC and
+# the PC/SC client library, which talks to the host's pcscd through its
+# socket (--socket=pcsc). The readers stay with the host's pcscd and its
+# drivers; nothing else of the host's is reached.
 id: org.codeberg.simplicer.trebaruna
 runtime: org.freedesktop.Platform
-runtime-version: '24.08'
+runtime-version: '26.08'
 sdk: org.freedesktop.Sdk
 command: trebaruna-desktop
 finish-args:
@@ -17,6 +16,8 @@ finish-args:
   - --socket=fallback-x11
   - --socket=wayland
   - --device=dri
+  # Smart cards, through the host's pcscd.
+  - --socket=pcsc
   # Timestamps, revocation, trust lists and web pages' afirma:// servers,
   # each made only when asked for and listed in the result (ADR-0010).
   - --share=network
@@ -37,6 +38,61 @@ modules:
         only-arches: [aarch64]
         url: https://go.dev/dl/go1.27.3.linux-arm64.tar.gz
         sha256: a06e99309dbcbdca1a8ccd2282c3ee146e55930886e26b4f1193269587165f49
+
+  # The PC/SC client library only: the daemon stays the host's. The
+  # tarball is signed by its maintainer, Ludovic Rousseau (key
+  # F5E11B9FFE911146F41D953D78A1B4DFE8F9C57E); the digest is of the
+  # checked file.
+  - name: pcsc-lite
+    buildsystem: meson
+    config-opts:
+      - -Dlibsystemd=false
+      - -Dlibudev=false
+      - -Dpolkit=false
+      - -Dusb=false
+      - -Dserial=false
+      - -Dipcdir=/run/pcscd
+    cleanup:
+      - /bin
+      - /sbin
+      - /include
+      - /lib/pkgconfig
+      - /lib/systemd
+      - /share
+    sources:
+      - type: archive
+        url: https://pcsclite.apdu.fr/files/pcsc-lite-2.5.3.tar.xz
+        sha256: fe2bb733ecf95e52768907eb00da9f9f3daf180960283e514a05dcc090afa3bd
+
+  # OpenSC, the free driver of the national and qualified cards: trebaruna
+  # finds its PKCS#11 module in /app/lib. pkcs11-tool and opensc-tool stay,
+  # for the diagnostics trebaruna suggests.
+  - name: opensc
+    config-opts:
+      - --disable-doc
+      - --disable-man
+      - --disable-notify
+      - --disable-tests
+      - --disable-cmocka
+      - --disable-static
+      - --enable-zlib
+      - --enable-openssl
+      - --sysconfdir=/app/etc
+      # Its p11-kit registration would go to the runtime's read-only /usr;
+      # trebaruna loads the module by its path, so it is dropped.
+      - --enable-p11_system_config_modules=/app/share/p11-kit/modules
+    cleanup:
+      - /include
+      - /lib/pkgconfig
+      - '*.la'
+      - /share/bash-completion
+      - /share/doc
+      - /share/man
+      - /share/p11-kit
+    sources:
+      - type: archive
+        url: https://github.com/OpenSC/OpenSC/releases/download/0.27.1/opensc-0.27.1.tar.gz
+        sha256: 976f4a23eaf3397a1a2c3a7aac80bf971a8c3d829c9a79f06145bfaeeae5eca7
 
   - name: trebaruna
     buildsystem: simple

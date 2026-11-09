@@ -68,7 +68,7 @@ side by side:
 |---|---|---|---|
 | `.deb` (Debian, Ubuntu) | `make package-deb` | `sudo apt install ./dist/trebaruna_<version>_amd64.deb` | yes, with `opensc-pkcs11` and `pcscd` (recommended) |
 | AppImage | `make package-appimage` (needs `appimagetool`) | run it; link it as `trebaruna` for the command line | yes, with the system's OpenSC and pcscd |
-| Flatpak | `make package-flatpak` (needs `flatpak-builder`) | installed for this user by the build | not yet: OpenSC is not in the sandbox |
+| Flatpak | `make package-flatpak` (needs `flatpak-builder`, or Flathub's `org.flatpak.Builder`) | installed for this user by the build | yes: OpenSC inside, through the system's pcscd |
 
 - The `.deb` declares what the binaries link (read by `dpkg-shlibdeps`) and
   the X11 and Wayland libraries the window opens at run time. It installs
@@ -84,8 +84,14 @@ side by side:
   reaches the network (timestamps, revocation, trust lists, all listed in
   the result) and the home folder. Its Go toolchain comes as a checked
   archive and the modules are vendored, since `flatpak-builder` builds
-  offline. The CI builds it in Flathub's builder image; that workflow has
-  not run yet.
+  offline. Cards: the runtime has no PC/SC, so the Flatpak carries OpenSC
+  0.27.1 and the PC/SC client library (pcsc-lite 2.5.3, its signature
+  checked); the client talks to the system's `pcscd` through the socket
+  Flatpak shares with `--socket=pcsc`, so `pcscd` and the reader's driver
+  stay installed on the system. `pkcs11-tool` and `opensc-tool` come along
+  (`flatpak run --command=opensc-tool org.codeberg.simplicer.trebaruna -l`).
+  Built and installed here with Flathub's builder on the 26.08 runtime; the
+  CI builds it in Flathub's builder image, a workflow that has not run yet.
 
 ### From a release binary
 

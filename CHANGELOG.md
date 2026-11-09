@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The Flatpak signs with smart cards. The runtime has no PC/SC, so it
+  carries OpenSC 0.27.1 and the PC/SC client library of pcsc-lite 2.5.3
+  (the tarball's signature by its maintainer checked), and reaches the
+  system's pcscd through `--socket=pcsc`; trebaruna looks for OpenSC in
+  /app/lib after the system's places. The runtime moves to freedesktop
+  26.08 (24.08 is past its support), in the CI image too. The build script
+  uses Flathub's flatpak-builder when the system has none, without
+  rofiles-fuse, and clears a failed build's directory before vendoring.
+
 - The window follows the desktop's light or dark preference: a light
   palette (pale desk, white fields, the teal and the signal colours
   darkened) with the same WCAG 2.2 AA contrast as the dark one, checked by

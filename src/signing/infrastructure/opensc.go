@@ -44,12 +44,14 @@ func OpenSCLocations(system, architecture string) []string {
 			"/usr/lib/"+triplet+"/opensc-pkcs11.so",
 			"/usr/lib/"+triplet+"/pkcs11/opensc-pkcs11.so")
 	}
+	// /app/lib last: the Flatpak's own OpenSC, the runtime having none.
 	return append(locations,
 		"/usr/lib64/opensc-pkcs11.so",
 		"/usr/lib64/pkcs11/opensc-pkcs11.so",
 		"/usr/lib/opensc-pkcs11.so",
 		"/usr/lib/pkcs11/opensc-pkcs11.so",
-		"/usr/local/lib/opensc-pkcs11.so")
+		"/usr/local/lib/opensc-pkcs11.so",
+		"/app/lib/opensc-pkcs11.so")
 }
 
 // debianTriplets maps Go architectures onto the multiarch directories of

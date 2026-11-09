@@ -131,7 +131,7 @@ user seeing what is signed and where anything goes.
 |---|---|
 | `.deb` with the window, the card CLI, the launcher and its URL handlers, icons, AppStream, dependencies from the binaries (`make package-deb`); checked with dpkg-deb, apt and the extracted binaries | built |
 | AppImage (`make package-appimage`): the window, or the command line through a link named `trebaruna`; AppDir checked, packing needs appimagetool | built (packed in CI) |
-| Flatpak manifest (`make package-flatpak`), without cards for now | in CI, not yet run |
+| Flatpak (`make package-flatpak`) with cards: OpenSC and the PC/SC client inside, the system's pcscd through `--socket=pcsc` | built (here; in CI, not yet run) |
 | Windows installer (WiX v4, per user, `afirma://` optional and off by default) | in CI, not yet run |
 | CI on Windows (tests, window, zip, MSI) and macOS (tests, `.app`); Linux `.deb` installed and removed, AppImage, Flatpak | written, not yet run (needs publishing) |
 
