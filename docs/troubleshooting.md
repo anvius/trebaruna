@@ -226,9 +226,10 @@ trebaruna trust sync
 ### `trebaruna trust sync` fails for one territory
 
 The national list's XML signature did not verify against the certificate the EU
-list publishes. That list goes to **quarantine** and is not used. Causes: the
-state rotated its signing certificate and the LOTL lags, or the download was
-tampered with.
+list publishes, or it does not sign the whole list. That list goes to
+**quarantine** and is not used. Causes: the state rotated its signing
+certificate and the LOTL lags, or the download was tampered with. The reason
+`trust sync` prints says which.
 
 Retry later; the LOTL is updated by the EU.
 

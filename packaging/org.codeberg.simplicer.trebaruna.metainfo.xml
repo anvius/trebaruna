@@ -54,6 +54,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.45.4-unstable" date="2026-11-09">
+      <description>
+        <p>A trusted list is used only when its own signature signs the whole list.</p>
+      </description>
+    </release>
     <release version="0.45.3-unstable" date="2026-11-09">
       <description>
         <p>Verification names the parts of an XML document a signature leaves out.</p>

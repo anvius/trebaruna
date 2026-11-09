@@ -55,7 +55,10 @@ Concretely, `trebaruna trust sync`:
 2. For each territory, extracts the list URL **and the certificates authorised to
    sign it**.
 3. Downloads the national list.
-4. Verifies the national list's XML signature against those certificates.
+4. Verifies the national list's own XML signature (the one under its root)
+   against those certificates, with the same verifier as signed documents.
+   It must sign the whole list (ETSI TS 119 612, 5.7.1): a signature over
+   one part would leave the rest, where an authority can be added, unsigned.
 5. Caches it only if step 4 succeeds.
 
 A list that fails goes to **quarantine**, never to the cache. The tool will report

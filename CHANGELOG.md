@@ -17,6 +17,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- trust sync accepts a national list only when its own signature (a child
+  of the list's root, ETSI TS 119 612 5.7) signs the whole list: one over
+  a part, with the authorities left unsigned, or nested elsewhere is
+  refused. The signature is checked with the XML-Signature verifier signed
+  documents use, instead of a second, partial one (it refused inclusive
+  C14N and read a missing SignatureMethod as SHA-512); among the
+  certificates KeyInfo shows, the one the EU list publishes is used.
+  goxmldsig is no longer a dependency. Of the lists the EU list pointed at
+  on 9 November 2026, the 30 that could be fetched authenticate but
+  Germany's, signed with RSA-PSS and refused as before.
+
 - verify names the parts of an XML document its signature does not cover:
   a signature whose references point at one element by Id, none at the
   whole document, leaves the rest unsigned and readable as if signed (the
