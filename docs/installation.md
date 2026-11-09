@@ -59,6 +59,33 @@ one — works in the static binary.
 
 ## Linux
 
+### Packages
+
+Built from the source tree, with the CLI that reads cards and the window
+side by side:
+
+| Package | Build | Install | Cards |
+|---|---|---|---|
+| `.deb` (Debian, Ubuntu) | `make package-deb` | `sudo apt install ./dist/trebaruna_<version>_amd64.deb` | yes, with `opensc-pkcs11` and `pcscd` (recommended) |
+| AppImage | `make package-appimage` (needs `appimagetool`) | run it; link it as `trebaruna` for the command line | yes, with the system's OpenSC and pcscd |
+| Flatpak | `make package-flatpak` (needs `flatpak-builder`) | installed for this user by the build | not yet: OpenSC is not in the sandbox |
+
+- The `.deb` declares what the binaries link (read by `dpkg-shlibdeps`) and
+  the X11 and Wayland libraries the window opens at run time. It installs
+  the launcher, which offers trebaruna for `trebaruna://` and `afirma://`
+  links without taking `afirma://` from an installed AutoFirma, the icons
+  and the AppStream description. `0.43.0-unstable` becomes
+  `0.43.0~unstable-1`, which sorts before `0.43.0`.
+- The AppImage is the window; run through a link named `trebaruna`
+  (`ln -s trebaruna-x86_64.AppImage ~/.local/bin/trebaruna`) it is the
+  command line. Without `appimagetool` the build stops at
+  `dist/trebaruna.AppDir`.
+- The Flatpak's id is the window's, `org.codeberg.simplicer.trebaruna`. It
+  reaches the network (timestamps, revocation, trust lists, all listed in
+  the result) and the home folder. Its Go toolchain comes as a checked
+  archive and the modules are vendored, since `flatpak-builder` builds
+  offline. Not built on the machine the manifest was written on.
+
 ### From a release binary
 
 ```bash
@@ -173,6 +200,24 @@ and the approval by reading what the CLI prints about the request before running
 ---
 
 ## Windows
+
+### Installer
+
+`packaging/package-desktop.sh windows`, run on Windows with the WiX Toolset
+(`dotnet tool install --global wix`), builds
+`dist/trebaruna-<version>-windows-amd64.msi` next to the zip. It installs
+for the current user only, without administrator rights, in
+`%LOCALAPPDATA%\Programs\trebaruna`, with a Start menu entry, and opens
+`trebaruna://` links. AutoFirma's `afirma://` links stay with AutoFirma
+unless you ask for them:
+
+```powershell
+msiexec /i trebaruna-0.43.0-unstable-windows-amd64.msi ADDLOCAL=ALL
+```
+
+Not built yet: it needs Windows, which the CI of plan G6 brings.
+
+### The command line alone
 
 Rename the file and put it somewhere on `PATH`:
 

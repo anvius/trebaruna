@@ -1,0 +1,61 @@
+# Flatpak build of trebaruna from this source tree. flatpak-builder builds
+# without network, so packaging/build-flatpak.sh vendors the Go modules
+# first, and the Go toolchain the project needs comes as a checked archive.
+#
+# Not yet built: flatpak-builder was not available where this manifest was
+# written; CI builds it (plan G6). Smart cards need OpenSC inside the
+# sandbox, which this manifest does not carry yet: the Flatpak signs with a
+# certificate file, Firefox's store or a remote service; the .deb and the
+# AppImage also do cards.
+id: org.codeberg.simplicer.trebaruna
+runtime: org.freedesktop.Platform
+runtime-version: '24.08'
+sdk: org.freedesktop.Sdk
+command: trebaruna-desktop
+finish-args:
+  - --share=ipc
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --device=dri
+  # Timestamps, revocation, trust lists and web pages' afirma:// servers,
+  # each made only when asked for and listed in the result (ADR-0010).
+  - --share=network
+  # The documents to sign, and the signed copies written beside them.
+  - --filesystem=home
+modules:
+  - name: go
+    buildsystem: simple
+    cleanup: ['*']
+    build-commands:
+      - install -d /app/go && cp -a . /app/go
+    sources:
+      - type: archive
+        only-arches: [x86_64]
+        url: https://go.dev/dl/go1.27.3.linux-amd64.tar.gz
+        sha256: 65efbc80fdc1fa2cd2631cad5b481777a68e8725f34e89f50fc6ac714e379b40
+      - type: archive
+        only-arches: [aarch64]
+        url: https://go.dev/dl/go1.27.3.linux-arm64.tar.gz
+        sha256: a06e99309dbcbdca1a8ccd2282c3ee146e55930886e26b4f1193269587165f49
+
+  - name: trebaruna
+    buildsystem: simple
+    build-options:
+      append-path: /app/go/bin
+      env:
+        GOFLAGS: -mod=vendor
+        GOTOOLCHAIN: local
+        CGO_ENABLED: '1'
+    build-commands:
+      - go build -trimpath -ldflags "-s -w -X codeberg.org/simplicer/trebaruna/src/entrypoint/cli.injectedVersion=$(cat VERSION)" -o /app/bin/trebaruna ./src/entrypoint/main
+      - go build -tags gui -trimpath -ldflags "-s -w -X codeberg.org/simplicer/trebaruna/src/entrypoint/cli.injectedVersion=$(cat VERSION)" -o /app/bin/trebaruna-desktop ./src/entrypoint/desktop
+      - install -Dm644 packaging/trebaruna.desktop /app/share/applications/org.codeberg.simplicer.trebaruna.desktop
+      - desktop-file-edit --set-icon=org.codeberg.simplicer.trebaruna /app/share/applications/org.codeberg.simplicer.trebaruna.desktop
+      - for size in 64 128 256 512; do install -Dm644 assets/icons/trebaruna-$size.png /app/share/icons/hicolor/${size}x${size}/apps/org.codeberg.simplicer.trebaruna.png; done
+      - install -d /app/share/metainfo
+      - sed 's|>trebaruna.desktop<|>org.codeberg.simplicer.trebaruna.desktop<|' packaging/org.codeberg.simplicer.trebaruna.metainfo.xml > /app/share/metainfo/org.codeberg.simplicer.trebaruna.metainfo.xml
+      - install -Dm644 LICENSE /app/share/licenses/org.codeberg.simplicer.trebaruna/LICENSE
+    sources:
+      - type: dir
+        path: ../..
+        skip: [.git, dist, bin]

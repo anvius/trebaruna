@@ -8,6 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Packages (plan G5):
+  - `make package-deb`: a `.deb` with the window, the CLI that reads cards,
+    the launcher and its URL handlers, the icons, an AppStream description
+    and the licence; its dependencies are those dpkg-shlibdeps reads from
+    the binaries plus the X11 and Wayland libraries GLFW opens at run time.
+  - `make package-appimage`: an AppDir, packed into an AppImage when
+    appimagetool is installed; run through a link named `trebaruna` it is
+    the command line.
+  - `make package-flatpak`: a Flatpak manifest under the window's id, with
+    the Go toolchain as a checked archive and vendored modules; no cards in
+    the sandbox yet.
+  - A WiX installer for Windows, built by `package-desktop.sh windows` when
+    wix is installed: per user, trebaruna:// links, AutoFirma's afirma://
+    links only on request.
+  - The .deb was built and checked here (dpkg-deb, apt, the extracted
+    binaries, desktop-file-validate, appstreamcli); the Flatpak and the
+    installer need tools this machine lacks.
+
 - Catalan, Galician and Basque (plan G4): the window, the approval windows
   and the verification report (`verify --lang ca|gl|eu`, `TREBARUNA_LANG`,
   `$LANG`), Fyne's own widget strings, and the launcher's name and comment.

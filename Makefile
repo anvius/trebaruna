@@ -90,7 +90,7 @@ version:
 
 clean:
 	rm -rf bin
-.PHONY: format test-race check-gui package-desktop release-artifacts reproducible
+.PHONY: format test-race check-gui package-desktop package-deb package-appimage package-flatpak release-artifacts reproducible
 format:
 	gofmt -w src tests
 
@@ -109,6 +109,17 @@ check-gui:
 
 package-desktop:
 	bash packaging/package-desktop.sh $(shell $(GO) env GOOS)
+
+# Linux packages: the .deb (needs dpkg-deb), the AppImage (packed when
+# appimagetool is installed), the Flatpak (needs flatpak-builder).
+package-deb:
+	bash packaging/build-deb.sh
+
+package-appimage:
+	bash packaging/build-appimage.sh
+
+package-flatpak:
+	bash packaging/build-flatpak.sh
 
 release-artifacts:
 	bash packaging/release.sh

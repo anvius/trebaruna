@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- AppStream description of trebaruna, for software centres, the .deb, the
+     Flatpak and the AppImage. Its newest release is the version in VERSION. -->
+<component type="desktop-application">
+  <id>org.codeberg.simplicer.trebaruna</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>AGPL-3.0-or-later</project_license>
+  <name>trebaruna</name>
+  <summary>Sign and check documents with the European signature formats</summary>
+  <summary xml:lang="es">Firma y comprueba documentos con los formatos de firma europeos</summary>
+  <summary xml:lang="ca">Signa i comprova documents amb els formats de signatura europeus</summary>
+  <summary xml:lang="gl">Asina e comproba documentos cos formatos de sinatura europeos</summary>
+  <summary xml:lang="eu">Sinatu eta egiaztatu dokumentuak Europako sinadura-formatuekin</summary>
+  <summary xml:lang="it">Firma e verifica documenti con i formati di firma europei</summary>
+  <developer id="org.codeberg.simplicer">
+    <name>Simplicer</name>
+  </developer>
+  <description>
+    <p>
+      trebaruna signs PDF, XML and any other file with a certificate on a file,
+      a smart card, Firefox or a remote signing service, and checks signatures
+      against the European trust lists. It replaces AutoFirma, and answers the
+      afirma:// requests of public administration websites.
+    </p>
+    <ul>
+      <li>PAdES, CAdES, XAdES, XMLDSig, ASiC, OpenDocument and Office Open XML signatures</li>
+      <li>Timestamps, long-term validation and archival levels</li>
+      <li>A visible seal you place on the page, with an optional handwritten signature</li>
+      <li>Every network connection it makes is listed in the result</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">trebaruna.desktop</launchable>
+  <url type="homepage">https://codeberg.org/simplicer/trebaruna</url>
+  <url type="bugtracker">https://codeberg.org/simplicer/trebaruna/issues</url>
+  <url type="vcs-browser">https://codeberg.org/simplicer/trebaruna</url>
+  <categories>
+    <category>Office</category>
+  </categories>
+  <keywords>
+    <keyword>signature</keyword>
+    <keyword>PAdES</keyword>
+    <keyword>eIDAS</keyword>
+    <keyword>firma</keyword>
+  </keywords>
+  <provides>
+    <binary>trebaruna</binary>
+    <binary>trebaruna-desktop</binary>
+    <mediatype>application/pdf</mediatype>
+    <mediatype>application/xml</mediatype>
+  </provides>
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </supports>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.43.0-unstable" date="2026-11-09">
+      <description>
+        <p>Packages: .deb, Flatpak, AppImage and a Windows installer.</p>
+      </description>
+    </release>
+  </releases>
+</component>

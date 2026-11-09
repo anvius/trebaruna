@@ -35,6 +35,10 @@ case "$platform" in
       tar -czf "$stage.tar.gz" -C dist "$(basename "$stage")"
     else
       powershell.exe -NoProfile -Command "Compress-Archive -Path '$stage/*' -DestinationPath '$stage.zip' -Force"
+      # The installer, when the WiX Toolset is installed (dotnet tool install --global wix).
+      if command -v wix >/dev/null; then
+        wix build packaging/windows/trebaruna.wxs -arch x64 -d Version="${version%%-*}" -d Stage="$stage" -o "$stage.msi"
+      fi
     fi
     echo "packaged $stage"
     ;;

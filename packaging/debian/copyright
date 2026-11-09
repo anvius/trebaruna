@@ -1,0 +1,18 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: trebaruna
+Upstream-Contact: https://codeberg.org/simplicer/trebaruna/issues
+Source: https://codeberg.org/simplicer/trebaruna
+
+Files: *
+Copyright: 2026 Simplicer and the trebaruna contributors
+License: AGPL-3.0-or-later
+ This program is free software: you can redistribute it and/or modify it
+ under the terms of the GNU Affero General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or (at your
+ option) any later version.
+ .
+ Debian ships no copy of the AGPL in /usr/share/common-licenses; the full
+ text is /usr/share/doc/trebaruna/LICENSE.
+ .
+ The Go libraries compiled into the binaries keep their own licences, all
+ permissive or weak-copyleft; `trebaruna about --deps` prints each one.

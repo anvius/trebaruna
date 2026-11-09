@@ -1,0 +1,10 @@
+#!/bin/sh
+# The AppImage's entry point: the window, or the command line when the
+# AppImage runs through a link named trebaruna
+#   ln -s ~/Apps/trebaruna-x86_64.AppImage ~/.local/bin/trebaruna
+# The window finds the command line beside itself, in usr/bin.
+here=$(dirname "$(readlink -f "$0")")
+case "$(basename "${ARGV0:-$0}")" in
+  trebaruna) exec "$here/usr/bin/trebaruna" "$@" ;;
+esac
+exec "$here/usr/bin/trebaruna-desktop" "$@"

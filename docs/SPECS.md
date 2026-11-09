@@ -121,6 +121,15 @@ user seeing what is signed and where anything goes.
 | Dependencies and licences embedded and printable | built |
 | Reproducible release with SBOM and checksums (ADR-0017) | built |
 
+### Packages
+
+| Capability | Status |
+|---|---|
+| `.deb` with the window, the card CLI, the launcher and its URL handlers, icons, AppStream, dependencies from the binaries (`make package-deb`); checked with dpkg-deb, apt and the extracted binaries | built |
+| AppImage (`make package-appimage`): the window, or the command line through a link named `trebaruna`; AppDir checked, packing needs appimagetool | built (packing in CI) |
+| Flatpak manifest (`make package-flatpak`), without cards for now | prepared (built in CI, G6) |
+| Windows installer (WiX v4, per user, `afirma://` optional and off by default) | prepared (built in CI, G6) |
+
 ### Languages
 
 | Capability | Status |

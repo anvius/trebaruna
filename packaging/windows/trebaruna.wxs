@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Windows installer for trebaruna (WiX Toolset v4 or later), for this user
+  only: no administrator rights, nothing outside the user's profile.
+
+    wix build packaging\windows\trebaruna.wxs -arch x64 ^
+      -d Version=0.43.0 -d Stage=dist\trebaruna-0.43.0-unstable-windows-amd64 ^
+      -o dist\trebaruna-0.43.0-unstable-windows-amd64.msi
+
+  packaging/package-desktop.sh windows runs it when wix is installed.
+  Version is numeric (MSI cannot hold the -unstable suffix). The UpgradeCode
+  never changes: it is what lets a new version replace the old one.
+
+  trebaruna:// links open the window. AutoFirma's afirma:// links are an
+  optional feature, off by default, so an installed AutoFirma keeps them
+  until the person chooses: msiexec /i trebaruna-….msi ADDLOCAL=ALL
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="trebaruna" Manufacturer="Simplicer" Version="$(Version)"
+           UpgradeCode="77e67d8a-3761-4bc1-8466-1c3b7fc96bcd" Scope="perUser" Compressed="yes">
+    <MajorUpgrade DowngradeErrorMessage="A newer trebaruna is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <StandardDirectory Id="ProgramFiles6432Folder">
+      <Directory Id="INSTALLFOLDER" Name="trebaruna">
+        <Component Id="Programs">
+          <File Id="Cli" Source="$(Stage)\trebaruna.exe" />
+          <File Id="Window" Source="$(Stage)\trebaruna-desktop.exe" />
+          <File Id="Licence" Source="$(Stage)\LICENSE" Name="LICENSE.txt" />
+          <RegistryValue Root="HKCU" Key="Software\Simplicer\trebaruna" Name="Programs" Type="integer" Value="1" KeyPath="yes" />
+          <RemoveFolder Id="RemoveInstallFolder" On="uninstall" />
+        </Component>
+
+        <Component Id="TrebarunaLinks">
+          <RegistryKey Root="HKCU" Key="Software\Classes\trebaruna">
+            <RegistryValue Type="string" Value="URL:trebaruna" />
+            <RegistryValue Name="URL Protocol" Type="string" Value="" />
+            <RegistryValue Key="shell\open\command" Type="string" Value="&quot;[INSTALLFOLDER]trebaruna-desktop.exe&quot; &quot;%1&quot;" />
+          </RegistryKey>
+          <RegistryValue Root="HKCU" Key="Software\Simplicer\trebaruna" Name="TrebarunaLinks" Type="integer" Value="1" KeyPath="yes" />
+        </Component>
+
+        <Component Id="AfirmaLinks">
+          <RegistryKey Root="HKCU" Key="Software\Classes\afirma">
+            <RegistryValue Type="string" Value="URL:afirma" />
+            <RegistryValue Name="URL Protocol" Type="string" Value="" />
+            <RegistryValue Key="shell\open\command" Type="string" Value="&quot;[INSTALLFOLDER]trebaruna-desktop.exe&quot; &quot;%1&quot;" />
+          </RegistryKey>
+          <RegistryValue Root="HKCU" Key="Software\Simplicer\trebaruna" Name="AfirmaLinks" Type="integer" Value="1" KeyPath="yes" />
+        </Component>
+      </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Component Id="StartMenu">
+        <Shortcut Id="WindowShortcut" Name="trebaruna" Description="Sign and check documents"
+                  Target="[INSTALLFOLDER]trebaruna-desktop.exe" WorkingDirectory="INSTALLFOLDER" />
+        <RegistryValue Root="HKCU" Key="Software\Simplicer\trebaruna" Name="StartMenu" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </StandardDirectory>
+
+    <Feature Id="Main" Title="trebaruna" Level="1" AllowAbsent="no">
+      <ComponentRef Id="Programs" />
+      <ComponentRef Id="TrebarunaLinks" />
+      <ComponentRef Id="StartMenu" />
+    </Feature>
+    <Feature Id="Afirma" Title="Open AutoFirma's afirma:// links" Level="2">
+      <ComponentRef Id="AfirmaLinks" />
+    </Feature>
+  </Package>
+</Wix>
