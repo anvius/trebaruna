@@ -92,7 +92,9 @@ user seeing what is signed and where anything goes.
 | Rule | Status |
 |---|---|
 | Local HTTP API and `trebaruna://` handler under ADR-0004 | built |
-| AutoFirma `afirma://` protocol: single operations, batches (JSON/XML, one- and three-phase), intermediate server, WebSocket without an installed root (ADR-0013) | planned (D1–D7) |
+| AutoFirma `afirma://` protocol, specified from the free source in [afirma-protocol.md](afirma-protocol.md) | specified (D1) |
+| `afirma://` single operations and batches (JSON/XML, one- and three-phase) through the intermediate server (DES, and AES for autoscript 1.10) | planned (D2–D4) |
+| `afirma://` WebSocket and socket channels: TLS on 127.0.0.1 needs a locally trusted certificate, which ADR-0013 forbids installing as a root; not offered unless the owner chooses a leaf-only peer trust | blocked (D5, owner decision) |
 
 ### Transparency
 
