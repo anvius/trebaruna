@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Every HTTP request names the program (User-Agent `trebaruna`, no
+  version): the Estonian trusted list answered Go's default one with 403,
+  so Estonia was never synced. trust sync downloads the EU list of the
+  lists once per run instead of once per territory (31 times, half a
+  megabyte each); a failed download is tried again for the next territory.
+  On 9 November 2026 a full sync authenticated all 31 lists.
+
 - verify recomputes what a XAdES archive timestamp seals (EN 319 132-1
   5.5.2: the references, SignedInfo, SignatureValue, KeyInfo, the unsigned
   properties before it, the other objects, with its declared C14N) and

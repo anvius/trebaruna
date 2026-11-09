@@ -95,7 +95,7 @@ func runTrustSync(args []string, stdout, stderr io.Writer) int {
 		QuarantineDir: filepath.Join(cache, "rejected"),
 	}
 
-	territories, err := selectTerritories(syncer, *territory, *lotlURL)
+	territories, err := selectTerritories(syncer, *territory)
 	if err != nil {
 		fmt.Fprintf(stderr, "%v\n", err)
 		return exitUsage
@@ -141,28 +141,11 @@ func runTrustSync(args []string, stdout, stderr io.Writer) int {
 //
 // With no argument, every XML territory the LOTL publishes is synced: that is
 // what makes "sign in any EU country" real instead of a claim.
-func selectTerritories(syncer *trustapplication.SyncTerritory, requested, lotlURL string) ([]string, error) {
+func selectTerritories(syncer *trustapplication.SyncTerritory, requested string) ([]string, error) {
 	if requested != "" {
 		return []string{strings.ToUpper(strings.TrimSpace(requested))}, nil
 	}
-
-	content, err := trustinfra.WebLOTL{URL: lotlURL}.Fetch()
-	if err != nil {
-		return nil, fmt.Errorf("fetch the EU list of the lists: %w", err)
-	}
-
-	lotl, err := trustinfra.LOTLParser{}.Parse(strings.NewReader(string(content)))
-	if err != nil {
-		return nil, err
-	}
-
-	var territories []string
-	for _, entry := range lotl.Entries {
-		if entry.XML() && entry.CanSign() {
-			territories = append(territories, entry.Territory)
-		}
-	}
-	return territories, nil
+	return syncer.Territories()
 }
 
 // runTrustList shows what is cached.

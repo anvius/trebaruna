@@ -54,6 +54,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.46.1-unstable" date="2026-11-09">
+      <description>
+        <p>Trusted lists download from servers that refuse unnamed clients, and the EU list is read once per sync.</p>
+      </description>
+    </release>
     <release version="0.46.0-unstable" date="2026-11-09">
       <description>
         <p>XML signatures made with RSA-PSS or SHA-3 are verified; the German trusted list authenticates.</p>

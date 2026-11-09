@@ -533,6 +533,9 @@ The one exception is `handler`, which must ask: that is its purpose.
 - `sign --level t|lt|lta`: `--tsa` is explicit
 - `trust sync`: always, and that is the point
 
+Every request names the program with the User-Agent `trebaruna`, without a
+version, and is listed at the end of the command's output.
+
 ### Cache location
 
 Trust lists: `~/.cache/trebaruna/`. Nothing else is cached.

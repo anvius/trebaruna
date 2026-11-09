@@ -39,6 +39,10 @@ type SyncTerritory struct {
 	CacheDir string
 	// QuarantineDir keeps rejected downloads for inspection.
 	QuarantineDir string
+
+	// fetched is the EU list of the lists once downloaded: a sync of every
+	// territory reads it once, not once per territory.
+	fetched *domain.LOTL
 }
 
 // Result describes what happened to one territory.
@@ -57,19 +61,9 @@ type Result struct {
 func (u *SyncTerritory) Execute(territory string) (Result, error) {
 	result := Result{Territory: territory}
 
-	lotlContent, err := u.LOTL.Fetch()
-	if err != nil {
-		return result, fmt.Errorf("fetch the EU list of the lists: %w", err)
-	}
-
-	lotl, err := trustinfrastructure.LOTLParser{}.Parse(bytes.NewReader(lotlContent))
+	entry, err := u.Territory(territory)
 	if err != nil {
 		return result, err
-	}
-
-	entry, found := lotl.Find(territory)
-	if !found {
-		return result, fmt.Errorf("territory %q does not appear in the EU list of the lists", territory)
 	}
 	result.Location = entry.Location
 
@@ -116,21 +110,49 @@ func (u *SyncTerritory) Execute(territory string) (Result, error) {
 
 // Territory reports the entry the LOTL publishes for a territory.
 func (u *SyncTerritory) Territory(territory string) (domain.LOTLEntry, error) {
-	lotlContent, err := u.LOTL.Fetch()
-	if err != nil {
-		return domain.LOTLEntry{}, fmt.Errorf("fetch the EU list of the lists: %w", err)
-	}
-
-	lotl, err := trustinfrastructure.LOTLParser{}.Parse(bytes.NewReader(lotlContent))
+	lotl, err := u.lotl()
 	if err != nil {
 		return domain.LOTLEntry{}, err
 	}
-
 	entry, found := lotl.Find(territory)
 	if !found {
 		return domain.LOTLEntry{}, fmt.Errorf("territory %q does not appear in the EU list of the lists", territory)
 	}
 	return entry, nil
+}
+
+// Territories are the territories whose lists can be synced: published in
+// XML, with a certificate to authenticate them.
+func (u *SyncTerritory) Territories() ([]string, error) {
+	lotl, err := u.lotl()
+	if err != nil {
+		return nil, err
+	}
+	var territories []string
+	for _, entry := range lotl.Entries {
+		if entry.XML() && entry.CanSign() {
+			territories = append(territories, entry.Territory)
+		}
+	}
+	return territories, nil
+}
+
+// lotl downloads and parses the EU list of the lists the first time; a
+// failed download is tried again next time.
+func (u *SyncTerritory) lotl() (domain.LOTL, error) {
+	if u.fetched != nil {
+		return *u.fetched, nil
+	}
+	content, err := u.LOTL.Fetch()
+	if err != nil {
+		return domain.LOTL{}, fmt.Errorf("fetch the EU list of the lists: %w", err)
+	}
+	lotl, err := trustinfrastructure.LOTLParser{}.Parse(bytes.NewReader(content))
+	if err != nil {
+		return domain.LOTL{}, err
+	}
+	u.fetched = &lotl
+	return lotl, nil
 }
 
 // writeInto writes content into a directory, creating it if needed.

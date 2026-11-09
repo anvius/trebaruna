@@ -75,8 +75,17 @@ type recordingTransport struct {
 	library bool
 }
 
+// userAgent names the program to the servers it calls. Some refuse Go's
+// default one (the Estonian trusted list answers 403); a version would only
+// help tell users apart.
+const userAgent = "trebaruna"
+
 // RoundTrip performs the request and arranges for it to be recorded.
 func (t recordingTransport) RoundTrip(request *http.Request) (*http.Response, error) {
+	if request.Header.Get("User-Agent") == "" {
+		request = request.Clone(request.Context())
+		request.Header.Set("User-Agent", userAgent)
+	}
 	purpose, via := t.purpose, ""
 	if t.library {
 		purpose, via = classify(request), "library"

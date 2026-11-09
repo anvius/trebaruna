@@ -51,7 +51,8 @@ list naming their own CA as qualified.
 
 Concretely, `trebaruna trust sync`:
 
-1. Downloads the LOTL from `https://ec.europa.eu/tools/lotl/eu-lotl.xml`.
+1. Downloads the LOTL from `https://ec.europa.eu/tools/lotl/eu-lotl.xml`,
+   once for the whole run.
 2. For each territory, extracts the list URL **and the certificates authorised to
    sign it**.
 3. Downloads the national list.

@@ -134,3 +134,33 @@ func TestOurOwnClientIsNotRecordedTwice(t *testing.T) {
 		t.Errorf("recorded = %+v, want exactly one entry from our client", recorded)
 	}
 }
+
+// TestTheProgramNamesItself: some servers refuse Go's default User-Agent;
+// a caller that sets its own keeps it.
+func TestTheProgramNamesItself(t *testing.T) {
+	transparency.Reset()
+	var seen []string
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		seen = append(seen, request.UserAgent())
+	}))
+	defer server.Close()
+
+	for _, send := range []func() (*http.Response, error){
+		func() (*http.Response, error) { return transparency.Client(domain.PurposeTrustList, 0).Get(server.URL) },
+		func() (*http.Response, error) { return http.Get(server.URL) },
+		func() (*http.Response, error) {
+			request, _ := http.NewRequest(http.MethodGet, server.URL, nil)
+			request.Header.Set("User-Agent", "caller/1")
+			return transparency.Client(domain.PurposeTrustList, 0).Do(request)
+		},
+	} {
+		response, err := send()
+		if err != nil {
+			t.Fatal(err)
+		}
+		_ = response.Body.Close()
+	}
+	if strings.Join(seen, ",") != "trebaruna,trebaruna,caller/1" {
+		t.Errorf("User-Agent headers %q", seen)
+	}
+}
