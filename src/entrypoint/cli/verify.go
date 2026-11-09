@@ -64,15 +64,7 @@ func runVerify(args []string, stdout, stderr io.Writer) int {
 	// that silently calls OCSP is a verification that fails on a plane.
 	pdfVerifier.CheckRevocation = !*offline
 
-	useCase := application.NewVerifyDocument(
-		pdfVerifier,
-		verificationinfra.NewCadesVerifier(),
-		verificationinfra.NewCachedTrustProvider(),
-		systemClock{},
-	).WithXades(verificationinfra.NewXadesVerifier()).
-		WithAsic(verificationinfra.NewAsicVerifier(verificationinfra.NewCadesVerifier(), verificationinfra.NewXadesVerifier())).
-		WithOdf(verificationinfra.NewOdfVerifier(verificationinfra.NewXadesVerifier())).
-		WithOoxml(verificationinfra.NewOoxmlVerifier(verificationinfra.NewXadesVerifier()))
+	useCase := Verification(pdfVerifier)
 
 	if !*offline {
 		// Our own checker replaces the library's: it distinguishes an answered

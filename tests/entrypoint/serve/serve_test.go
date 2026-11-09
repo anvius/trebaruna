@@ -14,6 +14,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/json"
 	"encoding/pem"
+	"fmt"
 	"io"
 	"math/big"
 	"net/http"
@@ -24,11 +25,10 @@ import (
 	"testing"
 	"time"
 
+	"codeberg.org/simplicer/trebaruna/src/entrypoint/cli"
 	"codeberg.org/simplicer/trebaruna/src/entrypoint/serve"
-	"codeberg.org/simplicer/trebaruna/src/signing/application"
 	signingdomain "codeberg.org/simplicer/trebaruna/src/signing/domain"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure"
-	verificationapp "codeberg.org/simplicer/trebaruna/src/verification/application"
 	verification "codeberg.org/simplicer/trebaruna/src/verification/domain"
 	verificationinfra "codeberg.org/simplicer/trebaruna/src/verification/infrastructure"
 )
@@ -46,26 +46,15 @@ func newFixture(t *testing.T) fixture {
 	t.Helper()
 
 	root := t.TempDir()
-	timestamper := infrastructure.NewRfc3161Timestamper()
 
+	// The command line's own wiring: what the API serves is what trebaruna
+	// serve runs.
 	service := &serve.Service{
-		Signer: application.NewSignDocument(
-			infrastructure.DiskStore{},
-			application.SystemClock{},
-			infrastructure.CertificateInspector{},
-			infrastructure.NewCadesSigner(timestamper),
-			infrastructure.NewPadesSigner(timestamper),
-			infrastructure.NewXadesSigner(timestamper),
-		),
-		Verifier: verificationapp.NewVerifyDocument(
-			verificationinfra.NewPDFVerifier(),
-			verificationinfra.NewCadesVerifier(),
-			verificationinfra.NewCachedTrustProvider(),
-			realClock{},
-		).WithXades(verificationinfra.NewXadesVerifier()),
-		Files:   serve.RootedFiles{Roots: []string{root}},
-		Token:   "test-token",
-		Version: "9.9.9-test",
+		Signer:   cli.Signing(infrastructure.NewRfc3161Timestamper()),
+		Verifier: cli.Verification(verificationinfra.NewPDFVerifier()),
+		Files:    serve.RootedFiles{Roots: []string{root}},
+		Token:    "test-token",
+		Version:  "9.9.9-test",
 	}
 
 	server := httptest.NewServer(service.Handler())
@@ -73,11 +62,6 @@ func newFixture(t *testing.T) fixture {
 
 	return fixture{service: service, server: server, token: "test-token", root: root}
 }
-
-// realClock reports the current time.
-type realClock struct{}
-
-func (realClock) Now() time.Time { return time.Now() }
 
 // call performs an authenticated request.
 func (f fixture) call(t *testing.T, method, path string, body any, headers map[string]string) *http.Response {
@@ -412,6 +396,36 @@ func TestVerificationIsCachedForRetrieval(t *testing.T) {
 	retrieved := fixture.call(t, "GET", "/v1/verifications/check-1", nil, nil)
 	if retrieved.StatusCode != http.StatusOK {
 		t.Errorf("retrieval = %d, want 200", retrieved.StatusCode)
+	}
+}
+
+// TestTheAPIReadsOfficeDocumentsAndContainers: the local API verifies what
+// the command line verifies, LibreOffice's and Office's signatures included.
+func TestTheAPIReadsOfficeDocumentsAndContainers(t *testing.T) {
+	fixture := newFixture(t)
+	for index, source := range []string{
+		"../../verification/odf/testdata/libreoffice-signed.odt",
+		"../../verification/ooxml/testdata/libreoffice-signed.docx",
+		"../../verification/ooxml/testdata/ms-office-2010-signed.xlsx",
+	} {
+		content, err := os.ReadFile(source)
+		if err != nil {
+			t.Fatal(err)
+		}
+		document := filepath.Join(fixture.root, filepath.Base(source))
+		if err := os.WriteFile(document, content, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		response := fixture.call(t, "PUT", fmt.Sprintf("/v1/verifications/office-%d", index), map[string]any{"path": document}, nil)
+		var report struct {
+			Signers []struct {
+				Integrity string `json:"integrity"`
+			} `json:"signers"`
+		}
+		_ = json.NewDecoder(response.Body).Decode(&report)
+		if response.StatusCode != http.StatusOK || len(report.Signers) != 1 || report.Signers[0].Integrity != "good" {
+			t.Errorf("%s: %d %+v", filepath.Base(source), response.StatusCode, report)
+		}
 	}
 }
 

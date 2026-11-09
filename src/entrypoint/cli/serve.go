@@ -12,10 +12,8 @@ import (
 	"syscall"
 
 	"codeberg.org/simplicer/trebaruna/src/entrypoint/serve"
-	"codeberg.org/simplicer/trebaruna/src/signing/application"
 	"codeberg.org/simplicer/trebaruna/src/signing/domain"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure"
-	verificationapp "codeberg.org/simplicer/trebaruna/src/verification/application"
 	verificationinfra "codeberg.org/simplicer/trebaruna/src/verification/infrastructure"
 )
 
@@ -89,26 +87,7 @@ func runServe(args []string, stdout, stderr io.Writer) int {
 	}
 	defer func() { _ = os.Remove(tokenPath) }()
 
-	timestamper := infrastructure.NewRfc3161Timestamper()
-	service := &serve.Service{
-		Signer: application.NewSignDocument(
-			infrastructure.DiskStore{},
-			application.SystemClock{},
-			infrastructure.CertificateInspector{},
-			infrastructure.NewCadesSigner(timestamper),
-			infrastructure.NewPadesSigner(timestamper),
-			infrastructure.NewXadesSigner(timestamper),
-		),
-		Verifier: verificationapp.NewVerifyDocument(
-			verificationinfra.NewPDFVerifier(),
-			verificationinfra.NewCadesVerifier(),
-			verificationinfra.NewCachedTrustProvider(),
-			systemClock{},
-		).WithXades(verificationinfra.NewXadesVerifier()),
-		Files:   serve.RootedFiles{Roots: roots},
-		Token:   token,
-		Version: version,
-	}
+	service := localService(roots, token)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -233,26 +212,7 @@ func runHandler(args []string, stdout, stderr io.Writer) int {
 	}
 	defer func() { _ = os.Remove(tokenPath) }()
 
-	timestamper := infrastructure.NewRfc3161Timestamper()
-	service := &serve.Service{
-		Signer: application.NewSignDocument(
-			infrastructure.DiskStore{},
-			application.SystemClock{},
-			infrastructure.CertificateInspector{},
-			infrastructure.NewCadesSigner(timestamper),
-			infrastructure.NewPadesSigner(timestamper),
-			infrastructure.NewXadesSigner(timestamper),
-		),
-		Verifier: verificationapp.NewVerifyDocument(
-			verificationinfra.NewPDFVerifier(),
-			verificationinfra.NewCadesVerifier(),
-			verificationinfra.NewCachedTrustProvider(),
-			systemClock{},
-		).WithXades(verificationinfra.NewXadesVerifier()),
-		Files:   serve.RootedFiles{Roots: roots},
-		Token:   token,
-		Version: version,
-	}
+	service := localService(roots, token)
 
 	keySource, err := buildSigner(signerOptions{
 		name: domain.NameFromCertificate, p12Path: p12Path, pemPath: pemPath, passphrase: passphrase,
@@ -336,4 +296,16 @@ func runHandler(args []string, stdout, stderr io.Writer) int {
 		}
 	}
 	return exitOK
+}
+
+// localService is the local API over the command line's wiring, reading
+// only under roots and answering only to token.
+func localService(roots []string, token string) *serve.Service {
+	return &serve.Service{
+		Signer:   Signing(infrastructure.NewRfc3161Timestamper()),
+		Verifier: Verification(verificationinfra.NewPDFVerifier()),
+		Files:    serve.RootedFiles{Roots: roots},
+		Token:    token,
+		Version:  version,
+	}
 }

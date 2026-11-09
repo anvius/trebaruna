@@ -180,6 +180,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The local API (`trebaruna serve` and the `trebaruna://` handler) signs and
+  verifies every format the command line does: it was wired with PAdES,
+  CAdES and XAdES only, so ASiC containers, OpenDocument and Office Open
+  XML files were refused or unreadable through it. The command line, the
+  API and their tests now share one wiring (`cli.Signing`,
+  `cli.Verification`).
 - XAdES signature timestamps cover the canonical `ds:SignatureValue`.
   - EN 319 132-1 (5.4.1.3) has the token seal the element canonicalised
     where it stands, its inherited namespaces included. The signer sealed

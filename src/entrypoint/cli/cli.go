@@ -187,17 +187,7 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 		}
 	}
 
-	timestamper := infrastructure.NewRfc3161Timestamper()
-	xadesSigner := infrastructure.NewXadesSigner(timestamper)
-	useCase := application.NewSignDocument(
-		infrastructure.DiskStore{},
-		application.SystemClock{},
-		infrastructure.CertificateInspector{},
-		infrastructure.NewCadesSigner(timestamper),
-		infrastructure.NewPadesSigner(timestamper),
-		xadesSigner,
-	).WithContainers(infrastructure.AsicContainers{}).WithOdf(infrastructure.NewOdfSigner(xadesSigner)).
-		WithOoxml(infrastructure.NewOoxmlSigner(xadesSigner))
+	useCase := Signing(infrastructure.NewRfc3161Timestamper())
 
 	// Every document gets the same settings; each format is still inferred from
 	// its own suffix unless --format names one. One failure does not stop the
