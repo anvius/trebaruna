@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/brainpool"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/publickey"
 	"codeberg.org/simplicer/trebaruna/src/trust/domain"
 )
@@ -177,7 +178,7 @@ func parsePEMCertificate(text string) *x509.Certificate {
 	if err != nil {
 		return nil
 	}
-	certificate, err := x509.ParseCertificate(decoded)
+	certificate, err := brainpool.ParseCertificate(decoded)
 	if err != nil {
 		return nil
 	}

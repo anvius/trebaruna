@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/brainpool"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/publickey"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/xmldsig"
 	"codeberg.org/simplicer/trebaruna/src/trust/domain"
@@ -125,7 +126,7 @@ func keyInfoCertificates(signature *etree.Element) []*x509.Certificate {
 		if element.NamespaceURI() != xmldsig.Namespace {
 			continue
 		}
-		if certificate, err := x509.ParseCertificate(decodeBase64Text(element.Text())); err == nil {
+		if certificate, err := brainpool.ParseCertificate(decodeBase64Text(element.Text())); err == nil {
 			certificates = append(certificates, certificate)
 		}
 	}

@@ -295,10 +295,9 @@ worse than none.
   verifies ECDSA on them with its own arithmetic, and walks their chain to an
   anchor, each issuer's signature checked. The PDF library cannot read such a
   signature and calls it changed; trebaruna checks it itself, as the detached
-  CMS over the byte ranges it is. A trusted list whose own
-  authorities have brainpool keys is not read yet, so such signatures are
-  shown with their issuer unrecognised unless that authority is given as an
-  anchor.
+  CMS over the byte ranges it is. Trusted lists publish such authorities
+  (the German one, for health professionals) and they are read as anchors
+  like any other. Signing with a brainpool key is not offered yet.
 
 ### A note on the key-usage check
 

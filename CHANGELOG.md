@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Trusted lists read the authorities they publish with brainpool keys (the
+  German list's health professionals' authorities) and use them as
+  anchors; Go's parser dropped them. The lists' and the list of lists'
+  signer certificates are read the same way.
+
 - XML signatures (XAdES, XMLDSig) made with brainpool keys are read and
   checked: their certificates through trebaruna's own reading, the value
   (XML-Signature's r and s) with its brainpool ECDSA, the chain walked to

@@ -11,10 +11,14 @@ import (
 	"crypto/x509/pkix"
 	"encoding/base64"
 	"math/big"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/brainpool"
 	"codeberg.org/simplicer/trebaruna/src/trust/infrastructure"
 )
 
@@ -205,4 +209,36 @@ func buildCertificate(t *testing.T) *x509.Certificate {
 		t.Fatalf("parse certificate: %v", err)
 	}
 	return certificate
+}
+
+// TestABrainpoolAuthorityIsReadFromTheList: the German list publishes the
+// health professionals' authorities, whose keys are on brainpool curves;
+// they become anchors like any other.
+func TestABrainpoolAuthorityIsReadFromTheList(t *testing.T) {
+	if _, err := exec.LookPath("openssl"); err != nil {
+		t.Skip("openssl is not available")
+	}
+	directory := t.TempDir()
+	for _, arguments := range [][]string{
+		{"ecparam", "-name", "brainpoolP256r1", "-genkey", "-noout", "-out", "ca.key"},
+		{"req", "-x509", "-new", "-key", "ca.key", "-subj", "/C=DE/O=Aerztekammer/CN=HBA-CA 7", "-days", "30", "-outform", "DER", "-out", "ca.der"},
+	} {
+		command := exec.Command("openssl", arguments...)
+		command.Dir = directory
+		if output, err := command.CombinedOutput(); err != nil {
+			t.Fatalf("openssl %v: %v\n%s", arguments, err, output)
+		}
+	}
+	der, _ := os.ReadFile(filepath.Join(directory, "ca.der"))
+	list, err := infrastructure.TSLParser{}.Parse(strings.NewReader(strings.Replace(sampleList, "CERTIFICATE_ONE", base64.StdEncoding.EncodeToString(der), 1)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	certificates := list.Services[0].Certificates
+	if len(certificates) != 1 || certificates[0].Subject.CommonName != "HBA-CA 7" {
+		t.Fatalf("the authority is not read: %d certificates", len(certificates))
+	}
+	if _, ok := certificates[0].PublicKey.(*brainpool.PublicKey); !ok {
+		t.Errorf("its key is %T", certificates[0].PublicKey)
+	}
 }
