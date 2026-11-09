@@ -321,9 +321,12 @@ type signerOptions struct {
 	certificate string
 	module      string
 	store       storeOptions
-	// remote and credential name a CSC service and its credential.
-	remote     string
-	credential string
+	// remote and credential name a CSC service and its credential;
+	// oauthClient and oauthRedirect, its OAuth2 sign-in.
+	remote        string
+	credential    string
+	oauthClient   string
+	oauthRedirect string
 }
 
 // buildSigner resolves the key source from the flags, enforcing exactly one.
@@ -355,6 +358,7 @@ func buildSigner(options signerOptions) (domain.Signer, error) {
 			Address: options.remote, Credential: options.credential,
 			Token: os.Getenv("TREBARUNA_CSC_TOKEN"), User: os.Getenv("TREBARUNA_CSC_USER"), Password: os.Getenv("TREBARUNA_CSC_PASSWORD"),
 			PIN: secretFrom(options.pin, pinVariable), OTP: os.Getenv("TREBARUNA_OTP"),
+			OAuthClient: options.oauthClient, OAuthSecret: os.Getenv("TREBARUNA_CSC_CLIENT_SECRET"), OAuthRedirect: options.oauthRedirect,
 		}))
 	}
 

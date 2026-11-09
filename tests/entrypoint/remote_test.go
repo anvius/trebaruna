@@ -2,6 +2,9 @@ package cli_test
 
 import (
 	"net/url"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -81,5 +84,42 @@ func TestAnotherCredentialIsReadAgain(t *testing.T) {
 	}
 	if info := countOf(server.Calls(), "credentials/info"); info != 2 || !slices.Contains(server.Calls(), "signatures/signHash") {
 		t.Errorf("calls: %v", server.Calls())
+	}
+}
+
+// TestSignWithASignatureAuthorisedInTheBrowser: --csc-client lets the
+// person authorise the signature at the provider's OAuth2 server; neither
+// the client secret nor the token shows.
+func TestSignWithASignatureAuthorisedInTheBrowser(t *testing.T) {
+	if _, err := exec.LookPath("curl"); err != nil {
+		t.Skip("curl stands in for the browser")
+	}
+	browser := filepath.Join(t.TempDir(), "browser")
+	if err := os.WriteFile(browser, []byte("#!/bin/sh\nexec curl -sS -L -o /dev/null \"$1\"\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("BROWSER", browser)
+	server := csc.Start(t)
+	t.Setenv("TREBARUNA_CSC_TOKEN", csc.Token)
+	t.Setenv("TREBARUNA_CSC_CLIENT_SECRET", "client-secret-value")
+	document := writeDocument(t, "delibera.txt", "delibera\n")
+
+	stdout, stderr, code := run("sign", document, "--csc", server.URL, "--credential", "rsa-oauth", "--csc-client", csc.OAuthClient,
+		"--format", "cades", "--json")
+	if code != 0 {
+		t.Fatalf("exit %d: %s", code, stderr)
+	}
+	if !slices.Contains(server.Calls(), "oauth2/token") {
+		t.Errorf("calls: %v", server.Calls())
+	}
+	for _, output := range []string{stdout, stderr} {
+		if strings.Contains(output, "client-secret-value") || strings.Contains(output, csc.Token) {
+			t.Error("a secret reached the output")
+		}
+	}
+	if _, stderr, code := run("sign", document, "--csc", server.URL, "--csc-client", csc.OAuthClient,
+		"--csc-redirect", "https://provider.example/back", "--format", "cades", "--out", document+".x.p7m"); code == 0 ||
+		!strings.Contains(stderr, "redirect") {
+		t.Errorf("a redirect off this computer: exit %d, %s", code, stderr)
 	}
 }

@@ -7,7 +7,7 @@ import "flag"
 type keyFlags struct {
 	p12, pem, passphrase, pin, token, certificate, module, nssDB *string
 	card, firefox                                                *bool
-	remote, credential                                           *string
+	remote, credential, oauthClient, oauthRedirect               *string
 }
 
 // addKeyFlags registers the key flags; purpose completes "the certificate
@@ -28,6 +28,10 @@ func addKeyFlags(flags *flag.FlagSet, purpose string) keyFlags {
 		remote: flags.String("csc", "", "sign with a key kept by a provider, through its Cloud Signature Consortium API (https://…/csc/v2); "+
 			"secrets in $TREBARUNA_CSC_TOKEN or $TREBARUNA_CSC_USER/_PASSWORD, $TREBARUNA_PIN, $TREBARUNA_OTP"),
 		credential: flags.String("credential", "", "the provider's credential to sign with (default: its only one)"),
+		oauthClient: flags.String("csc-client", "", "the client id the provider gave trebaruna, to sign in or authorise a signature "+
+			"in your browser through its OAuth2 server (client secret, if any, in $TREBARUNA_CSC_CLIENT_SECRET)"),
+		oauthRedirect: flags.String("csc-redirect", "", "the address your browser comes back to after authorising, "+
+			"as registered with the provider (default: http://127.0.0.1:<free port>/callback)"),
 	}
 }
 
@@ -37,12 +41,13 @@ func (k keyFlags) options(name string) signerOptions {
 		name: name, p12Path: *k.p12, pemPath: *k.pem, passphrase: *k.passphrase,
 		pin: *k.pin, card: *k.card, tokenLabel: *k.token, certificate: *k.certificate, module: *k.module,
 		store:  storeOptions{firefox: *k.firefox, directory: *k.nssDB},
-		remote: *k.remote, credential: *k.credential,
+		remote: *k.remote, credential: *k.credential, oauthClient: *k.oauthClient, oauthRedirect: *k.oauthRedirect,
 	}
 }
 
 // keyValueFlagNames are the key flags that take a value.
-var keyValueFlagNames = []string{"p12", "pem", "pass", "pin", "token", "module", "certificate", "nss-db", "csc", "credential"}
+var keyValueFlagNames = []string{"p12", "pem", "pass", "pin", "token", "module", "certificate", "nss-db", "csc", "credential",
+	"csc-client", "csc-redirect"}
 
 // valueFlagsWith returns the key flags that take a value plus the named ones,
 // in both their - and -- forms, for telling flag values from documents.

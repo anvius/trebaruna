@@ -33,5 +33,12 @@ Providers without a CSC endpoint are not supported.
   provider once.
 - The receipt carries `key_source: csc` and the provider's host, in text
   and JSON.
-- Not implemented: the OAuth2 authorization-code flow (`oauth2code`
-  credentials are refused with that reason), and RSA-PSS.
+- OAuth2 authorization-code flow (0.61.0), with `--csc-client`: `info`
+  names the server; the browser opens the authorisation page and comes
+  back to a loopback address (RFC 8252); PKCE S256 and the state bind the
+  code to the request. Scope `service` signs in when there is no token or
+  user; scope `credential` (credentialID, numSignatures, base64url hashes,
+  hashAlgorithmOID) authorises each signature of an `oauth2code`
+  credential, and the credential-scoped token replaces the SAD in
+  `signatures/signHash`.
+- Not implemented: RSA-PSS.

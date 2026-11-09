@@ -96,6 +96,8 @@ trebaruna sign <document> [flags]
 | `--nss-db` | — | Sign with a certificate of this NSS store directory (`~/.pki/nssdb` for Chromium) |
 | `--csc` | — | Sign with a key a provider keeps, through its Cloud Signature Consortium API v2 (`https://…/csc/v2`) |
 | `--credential` | the only one | The provider's credential to sign with |
+| `--csc-client` | — | The client id the provider gave trebaruna: sign in, or authorise each signature of an `oauth2code` credential, in the browser |
+| `--csc-redirect` | `http://127.0.0.1:<free port>/callback` | The address the browser comes back to, as registered with the provider; on this computer only |
 | `--pin` | — | Smartcard PIN |
 | `--pass` | — | Passphrase for the P12 or PEM |
 | `--name` | from the certificate | Signer name recorded in the signature |
@@ -579,6 +581,8 @@ Trust lists: `~/.cache/trebaruna/`. Nothing else is cached.
 | `TREBARUNA_CSC_TOKEN` | `sign --csc` | Access token of the remote signing service |
 | `TREBARUNA_CSC_USER`, `TREBARUNA_CSC_PASSWORD` | `sign --csc` | Sign in to the service when there is no token |
 | `TREBARUNA_OTP` | `sign --csc` | One-time password a credential asks for |
+| `TREBARUNA_CSC_CLIENT_SECRET` | `sign --csc --csc-client` | Secret of a confidential OAuth2 client, when the provider gave one |
+| `BROWSER` | `sign --csc --csc-client` | The program that shows the authorisation page (default: the system's opener) |
 | `SOFTHSM2_MODULE` | tests only | PKCS#11 module for the test suite |
 
 ---

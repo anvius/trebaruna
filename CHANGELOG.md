@@ -6,6 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Remote signing through a provider's OAuth2 server (CSC's
+  authorization-code flow): `sign --csc … --csc-client <id>` signs the
+  person in, or has each signature of an `oauth2code` credential
+  authorised, in their own browser. trebaruna asks `info` for the server,
+  opens the page (`$BROWSER` or the system's opener, the address also on
+  standard error), waits up to five minutes for the browser to come back
+  to a loopback address, checks the state and exchanges the code with
+  PKCE (S256); a credential-scoped token stands in for the activation data
+  in signatures/signHash. `--csc-redirect` takes the address a provider
+  registered (on this computer only); `TREBARUNA_CSC_CLIENT_SECRET` a
+  confidential client's secret. oauth2code credentials were refused.
+
 ### Fixed
 
 - A remote signature asked the CSC service for the credential twice

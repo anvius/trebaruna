@@ -23,8 +23,12 @@ import (
 	transparency "codeberg.org/simplicer/trebaruna/src/transparency/infrastructure"
 )
 
-// remoteTimeout bounds each call to the remote service.
-const remoteTimeout = time.Minute
+// remoteTimeout bounds each call to the remote service; authorising in the
+// browser, which waits for a person, gets longer.
+const (
+	remoteTimeout = time.Minute
+	oauthTimeout  = 5 * time.Minute
+)
 
 // loadRemote is the CSC credential of the signer's service, as a key pair.
 func loadRemote(signer domain.Signer) (KeyPair, error) {
@@ -94,6 +98,7 @@ func readCredential(service domain.RemoteService) (remoteCredential, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), remoteTimeout)
 	defer cancel()
 
+	var oauth *csc.OAuth
 	switch {
 	case service.Token != "":
 		client.UseToken(service.Token)
@@ -101,8 +106,21 @@ func readCredential(service domain.RemoteService) (remoteCredential, error) {
 		if err := client.Login(ctx, service.User, service.Password); err != nil {
 			return remoteCredential{}, err
 		}
+	case service.OAuthClient != "":
+		var err error
+		if oauth, err = oauthOf(ctx, client, service); err != nil {
+			return remoteCredential{}, err
+		}
+		signIn, cancelSignIn := context.WithTimeout(context.Background(), oauthTimeout)
+		token, err := oauth.ServiceToken(signIn)
+		cancelSignIn()
+		if err != nil {
+			return remoteCredential{}, err
+		}
+		client.UseToken(token)
 	default:
-		return remoteCredential{}, errors.New("a remote signing service needs $TREBARUNA_CSC_TOKEN, or $TREBARUNA_CSC_USER and $TREBARUNA_CSC_PASSWORD")
+		return remoteCredential{}, errors.New("a remote signing service needs $TREBARUNA_CSC_TOKEN, $TREBARUNA_CSC_USER and " +
+			"$TREBARUNA_CSC_PASSWORD, or --csc-client to sign in through the provider's OAuth2 server")
 	}
 
 	credentialID, err := chooseCredential(ctx, client, service.Credential)
@@ -124,6 +142,14 @@ func readCredential(service domain.RemoteService) (remoteCredential, error) {
 		return remoteCredential{}, fmt.Errorf("credential %s asks for a PIN for each signature: set $TREBARUNA_PIN", credentialID)
 	case credential.Explicit && credential.NeedsOTP && service.OTP == "":
 		return remoteCredential{}, fmt.Errorf("credential %s asks for a one-time password: set $TREBARUNA_OTP", credentialID)
+	case credential.OAuth && service.OAuthClient == "":
+		return remoteCredential{}, fmt.Errorf("credential %s is authorised in the browser, through the provider's OAuth2 server: "+
+			"give the client id the provider gave trebaruna with --csc-client", credentialID)
+	}
+	if credential.OAuth && oauth == nil {
+		if oauth, err = oauthOf(ctx, client, service); err != nil {
+			return remoteCredential{}, err
+		}
 	}
 
 	certificate, err := x509.ParseCertificate(credential.Certificates[0])
@@ -138,7 +164,26 @@ func readCredential(service domain.RemoteService) (remoteCredential, error) {
 	}
 	key := remoteKey{client: client, credential: credentialID, public: certificate.PublicKey,
 		algorithms: credential.KeyAlgorithms, explicit: credential.Explicit, pin: service.PIN, otp: service.OTP}
+	if credential.OAuth {
+		key.oauth = oauth
+	}
 	return remoteCredential{key: key, certificate: certificate, chain: chain}, nil
+}
+
+// oauthOf is the service's OAuth2 server, as info names it, for the client
+// the person gave.
+func oauthOf(ctx context.Context, client *csc.Client, service domain.RemoteService) (*csc.OAuth, error) {
+	described, err := client.Info(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if described.OAuth2 == "" {
+		return nil, fmt.Errorf("the service names no OAuth2 server (info's oauth2)")
+	}
+	return &csc.OAuth{
+		Base: described.OAuth2, ClientID: service.OAuthClient, ClientSecret: service.OAuthSecret, Redirect: service.OAuthRedirect,
+		HTTP: transparency.Client(transparencydomain.PurposeRemoteSigning, remoteTimeout), Open: openInBrowser,
+	}, nil
 }
 
 // chooseCredential is the credential named, or the account's only one.
@@ -165,6 +210,8 @@ type remoteKey struct {
 	algorithms []string
 	explicit   bool
 	pin, otp   string
+	// oauth authorises each signature in the person's browser.
+	oauth *csc.OAuth
 }
 
 // Public is the certificate's key.
@@ -180,6 +227,9 @@ func (k remoteKey) Sign(_ io.Reader, digest []byte, options crypto.SignerOpts) (
 	if err != nil {
 		return nil, err
 	}
+	if k.oauth != nil {
+		return k.signAuthorisedInBrowser(digest, hashOID, signatureOID)
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), remoteTimeout)
 	defer cancel()
 	sad := ""
@@ -192,10 +242,32 @@ func (k remoteKey) Sign(_ io.Reader, digest []byte, options crypto.SignerOpts) (
 	if err != nil {
 		return nil, err
 	}
-	if public, ok := k.public.(*ecdsa.PublicKey); ok {
-		return remoteECDSA(public, signatures[0])
+	return k.fromService(signatures[0])
+}
+
+// signAuthorisedInBrowser has the person authorise this one digest in their
+// browser; the credential-scoped token the provider then gives stands in
+// for the activation data.
+func (k remoteKey) signAuthorisedInBrowser(digest []byte, hashOID, signatureOID string) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), oauthTimeout)
+	defer cancel()
+	token, err := k.oauth.CredentialToken(ctx, k.credential, [][]byte{digest}, hashOID)
+	if err != nil {
+		return nil, err
 	}
-	return signatures[0], nil
+	signatures, err := k.client.WithToken(token).SignHash(ctx, k.credential, "", [][]byte{digest}, hashOID, signatureOID)
+	if err != nil {
+		return nil, err
+	}
+	return k.fromService(signatures[0])
+}
+
+// fromService is a signature as crypto.Signer promises it.
+func (k remoteKey) fromService(signature []byte) ([]byte, error) {
+	if public, ok := k.public.(*ecdsa.PublicKey); ok {
+		return remoteECDSA(public, signature)
+	}
+	return signature, nil
 }
 
 // Hash and signature algorithm OIDs.

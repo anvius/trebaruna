@@ -282,8 +282,34 @@ trebaruna sign contratto.pdf --csc https://provider.example/csc/v2 --credential 
   connection appears with the purpose `remote-signing` (ADR-0010). Neither
   the token nor the PIN is ever printed.
 - Every format and level works, and the timestamps are fetched as usual.
-- Providers that only authorise through an OAuth2 browser flow are not
-  supported.
+
+### Authorising in the browser (OAuth2)
+
+Providers that sign people in, or have each signature authorised, through
+their OAuth2 server give trebaruna a client id. With it, the person signs
+in or agrees in their own browser, and no password reaches trebaruna:
+
+```bash
+trebaruna sign contratto.pdf --csc https://provider.example/csc/v2 --csc-client <client id>
+```
+
+- trebaruna asks the service where its OAuth2 server is (`info`), opens
+  the authorisation page in the browser (`$BROWSER`, or the system's
+  opener; the address is also printed on standard error) and waits, up to
+  five minutes, for the browser to come back to `http://127.0.0.1:<port>/callback`.
+  The code it brings is exchanged with PKCE (S256), and only if the state
+  is this request's.
+- Without a token or a user, the person signs in this way (scope
+  `service`). A credential whose mode is `oauth2code` has each signature
+  authorised for its one hash (scope `credential`), and the token the
+  provider then gives signs it.
+- A provider that registered a fixed address for trebaruna gets it with
+  `--csc-redirect http://127.0.0.1:8765/callback`; it must be on this
+  computer. A confidential client's secret goes in
+  `TREBARUNA_CSC_CLIENT_SECRET`.
+- The token and the secret are never printed. The browser's own
+  connections are the browser's; trebaruna's (`info`, the code exchange)
+  are listed as `remote-signing`.
 
 ---
 

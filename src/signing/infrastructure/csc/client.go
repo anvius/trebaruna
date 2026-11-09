@@ -35,6 +35,35 @@ func NewClient(base string, client *http.Client) *Client {
 // UseToken signs every call with an access token.
 func (c *Client) UseToken(token string) { c.token = token }
 
+// WithToken is a copy of the client that signs its calls with another
+// token: a credential-scoped one, which authorises one signature.
+func (c *Client) WithToken(token string) *Client {
+	copied := *c
+	copied.token = token
+	return &copied
+}
+
+// Service is what a CSC service says of itself (info): how it signs
+// people in, and where its OAuth2 authorisation server is.
+type Service struct {
+	AuthTypes []string
+	// OAuth2 is the base of the authorisation server's endpoints
+	// (…/oauth2/authorize, …/oauth2/token).
+	OAuth2 string
+}
+
+// Info asks the service to describe itself; it needs no sign-in.
+func (c *Client) Info(ctx context.Context) (Service, error) {
+	var answer struct {
+		AuthType []string `json:"authType"`
+		OAuth2   string   `json:"oauth2"`
+	}
+	if err := c.call(ctx, "info", map[string]any{}, &answer, nil); err != nil {
+		return Service{}, err
+	}
+	return Service{AuthTypes: answer.AuthType, OAuth2: strings.TrimRight(answer.OAuth2, "/")}, nil
+}
+
 // Login signs in with a user and a password (auth/login, HTTP Basic) and
 // keeps the access token it returns.
 func (c *Client) Login(ctx context.Context, user, password string) error {
@@ -76,6 +105,9 @@ type Credential struct {
 	Explicit bool
 	NeedsPIN bool
 	NeedsOTP bool
+	// OAuth says each signature is authorised by the person in their
+	// browser, through the service's OAuth2 server (oauth2code).
+	OAuth bool
 }
 
 // credentialAnswer reads both shapes of credentials/info: v2's auth object
@@ -115,10 +147,8 @@ func (c *Client) Credential(ctx context.Context, id string) (Credential, error) 
 	if mode == "" {
 		mode = answer.AuthMode
 	}
-	if mode == "oauth2code" {
-		return Credential{}, fmt.Errorf("%w: %s authorises through an OAuth2 browser flow, which trebaruna does not run", ErrService, id)
-	}
 	credential := Credential{
+		OAuth:         mode == "oauth2code",
 		KeyEnabled:    answer.Key.Status == "" || answer.Key.Status == "enabled",
 		CertValid:     answer.Cert.Status == "" || answer.Cert.Status == "valid",
 		KeyAlgorithms: answer.Key.Algo,
