@@ -120,6 +120,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gcc pkg-config libgl1-mesa-dev xorg-dev \
             libxkbcommon-dev libwayland-dev libegl1-mesa-dev
+      # The translation tests only exist behind the gui tag, because the file
+      # they test imports Fyne. This job is the only one that can run them, and
+      # the Spanish shadowing defect survived precisely because no CI did.
+      - name: Translation tests
+        run: CGO_ENABLED=1 go test -tags gui ./src/desktop/... -count=1
       - name: Build
         run: CGO_ENABLED=1 go build -tags gui -trimpath -o bin/trebaruna-desktop ./src/entrypoint/desktop
       - uses: actions/upload-artifact@v4
