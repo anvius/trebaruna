@@ -137,7 +137,7 @@ func (s *XadesSigner) SignXades(ctx context.Context, request application.XadesRe
 	signedInfo := buildSignedInfo(ids,
 		placeholderDigest, placeholderDigest,
 		keyPair.Certificate.PublicKeyAlgorithm == x509.ECDSA,
-		request.Enveloping,
+		documentLayout{enveloping: request.Enveloping, excludeSignatures: !request.Policy.IsFacturaE()},
 	)
 	payload := ""
 	if request.Enveloping {
@@ -424,7 +424,7 @@ func xmlEscape(text string) string {
 }
 
 // buildSignedInfo emits ds:SignedInfo with the two required references.
-func buildSignedInfo(ids signatureIDs, documentDigest, propertiesDigest string, ecdsa, enveloping bool) string {
+func buildSignedInfo(ids signatureIDs, documentDigest, propertiesDigest string, ecdsa bool, layout documentLayout) string {
 	method := algorithmRSASHA256
 	if ecdsa {
 		method = algorithmECDSASHA256
@@ -433,7 +433,7 @@ func buildSignedInfo(ids signatureIDs, documentDigest, propertiesDigest string, 
 	return `<ds:SignedInfo xmlns:ds="` + namespaceDS + `">` +
 		`<ds:CanonicalizationMethod Algorithm="` + algorithmC14N + `"/>` +
 		`<ds:SignatureMethod Algorithm="` + method + `"/>` +
-		documentReference(ids, enveloping) +
+		documentReference(ids, layout) +
 		`<ds:Reference Type="` + typeSignedProperties + `" URI="#` + ids.signedProperties() + `">` +
 		`<ds:Transforms>` +
 		`<ds:Transform Algorithm="` + algorithmC14N + `"/>` +
@@ -444,13 +444,24 @@ func buildSignedInfo(ids signatureIDs, documentDigest, propertiesDigest string, 
 		`</ds:SignedInfo>`
 }
 
+// documentLayout says how a signature holds what it signs.
+type documentLayout struct {
+	// enveloping carries the document inside the signature, in an Object.
+	enveloping bool
+	// excludeSignatures leaves every signature out of an enveloped reference
+	// (AutoFirma's XPath filter), so a signature added later to the document
+	// does not break this one. FacturaE invoices take one signature and
+	// AutoFirma writes none.
+	excludeSignatures bool
+}
+
 // documentReference builds the reference to the signed payload.
 //
 // Enveloped signatures reference the whole document with URI="" and must declare
 // the enveloped-signature transform, or a verifier hashes the document with the
 // signature inside. Enveloping signatures reference their own Object by Id.
-func documentReference(ids signatureIDs, enveloping bool) string {
-	if enveloping {
+func documentReference(ids signatureIDs, layout documentLayout) string {
+	if layout.enveloping {
 		return `<ds:Reference Id="` + ids.reference() + `" URI="#` + ids.payload() + `">` +
 			`<ds:Transforms>` +
 			`<ds:Transform Algorithm="` + algorithmC14N + `"/>` +
@@ -460,9 +471,15 @@ func documentReference(ids signatureIDs, enveloping bool) string {
 			`</ds:Reference>`
 	}
 
+	filter := ""
+	if layout.excludeSignatures {
+		filter = `<ds:Transform Algorithm="` + xmldsig.XPathTransform + `">` +
+			`<ds:XPath>not(ancestor-or-self::ds:Signature)</ds:XPath></ds:Transform>`
+	}
 	return `<ds:Reference Id="` + ids.reference() + `" URI="">` +
 		`<ds:Transforms>` +
 		`<ds:Transform Algorithm="` + algorithmEnveloped + `"/>` +
+		filter +
 		`<ds:Transform Algorithm="` + algorithmC14N + `"/>` +
 		`</ds:Transforms>` +
 		`<ds:DigestMethod Algorithm="` + algorithmSHA256 + `"/>` +

@@ -356,3 +356,31 @@ func TestEachXadesSignatureHasItsOwnIds(t *testing.T) {
 		t.Errorf("only %d Ids in two signatures", len(ids))
 	}
 }
+
+// TestASecondXadesLeavesTheFirstIntact: each enveloped signature excludes
+// every signature (AutoFirma's XPath filter), so signing a signed document
+// again does not break the first signature.
+func TestASecondXadesLeavesTheFirstIntact(t *testing.T) {
+	twice := signXades(t, signXades(t, `<acta><punto>1</punto></acta>`, false), false)
+	document := etree.NewDocument()
+	if err := document.ReadFromString(twice); err != nil {
+		t.Fatal(err)
+	}
+	signatures := xmldsig.Signatures(document)
+	if len(signatures) != 2 {
+		t.Fatalf("%d signatures, want 2", len(signatures))
+	}
+	for index, signature := range signatures {
+		der, err := base64.StdEncoding.DecodeString(signature.FindElement(".//X509Certificate").Text())
+		if err != nil {
+			t.Fatal(err)
+		}
+		certificate, err := x509.ParseCertificate(der)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := xmldsig.Check(document, signature, certificate.PublicKey, nil); err != nil {
+			t.Errorf("signature %d: %v", index+1, err)
+		}
+	}
+}

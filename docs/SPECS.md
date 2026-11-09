@@ -40,7 +40,8 @@ user seeing what is signed and where anything goes.
 | PAdES seal in an existing empty form field | planned (needs an incremental writer of our own; the PDF library always adds a field) |
 | CAdES detached (`.p7s`), verified with the document beside it | built |
 | Parallel signatures (co-signing) and counter-signatures on CAdES, levels B and T | built |
-| Parallel signatures and counter-signatures on XAdES | planned (B5) |
+| Parallel signatures on XAdES enveloped: signing a signed XML adds a signature beside the others; each excludes every signature (AutoFirma's XPath filter), so none breaks another | built |
+| Counter-signatures on XAdES | planned (B5) |
 | Several documents in one run, same settings, one result per document | built |
 | Signature policies (EPES) in CAdES and XAdES: AGE 1.9 and 1.8, FacturaE 3.1 and 3.0 by name, with AutoFirma 1.9's digests; any other by identifier, digest and qualifier, never downloaded; a policy named by a URL only in XAdES | built |
 | Claimed roles in XAdES (`SignerRoleV2`) | built |

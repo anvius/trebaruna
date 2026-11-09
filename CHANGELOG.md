@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A second XAdES on a signed XML no longer breaks the first.
+  - The enveloped reference only excluded its own signature, so the next
+    signature added to the root changed what the first one signed.
+  - Each enveloped signature now leaves every signature out, with the
+    XPath filter `not(ancestor-or-self::ds:Signature)` as AutoFirma writes
+    it. FacturaE keeps AutoFirma's transforms, without the filter.
+  - Checked with xmlsec1 1.3.9 and Java 25 on both signatures of a
+    twice-signed FatturaPA.
+
 - XML verification reads AutoFirma's enveloped signatures and every
   signature of a document.
   - AutoFirma writes the XPath filter after C14N, on the canonical octets.

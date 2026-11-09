@@ -243,6 +243,13 @@ Verified with up to five chained signatures. Each is reported separately by
 This is the same model public administrations use when an office countersigns
 after the citizen signs.
 
+An XML works the same way: signing `acta_signed.xml` adds a second
+`ds:Signature` beside the first. Each signature leaves every signature out
+of what it signs (the XPath filter `not(ancestor-or-self::ds:Signature)`,
+as AutoFirma writes it), so adding one never breaks another; `verify`
+reports each. FacturaE invoices take a single signature. XML signed by
+trebaruna before 0.30.4 lacks the filter, and a second signature breaks it.
+
 ---
 
 ## Reasons and locations
