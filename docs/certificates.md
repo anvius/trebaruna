@@ -47,7 +47,13 @@ Both extension names work; the tool reads the container, not the name.
 
 ### What is accepted
 
-- Any PKCS#12 produced by any authority.
+- PKCS#12 in DER, as OpenSSL, Windows and most authorities write it, with any
+  of the usual algorithms (PBES2/AES, 3DES, RC2).
+- PKCS#12 in BER, as Firefox and Thunderbird (NSS) export a certificate from
+  their certificate manager: PBES2 with AES and PBKDF2-HMAC-SHA256, or the older
+  3DES with an HMAC-SHA1 integrity check. Go's PKCS#12 library reads DER only;
+  before 0.6.1 such a file was refused as "not a certificate" even with the right
+  passphrase.
 - Self-signed certificates.
 - Keys encrypted with a passphrase. An empty passphrase is allowed if the
   container has none.
@@ -55,7 +61,7 @@ Both extension names work; the tool reads the container, not the name.
 If the passphrase is wrong you get a clear error rather than a crash:
 
 ```
-cannot read the P12: pkcs12: decryption password incorrect
+the passphrase does not open "mia-chiave.p12"
 ```
 
 ---

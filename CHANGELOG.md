@@ -87,6 +87,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- PKCS#12 files exported by Firefox or Thunderbird (NSS) were refused as "not a
+  certificate" even with the right passphrase: they are BER with indefinite
+  lengths and Go's PKCS#12 library reads DER only. A new `keybundle` package
+  falls back to its own reader for BER files: PBES2 (AES, PBKDF2-HMAC-SHA1/256/
+  384/512), legacy 3DES with the PKCS#12 KDF, and the integrity MAC checked on
+  the bytes as written. Every earlier version failed on these files too, only
+  later, at signing time.
 - The PDF seal never carried its design: every line printed pure black and the
   blue accent rule was missing. With pdfsign v1.0.0, `Position()` commits a text
   element, so the colour set after it was dropped; and `DrawRect()` registers a

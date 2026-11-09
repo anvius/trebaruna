@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"codeberg.org/simplicer/trebaruna/src/signing/domain"
-	"software.sslmate.com/src/go-pkcs12"
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/keybundle"
 )
 
 // KeyPair is a ready-to-use signing identity.
@@ -48,7 +48,8 @@ func LoadKeyPair(signer domain.Signer) (KeyPair, error) {
 // loadP12 decodes a PKCS#12 bundle. Self-signed certificates are accepted and
 // flagged, never rejected: the user may be signing for internal use.
 func loadP12(signer domain.Signer) (KeyPair, error) {
-	key, cert, chain, err := pkcs12.DecodeChain(signer.KeyMaterial(), signer.Passphrase())
+	// keybundle reads DER and the BER that Firefox and Thunderbird export.
+	key, cert, chain, err := keybundle.Decode(signer.KeyMaterial(), signer.Passphrase())
 	if err != nil {
 		return KeyPair{}, fmt.Errorf("decode p12 %q: %w", signer.Name(), err)
 	}
