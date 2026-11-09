@@ -76,6 +76,8 @@ type Request struct {
 	// qualified name, the seal in the field's box: a form prepared for its
 	// signers. It excludes Placement and Placements.
 	Field string
+	// PDFPassword opens an encrypted PDF: its user or owner password.
+	PDFPassword string
 	// Rubric is the image of a handwritten signature each seal shows beside
 	// the certificate data (ADR-0012); a default seal widens for it.
 	Rubric domain.Rubric
@@ -391,6 +393,7 @@ func (u *SignDocument) sign(ctx context.Context, request Request, content []byte
 			Policy:          request.Policy,
 			Field:           request.Field,
 			Invisible:       request.Invisible,
+			Password:        request.PDFPassword,
 		})
 		return signed, err
 

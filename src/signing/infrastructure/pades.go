@@ -7,6 +7,7 @@ import (
 	"crypto/sha1"
 	"crypto/x509"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"math"
 	"strings"
@@ -15,6 +16,7 @@ import (
 	"codeberg.org/simplicer/trebaruna/src/signing/application"
 	"codeberg.org/simplicer/trebaruna/src/signing/domain"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/dss"
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/pdffield"
 	verificationdomain "codeberg.org/simplicer/trebaruna/src/verification/domain"
 	verificationinfra "codeberg.org/simplicer/trebaruna/src/verification/infrastructure"
 	"github.com/digitorus/pdf"
@@ -58,6 +60,14 @@ func (s *PadesSigner) SignPades(ctx context.Context, request application.PadesRe
 		)
 	}
 
+	if encrypted, err := encryptedForSigning(request); err != nil {
+		return nil, err
+	} else if encrypted && request.Level.EmbedsRevocation() {
+		// The validation material's update would have to be encrypted too,
+		// which its writer does not do.
+		return nil, fmt.Errorf("%w: level %s on an encrypted PDF; sign it at level T, or decrypt it first", ErrEncryptedPDF, request.Level)
+	}
+
 	keyPair, err := LoadKeyPair(request.Signer)
 	if err != nil {
 		return nil, err
@@ -77,7 +87,7 @@ func (s *PadesSigner) SignPades(ctx context.Context, request application.PadesRe
 		return s.complete(ctx, signed, request, keyPair)
 	}
 
-	document, err := pdfsign.Open(bytes.NewReader(request.Content), int64(len(request.Content)))
+	document, err := pdfsign.OpenWithPassword(bytes.NewReader(request.Content), int64(len(request.Content)), request.Password)
 	if err != nil {
 		return nil, fmt.Errorf("open PDF: %w", err)
 	}
@@ -111,6 +121,34 @@ func (s *PadesSigner) SignPades(ctx context.Context, request application.PadesRe
 	}
 
 	return s.complete(ctx, output.Bytes(), request, keyPair)
+}
+
+// ErrEncryptedPDF marks what an encrypted PDF does not allow.
+var ErrEncryptedPDF = errors.New("encrypted PDF")
+
+// encryptedForSigning opens the document as both writers will: an
+// encrypted one with its password, and only when its author's permissions
+// allow a signature.
+func encryptedForSigning(request application.PadesRequest) (bool, error) {
+	given := false
+	reader, err := pdf.NewReaderEncrypted(bytes.NewReader(request.Content), int64(len(request.Content)), func() string {
+		if given {
+			return ""
+		}
+		given = true
+		return request.Password
+	})
+	switch {
+	case errors.Is(err, pdf.ErrInvalidPassword) && request.Password == "":
+		return true, fmt.Errorf("%w: it opens only with its password; give it in TREBARUNA_PDF_PASSWORD", ErrEncryptedPDF)
+	case errors.Is(err, pdf.ErrInvalidPassword):
+		return true, fmt.Errorf("%w: the password given does not open it", ErrEncryptedPDF)
+	case err != nil:
+		return false, fmt.Errorf("open PDF: %w", err)
+	case reader.IsEncrypted() && !pdffield.SigningPermitted(reader):
+		return true, fmt.Errorf("%w: its author's permissions allow neither filling in forms nor signing", ErrEncryptedPDF)
+	}
+	return reader.IsEncrypted(), nil
 }
 
 // complete adds what levels LT and LTA ask for to a signed PDF.

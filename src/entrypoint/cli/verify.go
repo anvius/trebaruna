@@ -64,6 +64,7 @@ func runVerify(args []string, stdout, stderr io.Writer) int {
 	// Revocation checks reach the network, so they are opt-in: a verification
 	// that silently calls OCSP is a verification that fails on a plane.
 	pdfVerifier.CheckRevocation = !*offline
+	pdfVerifier.Password = os.Getenv(pdfPasswordVariable)
 
 	useCase := Verification(pdfVerifier)
 

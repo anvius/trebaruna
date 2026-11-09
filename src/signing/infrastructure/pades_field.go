@@ -144,6 +144,7 @@ func (s *PadesSigner) signWithRoom(ctx context.Context, request application.Pade
 			Name:     keyPair.Name,
 			Reason:   request.Reason,
 			Location: request.Location,
+			Password: request.Password,
 			SignedAt: signingMoment(request),
 			Reserve:  reserve,
 			Envelope: envelope,

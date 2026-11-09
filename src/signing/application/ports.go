@@ -105,6 +105,10 @@ type PadesRequest struct {
 	EmbedRevocation bool
 	// Policy is the signature policy declared in the signed attributes.
 	Policy domain.SignaturePolicy
+	// Password opens an encrypted PDF: its user or owner password. Empty
+	// tries the empty user password, as documents that only restrict
+	// permissions have.
+	Password string
 	// Field is the document's empty signature field to sign in, by its
 	// fully qualified name; empty adds a field. The seal goes in its box
 	// unless Invisible.

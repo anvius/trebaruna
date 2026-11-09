@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Signing encrypted PDFs (RC4, AES-128, AES-256): the password, user or
+  owner, comes from TREBARUNA_PDF_PASSWORD (never a flag) or afirma://
+  `ownerPassword`/`userPassword`; a document that only restricts
+  permissions needs none. Invisible signatures go through the PDF
+  library's encrypted writer; trebaruna's own writer (seals, fields,
+  policies) now encrypts every new string and stream with its object's
+  key, leaves the signature's /Contents clear and keeps the document's
+  /Encrypt. The author's permissions are honoured (neither form filling
+  nor annotations: refused); LT and LTA are refused on encrypted files.
+  `verify` opens them with the same variable. Judges: qpdf makes AES-256
+  R6, AES-128 R4 and RC4-128 files; pdfsig verifies each signature with
+  the password, qpdf --check finds the files sound, the /ByteRange gap is
+  exactly /Contents, and after qpdf --decrypt the signature's strings
+  read as written.
+
 - A recipients' address book for `.p7e` envelopes: `trebaruna recipients
   list|add|remove` and `encrypt --to saved:<fingerprint start | holder>`.
   Certificates are kept as `<SHA-256>.pem` in a private directory (0700,

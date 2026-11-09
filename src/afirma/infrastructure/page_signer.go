@@ -179,8 +179,13 @@ func (s NativePageSigner) signPades(ctx context.Context, request application.Pag
 	if request.Crypto == domain.Countersign {
 		return nil, domain.Failure{Code: domain.UnsupportedOperation, Cause: "a PDF takes signatures, not counter-signatures"}
 	}
+	// AutoFirma opens an encrypted PDF with ownerPassword, else userPassword.
+	password := request.Properties["ownerPassword"]
+	if password == "" {
+		password = request.Properties["userPassword"]
+	}
 	pades := signapp.PadesRequest{
-		Content: request.Data, Signer: request.Key, Level: level, TimestampURL: tsa,
+		Content: request.Data, Signer: request.Key, Level: level, TimestampURL: tsa, Password: password,
 		Reason: request.Properties["signReason"], Location: request.Properties["signatureProductionCity"],
 		Policy: policy,
 	}

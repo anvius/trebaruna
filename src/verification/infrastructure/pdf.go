@@ -30,6 +30,8 @@ type PDFVerifier struct {
 	// CheckRevocation enables OCSP/CRL lookups. Off by default: a verification
 	// that reaches the network must be an explicit choice.
 	CheckRevocation bool
+	// Password opens an encrypted PDF whose user password is not empty.
+	Password string
 	// Intermediates complements Roots when the anchors come from a trust list.
 	Intermediates *x509.CertPool
 	// Anchors are the raw certificates the trust list published.
@@ -115,7 +117,8 @@ func (v *PDFVerifier) Extract(path string) ([]domain.SignerReport, error) {
 		HTTPTimeout:                   10 * time.Second,
 		// A caller-supplied clock wins over the wall clock, so tests and the
 		// future "verify as of" mode can pin the instant.
-		AtTime: v.Now,
+		AtTime:   v.Now,
+		Password: v.Password,
 	}
 
 	response, err := verify.VerifyFileWithOptions(file, options)

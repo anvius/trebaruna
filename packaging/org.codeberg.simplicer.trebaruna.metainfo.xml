@@ -55,6 +55,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.77.0-unstable" date="2026-11-09">
+      <description>
+        <p>Sign PDFs protected with a password, keeping them encrypted.</p>
+      </description>
+    </release>
     <release version="0.76.0-unstable" date="2026-11-09">
       <description>
         <p>An address book of the people you encrypt for, in the command line and the envelopes window.</p>

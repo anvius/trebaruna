@@ -580,6 +580,7 @@ Trust lists: `~/.cache/trebaruna/`. Nothing else is cached.
 | `TREBARUNA_NEW_PIN` | `pin change`, `pin unlock` | The new PIN (no flag exists) |
 | `TREBARUNA_NEW_PUK` | `pin change-puk` | The new PUK (no flag exists) |
 | `TREBARUNA_TSA_PASS` | `sign`, `timestamp` | Timestamp authority password |
+| `TREBARUNA_PDF_PASSWORD` | `sign`, `verify` | The password that opens an encrypted PDF (no flag exists) |
 | `TREBARUNA_CSC_TOKEN` | `sign --csc` | Access token of the remote signing service |
 | `TREBARUNA_CSC_USER`, `TREBARUNA_CSC_PASSWORD` | `sign --csc` | Sign in to the service when there is no token |
 | `TREBARUNA_OTP` | `sign --csc` | One-time password a credential asks for |

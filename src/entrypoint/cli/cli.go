@@ -247,6 +247,7 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 			Placements:      placements,
 			Invisible:       *invisible,
 			Field:           *field,
+			PDFPassword:     os.Getenv(pdfPasswordVariable),
 			Rubric:          rubric,
 			Detached:        *detached,
 			Cosign:          *cosign,

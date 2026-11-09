@@ -21,7 +21,7 @@ type Widget struct {
 // none): what the PDF library does, written here when its signature needs
 // what the library cannot add, such as a signature policy.
 func SignNew(content []byte, widgets []Widget, signature Signature) ([]byte, error) {
-	reader, err := openForSigning(content)
+	reader, err := openForSigning(content, signature.Password)
 	if err != nil {
 		return nil, err
 	}

@@ -12,7 +12,9 @@ import "os"
 const (
 	passphraseVariable = "TREBARUNA_PASSPHRASE"
 	pinVariable        = "TREBARUNA_PIN"
-	tsaSecretVariable  = "TREBARUNA_TSA_PASS"
+	// pdfPasswordVariable opens an encrypted PDF to sign it.
+	pdfPasswordVariable = "TREBARUNA_PDF_PASSWORD"
+	tsaSecretVariable   = "TREBARUNA_TSA_PASS"
 	// The card management secrets have no flags at all: they are only ever
 	// typed by a person, and a person can set them without echo.
 	pukVariable    = "TREBARUNA_PUK"

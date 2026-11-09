@@ -188,8 +188,31 @@ lacked them; its cross-references are a table or a stream, as the file's are.
 The CMS envelope is trebaruna's own (signing-certificate-v2, no signing-time
 attribute), timestamped for level T; levels LT and LTA are added after it as
 for any PDF signature. A field too small for a legible seal (type under 3 pt) is
-refused, with `--invisible` offered; encrypted documents, and documents their
-author certified against any change, are refused. `--field` excludes `--box`.
+refused, with `--invisible` offered; documents their author certified against
+any change are refused. `--field` excludes `--box`.
+
+### Encrypted PDFs
+
+```bash
+read -rs TREBARUNA_PDF_PASSWORD && export TREBARUNA_PDF_PASSWORD
+trebaruna sign protegido.pdf --p12 k.p12              # invisible, or with a seal
+TREBARUNA_PDF_PASSWORD=… trebaruna verify protegido_signed.pdf
+```
+
+A PDF encrypted with a password (RC4, AES-128 or AES-256, the standard
+security handler) is opened with its user or owner password, read only from
+`TREBARUNA_PDF_PASSWORD`, never a flag; one that only restricts permissions
+(an empty user password) needs none. The signature is an incremental update
+encrypted as the document is: every new string and stream with its object's
+key, except the signature's `/Contents` (ISO 32000-1, 7.6.1 and 7.6.2), under
+the document's own `/Encrypt`. The author's permissions are honoured: a
+document that allows neither filling in forms nor changing annotations is not
+signed. Levels B and T; LT and LTA are refused on an encrypted PDF (their
+update is not encrypted), so sign at T or decrypt it first. afirma:// pages
+give the password as `ownerPassword` or `userPassword`. Checked with qpdf
+(AES-256 R6, AES-128 R4, RC4-128), invisible and with a seal: pdfsig verifies
+each with the password, `qpdf --check` finds the file sound, and after `qpdf
+--decrypt` the signature's strings read as written.
 
 ---
 

@@ -13,7 +13,9 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/hex"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -91,5 +93,37 @@ func TestTheApprovalShowsTheDigestThePageSent(t *testing.T) {
 		return strings.Contains(warning, "SHA-256 digest of a document, "+hex.EncodeToString(digest[:])+", not the document")
 	}) {
 		t.Errorf("the approval does not show the digest: %v", approver.proposal.Warnings)
+	}
+}
+
+// TestAPageSignsAnEncryptedPDFWithItsPassword: AutoFirma's ownerPassword,
+// else userPassword, opens the PDF; pdfsig verifies it with the password.
+func TestAPageSignsAnEncryptedPDFWithItsPassword(t *testing.T) {
+	for _, tool := range []string{"qpdf", "pdfsig"} {
+		if _, err := exec.LookPath(tool); err != nil {
+			t.Skip(tool + " is not available")
+		}
+	}
+	directory := t.TempDir()
+	plain := write(t, directory, "plain.pdf", onePagePDF())
+	encrypted := filepath.Join(directory, "encrypted.pdf")
+	if output, err := exec.Command("qpdf", "--encrypt", "abierto", "propietario", "256", "--", plain, encrypted).CombinedOutput(); err != nil {
+		t.Fatalf("qpdf: %v\n%s", err, output)
+	}
+	content, _ := os.ReadFile(encrypted)
+	maria, _ := identity(t, "MARIA GARCIA", 97)
+	signer := infrastructure.NewNativePageSigner()
+	if _, err := signer.Sign(context.Background(), application.PageSignature{Crypto: domain.Sign, Format: format(t, "PAdES"),
+		Algorithm: "SHA256withECDSA", Key: maria, Data: content, Properties: map[string]string{}}); err == nil {
+		t.Error("an encrypted PDF signed without its password")
+	}
+	signed, err := signer.Sign(context.Background(), application.PageSignature{Crypto: domain.Sign, Format: format(t, "PAdES"),
+		Algorithm: "SHA256withECDSA", Key: maria, Data: content, Properties: map[string]string{"userPassword": "abierto"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := write(t, directory, "signed.pdf", signed.Signature)
+	if output, _ := exec.Command("pdfsig", "-upw", "abierto", path).CombinedOutput(); !strings.Contains(string(output), "Signature is Valid") {
+		t.Errorf("pdfsig: %s", output)
 	}
 }

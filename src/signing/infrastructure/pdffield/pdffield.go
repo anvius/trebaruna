@@ -67,6 +67,10 @@ type Object struct {
 type Signature struct {
 	// Name, Reason and Location are written when not empty.
 	Name, Reason, Location string
+	// Password opens an encrypted document: its user or owner password;
+	// empty tries the empty user password, as documents that only restrict
+	// permissions have.
+	Password string
 	// SignedAt is /M.
 	SignedAt time.Time
 	// Reserve is the room for the CMS envelope, in bytes.
@@ -171,7 +175,7 @@ func abs(value float64) float64 {
 
 // Sign signs the document in its empty signature field called name.
 func Sign(content []byte, name string, appearance *Appearance, signature Signature) ([]byte, error) {
-	reader, err := openForSigning(content)
+	reader, err := openForSigning(content, signature.Password)
 	if err != nil {
 		return nil, err
 	}
@@ -245,20 +249,44 @@ func (u *update) writeAppearance(width, height float64, appearance *Appearance) 
 	return formID
 }
 
-// openForSigning reads a PDF this package can add a signature to: not
-// encrypted, and not certified against any change.
-func openForSigning(content []byte) (*pdf.Reader, error) {
-	reader, err := pdf.NewReader(bytes.NewReader(content), int64(len(content)))
+// ErrPasswordNeeded means the document is encrypted and the password given
+// does not open it.
+var ErrPasswordNeeded = errors.New("the PDF is encrypted and this password does not open it")
+
+// openForSigning reads a PDF this package can add a signature to: opened
+// with its password when encrypted, its author's permissions allowing a
+// signature, and not certified against any change.
+func openForSigning(content []byte, password string) (*pdf.Reader, error) {
+	given := false
+	reader, err := pdf.NewReaderEncrypted(bytes.NewReader(content), int64(len(content)), func() string {
+		// Asked once: a second call means the password failed.
+		if given {
+			return ""
+		}
+		given = true
+		return password
+	})
+	if errors.Is(err, pdf.ErrInvalidPassword) {
+		return nil, ErrPasswordNeeded
+	}
 	if err != nil {
 		return nil, fmt.Errorf("read the PDF: %w", err)
 	}
-	if reader.IsEncrypted() {
-		return nil, fmt.Errorf("%w: it is encrypted", ErrUnsupported)
+	if reader.IsEncrypted() && !SigningPermitted(reader) {
+		return nil, fmt.Errorf("%w: its author's permissions allow neither filling in forms nor signing", ErrUnsupported)
 	}
 	if certifiedAgainstChanges(reader) {
 		return nil, fmt.Errorf("%w: its author certified it against any change", ErrUnsupported)
 	}
 	return reader, nil
+}
+
+// SigningPermitted reads an encrypted document's permissions (/P): a
+// signature needs bit 9, filling in form fields, or bit 6, changing
+// annotations and filling in forms (ISO 32000-1, table 22).
+func SigningPermitted(reader *pdf.Reader) bool {
+	permissions := reader.Trailer().Key("Encrypt").Key("P").Int64()
+	return permissions&(1<<8) != 0 || permissions&(1<<5) != 0
 }
 
 // certifiedAgainstChanges reports a certification signature whose DocMDP
@@ -288,12 +316,16 @@ func references(text string, ids []uint32) string {
 type update struct {
 	original []byte
 	reader   *pdf.Reader
-	body     bytes.Buffer
-	offsets  map[uint32]int64
-	gens     map[uint32]int
-	size     uint32
-	stream   bool
-	previous int64
+	// signatureID is the signature dictionary, whose /Contents stays
+	// unencrypted; err is the first failure to encrypt an object.
+	signatureID uint32
+	err         error
+	body        bytes.Buffer
+	offsets     map[uint32]int64
+	gens        map[uint32]int
+	size        uint32
+	stream      bool
+	previous    int64
 }
 
 func newUpdate(original []byte, reader *pdf.Reader) (*update, error) {
@@ -351,6 +383,12 @@ func (u *update) write(id uint32, dictionary string, data []byte) {
 }
 
 func (u *update) writeWithGeneration(id uint32, generation int, dictionary string, data []byte) {
+	if u.reader.IsEncrypted() {
+		var err error
+		if dictionary, data, err = encryptObject(u.reader, id, generation, dictionary, data, id == u.signatureID); err != nil && u.err == nil {
+			u.err = err
+		}
+	}
 	u.offsets[id], u.gens[id] = u.position(), generation
 	fmt.Fprintf(&u.body, "%d %d obj\n%s\n", id, generation, dictionary)
 	if data != nil {
@@ -402,6 +440,7 @@ func (u *update) signaturePlaceholder(id uint32, signature Signature) {
 		}
 	}
 	dictionary.WriteString(" >>")
+	u.signatureID = id
 	u.write(id, dictionary.String(), nil)
 }
 
@@ -415,6 +454,9 @@ func reserveOf(signature Signature) int {
 // finish writes the cross-reference section and the trailer, then signs
 // every byte of the file but the signature's own /Contents.
 func (u *update) finish(signatureID uint32, signature Signature) ([]byte, error) {
+	if u.err != nil {
+		return nil, fmt.Errorf("encrypt the update: %w", u.err)
+	}
 	if err := u.crossReferences(); err != nil {
 		return nil, err
 	}
@@ -454,6 +496,11 @@ func (u *update) crossReferences() error {
 	fmt.Fprintf(&common, "/Root %s", reference(trailer.Key("Root")))
 	if info := trailer.Key("Info"); !info.IsNull() {
 		fmt.Fprintf(&common, " /Info %s", reference(info))
+	}
+	if encrypt := trailer.Key("Encrypt"); !encrypt.IsNull() {
+		// The update is encrypted as the document is, under the same
+		// dictionary.
+		fmt.Fprintf(&common, " /Encrypt %s", reference(encrypt))
 	}
 	if id := trailer.Key("ID"); id.Len() == 2 {
 		fmt.Fprintf(&common, " /ID [%s %s]", pdfString(id.Index(0).RawString()), pdfString(id.Index(1).RawString()))
