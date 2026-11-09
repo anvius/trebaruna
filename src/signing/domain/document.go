@@ -62,6 +62,14 @@ func (d Document) SignedName(format Format) string {
 	return filepath.Join(dir, stem+"_signed"+extension)
 }
 
+// IsContainer reports an ASiC container (.asics, .asice, or their short
+// .scs and .sce), which takes added signatures inside.
+func (d Document) IsContainer() bool {
+	lower := strings.ToLower(d.Name())
+	return strings.HasSuffix(lower, ".asics") || strings.HasSuffix(lower, ".asice") ||
+		strings.HasSuffix(lower, ".scs") || strings.HasSuffix(lower, ".sce")
+}
+
 // AddedSignatureName is where an envelope goes after a signature is added
 // to it: the same name with a marker before the last extension, so the
 // original envelope is never overwritten (contratto.pdf.p7m becomes

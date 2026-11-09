@@ -73,6 +73,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- ASiC containers are co-signed (`sign x.asics|x.asice --cosign`), with
+  the kind of signature they hold: an ASiC-S's CAdES signature in place,
+  one more XAdES signature in its signatures file (every signature that
+  verified must still verify, or nothing is written), and in an ASiC-E a
+  new signature file over all its documents (a CAdES one over a new
+  ASiCManifest, or a XAdES one). The container is read (asic.Read, with
+  the same name and size limits as verification) and written again; the
+  result is `<name>_cosigned.<ext>`.
+
 - ASiC time-stamp tokens (ETSI EN 319 162-1): `timestamp <file> --asic`
   writes `<file>.asics` with the document and `META-INF/timestamp.tst` (the
   TimeStampToken); verify judges each `timestamp*.tst` of a container,

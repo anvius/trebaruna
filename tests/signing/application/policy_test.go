@@ -154,6 +154,20 @@ func TestXMLDSigIsLevelBWithoutPolicy(t *testing.T) {
 type fakeContainers struct {
 	container domain.Container
 	entries   []application.ContainerEntry
+	// held is the container ReadContainer finds; readErr fails it.
+	held        domain.Container
+	heldEntries []application.ContainerEntry
+	readErr     error
+	// manifestErr and mergeErr fail Manifest and AddXMLSignatures.
+	manifestErr, mergeErr error
+}
+
+func (f *fakeContainers) ReadContainer([]byte) (domain.Container, []application.ContainerEntry, error) {
+	return f.held, append([]application.ContainerEntry{}, f.heldEntries...), f.readErr
+}
+
+func (f *fakeContainers) AddXMLSignatures(signatures, added []byte, _ []application.ContainerEntry) ([]byte, error) {
+	return []byte(string(signatures) + "+" + string(added)), f.mergeErr
 }
 
 func (f *fakeContainers) WriteContainer(container domain.Container, entries []application.ContainerEntry) ([]byte, error) {
@@ -162,6 +176,9 @@ func (f *fakeContainers) WriteContainer(container domain.Container, entries []ap
 }
 
 func (f *fakeContainers) Manifest(signatureEntry string, documents []application.ContainerEntry) ([]byte, error) {
+	if f.manifestErr != nil {
+		return nil, f.manifestErr
+	}
 	manifest := "manifest " + signatureEntry
 	for _, document := range documents {
 		manifest += " " + document.Name

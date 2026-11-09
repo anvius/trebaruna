@@ -11,6 +11,7 @@ import (
 	"encoding/base64"
 	"encoding/xml"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"path"
@@ -113,4 +114,46 @@ func attribute(text string) string {
 	var escaped strings.Builder
 	_ = xml.EscapeText(&escaped, []byte(text))
 	return strings.ReplaceAll(escaped.String(), `"`, "&quot;")
+}
+
+// Read opens a container: its media type (the mimetype entry) and its other
+// files, in their order. Names that would leave the container are refused,
+// and no file may exceed limit bytes.
+func Read(container []byte, limit int64) (string, []Entry, error) {
+	archive, err := zip.NewReader(bytes.NewReader(container), int64(len(container)))
+	if err != nil {
+		return "", nil, fmt.Errorf("not a container: %w", err)
+	}
+	mediaType := ""
+	var entries []Entry
+	for _, file := range archive.File {
+		if file.FileInfo().IsDir() {
+			continue
+		}
+		cleaned := path.Clean(file.Name)
+		if cleaned != file.Name || path.IsAbs(cleaned) || strings.HasPrefix(cleaned, "../") || strings.Contains(cleaned, `\`) {
+			return "", nil, fmt.Errorf("%q cannot be a file of the container", file.Name)
+		}
+		if file.UncompressedSize64 > uint64(limit) {
+			return "", nil, fmt.Errorf("%q is larger than %d bytes", file.Name, limit)
+		}
+		reader, err := file.Open()
+		if err != nil {
+			return "", nil, err
+		}
+		content, err := io.ReadAll(io.LimitReader(reader, limit+1))
+		reader.Close()
+		if err != nil {
+			return "", nil, err
+		}
+		if int64(len(content)) > limit {
+			return "", nil, fmt.Errorf("%q is larger than %d bytes", file.Name, limit)
+		}
+		if file.Name == "mimetype" {
+			mediaType = strings.TrimSpace(string(content))
+			continue
+		}
+		entries = append(entries, Entry{Name: file.Name, Content: content})
+	}
+	return mediaType, entries, nil
 }

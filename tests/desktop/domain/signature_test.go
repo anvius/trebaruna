@@ -9,12 +9,14 @@ import (
 
 func TestTheDocumentDecidesWhichFormatsMakeSense(t *testing.T) {
 	cases := map[string][]domain.SignatureFormat{
-		"/tmp/contratto.PDF":   {domain.FormatPAdES, domain.FormatCAdES, domain.FormatCAdESDetached},
-		"/tmp/fattura.xml":     {domain.FormatXAdES, domain.FormatCAdES, domain.FormatCAdESDetached},
-		"/tmp/offerta.docx":    {domain.FormatOOXML, domain.FormatCAdES, domain.FormatCAdESDetached},
-		"/tmp/senza-estensio":  {domain.FormatCAdES, domain.FormatCAdESDetached},
-		"/tmp/atto.pdf.p7m":    {domain.FormatCosign, domain.FormatCountersign, domain.FormatCAdES},
-		"/tmp/offerta.txt.p7s": {domain.FormatCosign, domain.FormatCountersign},
+		"/tmp/contratto.PDF":    {domain.FormatPAdES, domain.FormatCAdES, domain.FormatCAdESDetached},
+		"/tmp/fattura.xml":      {domain.FormatXAdES, domain.FormatCAdES, domain.FormatCAdESDetached},
+		"/tmp/offerta.docx":     {domain.FormatOOXML, domain.FormatCAdES, domain.FormatCAdESDetached},
+		"/tmp/senza-estensio":   {domain.FormatCAdES, domain.FormatCAdESDetached},
+		"/tmp/atto.pdf.p7m":     {domain.FormatCosign, domain.FormatCountersign, domain.FormatCAdES},
+		"/tmp/offerta.txt.p7s":  {domain.FormatCosign, domain.FormatCountersign},
+		"/tmp/expediente.ASICE": {domain.FormatCosign},
+		"/tmp/plano.pdf.asics":  {domain.FormatCosign},
 	}
 	for path, want := range cases {
 		got := domain.FormatsFor(path)

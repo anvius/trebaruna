@@ -211,6 +211,12 @@ func unsignedSignatureProperties(signature, qualifying *etree.Element) *etree.El
 // holdingSignatures are the signatures of the document that verify with
 // the certificate they carry, by their SignatureValue.
 func holdingSignatures(tree *etree.Document) map[string]bool {
+	return holdingSignaturesResolved(tree, nil)
+}
+
+// holdingSignaturesResolved is holdingSignatures with the documents outside
+// the file that references point at.
+func holdingSignaturesResolved(tree *etree.Document, resolve xmldsig.Resolver) map[string]bool {
 	holding := map[string]bool{}
 	for _, signature := range xmldsig.Signatures(tree) {
 		certificateElement := signature.FindElement("./KeyInfo/X509Data/X509Certificate")
@@ -226,7 +232,7 @@ func holdingSignatures(tree *etree.Document) map[string]bool {
 		if err != nil {
 			continue
 		}
-		if xmldsig.Check(tree, signature, publickey.Of(certificate), nil) == nil {
+		if xmldsig.Check(tree, signature, publickey.Of(certificate), resolve) == nil {
 			holding[strings.Join(strings.Fields(value.Text()), "")] = true
 		}
 	}

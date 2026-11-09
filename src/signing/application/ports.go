@@ -174,6 +174,13 @@ type OoxmlSigner interface {
 type ContainerWriter interface {
 	WriteContainer(container domain.Container, entries []ContainerEntry) ([]byte, error)
 	Manifest(signatureEntry string, documents []ContainerEntry) ([]byte, error)
+	// ReadContainer opens a container: its kind and its files but the
+	// mimetype.
+	ReadContainer(content []byte) (domain.Container, []ContainerEntry, error)
+	// AddXMLSignatures puts the signatures of added into the signatures
+	// file of an ASiC-S, its references resolved from files; every
+	// signature that verified must still verify.
+	AddXMLSignatures(signatures, added []byte, files []ContainerEntry) ([]byte, error)
 }
 
 // ContainerEntry is a file of a container, by its path inside it.

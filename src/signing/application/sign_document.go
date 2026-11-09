@@ -164,9 +164,12 @@ func (u *SignDocument) Execute(ctx context.Context, request Request) (Artefact, 
 	signedAt := u.clock.Now()
 
 	var signed []byte
-	if request.Container == domain.ASiCE {
+	switch {
+	case request.Cosign && request.Document.IsContainer():
+		signed, err = u.cosignContainer(ctx, request.WithSignedAt(signedAt), content)
+	case request.Container == domain.ASiCE:
 		signed, err = u.signExtended(ctx, request.WithSignedAt(signedAt), content)
-	} else {
+	default:
 		signed, err = u.sign(ctx, request.WithSignedAt(signedAt), content)
 	}
 	if err != nil {

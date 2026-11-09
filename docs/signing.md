@@ -336,6 +336,15 @@ an archive-time-stamp-v3 seals the parallel signature added, or each signature
 that took counter-signatures, which seals them with it. A detached `.p7s` needs
 its document to be co-signed, or counter-signed at LTA: `--content atto.pdf`.
 
+An ASiC container takes a parallel signature too, of the kind it holds: `sign
+expediente.asice --cosign` (or `.asics`). An ASiC-S's CAdES `signature.p7s` is
+co-signed in place; its XAdES `signatures.xml` takes one more signature, and
+every signature that verified must still verify (a file whose root declares
+other namespaces would change the new signature's canonical form, and is
+refused); an ASiC-E takes a new signature file over all its documents, a CAdES
+`signatureNNN.p7s` over a new `ASiCManifestNNN.xml` or a XAdES
+`signaturesNNN.xml`. The result is `expediente_cosigned.asice`.
+
 A signed XML document is counter-signed in place too: `sign acta_signed.xml
 --countersign leaves` (or `all`) adds a XAdES signature over each chosen
 signature's `SignatureValue` (a reference of type
