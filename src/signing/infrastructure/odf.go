@@ -9,6 +9,7 @@ import (
 	"io"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/beevik/etree"
 
@@ -160,7 +161,8 @@ func rewritePackage(archive *zip.Reader, signatures []byte) ([]byte, error) {
 }
 
 func writeDeflated(writer *zip.Writer, name string, content []byte) error {
-	entry, err := writer.CreateHeader(&zip.FileHeader{Name: name, Method: zip.Deflate})
+	// A dated entry: a zero MS-DOS date (month 0) is no date at all.
+	entry, err := writer.CreateHeader(&zip.FileHeader{Name: name, Method: zip.Deflate, Modified: time.Now()})
 	if err != nil {
 		return err
 	}

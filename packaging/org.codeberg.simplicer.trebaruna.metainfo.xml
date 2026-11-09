@@ -55,6 +55,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.83.7-unstable" date="2026-11-10">
+      <description>
+        <p>ASiC containers open in Java's ZIP reader; added entries are dated.</p>
+      </description>
+    </release>
     <release version="0.83.6-unstable" date="2026-11-10">
       <description>
         <p>Co-signed containers report the kind of signature added; documents declare their real media type.</p>

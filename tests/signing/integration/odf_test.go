@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -87,6 +88,23 @@ func entries(t *testing.T, content []byte) (names []string, files map[string][]b
 	return names, files, methods
 }
 
+// undated names the package's entries among names with a zero MS-DOS date
+// (month 0, no date at all).
+func undated(t *testing.T, content []byte, names ...string) []string {
+	t.Helper()
+	archive, err := zip.NewReader(bytes.NewReader(content), int64(len(content)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var found []string
+	for _, file := range archive.File {
+		if slices.Contains(names, file.Name) && (file.ModifiedDate>>5)&0xF == 0 {
+			found = append(found, file.Name)
+		}
+	}
+	return found
+}
+
 // checkOdfSignatures runs the complete check on every signature, resolving
 // references inside the package.
 func checkOdfSignatures(t *testing.T, signed []byte) []error {
@@ -128,6 +146,9 @@ func TestAnOpenDocumentIsSignedInsideItself(t *testing.T) {
 		if !bytes.Equal(files[name], originalFiles[name]) {
 			t.Errorf("%s changed", name)
 		}
+	}
+	if missing := undated(t, signed, "META-INF/documentsignatures.xml"); len(missing) > 0 {
+		t.Errorf("written without a date: %v", missing)
 	}
 	signatures := string(files["META-INF/documentsignatures.xml"])
 	if !strings.Contains(signatures, `<document-signatures xmlns="urn:oasis:names:tc:opendocument:xmlns:digitalsignature:1.0" version="1.2">`) {

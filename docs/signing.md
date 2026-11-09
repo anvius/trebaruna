@@ -354,8 +354,10 @@ trebaruna sign contratto.pdf --csc https://provider.example/csc/v2 --csc-client 
 
 `--asic s` packs the document and its detached signature into one file, an
 ASiC-S container (ETSI EN 319 162-1): `<document>.asics`, a ZIP whose first
-entry is its media type, the document at the root, and the signature under
-`META-INF`. CAdES writes `signature.p7s`; XAdES and XMLDSig write
+entry is its media type (stored, with its CRC and sizes in its own header
+and no extra field, so the type stands at byte 38 and Java's
+`ZipInputStream` reads the container), the document at the root, and the
+signature under `META-INF`. CAdES writes `signature.p7s`; XAdES and XMLDSig write
 `signatures.xml`, the signature inside `asic:XAdESSignatures`. Some offices
 ask for this wrapper, and it keeps a signature from travelling without its
 document.

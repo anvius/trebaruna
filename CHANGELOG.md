@@ -920,6 +920,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- ASiC containers wrote their `mimetype` entry with a data descriptor, its
+  header's CRC and sizes zero: Java's `ZipInputStream`, as Java signing
+  tools read a container, refused it ("only DEFLATED entries can have EXT
+  descriptor"). The entry now carries its CRC and sizes, no descriptor and
+  no extra field (EN 319 162-1, A.1). Every entry of a container, and the
+  parts a signature adds to an ODF or OOXML package, was dated
+  1980-00-00 (an MS-DOS date of zero); they carry the time written.
+
 - Co-signing an ASiC reported `"format": "cades"` even when the container
   took a XAdES signature: the report now names the kind added. The media
   type of a document, in an ASiC-E manifest and in a XAdES

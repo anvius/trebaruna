@@ -11,10 +11,12 @@ import (
 	"encoding/base64"
 	"encoding/xml"
 	"fmt"
+	"hash/crc32"
 	"io"
 	"net/url"
 	"path"
 	"strings"
+	"time"
 
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/mediatype"
 )
@@ -33,12 +35,21 @@ func Write(mediaType string, entries []Entry) ([]byte, error) {
 	if err := archive.SetComment("mimetype=" + mediaType); err != nil {
 		return nil, err
 	}
-	header := &zip.FileHeader{Name: "mimetype", Method: zip.Store}
-	writer, err := archive.CreateHeader(header)
+	now := time.Now()
+	// The mimetype entry carries its CRC and sizes in its own header, with
+	// no data descriptor and no extra field (EN 319 162-1, A.1, as ODF): the
+	// media type then stands at byte 38 for a reader of the first bytes, and
+	// Java's ZipInputStream, which refuses a stored entry with a data
+	// descriptor, reads the container.
+	media := []byte(mediaType)
+	header := &zip.FileHeader{Name: "mimetype", Method: zip.Store, CreatorVersion: 20, ReaderVersion: 10,
+		CRC32: crc32.ChecksumIEEE(media), CompressedSize64: uint64(len(media)), UncompressedSize64: uint64(len(media))}
+	header.ModifiedDate, header.ModifiedTime = msDosTime(now)
+	writer, err := archive.CreateRaw(header)
 	if err != nil {
 		return nil, err
 	}
-	if _, err := writer.Write([]byte(mediaType)); err != nil {
+	if _, err := writer.Write(media); err != nil {
 		return nil, err
 	}
 
@@ -53,7 +64,7 @@ func Write(mediaType string, entries []Entry) ([]byte, error) {
 			return nil, fmt.Errorf("the container would hold %q twice", entry.Name)
 		}
 		seen[entry.Name] = true
-		writer, err := archive.CreateHeader(&zip.FileHeader{Name: entry.Name, Method: zip.Deflate})
+		writer, err := archive.CreateHeader(&zip.FileHeader{Name: entry.Name, Method: zip.Deflate, Modified: now})
 		if err != nil {
 			return nil, err
 		}
@@ -65,6 +76,14 @@ func Write(mediaType string, entries []Entry) ([]byte, error) {
 		return nil, err
 	}
 	return output.Bytes(), nil
+}
+
+// msDosTime is an instant (from 1980) as a ZIP header's MS-DOS date and
+// time, in its own zone, to the even second.
+func msDosTime(instant time.Time) (date, clock uint16) {
+	date = uint16(instant.Day() + int(instant.Month())<<5 + (instant.Year()-1980)<<9)
+	clock = uint16(instant.Second()/2 + instant.Minute()<<5 + instant.Hour()<<11)
+	return date, clock
 }
 
 // Manifest writes the ASiCManifest a CAdES signature of an ASiC-E container

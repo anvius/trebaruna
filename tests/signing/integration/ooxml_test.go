@@ -141,6 +141,10 @@ func TestAnOfficeDocumentIsSignedInsideItself(t *testing.T) {
 		"_xmlsignatures/_rels/origin.sigs.rels", "_xmlsignatures/sig1.xml"); !slices.Equal(after, want) {
 		t.Errorf("entries %v, want %v", after, want)
 	}
+	if missing := undated(t, signed, "_xmlsignatures/origin.sigs", "_xmlsignatures/_rels/origin.sigs.rels", "_xmlsignatures/sig1.xml",
+		"[Content_Types].xml"); len(missing) > 0 {
+		t.Errorf("written without a date: %v", missing)
+	}
 	for _, name := range []string{"word/document.xml", "word/styles.xml", "word/media/sello.png", "docProps/core.xml", "docProps/app.xml"} {
 		if !bytes.Equal(beforeFiles[name], afterFiles[name]) || beforeMethods[name] != afterMethods[name] {
 			t.Errorf("%s was not copied as it was", name)

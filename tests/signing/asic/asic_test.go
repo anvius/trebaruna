@@ -3,8 +3,14 @@ package asic_test
 import (
 	"archive/zip"
 	"bytes"
+	"encoding/binary"
+	"hash/crc32"
 	"io"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"testing"
+	"time"
 
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/asic"
 )
@@ -33,7 +39,75 @@ func TestTheMediaTypeComesFirstAndUncompressed(t *testing.T) {
 	if archive.File[2].Name != "META-INF/signature.p7s" || !bytes.Equal(content, []byte{0x30}) {
 		t.Errorf("entry %s = %x", archive.File[2].Name, content)
 	}
+
+	// The mimetype's own header holds its CRC and sizes: no data descriptor
+	// (flag bit 3), no extra field (EN 319 162-1, A.1).
+	media := []byte("application/vnd.etsi.asic-s+zip")
+	local := container[:30]
+	if flags := binary.LittleEndian.Uint16(local[6:]); flags&0x8 != 0 {
+		t.Errorf("the mimetype entry has a data descriptor (flags %#x)", flags)
+	}
+	if crc := binary.LittleEndian.Uint32(local[14:]); crc != crc32.ChecksumIEEE(media) {
+		t.Errorf("the mimetype header's CRC is %#x", crc)
+	}
+	if compressed, size := binary.LittleEndian.Uint32(local[18:]), binary.LittleEndian.Uint32(local[22:]); compressed != uint32(len(media)) || size != compressed {
+		t.Errorf("the mimetype header's sizes are %d and %d", compressed, size)
+	}
+	if extra := binary.LittleEndian.Uint16(local[28:]); extra != 0 {
+		t.Errorf("the mimetype header has %d bytes of extra field", extra)
+	}
+	// Every entry is dated: a zero MS-DOS date has month 0.
+	for _, file := range archive.File {
+		if month := (file.ModifiedDate >> 5) & 0xF; month == 0 || file.Modified.Before(time.Now().Add(-time.Hour)) {
+			t.Errorf("%s is dated %v (MS-DOS date %#x)", file.Name, file.Modified, file.ModifiedDate)
+		}
+	}
 }
+
+// TestJavaReadsTheContainerEntryByEntry: Java's ZipInputStream, as Java
+// signing tools read an ASiC, refuses a stored entry with a data descriptor.
+func TestJavaReadsTheContainerEntryByEntry(t *testing.T) {
+	java, err := exec.LookPath("java")
+	if err != nil {
+		t.Skip("no java to judge with")
+	}
+	container, err := asic.Write("application/vnd.etsi.asic-e+zip", []asic.Entry{
+		{Name: "acta.txt", Content: []byte("acta\n")},
+		{Name: "META-INF/signatures001.xml", Content: []byte("<x/>")},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	directory := t.TempDir()
+	path := filepath.Join(directory, "expediente.asice")
+	source := filepath.Join(directory, "ReadEntries.java")
+	if err := os.WriteFile(path, container, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(source, []byte(readEntries), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	output, err := exec.Command(java, source, path).CombinedOutput()
+	if err != nil || string(output) != "mimetype 31\nacta.txt 5\nMETA-INF/signatures001.xml 4\n" {
+		t.Errorf("java: %v\n%s", err, output)
+	}
+}
+
+// readEntries prints each entry's name and size as ZipInputStream reads it.
+const readEntries = `import java.io.FileInputStream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+
+public class ReadEntries {
+    public static void main(String[] args) throws Exception {
+        try (ZipInputStream in = new ZipInputStream(new FileInputStream(args[0]))) {
+            for (ZipEntry entry; (entry = in.getNextEntry()) != null; ) {
+                System.out.println(entry.getName() + " " + in.readAllBytes().length);
+            }
+        }
+    }
+}
+`
 
 // TestNamesThatLeaveTheContainerAreRefused, and a name twice.
 func TestNamesThatLeaveTheContainerAreRefused(t *testing.T) {
