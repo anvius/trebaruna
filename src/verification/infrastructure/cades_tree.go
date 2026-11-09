@@ -12,11 +12,13 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
+	"errors"
 	"fmt"
 	"math/big"
 	"time"
 
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/ber"
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/publickey"
 	"codeberg.org/simplicer/trebaruna/src/verification/domain"
 )
 
@@ -93,6 +95,7 @@ func parseSignatureTree(envelope, detached []byte) (signatureTree, error) {
 			return signatureTree{}, err
 		}
 		if certificate, err := x509.ParseCertificate(element.FullBytes); err == nil {
+			publickey.Complete(certificate)
 			tree.certificates = append(tree.certificates, certificate)
 		}
 	}
@@ -150,7 +153,7 @@ func attributeValues(set asn1.RawValue, wanted asn1.ObjectIdentifier) [][]byte {
 // extractTree checks every node and reports them in document order: each
 // signature over the content followed by its counter-signatures.
 func (v *CadesVerifier) extractTree(tree signatureTree) ([]domain.SignerReport, error) {
-	if len(tree.content) == 0 && v.contentPath == "" {
+	if len(tree.content) == 0 && !v.hasDetached() {
 		// Without the document no node can be compared; ADR-0005.
 		return nil, fmt.Errorf("detached envelope: the signed document is needed (--content)")
 	}
@@ -175,7 +178,11 @@ func (v *CadesVerifier) checkNode(tree signatureTree, signer treeSignerInfo, sig
 		return verifyNode(signer, candidate, signed)
 	})
 
-	if err != nil {
+	switch {
+	case errors.Is(err, errUnsupportedSignature):
+		report.Integrity = domain.StatusUnknown
+		report.Findings = append(report.Findings, unverifiableFinding(err))
+	case err != nil:
 		report.Integrity = domain.StatusBad
 		message := "the signed content does not match the signature"
 		if countersigns != "" {
@@ -184,7 +191,7 @@ func (v *CadesVerifier) checkNode(tree signatureTree, signer treeSignerInfo, sig
 		report.Findings = append(report.Findings, domain.Finding{
 			Code: "signature.modified", Status: domain.StatusBad, Message: message, Detail: err.Error(),
 		})
-	} else {
+	default:
 		report.Integrity = domain.StatusGood
 		report.Findings = append(report.Findings, domain.Finding{
 			Code: "signature.intact", Status: domain.StatusGood, Message: "the signed content is unaltered",
@@ -242,6 +249,7 @@ func (v *CadesVerifier) checkNode(tree signatureTree, signer treeSignerInfo, sig
 
 // chainOf validates a certificate against the anchors at the given instant.
 func (v *CadesVerifier) chainOf(certificate *x509.Certificate, carried []*x509.Certificate, at time.Time) error {
+	publickey.Complete(carried...)
 	intermediates := x509.NewCertPool()
 	for _, candidate := range carried {
 		intermediates.AddCert(candidate)
@@ -311,11 +319,7 @@ func verifyNode(signer treeSignerInfo, certificate *x509.Certificate, signed []b
 	// are written with.
 	attributes := append([]byte{}, signer.SignedAttrs.FullBytes...)
 	attributes[0] = 0x31
-	algorithm, ok := signatureAlgorithm(signer.SignatureAlgorithm.Algorithm, hash)
-	if !ok {
-		return fmt.Errorf("unsupported signature algorithm %v", signer.SignatureAlgorithm.Algorithm)
-	}
-	return certificate.CheckSignature(algorithm, attributes, signer.Signature)
+	return checkSignerSignature(certificate, signer.SignatureAlgorithm, hash, attributes, signer.Signature)
 }
 
 func digestFromOID(oid asn1.ObjectIdentifier) (crypto.Hash, bool) {

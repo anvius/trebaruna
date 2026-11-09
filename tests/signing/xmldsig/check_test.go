@@ -17,6 +17,7 @@ import (
 
 	"github.com/beevik/etree"
 
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/publickey"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/xmldsig"
 )
 
@@ -27,7 +28,7 @@ func publicKey(t *testing.T, name string) crypto.PublicKey {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return xmldsig.KeyOf(certificate)
+	return publickey.Of(certificate)
 }
 
 func read(t *testing.T, name string) []byte {

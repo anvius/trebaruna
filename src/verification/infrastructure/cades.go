@@ -3,10 +3,12 @@ package infrastructure
 import (
 	"bytes"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"os"
 	"time"
 
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/publickey"
 	"codeberg.org/simplicer/trebaruna/src/verification/application"
 	"codeberg.org/simplicer/trebaruna/src/verification/domain"
 	"github.com/digitorus/pkcs7"
@@ -22,6 +24,9 @@ import (
 type CadesVerifier struct {
 	// contentPath is the document a detached signature signs.
 	contentPath string
+	// signedBytes, when set, is that document already read: the byte ranges
+	// a PDF signature signs.
+	signedBytes []byte
 	// Roots is the trusted root pool. Nil tells the library to use its own
 	// defaults, which means "do not trust the embedded certificates".
 	Roots *x509.CertPool
@@ -73,6 +78,7 @@ func (v *CadesVerifier) WithAnchors(roots, intermediates *x509.CertPool) applica
 // The raw certificates are needed because x509.CertPool cannot be enumerated.
 func (v *CadesVerifier) WithAnchorCertificates(roots, intermediates *x509.CertPool, anchors []*x509.Certificate) application.DocumentExtractor {
 	clone := v.WithAnchors(roots, intermediates).(*CadesVerifier)
+	publickey.Complete(anchors...)
 	clone.Anchors = anchors
 	return clone
 }
@@ -113,19 +119,53 @@ func (v *CadesVerifier) Extract(path string) ([]domain.SignerReport, error) {
 
 	// .p7m files also arrive as PEM or bare Base64; the rest of the checks
 	// read the binary form.
-	content = CMSBytes(content)
+	reports, err := v.extractEnvelope(CMSBytes(content))
+	if err != nil {
+		return nil, fmt.Errorf("%q: %w", path, err)
+	}
+	return reports, nil
+}
+
+// envelopeReports verifies an envelope against the bytes it signs, both in
+// memory: a PDF signature is a detached CMS over its byte ranges.
+func (v *CadesVerifier) envelopeReports(envelope, signed []byte) ([]domain.SignerReport, error) {
+	clone := *v
+	clone.contentPath, clone.signedBytes = "", signed
+	return clone.extractEnvelope(envelope)
+}
+
+// hasDetached reports whether the document a detached signature signs is
+// available.
+func (v *CadesVerifier) hasDetached() bool {
+	return v.contentPath != "" || v.signedBytes != nil
+}
+
+// detachedContent reads the document a detached signature signs.
+func (v *CadesVerifier) detachedContent() ([]byte, error) {
+	if v.signedBytes != nil {
+		return v.signedBytes, nil
+	}
+	content, err := os.ReadFile(v.contentPath)
+	if err != nil {
+		return nil, fmt.Errorf("read the signed document %q: %w", v.contentPath, err)
+	}
+	return content, nil
+}
+
+// extractEnvelope verifies a CMS envelope in its binary form.
+func (v *CadesVerifier) extractEnvelope(content []byte) ([]domain.SignerReport, error) {
 	parsed, err := pkcs7.Parse(content)
 	if err != nil {
-		return nil, fmt.Errorf("parse CMS in %q: %w", path, err)
+		return nil, fmt.Errorf("parse CMS: %w", err)
 	}
 
 	// Several signatures, or counter-signatures, go through the tree path,
 	// which checks each node on its own.
 	tree, treeErr := parseSignatureTree(content, nil)
 	if treeErr == nil && tree.isTree() {
-		if len(tree.content) == 0 && v.contentPath != "" {
-			if tree.content, err = os.ReadFile(v.contentPath); err != nil {
-				return nil, fmt.Errorf("read the signed document %q: %w", v.contentPath, err)
+		if len(tree.content) == 0 && v.hasDetached() {
+			if tree.content, err = v.detachedContent(); err != nil {
+				return nil, err
 			}
 		}
 		return v.extractTree(tree)
@@ -144,29 +184,34 @@ func (v *CadesVerifier) Extract(path string) ([]domain.SignerReport, error) {
 	// comes from beside it. Without that document the bytes cannot be compared,
 	// which is "unknown", never "altered" (ADR-0005).
 	detached := len(parsed.Content) == 0
-	if detached && v.contentPath != "" {
-		external, err := os.ReadFile(v.contentPath)
+	if detached && v.hasDetached() {
+		external, err := v.detachedContent()
 		if err != nil {
-			return nil, fmt.Errorf("read the signed document %q: %w", v.contentPath, err)
+			return nil, err
 		}
 		parsed.Content = external
-		report.Findings = append(report.Findings, domain.Finding{
-			Code:    "content.detached",
-			Status:  domain.StatusGood,
-			Message: "detached signature checked against the document beside it",
-			Detail:  v.contentPath,
-		})
+		if v.contentPath != "" {
+			report.Findings = append(report.Findings, domain.Finding{
+				Code:    "content.detached",
+				Status:  domain.StatusGood,
+				Message: "detached signature checked against the document beside it",
+				Detail:  v.contentPath,
+			})
+		}
 	}
 
 	// Integrity: the detached/embedded content must still match the digest.
-	if detached && v.contentPath == "" {
+	if detached && !v.hasDetached() {
 		report.Integrity = domain.StatusUnknown
 		report.Findings = append(report.Findings, domain.Finding{
 			Code:    "content.missing",
 			Status:  domain.StatusUnknown,
 			Message: "detached signature: the signed document is needed to compare its bytes",
 		})
-	} else if err := verifyContent(parsed); err != nil {
+	} else if err := verifyContent(parsed, tree, treeErr); errors.Is(err, errUnsupportedSignature) {
+		report.Integrity = domain.StatusUnknown
+		report.Findings = append(report.Findings, unverifiableFinding(err))
+	} else if err != nil {
 		report.Integrity = domain.StatusBad
 		report.Findings = append(report.Findings, domain.Finding{
 			Code:    "signature.modified",
@@ -207,7 +252,7 @@ func (v *CadesVerifier) Extract(path string) ([]domain.SignerReport, error) {
 				Status:  domain.StatusWarn,
 				Message: "the certificate is self-signed: valid cryptography, no third-party trust",
 			})
-		case verifyCMSChain(parsed, v.rootsWithAnchors(), chainInstant(&report, v.Now)) == nil:
+		case v.chainOf(signer, parsed.Certificates, chainInstant(&report, v.Now)) == nil:
 			report.CertificateStatus = domain.StatusGood
 			report.Findings = append(report.Findings, domain.Finding{
 				Code:    "certificate.trusted",
@@ -260,25 +305,30 @@ func chainInstant(report *domain.SignerReport, fallback time.Time) time.Time {
 	return fallback
 }
 
-// verifyContent checks the signature against the carried content.
-func verifyContent(parsed *pkcs7.PKCS7) error {
+// verifyContent checks the signature against the carried content: through
+// the CMS library, or here for RSASSA-PSS, which the library does not
+// implement. What neither implements is errUnsupportedSignature.
+func verifyContent(parsed *pkcs7.PKCS7, tree signatureTree, treeErr error) error {
+	if treeErr == nil && len(tree.signers) == 1 && isPSS(tree.signers[0].SignatureAlgorithm) {
+		return verifyNode(tree.signers[0], parsed.GetOnlySigner(), parsed.Content)
+	}
 	// VerifyWithOpts with nil Roots checks cryptography without conflating
 	// current certificate validity and content integrity.
-	return parsed.VerifyWithOpts(x509.VerifyOptions{CurrentTime: time.Now()})
+	err := parsed.VerifyWithOpts(x509.VerifyOptions{CurrentTime: time.Now()})
+	if err != nil && unsupportedByLibrary(err) {
+		return fmt.Errorf("%w: %v", errUnsupportedSignature, err)
+	}
+	return err
 }
 
-func verifyCMSChain(parsed *pkcs7.PKCS7, roots *x509.CertPool, now time.Time) error {
-	if roots == nil {
-		var err error
-		roots, err = x509.SystemCertPool()
-		if err != nil {
-			return err
-		}
+// unverifiableFinding reports a signature trebaruna cannot check.
+func unverifiableFinding(err error) domain.Finding {
+	return domain.Finding{
+		Code:    "signature.unverifiable",
+		Status:  domain.StatusUnknown,
+		Message: "the signature uses something trebaruna cannot check",
+		Detail:  err.Error(),
 	}
-	if now.IsZero() {
-		now = time.Now()
-	}
-	return parsed.VerifyWithChainAtTime(roots, now)
 }
 
 // No CMS timestamp is accepted as authoritative until its signature, imprint

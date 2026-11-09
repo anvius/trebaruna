@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/publickey"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/xmldsig"
 	"codeberg.org/simplicer/trebaruna/src/trust/domain"
 	"github.com/beevik/etree"
@@ -71,7 +72,7 @@ func InspectListSignatureWithAnchors(content []byte, anchors []*x509.Certificate
 		integrity.Reason = "the signature does not cover the whole list"
 		return integrity
 	}
-	if err := xmldsig.Check(document, signature, xmldsig.KeyOf(signer), nil); err != nil {
+	if err := xmldsig.Check(document, signature, publickey.Of(signer), nil); err != nil {
 		integrity.Reason = fmt.Sprintf("the signature does not verify: %v", err)
 		return integrity
 	}

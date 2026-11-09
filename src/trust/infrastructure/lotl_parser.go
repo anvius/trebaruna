@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/publickey"
 	"codeberg.org/simplicer/trebaruna/src/trust/domain"
 )
 
@@ -159,6 +160,7 @@ func parsePEMCertificate(text string) *x509.Certificate {
 	if err != nil {
 		return nil
 	}
+	publickey.Complete(certificate)
 	return certificate
 }
 

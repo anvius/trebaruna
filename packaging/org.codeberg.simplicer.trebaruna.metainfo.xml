@@ -54,6 +54,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.47.0-unstable" date="2026-11-09">
+      <description>
+        <p>CMS and PDF signatures made with RSA-PSS are verified, and chains reach German authorities with RSA-PSS keys.</p>
+      </description>
+    </release>
     <release version="0.46.1-unstable" date="2026-11-09">
       <description>
         <p>Trusted lists download from servers that refuse unnamed clients, and the EU list is read once per sync.</p>

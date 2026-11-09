@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/publickey"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/xmldsig"
 	"codeberg.org/simplicer/trebaruna/src/verification/application"
 	"codeberg.org/simplicer/trebaruna/src/verification/domain"
@@ -103,6 +104,7 @@ func (v *XadesVerifier) WithAnchors(roots, intermediates *x509.CertPool) applica
 // The raw certificates are needed because x509.CertPool cannot be enumerated.
 func (v *XadesVerifier) WithAnchorCertificates(roots, intermediates *x509.CertPool, anchors []*x509.Certificate) application.DocumentExtractor {
 	clone := v.WithAnchors(roots, intermediates).(*XadesVerifier)
+	publickey.Complete(anchors...)
 	clone.Anchors = anchors
 	return clone
 }
@@ -350,6 +352,7 @@ func extractCertificates(signature *etree.Element) []*x509.Certificate {
 		if err != nil {
 			return
 		}
+		publickey.Complete(certificate)
 		// The same certificate can appear twice when a document carries several
 		// signatures over the same key material.
 		for _, existing := range certificates {
@@ -397,7 +400,7 @@ func validate(document *etree.Document, signature *etree.Element, certificate *x
 	if certificate == nil {
 		return fmt.Errorf("%w: no signing certificate to validate against", xmldsig.ErrUnverifiable)
 	}
-	return xmldsig.Check(document, signature, xmldsig.KeyOf(certificate), resolve)
+	return xmldsig.Check(document, signature, publickey.Of(certificate), resolve)
 }
 
 // beside resolves a detached reference: the document the person named, or

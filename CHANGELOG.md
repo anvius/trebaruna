@@ -55,13 +55,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- CMS (CAdES) and PDF (PAdES) signatures made with RSASSA-PSS (RFC 4055,
+  with its parameters) are verified: the CMS and PDF libraries do not
+  implement it, and a valid PSS signature was reported as altered. A PDF
+  signature the PDF library cannot check goes through the CAdES checks over
+  its byte ranges (without the `/DSS` revocation data). Authorities whose
+  key is published as id-RSASSA-PSS (D-TRUST CA 3-1 2016 and the German
+  HBA authorities among the qualified ones) anchor chains: their keys are
+  read where trust lists, envelopes and anchors are (`publickey.Complete`).
+  An algorithm trebaruna does not implement is `signature.unverifiable`, no
+  longer `signature.modified`, in CMS and PDF as in XML.
+
 - XML signatures made with RSA-PSS (`sha1/224/256/384/512-rsa-MGF1` and
   `sha3-*-rsa-MGF1`, RFC 6931: MGF1 over the same digest, a salt as long as
   the digest) and with SHA-3 (digests `sha3-224/256/384/512`, ECDSA
   `ecdsa-sha3-*`, RFC 9231) are verified, in documents and in trusted
   lists, the algorithms xmlsec1 implements. An RSA key a certificate
   publishes as id-RSASSA-PSS (RFC 4055), which crypto/x509 leaves unread,
-  is read (`xmldsig.KeyOf`). The German trusted list, signed that way and
+  is read (`publickey.Of`). The German trusted list, signed that way and
   refused until now, authenticates: 979 services, 93 qualified.
 
 - Accessibility (plan G8), after a WCAG 2.2 AA review of the window

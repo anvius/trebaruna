@@ -59,6 +59,16 @@ key published as id-RSASSA-PSS or as plain RSA) and SHA-3 digests and
 signatures (RFC 9231). A document with several signatures (co-signed,
 or counter-signed inside) gets one report per signature.
 
+CMS and PDF signatures made with RSASSA-PSS (RFC 4055, with its parameters:
+digest, MGF1 over the same digest, salt length) are checked by trebaruna
+itself, since the CMS and PDF libraries it builds on lack them; a PDF
+signature is a detached CMS over its byte ranges, so it gets the CAdES
+checks, though the revocation data of the document's `/DSS` is not read for
+it. An authority whose key is published as id-RSASSA-PSS — German
+qualified ones such as D-TRUST CA 3-1 2016 and the HBA authorities —
+anchors chains like any other. An algorithm neither trebaruna nor the
+libraries implement is `signature.unverifiable`, never `signature.modified`.
+
 An ASiC container (`.asics`, `.asice`, ETSI EN 319 162-1) is unpacked into a
 private directory, refusing entries whose names leave it or that exceed
 512 MiB, and each signature under `META-INF` is judged against the files it

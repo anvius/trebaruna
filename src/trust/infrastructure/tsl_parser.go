@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/publickey"
 	"codeberg.org/simplicer/trebaruna/src/trust/domain"
 )
 
@@ -275,6 +276,9 @@ func parseBase64Certificate(text string) *x509.Certificate {
 	if err != nil {
 		return nil
 	}
+	// An authority whose key is published as id-RSASSA-PSS anchors chains
+	// only once its key is read.
+	publickey.Complete(certificate)
 	return certificate
 }
 

@@ -3,10 +3,12 @@ package infrastructure
 import (
 	"bytes"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"os"
 	"time"
 
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/publickey"
 	"codeberg.org/simplicer/trebaruna/src/verification/application"
 	"codeberg.org/simplicer/trebaruna/src/verification/domain"
 	"github.com/digitorus/pdfsign/verify"
@@ -64,6 +66,7 @@ func (v *PDFVerifier) WithAnchors(roots, intermediates *x509.CertPool) applicati
 // issuer reachable when the document does not carry its chain.
 func (v *PDFVerifier) WithAnchorCertificates(roots, intermediates *x509.CertPool, anchors []*x509.Certificate) application.DocumentExtractor {
 	clone := v.WithAnchors(roots, intermediates).(*PDFVerifier)
+	publickey.Complete(anchors...)
 	clone.Anchors = anchors
 	return clone
 }
@@ -124,11 +127,16 @@ func (v *PDFVerifier) Extract(path string) ([]domain.SignerReport, error) {
 	}
 
 	envelopes := signatureEnvelopes(path)
+	checkedHere := map[int]bool{}
 	reports := make([]domain.SignerReport, 0, len(response.Signers))
 	for index := range response.Signers {
 		// A pointer is needed because describeChain reads nested fields; taking
 		// one per iteration keeps the copies local to this loop.
 		signer := &response.Signers[index]
+		if report, ok := v.checkHere(path, signer, index, envelopes, checkedHere); ok {
+			reports = append(reports, report)
+			continue
+		}
 		report := v.translate(signer, index)
 		bindPDFCertificate(envelopes, signer, &report)
 		if report.Integrity == domain.StatusBad {
@@ -139,25 +147,75 @@ func (v *PDFVerifier) Extract(path string) ([]domain.SignerReport, error) {
 	return reports, nil
 }
 
+// checkHere verifies a signature the PDF library does not implement
+// (RSASSA-PSS) with the CAdES checks: a PDF signature is a detached CMS over
+// its byte ranges. Its envelope is the unchecked one with the same /Name.
+// The revocation data of the document's /DSS is not read for it.
+func (v *PDFVerifier) checkHere(path string, signer *verify.Signer, index int, envelopes []pdfEnvelope, taken map[int]bool) (domain.SignerReport, bool) {
+	if signer.ValidSignature || !libraryCannotCheck(signer) {
+		return domain.SignerReport{}, false
+	}
+	for candidate, envelope := range envelopes {
+		if taken[candidate] || envelope.name != signer.Name || len(envelope.tree.signers) != 1 ||
+			!isPSS(envelope.tree.signers[0].SignatureAlgorithm) {
+			continue
+		}
+		taken[candidate] = true
+		signed, err := envelope.signedBytes(path)
+		if err != nil {
+			return domain.SignerReport{}, false
+		}
+		cades := &CadesVerifier{Roots: v.Roots, Now: v.Now, Anchors: v.Anchors}
+		reports, err := cades.envelopeReports(envelope.der, signed)
+		if err != nil || len(reports) != 1 {
+			return domain.SignerReport{}, false
+		}
+		report := reports[0]
+		report.FieldName, report.Format = fieldName(signer, index), "PAdES"
+		return report, true
+	}
+	return domain.SignerReport{}, false
+}
+
+// libraryCannotCheck reports a signature the PDF library left unverified
+// for want of an algorithm, not because it does not match.
+func libraryCannotCheck(signer *verify.Signer) bool {
+	for _, problem := range signer.ValidationErrors {
+		if unsupportedByLibrary(problem) {
+			return true
+		}
+	}
+	return false
+}
+
+// fieldName is how a report names a PDF signature.
+func fieldName(signer *verify.Signer, index int) string {
+	if signer.Name == "" {
+		return fmt.Sprintf("signature-%d", index+1)
+	}
+	return signer.Name
+}
+
 // translate maps one library signer onto the domain report.
 func (v *PDFVerifier) translate(signer *verify.Signer, index int) domain.SignerReport {
 	report := domain.SignerReport{
-		FieldName: signer.Name,
+		FieldName: fieldName(signer, index),
 		Format:    "PAdES",
-	}
-	if report.FieldName == "" {
-		report.FieldName = fmt.Sprintf("signature-%d", index+1)
 	}
 
 	// Integrity is a single fact: the signed byte ranges still hash correctly.
-	if signer.ValidSignature {
+	switch {
+	case signer.ValidSignature:
 		report.Integrity = domain.StatusGood
 		report.Findings = append(report.Findings, domain.Finding{
 			Code:    "signature.intact",
 			Status:  domain.StatusGood,
 			Message: "the signed content is unaltered",
 		})
-	} else {
+	case libraryCannotCheck(signer):
+		report.Integrity = domain.StatusUnknown
+		report.Findings = append(report.Findings, unverifiableFinding(errors.Join(signer.ValidationErrors...)))
+	default:
 		report.Integrity = domain.StatusBad
 		report.Findings = append(report.Findings, domain.Finding{
 			Code:    "signature.modified",
@@ -435,6 +493,7 @@ func (v *PDFVerifier) chainTrusts(leaf *x509.Certificate, signer *verify.Signer)
 		if embedded.Certificate == nil || embedded.Certificate.Equal(leaf) {
 			continue
 		}
+		publickey.Complete(embedded.Certificate)
 		intermediates.AddCert(embedded.Certificate)
 	}
 
