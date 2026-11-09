@@ -10,15 +10,18 @@ import (
 	"crypto/x509"
 	"encoding/asn1"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/xml"
 	"fmt"
 	"math/big"
+	"regexp"
 	"strings"
 	"time"
 
 	"codeberg.org/simplicer/trebaruna/src/signing/application"
 	"codeberg.org/simplicer/trebaruna/src/signing/domain"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/cms"
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/xmldsig"
 	verificationdomain "codeberg.org/simplicer/trebaruna/src/verification/domain"
 	verificationinfra "codeberg.org/simplicer/trebaruna/src/verification/infrastructure"
 	"github.com/beevik/etree"
@@ -56,14 +59,33 @@ const (
 	algorithmECDSASHA256 = "http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha256"
 	typeSignedProperties = "http://uri.etsi.org/01903#SignedProperties"
 
-	signedPropertiesID  = "trebaruna-signed-properties"
-	signatureID         = "trebaruna-signature"
-	documentReferenceID = "trebaruna-reference"
-
 	// encodingBase64 names the transfer encoding of an enveloped payload.
-	encodingBase64  = "http://www.w3.org/2000/09/xmldsig#base64"
-	payloadObjectID = "trebaruna-payload"
+	encodingBase64 = "http://www.w3.org/2000/09/xmldsig#base64"
 )
+
+// signatureIDs name the elements of one signature. Each signature gets a
+// suffix of its own: a document can carry several, and a reference to an Id
+// must find exactly one element.
+type signatureIDs struct{ suffix string }
+
+func newSignatureIDs() (signatureIDs, error) {
+	random := make([]byte, 6)
+	if _, err := rand.Read(random); err != nil {
+		return signatureIDs{}, fmt.Errorf("signature identifiers: %w", err)
+	}
+	return signatureIDs{suffix: hex.EncodeToString(random)}, nil
+}
+
+func (ids signatureIDs) signature() string        { return "trebaruna-signature-" + ids.suffix }
+func (ids signatureIDs) signedProperties() string { return "trebaruna-signed-properties-" + ids.suffix }
+func (ids signatureIDs) reference() string        { return "trebaruna-reference-" + ids.suffix }
+func (ids signatureIDs) payload() string          { return "trebaruna-payload-" + ids.suffix }
+
+// idBeside names a property added to a signature after it is made (its
+// timestamps), from the signature's own Id.
+func idBeside(signature *etree.Element, name string) string {
+	return signature.SelectAttrValue("Id", "trebaruna-signature") + "-" + name
+}
 
 // SignXades signs the document in place (enveloped) or as a payload (enveloping).
 //
@@ -101,25 +123,29 @@ func (s *XadesSigner) SignXades(ctx context.Context, request application.XadesRe
 		return nil, err
 	}
 
+	ids, err := newSignatureIDs()
+	if err != nil {
+		return nil, err
+	}
 	certificateDigest := sha256.Sum256(keyPair.Certificate.Raw)
-	signedProperties := buildSignedProperties(
+	signedProperties := buildSignedProperties(ids,
 		base64.StdEncoding.EncodeToString(certificateDigest[:]),
 		time.Now().UTC().Format(time.RFC3339),
 		request.Enveloping,
 		policyProperties(request.Policy)+roleProperties(request.ClaimedRoles),
 	)
-	signedInfo := buildSignedInfo(
+	signedInfo := buildSignedInfo(ids,
 		placeholderDigest, placeholderDigest,
 		keyPair.Certificate.PublicKeyAlgorithm == x509.ECDSA,
 		request.Enveloping,
 	)
 	payload := ""
 	if request.Enveloping {
-		payload = `<ds:Object Id="` + payloadObjectID + `">` +
+		payload = `<ds:Object Id="` + ids.payload() + `">` +
 			base64.StdEncoding.EncodeToString(request.Content) + `</ds:Object>`
 	}
 
-	signature := buildSignature(signedInfo, placeholderDigest,
+	signature := buildSignature(ids, signedInfo, placeholderDigest,
 		base64.StdEncoding.EncodeToString(keyPair.Certificate.Raw), signedProperties, payload)
 
 	if err := attach(tree, signature, request.Enveloping); err != nil {
@@ -141,7 +167,7 @@ func (s *XadesSigner) SignXades(ctx context.Context, request application.XadesRe
 	}
 
 	// Pass two: measure what is really on the tree.
-	signatureElement := findByID(tree.Root(), signatureID)
+	signatureElement := findByID(tree.Root(), ids.signature())
 	if signatureElement == nil {
 		return nil, fmt.Errorf("the assembled signature cannot be located")
 	}
@@ -150,25 +176,22 @@ func (s *XadesSigner) SignXades(ctx context.Context, request application.XadesRe
 		return nil, fmt.Errorf("SignedInfo is missing from the assembled signature")
 	}
 
-	documentDigest, err := digestOfDocument(tree, request.Enveloping)
-	if err != nil {
-		return nil, err
-	}
-	propertiesElement := findByID(tree.Root(), signedPropertiesID)
-	if propertiesElement == nil {
-		return nil, fmt.Errorf("SignedProperties cannot be located")
-	}
-	propertiesDigest, err := canonicalDigest(propertiesElement)
-	if err != nil {
-		return nil, err
-	}
-
+	// Each reference is digested the way a verifier dereferences it, with the
+	// same code trebaruna's verifier runs: the document node for URI="" (the
+	// instructions outside the root included), the Object or SignedProperties
+	// for an Id.
 	references := signedInfoElement.SelectElements("Reference")
 	if len(references) != 2 {
 		return nil, fmt.Errorf("SignedInfo has %d references, expected 2", len(references))
 	}
-	setDigestValue(references[0], documentDigest)
-	setDigestValue(references[1], propertiesDigest)
+	for _, reference := range references {
+		data, err := xmldsig.ReferenceData(tree, signatureElement, reference, nil)
+		if err != nil {
+			return nil, fmt.Errorf("digest %s: %w", reference.SelectAttrValue("URI", ""), err)
+		}
+		digest := sha256.Sum256(data)
+		setDigestValue(reference, digest[:])
+	}
 
 	signedInfoDigest, err := canonicalDigest(signedInfoElement)
 	if err != nil {
@@ -222,17 +245,15 @@ func (s *XadesSigner) SignXades(ctx context.Context, request application.XadesRe
 		}
 	}
 
-	output := etree.NewDocument()
-	output.SetRoot(tree.Root().Copy())
-
-	final, err := output.WriteToBytes()
+	// The whole tree is written: the processing instructions and comments
+	// outside the root (a FatturaPA's stylesheet) belong to the document.
+	final, err := tree.WriteToBytes()
 	if err != nil {
 		return nil, err
 	}
 
-	// The prolog is prepended at the very end, never inserted into the tree: a
-	// processing instruction before the root would change the canonical form and
-	// therefore the document digest.
+	// A document without an XML declaration gets one at the very end. The
+	// declaration is part of no canonical form, so the digests stay valid.
 	if !hasXMLDeclaration(final) {
 		final = append([]byte(`<?xml version="1.0" encoding="UTF-8"?>`+"\n"), final...)
 	}
@@ -241,33 +262,6 @@ func (s *XadesSigner) SignXades(ctx context.Context, request application.XadesRe
 
 // placeholderDigest fills the skeleton until the real values are measured.
 const placeholderDigest = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
-
-// digestOfDocument canonicalises the document without its signature.
-//
-// The enveloped reference signs the whole document, and the signature itself is
-// excluded because it did not exist when the reference was created.
-func digestOfDocument(tree *etree.Document, enveloping bool) ([]byte, error) {
-	root := tree.Root()
-	if root == nil {
-		return nil, fmt.Errorf("the document has no root")
-	}
-
-	if enveloping {
-		object := findByID(root, payloadObjectID)
-		if object == nil {
-			return nil, fmt.Errorf("enveloping signature has no payload Object")
-		}
-		return canonicalDigest(object)
-	}
-
-	stripped := root.Copy()
-	for _, child := range stripped.ChildElements() {
-		if child.Tag == "Signature" && child.SelectAttrValue("Id", "") == signatureID {
-			stripped.RemoveChild(child)
-		}
-	}
-	return canonicalDigest(stripped)
-}
 
 // findByID walks the tree looking for an element with the given Id.
 func findByID(element *etree.Element, id string) *etree.Element {
@@ -352,14 +346,14 @@ func xmldsigECDSA(key *ecdsa.PublicKey, der []byte) ([]byte, error) {
 // requires it, and validators such as the EU DSS check for it. An enveloped
 // signature signs the XML it sits in; an enveloping one carries the file as
 // base64 inside its own Object.
-func buildSignedProperties(certificateDigest, signingTime string, enveloping bool, declarations string) string {
+func buildSignedProperties(ids signatureIDs, certificateDigest, signingTime string, enveloping bool, declarations string) string {
 	format := `<xades:MimeType>text/xml</xades:MimeType>`
 	if enveloping {
 		format = `<xades:MimeType>application/octet-stream</xades:MimeType>` +
 			`<xades:Encoding>` + encodingBase64 + `</xades:Encoding>`
 	}
 	return `<xades:SignedProperties xmlns:xades="` + namespaceXades + `" xmlns:ds="` + namespaceDS +
-		`" Id="` + signedPropertiesID + `">` +
+		`" Id="` + ids.signedProperties() + `">` +
 		`<xades:SignedSignatureProperties>` +
 		`<xades:SigningTime>` + signingTime + `</xades:SigningTime>` +
 		`<xades:SigningCertificateV2>` +
@@ -373,7 +367,7 @@ func buildSignedProperties(certificateDigest, signingTime string, enveloping boo
 		declarations +
 		`</xades:SignedSignatureProperties>` +
 		`<xades:SignedDataObjectProperties>` +
-		`<xades:DataObjectFormat ObjectReference="#` + documentReferenceID + `">` + format +
+		`<xades:DataObjectFormat ObjectReference="#` + ids.reference() + `">` + format +
 		`</xades:DataObjectFormat>` +
 		`</xades:SignedDataObjectProperties>` +
 		`</xades:SignedProperties>`
@@ -430,7 +424,7 @@ func xmlEscape(text string) string {
 }
 
 // buildSignedInfo emits ds:SignedInfo with the two required references.
-func buildSignedInfo(documentDigest, propertiesDigest string, ecdsa, enveloping bool) string {
+func buildSignedInfo(ids signatureIDs, documentDigest, propertiesDigest string, ecdsa, enveloping bool) string {
 	method := algorithmRSASHA256
 	if ecdsa {
 		method = algorithmECDSASHA256
@@ -439,8 +433,8 @@ func buildSignedInfo(documentDigest, propertiesDigest string, ecdsa, enveloping 
 	return `<ds:SignedInfo xmlns:ds="` + namespaceDS + `">` +
 		`<ds:CanonicalizationMethod Algorithm="` + algorithmC14N + `"/>` +
 		`<ds:SignatureMethod Algorithm="` + method + `"/>` +
-		documentReference(enveloping) +
-		`<ds:Reference Type="` + typeSignedProperties + `" URI="#` + signedPropertiesID + `">` +
+		documentReference(ids, enveloping) +
+		`<ds:Reference Type="` + typeSignedProperties + `" URI="#` + ids.signedProperties() + `">` +
 		`<ds:Transforms>` +
 		`<ds:Transform Algorithm="` + algorithmC14N + `"/>` +
 		`</ds:Transforms>` +
@@ -455,9 +449,9 @@ func buildSignedInfo(documentDigest, propertiesDigest string, ecdsa, enveloping 
 // Enveloped signatures reference the whole document with URI="" and must declare
 // the enveloped-signature transform, or a verifier hashes the document with the
 // signature inside. Enveloping signatures reference their own Object by Id.
-func documentReference(enveloping bool) string {
+func documentReference(ids signatureIDs, enveloping bool) string {
 	if enveloping {
-		return `<ds:Reference Id="` + documentReferenceID + `" URI="#` + payloadObjectID + `">` +
+		return `<ds:Reference Id="` + ids.reference() + `" URI="#` + ids.payload() + `">` +
 			`<ds:Transforms>` +
 			`<ds:Transform Algorithm="` + algorithmC14N + `"/>` +
 			`</ds:Transforms>` +
@@ -466,7 +460,7 @@ func documentReference(enveloping bool) string {
 			`</ds:Reference>`
 	}
 
-	return `<ds:Reference Id="` + documentReferenceID + `" URI="">` +
+	return `<ds:Reference Id="` + ids.reference() + `" URI="">` +
 		`<ds:Transforms>` +
 		`<ds:Transform Algorithm="` + algorithmEnveloped + `"/>` +
 		`<ds:Transform Algorithm="` + algorithmC14N + `"/>` +
@@ -478,14 +472,14 @@ func documentReference(enveloping bool) string {
 
 // buildSignature emits ds:Signature in the order XMLDSig mandates:
 // SignedInfo, SignatureValue, KeyInfo, Object.
-func buildSignature(signedInfo, signatureValue, certificate, signedProperties, payload string) string {
+func buildSignature(ids signatureIDs, signedInfo, signatureValue, certificate, signedProperties, payload string) string {
 	return `<ds:Signature xmlns:ds="` + namespaceDS + `" xmlns:xades="` + namespaceXades +
-		`" Id="` + signatureID + `">` + signedInfo +
+		`" Id="` + ids.signature() + `">` + signedInfo +
 		`<ds:SignatureValue>` + signatureValue + `</ds:SignatureValue>` +
 		`<ds:KeyInfo><ds:X509Data><ds:X509Certificate>` + certificate +
 		`</ds:X509Certificate></ds:X509Data></ds:KeyInfo>` +
 		payload +
-		`<ds:Object><xades:QualifyingProperties Target="#` + signatureID + `">` +
+		`<ds:Object><xades:QualifyingProperties Target="#` + ids.signature() + `">` +
 		signedProperties + `</xades:QualifyingProperties></ds:Object>` +
 		`</ds:Signature>`
 }
@@ -518,9 +512,13 @@ func attach(tree *etree.Document, signature string, enveloping bool) error {
 var _ application.XadesSigner = (*XadesSigner)(nil)
 var _ = domain.Xades
 
+// xmlDeclaration matches the XML declaration, not a processing instruction
+// whose name starts with xml, such as xml-stylesheet.
+var xmlDeclaration = regexp.MustCompile(`^<\?xml\s`)
+
 // hasXMLDeclaration reports whether the bytes already start with a prolog.
 func hasXMLDeclaration(content []byte) bool {
-	return strings.HasPrefix(strings.TrimSpace(string(content)), "<?xml")
+	return xmlDeclaration.Match(bytes.TrimSpace(content))
 }
 
 // attachSignatureTimeStamp adds xades:SignatureTimeStamp, turning BES into T.
@@ -558,7 +556,7 @@ func (s *XadesSigner) attachSignatureTimeStamp(
 	}
 
 	// The token travels as a base64 element, exactly as the CMS package emits it.
-	unsigned := buildUnsignedProperties(base64.StdEncoding.EncodeToString(tokenDER))
+	unsigned := buildUnsignedProperties(signatureElement, base64.StdEncoding.EncodeToString(tokenDER))
 
 	fragment, err := parseFragment(unsigned)
 	if err != nil {
@@ -654,22 +652,16 @@ func findQualifyingProperties(signature *etree.Element) *etree.Element {
 //
 // The Id is required by the schema and referenced by nothing: the token covers
 // the signature, not the other way round.
-func buildUnsignedProperties(token string) string {
-	return `<xades:UnsignedProperties xmlns:xades="` + namespaceXades + `" Id="` + unsignedPropertiesID + `">` +
+func buildUnsignedProperties(signature *etree.Element, token string) string {
+	return `<xades:UnsignedProperties xmlns:xades="` + namespaceXades + `" Id="` + idBeside(signature, "unsigned-properties") + `">` +
 		`<xades:UnsignedSignatureProperties>` +
-		`<xades:SignatureTimeStamp Id="` + signatureTimeStampID + `">` +
+		`<xades:SignatureTimeStamp Id="` + idBeside(signature, "timestamp") + `">` +
 		`<ds:CanonicalizationMethod xmlns:ds="` + namespaceDS + `" Algorithm="` + algorithmC14N + `"/>` +
 		`<xades:EncapsulatedTimeStamp>` + token + `</xades:EncapsulatedTimeStamp>` +
 		`</xades:SignatureTimeStamp>` +
 		`</xades:UnsignedSignatureProperties>` +
 		`</xades:UnsignedProperties>`
 }
-
-// Identifiers used by the timestamp extension.
-const (
-	unsignedPropertiesID = "trebaruna-unsigned-properties"
-	signatureTimeStampID = "trebaruna-signature-timestamp"
-)
 
 // archiveNamespace is the XAdES 1.4.1 namespace that defines ArchiveTimeStamp.
 const archiveNamespace = "http://uri.etsi.org/01903/v1.4.1#"
@@ -715,7 +707,7 @@ func (s *XadesSigner) attachArchiveTimeStamp(
 		return fmt.Errorf("the signature has no xades:UnsignedSignatureProperties to extend")
 	}
 
-	fragment, err := parseFragment(buildArchiveTimeStamp(base64.StdEncoding.EncodeToString(tokenDER)))
+	fragment, err := parseFragment(buildArchiveTimeStamp(signatureElement, base64.StdEncoding.EncodeToString(tokenDER)))
 	if err != nil {
 		return fmt.Errorf("build xades141:ArchiveTimeStamp: %w", err)
 	}
@@ -920,15 +912,12 @@ func xmlText(element *etree.Element) string {
 }
 
 // buildArchiveTimeStamp emits the qualifying property in the 1.4.1 namespace.
-func buildArchiveTimeStamp(token string) string {
-	return `<xades141:ArchiveTimeStamp xmlns:xades141="` + archiveNamespace + `" Id="` + archiveTimeStampID + `">` +
+func buildArchiveTimeStamp(signature *etree.Element, token string) string {
+	return `<xades141:ArchiveTimeStamp xmlns:xades141="` + archiveNamespace + `" Id="` + idBeside(signature, "archive-timestamp") + `">` +
 		`<ds:CanonicalizationMethod xmlns:ds="` + namespaceDS + `" Algorithm="` + algorithmC14N + `"/>` +
 		`<xades:EncapsulatedTimeStamp xmlns:xades="` + namespaceXades + `">` + token + `</xades:EncapsulatedTimeStamp>` +
 		`</xades141:ArchiveTimeStamp>`
 }
-
-// archiveTimeStampID names the archive property.
-const archiveTimeStampID = "trebaruna-archive-timestamp"
 
 // attachRevocationValues adds xades:RevocationValues (ETSI EN 319 132-1 §5.4.2).
 //

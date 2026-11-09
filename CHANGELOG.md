@@ -8,6 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- XAdES enveloped keeps what surrounds the root. The signed file was
+  rebuilt from the root element alone, so the processing instructions and
+  comments outside it were dropped: a FatturaPA lost its
+  `<?xml-stylesheet?>`. They stay now.
+  - The document reference digests the document node, those instructions
+    included, as C14N requires. The signer computes every DigestValue with
+    the verifier's own dereferencing code (`xmldsig.ReferenceData`).
+  - A document that starts with `<?xml-stylesheet` still gets an XML
+    declaration (it was mistaken for one).
+  - Each signature names its elements with Ids of its own
+    (`trebaruna-signature-<random>`…). With the fixed Ids, signing a signed
+    XML again made the new SignedProperties reference digest the old
+    signature's properties.
+  - Verified with xmlsec1 1.3.9 and Java 25's XML-Signature. signxml
+    canonicalises only the root and calls such a file modified
+    (docs/signing.md).
+
 - XML signatures are verified completely. The verifier, built on goxmldsig,
   checked only the reference to the document element. As a result:
   - a change inside the signed properties (signing time, policy, role,

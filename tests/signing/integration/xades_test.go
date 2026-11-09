@@ -15,9 +15,11 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"encoding/xml"
+	"errors"
 	"io"
 	"math/big"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -25,6 +27,8 @@ import (
 	"codeberg.org/simplicer/trebaruna/src/signing/application"
 	"codeberg.org/simplicer/trebaruna/src/signing/domain"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure"
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/xmldsig"
+	"github.com/beevik/etree"
 )
 
 // TestXadesIsWellFormedXML is the guard for the double-declaration bug.
@@ -101,10 +105,10 @@ func TestXadesDocumentDigestMatchesTheEmittedDocument(t *testing.T) {
 func TestXadesEnvelopingReferencesItsOwnPayload(t *testing.T) {
 	output := signXades(t, `<fattura><numero>1</numero></fattura>`, true)
 
-	if !strings.Contains(output, `Id="trebaruna-payload"`) {
+	if !strings.Contains(output, `Id="trebaruna-payload-`) {
 		t.Error("an enveloping signature must carry an Object with its payload id")
 	}
-	if !strings.Contains(output, `URI="#trebaruna-payload"`) {
+	if !strings.Contains(output, `URI="#trebaruna-payload-`) {
 		t.Error("an enveloping signature must reference its payload by id")
 	}
 	if strings.Contains(output, "enveloped-signature") {
@@ -207,10 +211,11 @@ func buildXadesRequest(signer domain.Signer, content []byte, enveloping bool) ap
 // B-B) asks for a DataObjectFormat bound to the signed data reference.
 func TestXadesDeclaresTheFormatOfWhatItSigns(t *testing.T) {
 	enveloped := signXades(t, `<fattura/>`, false)
-	if !strings.Contains(enveloped, `<xades:DataObjectFormat ObjectReference="#trebaruna-reference"><xades:MimeType>text/xml</xades:MimeType>`) {
-		t.Error("an enveloped signature must declare that it signs text/xml")
+	format := regexp.MustCompile(`<xades:DataObjectFormat ObjectReference="#(trebaruna-reference-[0-9a-f]+)"><xades:MimeType>text/xml</xades:MimeType>`).FindStringSubmatch(enveloped)
+	if format == nil {
+		t.Fatal("an enveloped signature must declare that it signs text/xml")
 	}
-	if !strings.Contains(enveloped, `Id="trebaruna-reference"`) {
+	if !strings.Contains(enveloped, `Id="`+format[1]+`"`) {
 		t.Error("the format must point at a reference that exists")
 	}
 
@@ -259,5 +264,95 @@ func TestXadesWritesECDSAAsXMLDSigExpects(t *testing.T) {
 	}
 	if len(value) != 64 {
 		t.Fatalf("SignatureValue is %d bytes, want 64 (r||s on P-256)", len(value))
+	}
+}
+
+// TestXadesKeepsWhatSurroundsTheRoot: a FatturaPA's stylesheet instruction
+// and the comments outside the root were dropped from the signed file up to
+// 0.30.1. They stay, and the document reference covers the instructions, as
+// C14N says and xmlsec1 and Java's XML-Signature check.
+func TestXadesKeepsWhatSurroundsTheRoot(t *testing.T) {
+	source := "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+		"<?xml-stylesheet type=\"text/xsl\" href=\"fatturaPA_v1.2.xsl\"?>\n" +
+		"<!-- copia di cortesia -->\n" +
+		"<p:FatturaElettronica xmlns:p=\"http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2\"><Numero>7</Numero></p:FatturaElettronica>\n" +
+		"<?after-root?>\n"
+	output := signXades(t, source, false)
+
+	stylesheet := strings.Index(output, `<?xml-stylesheet type="text/xsl" href="fatturaPA_v1.2.xsl"?>`)
+	comment := strings.Index(output, "<!-- copia di cortesia -->")
+	root := strings.Index(output, "<p:FatturaElettronica")
+	after := strings.Index(output, "<?after-root?>")
+	if stylesheet < 0 || comment < stylesheet || root < comment || after < root {
+		t.Fatalf("the prolog and epilog must stay in place:\n%s", output)
+	}
+	if strings.Count(output, "<?xml version") != 1 {
+		t.Error("one XML declaration")
+	}
+
+	if err := checkXML(t, output); err != nil {
+		t.Errorf("the signature must verify: %v", err)
+	}
+	withoutStylesheet := strings.Replace(output, `<?xml-stylesheet type="text/xsl" href="fatturaPA_v1.2.xsl"?>`, "", 1)
+	if err := checkXML(t, withoutStylesheet); !errors.Is(err, xmldsig.ErrModified) {
+		t.Errorf("the stylesheet instruction is signed: %v", err)
+	}
+}
+
+// TestXadesDeclaresADocumentThatStartsWithAnInstruction: <?xml-stylesheet
+// is not a declaration, so one is still added.
+func TestXadesDeclaresADocumentThatStartsWithAnInstruction(t *testing.T) {
+	output := signXades(t, "<?xml-stylesheet href=\"x.xsl\"?>\n<fattura/>", false)
+	if !strings.HasPrefix(output, `<?xml version="1.0" encoding="UTF-8"?>`) {
+		t.Errorf("no declaration added:\n%s", output)
+	}
+	if err := checkXML(t, output); err != nil {
+		t.Error(err)
+	}
+}
+
+// checkXML runs the complete XML-Signature check on a signed document.
+func checkXML(t *testing.T, signed string) error {
+	t.Helper()
+	document := etree.NewDocument()
+	if err := document.ReadFromString(signed); err != nil {
+		t.Fatal(err)
+	}
+	var signature *etree.Element
+	for _, element := range document.Root().ChildElements() {
+		if element.Tag == "Signature" {
+			signature = element
+		}
+	}
+	if signature == nil {
+		t.Fatal("no signature")
+	}
+	certificateElement := signature.FindElement(".//X509Certificate")
+	der, err := base64.StdEncoding.DecodeString(certificateElement.Text())
+	if err != nil {
+		t.Fatal(err)
+	}
+	certificate, err := x509.ParseCertificate(der)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return xmldsig.Check(document, signature, certificate.PublicKey, nil)
+}
+
+// TestEachXadesSignatureHasItsOwnIds: signing a signed document again must
+// not repeat an Id, or the new references find the old elements.
+func TestEachXadesSignatureHasItsOwnIds(t *testing.T) {
+	once := signXades(t, `<acta><punto>1</punto></acta>`, false)
+	twice := signXades(t, once, false)
+	ids := regexp.MustCompile(` Id="([^"]+)"`).FindAllStringSubmatch(twice, -1)
+	seen := map[string]bool{}
+	for _, id := range ids {
+		if seen[id[1]] {
+			t.Errorf("Id %s appears twice", id[1])
+		}
+		seen[id[1]] = true
+	}
+	if len(ids) < 6 {
+		t.Errorf("only %d Ids in two signatures", len(ids))
 	}
 }

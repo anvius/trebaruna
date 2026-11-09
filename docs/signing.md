@@ -280,6 +280,18 @@ A `/Type /DocTimeStamp` signature with `/SubFilter /ETSI.RFC3161` covering the
 whole file, `/DSS` included. This is what protects the validation material from
 becoming worthless as its own certificates expire.
 
+### XAdES enveloped
+
+The signature goes inside the document's root element; everything else
+stays as it was, the processing instructions and comments outside the root
+included (a FatturaPA's `<?xml-stylesheet?>`, so viewers still render it).
+The document reference (`URI=""`) covers the whole document node: the
+instructions outside the root are signed, comments are not (XML-Signature
+and C14N 1.0). xmlsec1 and Java's XML-Signature (used by EU DSS and
+AutoFirma) read it that way. signxml, a Python library, canonicalises only
+the root element and reports a document with such an instruction as
+modified; that is signxml's reading, not a broken signature.
+
 ### XAdES-A
 
 The signature element plus `xades:SignatureTimeStamp` and

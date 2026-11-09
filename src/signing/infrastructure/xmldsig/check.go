@@ -112,7 +112,7 @@ func checkReference(document *etree.Document, signature, reference *etree.Elemen
 	if err != nil {
 		return fmt.Errorf("%w: the digest is not Base64", ErrModified)
 	}
-	data, err := dereference(document, signature, reference, resolve)
+	data, err := ReferenceData(document, signature, reference, resolve)
 	if err != nil {
 		return err
 	}
@@ -140,9 +140,10 @@ func (s nodeSet) scope() *etree.Element {
 	return s.document.Root()
 }
 
-// dereference returns the octets a reference digests: its URI resolved and
-// its transforms applied (XML-Signature 4.4.3).
-func dereference(document *etree.Document, signature, reference *etree.Element, resolve Resolver) ([]byte, error) {
+// ReferenceData returns the octets a reference digests: its URI resolved and
+// its transforms applied (XML-Signature 4.4.3). A signer digests them to fill
+// DigestValue; an archive timestamp covers them (EN 319 132-1, 5.5.2.2).
+func ReferenceData(document *etree.Document, signature, reference *etree.Element, resolve Resolver) ([]byte, error) {
 	attribute := reference.SelectAttr("URI")
 	if attribute == nil {
 		return nil, fmt.Errorf("%w: a reference without URI", ErrUnverifiable)
