@@ -100,6 +100,10 @@ type Receipt struct {
 	SignedAt   string
 	SealCount  int
 	SelfSigned bool
+	// DocumentDigest and SignedDigest are the SHA-256 of the document signed
+	// and of the file written, as the signer measured them.
+	DocumentDigest string
+	SignedDigest   string
 	// Network is every connection the signature needed (ADR-0010).
 	Network []transparency.Connection
 }

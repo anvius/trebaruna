@@ -56,19 +56,23 @@ func (s CommandLineSigner) Sign(ctx context.Context, intent domain.SigningIntent
 		SealCount  int                             `json:"seal_count"`
 		SelfSigned bool                            `json:"self_signed"`
 		Network    []transparencydomain.Connection `json:"network"`
+		Document   string                          `json:"document_sha256"`
+		Output     string                          `json:"signed_sha256"`
 	}
 	if err := json.Unmarshal(stdout.Bytes(), &printed); err != nil {
 		return domain.Receipt{}, fmt.Errorf("the signer printed an unreadable receipt: %w", err)
 	}
 
 	return domain.Receipt{
-		SignedPath: printed.Path,
-		Standard:   printed.Standard,
-		Signer:     printed.Signer,
-		SignedAt:   printed.SignedAt,
-		SealCount:  printed.SealCount,
-		SelfSigned: printed.SelfSigned,
-		Network:    printed.Network,
+		SignedPath:     printed.Path,
+		Standard:       printed.Standard,
+		Signer:         printed.Signer,
+		SignedAt:       printed.SignedAt,
+		SealCount:      printed.SealCount,
+		SelfSigned:     printed.SelfSigned,
+		Network:        printed.Network,
+		DocumentDigest: printed.Document,
+		SignedDigest:   printed.Output,
 	}, nil
 }
 

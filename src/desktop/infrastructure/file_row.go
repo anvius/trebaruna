@@ -33,7 +33,7 @@ func newFileRow(chooseLabel, changeLabel, hint string, onChoose func()) *fileRow
 		hint:   caption(hint),
 		name:   widget.NewLabelWithStyle("", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		folder: caption(""),
-		note:   caption(""),
+		note:   selectableCaption(),
 		change: widget.NewButton(changeLabel, onChoose),
 	}
 	row.name.Wrapping = fyne.TextWrapWord
@@ -76,5 +76,14 @@ func caption(text string) *widget.Label {
 	label.Wrapping = fyne.TextWrapWord
 	label.SizeName = theme.SizeNameCaptionText
 	label.Importance = widget.LowImportance
+	return label
+}
+
+// selectableCaption is a caption the user can select and copy, for values
+// such as a fingerprint that are meant to be compared elsewhere.
+func selectableCaption() *widget.Label {
+	label := caption("")
+	label.Selectable = true
+	label.Wrapping = fyne.TextWrapBreak
 	return label
 }

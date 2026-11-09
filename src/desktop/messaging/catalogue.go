@@ -180,6 +180,8 @@ type Catalogue struct {
 	PurposeSigningServer string
 	PurposeRemoteSigning string
 	PurposeUnattributed  string
+	DocumentFingerprint  string
+	DocumentChanged      string
 }
 
 // For returns the catalogue for a language.
@@ -319,6 +321,8 @@ var spanish = Catalogue{
 	PurposeSigningServer:       "servidor de la sede",
 	PurposeRemoteSigning:       "firma remota",
 	PurposeUnattributed:        "sin motivo identificado",
+	DocumentFingerprint:        "Huella SHA-256: %s",
+	DocumentChanged:            "Atención: el documento cambió después de elegirlo. Se ha firmado la versión con huella %s.",
 }
 
 var italian = Catalogue{
@@ -446,6 +450,8 @@ var italian = Catalogue{
 	PurposeSigningServer:       "server del portale",
 	PurposeRemoteSigning:       "firma remota",
 	PurposeUnattributed:        "motivo non identificato",
+	DocumentFingerprint:        "Impronta SHA-256: %s",
+	DocumentChanged:            "Attenzione: il documento è cambiato dopo la scelta. È stata firmata la versione con impronta %s.",
 }
 
 var english = Catalogue{
@@ -573,6 +579,8 @@ var english = Catalogue{
 	PurposeSigningServer:       "site's signing server",
 	PurposeRemoteSigning:       "remote signing",
 	PurposeUnattributed:        "no identified purpose",
+	DocumentFingerprint:        "SHA-256 fingerprint: %s",
+	DocumentChanged:            "Warning: the document changed after it was chosen. The version with fingerprint %s was signed.",
 }
 
 // LevelName renders a level name for display.

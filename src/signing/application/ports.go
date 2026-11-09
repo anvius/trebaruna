@@ -21,6 +21,10 @@ type Artefact struct {
 	// SealCount is how many visible marks the artefact carries.
 	SealCount  int
 	SelfSigned bool
+	// DocumentDigest and SignedDigest are the SHA-256 of what was signed and of
+	// what was written, in lower-case hex: the receipt a person can compare.
+	DocumentDigest string
+	SignedDigest   string
 }
 
 // KeyMaterial is what the infrastructure resolved from a Signer.

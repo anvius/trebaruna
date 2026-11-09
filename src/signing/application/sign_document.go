@@ -2,6 +2,8 @@ package application
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -104,10 +106,18 @@ func (u *SignDocument) Execute(ctx context.Context, request Request) (Artefact, 
 		SignerName: request.Signer.NameFor(identity.Holder),
 		// Only a PDF carries a visible seal: reporting one for CAdES or XAdES
 		// would be a lie the caller could act on.
-		SealCount:  sealCount(request),
-		HasSeal:    sealCount(request) > 0,
-		SelfSigned: identity.SelfSigned,
+		SealCount:      sealCount(request),
+		HasSeal:        sealCount(request) > 0,
+		SelfSigned:     identity.SelfSigned,
+		DocumentDigest: fingerprint(content),
+		SignedDigest:   fingerprint(signed),
 	}, nil
+}
+
+// fingerprint is the SHA-256 of a byte string in lower-case hex.
+func fingerprint(content []byte) string {
+	digest := sha256.Sum256(content)
+	return hex.EncodeToString(digest[:])
 }
 
 // validate applies guard clauses so the adapters receive a coherent request.

@@ -2,7 +2,9 @@ package application_test
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -386,5 +388,25 @@ func TestAnUnnamedSignerIsReportedByItsCertificateHolder(t *testing.T) {
 	}
 	if artefact.SignerName != "MARIO ROSSI" {
 		t.Errorf("signer = %q, want the holder instead of a placeholder", artefact.SignerName)
+	}
+}
+
+func TestTheReceiptCarriesBothFingerprints(t *testing.T) {
+	store := newFakeStore(map[string][]byte{"/tmp/a.xml": []byte("xml")})
+	useCase := application.NewSignDocument(store, fakeClock{time.Unix(0, 0)},
+		selfSignedIdentity(), &fakeCades{}, &fakePades{}, &fakeXades{})
+
+	artefact, err := useCase.Execute(context.Background(), application.Request{
+		Document: newDocument(t, "/tmp/a.xml"), Format: domain.Cades, Level: domain.BES, Signer: newSigner(t),
+	})
+	if err != nil {
+		t.Fatalf("Execute: %v", err)
+	}
+	if artefact.DocumentDigest != fmt.Sprintf("%x", sha256.Sum256([]byte("xml"))) {
+		t.Errorf("document digest = %s, want the SHA-256 of the document read", artefact.DocumentDigest)
+	}
+	written := store.written[artefact.Path]
+	if artefact.SignedDigest != fmt.Sprintf("%x", sha256.Sum256(written)) {
+		t.Errorf("signed digest = %s, want the SHA-256 of the file written", artefact.SignedDigest)
 	}
 }

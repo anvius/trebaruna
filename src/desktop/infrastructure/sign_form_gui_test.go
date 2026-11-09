@@ -8,9 +8,14 @@ package infrastructure
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"errors"
+	"fmt"
 	"image"
 	"image/png"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -273,5 +278,42 @@ func TestTheTimestampAccountReachesTheSigner(t *testing.T) {
 		if preferences.String(key) == "tsa-segreta" {
 			t.Errorf("the TSA password was stored under %q", key)
 		}
+	}
+}
+
+type digestSigner struct{ digest string }
+
+func (s digestSigner) Sign(_ context.Context, intent domain.SigningIntent) (domain.Receipt, error) {
+	return domain.Receipt{SignedPath: intent.OutputName(), DocumentDigest: s.digest}, nil
+}
+
+func TestTheFingerprintShownIsTheOneSigned(t *testing.T) {
+	fixture := newFormFixture(t, scriptedCertificate{summary: qualifiedRossi()})
+	form := fixture.desktop.form
+	document := filepath.Join(t.TempDir(), "offerta.docx")
+	if err := os.WriteFile(document, []byte("offerta"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	want := fmt.Sprintf("%x", sha256.Sum256([]byte("offerta")))
+
+	form.setDocument(document)
+	settle(t, func() bool { return form.fingerprint != "" })
+	if form.fingerprint != want || !strings.Contains(form.documentRow.note.Text, want) {
+		t.Fatalf("fingerprint %q, note %q; want %s shown", form.fingerprint, form.documentRow.note.Text, want)
+	}
+
+	form.setCertificate("/tmp/rossi.p12")
+	form.signing = application.NewSignFromDesktop(digestSigner{digest: want}, func(string) bool { return true })
+	test.Tap(form.signButton)
+	settle(t, func() bool { return form.afterSign.Visible() })
+	if form.status.Importance != widget.SuccessImportance {
+		t.Errorf("matching fingerprints must report plain success, got %q", form.status.Text)
+	}
+
+	form.signing = application.NewSignFromDesktop(digestSigner{digest: "0000"}, func(string) bool { return true })
+	test.Tap(form.signButton)
+	settle(t, func() bool { return form.status.Importance == widget.WarningImportance })
+	if !strings.Contains(form.status.Text, "0000") {
+		t.Errorf("a changed document must be named by the fingerprint signed, got %q", form.status.Text)
 	}
 }

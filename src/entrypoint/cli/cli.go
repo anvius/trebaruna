@@ -387,23 +387,28 @@ type artefactJSON struct {
 	HasSeal    bool   `json:"has_seal"`
 	SealCount  int    `json:"seal_count"`
 	SelfSigned bool   `json:"self_signed"`
+	// DocumentSHA256 and SignedSHA256 let a person compare what was signed.
+	DocumentSHA256 string `json:"document_sha256"`
+	SignedSHA256   string `json:"signed_sha256"`
 	// Network lists every connection the signature needed (ADR-0010).
 	Network []transparencydomain.Connection `json:"network"`
 }
 
 func encodeJSON(writer io.Writer, artefact application.Artefact) {
 	payload := artefactJSON{
-		Path:       artefact.Path,
-		Format:     string(artefact.Format),
-		Standard:   artefact.Format.Standard(),
-		Level:      string(artefact.Level),
-		Size:       artefact.Size,
-		SignedAt:   artefact.SignedAt.Format(time.RFC3339),
-		Signer:     artefact.SignerName,
-		HasSeal:    artefact.HasSeal,
-		SealCount:  artefact.SealCount,
-		SelfSigned: artefact.SelfSigned,
-		Network:    connections(),
+		Path:           artefact.Path,
+		Format:         string(artefact.Format),
+		Standard:       artefact.Format.Standard(),
+		Level:          string(artefact.Level),
+		Size:           artefact.Size,
+		SignedAt:       artefact.SignedAt.Format(time.RFC3339),
+		Signer:         artefact.SignerName,
+		HasSeal:        artefact.HasSeal,
+		SealCount:      artefact.SealCount,
+		SelfSigned:     artefact.SelfSigned,
+		DocumentSHA256: artefact.DocumentDigest,
+		SignedSHA256:   artefact.SignedDigest,
+		Network:        connections(),
 	}
 	encoder := json.NewEncoder(writer)
 	encoder.SetIndent("", "  ")
@@ -416,6 +421,8 @@ func printArtefact(writer io.Writer, artefact application.Artefact) {
 	fmt.Fprintf(writer, "  format  %s (%s)\n", artefact.Format, artefact.Format.Standard())
 	fmt.Fprintf(writer, "  level   %s\n", artefact.Level)
 	fmt.Fprintf(writer, "  size    %d bytes\n", artefact.Size)
+	fmt.Fprintf(writer, "  signed  sha256 %s\n", artefact.DocumentDigest)
+	fmt.Fprintf(writer, "  output  sha256 %s\n", artefact.SignedDigest)
 	if artefact.SealCount > 0 {
 		fmt.Fprintf(writer, "  seals   %d visible\n", artefact.SealCount)
 	}

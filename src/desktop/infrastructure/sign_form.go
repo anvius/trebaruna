@@ -4,7 +4,10 @@ package infrastructure
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -53,7 +56,10 @@ type signForm struct {
 	// onNetwork receives the connections a signature reported.
 	onNetwork func([]transparency.Connection)
 
-	document    string
+	document string
+	// fingerprint is the SHA-256 shown for the document; the receipt must
+	// report the same one, or the file changed between choosing and signing.
+	fingerprint string
 	certificate string
 	format      domain.SignatureFormat
 	summary     *domain.CertificateSummary
@@ -217,6 +223,8 @@ func (f *signForm) pickDocument() {
 // setDocument adopts a document: its type decides the formats on offer.
 func (f *signForm) setDocument(path string) {
 	f.document = path
+	f.fingerprint = ""
+	go f.measure(path)
 	f.signedPath = ""
 	f.afterSign.Hide()
 	f.status.SetText("")
@@ -255,8 +263,7 @@ func (f *signForm) formatChanged() {
 	if f.document == "" {
 		return
 	}
-	output := domain.SigningIntent{DocumentPath: f.document, Format: f.format}.OutputName()
-	f.documentRow.show(f.document, fmt.Sprintf(f.m.DocumentSavedAs, filepath.Base(output)))
+	f.documentRow.show(f.document, f.documentNote())
 
 	if f.format.HasVisibleSeal() {
 		f.pages.show(f.document)
@@ -266,6 +273,32 @@ func (f *signForm) formatChanged() {
 	}
 	f.pages.withoutVisibleSeal()
 	f.sealNote.Hide()
+}
+
+// documentNote says where the result goes and, once measured, what exactly
+// is about to be signed.
+func (f *signForm) documentNote() string {
+	output := domain.SigningIntent{DocumentPath: f.document, Format: f.format}.OutputName()
+	note := fmt.Sprintf(f.m.DocumentSavedAs, filepath.Base(output))
+	if f.fingerprint != "" {
+		note += "\n" + fmt.Sprintf(f.m.DocumentFingerprint, f.fingerprint)
+	}
+	return note
+}
+
+// measure computes the document's SHA-256 off the UI thread.
+func (f *signForm) measure(path string) {
+	digest, err := fileFingerprint(path)
+	if err != nil {
+		return
+	}
+	fyne.Do(func() {
+		if f.document != path {
+			return
+		}
+		f.fingerprint = digest
+		f.documentRow.show(f.document, f.documentNote())
+	})
 }
 
 func (f *signForm) formatLabel(format domain.SignatureFormat) string {
@@ -482,13 +515,18 @@ func (f *signForm) sign() {
 			}
 			f.signedPath = receipt.SignedPath
 			message := fmt.Sprintf(f.m.SignedAs, filepath.Base(receipt.SignedPath))
+			importance := widget.SuccessImportance
+			if f.fingerprint != "" && receipt.DocumentDigest != "" && receipt.DocumentDigest != f.fingerprint {
+				message += "\n" + fmt.Sprintf(f.m.DocumentChanged, receipt.DocumentDigest)
+				importance = widget.WarningImportance
+			}
 			if summary := summarise(receipt.Network, f.m); summary != "" {
 				message += "\n" + summary
 			}
 			if f.onNetwork != nil {
 				f.onNetwork(receipt.Network)
 			}
-			f.report(message, widget.SuccessImportance)
+			f.report(message, importance)
 			f.afterSign.Show()
 		})
 	}()
@@ -503,4 +541,18 @@ func (f *signForm) report(text string, importance widget.Importance) {
 func fileExists(path string) bool {
 	info, err := os.Stat(path)
 	return err == nil && !info.IsDir()
+}
+
+// fileFingerprint is the SHA-256 of a file in lower-case hex, read in chunks.
+func fileFingerprint(path string) (string, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+	digest := sha256.New()
+	if _, err := io.Copy(digest, file); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(digest.Sum(nil)), nil
 }

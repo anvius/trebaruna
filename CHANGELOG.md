@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Transparency: the receipt carries `document_sha256` and `signed_sha256`; the
+  window shows the document's fingerprint before signing and warns if the
+  signer reports a different one (the file changed after it was chosen).
+
 - Transparency: every connection is recorded (ADR-0010). A new `transparency`
   slice hands out the only HTTP clients; it also wraps the default transport,
   so connections libraries open with their own client (pdfsign's timestamp and

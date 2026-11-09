@@ -59,6 +59,11 @@ before signing, not after. The verdict line reads, for instance:
   sound but carry no legal weight.*
 - *Expired on 12/03/2026: it can no longer sign.*
 
+As soon as a document is chosen, its SHA-256 fingerprint appears under its name,
+selectable so it can be compared elsewhere. The signer reports the fingerprint
+of what it actually signed; if the two differ because the file changed in
+between, the result says so and names the version that was signed.
+
 The certificate path, the level and the timestamp authority are remembered
 between sessions. The passphrase never is.
 
