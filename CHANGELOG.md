@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Encrypted envelopes (`.p7e`, ADR-0011): `trebaruna encrypt <file> --to
+  <cert> [--to …] [--oaep]` and `trebaruna decrypt <file.p7e>` with the key
+  flags of `sign` (file, card, Firefox store). CMS EnvelopedData written in
+  this repository: AES-256-CBC content, RSA PKCS#1 v1.5 (default) or
+  RSA-OAEP/SHA-256 key transport; OpenSSL envelopes (PKCS#1 v1.5, OAEP SHA-1
+  or SHA-256) open, and ours open in OpenSSL. Recipients are checked first
+  (RSA key, keyEncipherment when usages are declared, not expired); on a card
+  the certificate the envelope names is found without the PIN and only the
+  content key is decrypted there. New slice `encryption` with the use cases
+  `EncryptDocument` and `DecryptDocument`; `sign` and `decrypt` share their
+  key flags.
+
 - Time-stamped data (RFC 5544): `timestamp --tsd` writes `<file>.tsd` with the
   document, its name and media type, and the token; `verify-tsr <file.tsd>`
   checks every token (the first against the document, renewals against the

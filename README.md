@@ -424,6 +424,8 @@ src/
 ├── signing/         sign:      domain → application → infrastructure
 ├── verification/    verify:    domain → application → infrastructure
 ├── trust/           TSL/LOTL:  domain → application → infrastructure
+├── encryption/      .p7e:      domain → application → infrastructure
+├── transparency/    connection record, licences, SBOM
 ├── desktop/         the Fyne window (build tag `gui`)
 └── entrypoint/      cli and serve, thin adapters
 ```

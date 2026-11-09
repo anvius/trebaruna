@@ -338,6 +338,50 @@ func (k tokenKey) Sign(_ io.Reader, digest []byte, options crypto.SignerOpts) ([
 	return signature, nil
 }
 
+// Decrypt decrypts a key encrypted to this certificate (an envelope's content
+// key) on the token: RSA PKCS#1 v1.5, or OAEP with SHA-1 or SHA-256.
+func (k tokenKey) Decrypt(_ io.Reader, ciphertext []byte, options crypto.DecrypterOpts) ([]byte, error) {
+	if _, isRSA := k.public.(*rsa.PublicKey); !isRSA {
+		return nil, fmt.Errorf("the token's key type %T cannot decrypt", k.public)
+	}
+	mechanism := pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS, nil)
+	if oaep, ok := options.(*rsa.OAEPOptions); ok {
+		hashes := map[crypto.Hash][2]uint{
+			crypto.SHA1:   {pkcs11.CKM_SHA_1, pkcs11.CKG_MGF1_SHA1},
+			crypto.SHA256: {pkcs11.CKM_SHA256, pkcs11.CKG_MGF1_SHA256},
+		}
+		pair, known := hashes[oaep.Hash]
+		if !known {
+			return nil, fmt.Errorf("the token cannot decrypt OAEP with %v", oaep.Hash)
+		}
+		mechanism = pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS_OAEP,
+			pkcs11.NewOAEPParams(pair[0], pair[1], pkcs11.CKZ_DATA_SPECIFIED, oaep.Label))
+	}
+
+	k.session.mutex.Lock()
+	defer k.session.mutex.Unlock()
+	context := k.session.module.context
+	if err := context.DecryptInit(k.session.handle, []*pkcs11.Mechanism{mechanism}, k.handle); err != nil {
+		if oaep, ok := options.(*rsa.OAEPOptions); ok && mechanismRefused(err) {
+			return nil, fmt.Errorf("the card cannot decrypt RSA-OAEP with %v: ask for the envelope with "+
+				"PKCS#1 v1.5 (the usual kind) or OAEP with SHA-1 (%w)", oaep.Hash, err)
+		}
+		return nil, err
+	}
+	return context.Decrypt(k.session.handle, ciphertext)
+}
+
+// mechanismRefused reports a token that does not offer a mechanism, or not
+// with those parameters.
+func mechanismRefused(err error) bool {
+	var code pkcs11.Error
+	if !errors.As(err, &code) {
+		return false
+	}
+	return code == pkcs11.CKR_MECHANISM_INVALID || code == pkcs11.CKR_MECHANISM_PARAM_INVALID ||
+		code == pkcs11.CKR_ARGUMENTS_BAD
+}
+
 // asn1ECDSA turns the r||s a token returns into SEQUENCE { r, s }.
 func asn1ECDSA(raw []byte) ([]byte, error) {
 	if len(raw) == 0 || len(raw)%2 != 0 {

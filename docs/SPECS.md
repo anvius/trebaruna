@@ -84,7 +84,8 @@ user seeing what is signed and where anything goes.
 
 | Rule | Status |
 |---|---|
-| `.p7e` envelopes for recipients' certificates and their decryption (ADR-0011) | planned (F4) |
+| `.p7e` envelopes for recipients' certificates and their decryption with a file, a card or a store (ADR-0011): CLI | built |
+| `.p7e` encryption and decryption in the window | planned |
 
 ### Web entry points
 
@@ -110,6 +111,7 @@ user seeing what is signed and where anything goes.
 | signing | `ChangeCardPIN`, `UnlockCard` | `Execute(ctx, Card, secret, newPIN) error` |
 | verification | `VerifyDocument` | `Execute` |
 | trust | `VerifyList` | `Execute` |
+| encryption | `EncryptDocument`, `DecryptDocument` | `Execute` |
 | desktop | `SignFromDesktop`, `PreviewPage`, `InspectCertificate`, `ListCards`, `ChangeCardPIN` | `Execute` |
 
 New capabilities add use cases here as they are built.

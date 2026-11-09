@@ -505,6 +505,28 @@ Trust lists: `~/.cache/trebaruna/`. Nothing else is cached.
 
 ---
 
+## `encrypt` and `decrypt`
+
+```bash
+trebaruna encrypt offerta.pdf --to luca.pem --to maria.cer     # offerta.pdf.p7e
+trebaruna decrypt offerta.pdf.p7e --p12 luca.p12                # offerta.pdf
+trebaruna-token decrypt offerta.pdf.p7e --card                  # the key stays on the card
+```
+
+An encrypted envelope (`.p7e`, CMS EnvelopedData) only the recipients'
+certificates open, AutoFirma's digital envelope. The
+content is encrypted with AES-256-CBC and its key sent to each recipient with
+RSA PKCS#1 v1.5, which every tool reads, or RSA-OAEP with SHA-256 (`--oaep`).
+A recipient certificate must have an RSA key and, if it declares key usages,
+`keyEncipherment`: a signature-only certificate is refused, as is an expired
+one. `decrypt` takes the same key flags as `sign` (file, card, Firefox store);
+with a card and no `--certificate`, the certificate the envelope names is found
+on the card without the PIN, and only the envelope's content key is decrypted
+on the card. Neither command overwrites a file; the output is written readable
+only by its owner. Envelopes made by `openssl cms -encrypt` (PKCS#1 v1.5 or
+OAEP with SHA-1 or SHA-256) open, and ours open with `openssl cms -decrypt`.
+Many cards decrypt OAEP only with SHA-1; the error says so.
+
 ## `pin`
 
 ```bash

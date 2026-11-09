@@ -142,5 +142,12 @@ func (s Signer) PKCS11PIN() string { return s.pkcs11PIN }
 // PKCS11Parameters returns the module's initialisation parameters.
 func (s Signer) PKCS11Parameters() string { return s.pkcs11Params }
 
+// Choosing returns the same signer choosing its certificate another way, as
+// decryption does once it knows which certificate the envelope names.
+func (s Signer) Choosing(choice CertificateChoice) Signer {
+	s.choice = choice
+	return s
+}
+
 // CertificateChoice returns how the certificate of the card is chosen.
 func (s Signer) CertificateChoice() CertificateChoice { return s.choice }

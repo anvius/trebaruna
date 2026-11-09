@@ -56,6 +56,10 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runToken(args[1:], stdout, stderr)
 	case "pin":
 		return runPIN(args[1:], stdout, stderr)
+	case "encrypt":
+		return runEncrypt(args[1:], stdout, stderr)
+	case "decrypt":
+		return runDecrypt(args[1:], stdout, stderr)
 	case "asic":
 		return runAsic(args[1:], stdout, stderr)
 	case "serve":
@@ -89,26 +93,17 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 	flags.SetOutput(stderr)
 
 	var (
-		format     = flags.String("format", "", "signature format: cades | pades | xades (default: from the suffix)")
-		level      = flags.String("level", "bes", "signature level: bes | t | lt | lta")
-		output     = flags.String("out", "", "output path (default: derived from the input)")
-		p12Path    = flags.String("p12", "", "PKCS#12 file with the signing certificate")
-		pemPath    = flags.String("pem", "", "PEM bundle with certificate and private key")
-		passphrase = flags.String("pass", "", "passphrase for the P12 or PEM file (or $TREBARUNA_PASSPHRASE)")
-		pin        = flags.String("pin", "", "PIN for PKCS#11 tokens (or $TREBARUNA_PIN)")
-		tokenLabel = flags.String("token", "", "PKCS#11 token label (smartcard)")
-		useCard    = flags.Bool("card", false, "sign with the card in the reader (OpenSC; the card and its signing certificate are found)")
-		cardCert   = flags.String("certificate", "", "certificate of the card to sign with: serial or SHA-256 fingerprint (see `trebaruna token`)")
-		module     = flags.String("module", "", "PKCS#11 module path (default: OpenSC, found on this system)")
-		firefox    = flags.Bool("firefox", false, "sign with a certificate of the Firefox store, in place (PIN: its primary password)")
-		nssDB      = flags.String("nss-db", "", "sign with a certificate of this NSS store directory (Chromium: ~/.pki/nssdb)")
-		name       = flags.String("name", "", "signer display name (default: the holder printed on the certificate)")
-		reason     = flags.String("reason", "", "reason for signing")
-		location   = flags.String("location", "", "location of signing")
-		tsaURL     = flags.String("tsa", "", "RFC 3161 timestamp authority URL")
-		tsaUser    = flags.String("tsa-user", "", "TSA basic-auth username")
-		tsaSecret  = flags.String("tsa-pass", "", "TSA basic-auth password (or $TREBARUNA_TSA_PASS)")
-		onlineRev  = flags.Bool("online-revocation", false,
+		format    = flags.String("format", "", "signature format: cades | pades | xades (default: from the suffix)")
+		level     = flags.String("level", "bes", "signature level: bes | t | lt | lta")
+		output    = flags.String("out", "", "output path (default: derived from the input)")
+		keys      = addKeyFlags(flags, "sign with")
+		name      = flags.String("name", "", "signer display name (default: the holder printed on the certificate)")
+		reason    = flags.String("reason", "", "reason for signing")
+		location  = flags.String("location", "", "location of signing")
+		tsaURL    = flags.String("tsa", "", "RFC 3161 timestamp authority URL")
+		tsaUser   = flags.String("tsa-user", "", "TSA basic-auth username")
+		tsaSecret = flags.String("tsa-pass", "", "TSA basic-auth password (or $TREBARUNA_TSA_PASS)")
+		onlineRev = flags.Bool("online-revocation", false,
 			"query OCSP and embed the answers in /DSS (required for --level lt)")
 		page       = flags.Int("page", 1, "page for the visible seal (1-based)")
 		boxes      = boxList{}
@@ -154,11 +149,7 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 		return exitUsage
 	}
 
-	signer, err := buildSigner(signerOptions{
-		name: *name, p12Path: *p12Path, pemPath: *pemPath, passphrase: *passphrase,
-		pin: *pin, card: *useCard, tokenLabel: *tokenLabel, certificate: *cardCert, module: *module,
-		store: storeOptions{firefox: *firefox, directory: *nssDB},
-	})
+	signer, err := buildSigner(keys.options(*name))
 	if err != nil {
 		fmt.Fprintf(stderr, "%v\n", err)
 		return exitUsage
@@ -258,21 +249,8 @@ func extractDocument(args []string) (documentPath string, remaining []string, er
 
 // signValueFlags are the sign flags that take a value, so the documents can
 // be told apart from flag values wherever the flags appear.
-var signValueFlags = map[string]bool{
-	"-format": true, "--format": true, "-level": true, "--level": true,
-	"-lang": true, "--lang": true, "-territory": true, "--territory": true,
-	"-out": true, "--out": true, "-p12": true, "--p12": true,
-	"-pem": true, "--pem": true, "-pass": true, "--pass": true,
-	"-pin": true, "--pin": true, "-token": true, "--token": true,
-	"-module": true, "--module": true, "-name": true, "--name": true,
-	"-certificate": true, "--certificate": true, "-nss-db": true, "--nss-db": true,
-	"-reason": true, "--reason": true, "-location": true, "--location": true,
-	"-tsa": true, "--tsa": true, "-tsa-user": true, "--tsa-user": true,
-	"-tsa-pass": true, "--tsa-pass": true, "-page": true, "--page": true,
-	"-box": true, "--box": true,
-	"-content": true, "--content": true,
-	"-countersign": true, "--countersign": true,
-}
+var signValueFlags = valueFlagsWith("format", "level", "lang", "territory", "out", "name",
+	"reason", "location", "tsa", "tsa-user", "tsa-pass", "page", "box", "content", "countersign")
 
 // splitSignArguments separates the documents from the flags of `sign`.
 func splitSignArguments(args []string) (positional, remaining []string) {
@@ -479,6 +457,8 @@ usage:
   trebaruna asic <document> <signature>        (ASiC-S / ASiC-E container)
   trebaruna serve --root <dir> --listen 127.0.0.1:0   (local HTTP API)
   trebaruna extract <document.p7m> [--out path]  (the document inside one or more envelopes)
+  trebaruna encrypt <file> --to <cert> [--to …]   (a .p7e only the recipients open)
+  trebaruna decrypt <file.p7e> --p12|--card|…     (open a .p7e with your key)
   trebaruna about [--json]                      (build, revision, dependencies and licences)
 
 flags:
