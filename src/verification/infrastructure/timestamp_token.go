@@ -19,11 +19,17 @@ import (
 // RSASSA-PSS, which the library's CMS code does not implement, here, the
 // SignerInfo checked over the TSTInfo as any CMS signature (verifyNode).
 func parseTimeStamp(der []byte) (*timestamp.Timestamp, error) {
+	// A token's content is declared a TSTInfo (RFC 3161, 2.4.2). The
+	// timestamp library reads any signed content that parses as one, so a
+	// signature over other data passed for a timestamp.
+	tree, treeErr := parseSignatureTree(der, nil)
+	if treeErr == nil && !tree.contentType.Equal(oidTSTInfo) {
+		return nil, fmt.Errorf("the timestamp token does not carry a TSTInfo")
+	}
 	token, err := timestamp.Parse(der)
 	if err == nil || !unsupportedByLibrary(err) {
 		return token, err
 	}
-	tree, treeErr := parseSignatureTree(der, nil)
 	if treeErr != nil || len(tree.signers) != 1 || !isPSS(tree.signers[0].SignatureAlgorithm) {
 		return nil, err
 	}

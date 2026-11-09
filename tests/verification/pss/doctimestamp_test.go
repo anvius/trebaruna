@@ -144,3 +144,46 @@ func TestADocumentTimestampSignedWithRSAPSS(t *testing.T) {
 		t.Errorf("a changed document under a PSS document timestamp is reported intact: %+v", report.Findings)
 	}
 }
+
+// TestAPSSEnvelopeOfOtherContentIsNoTimestamp: a CMS signed with RSA-PSS
+// over data that happens to parse as a TSTInfo but is declared id-data is
+// not a timestamp token.
+func TestAPSSEnvelopeOfOtherContentIsNoTimestamp(t *testing.T) {
+	stamped := pssDocumentTimestamp(t)
+	// The same document timestamp, its token re-signed as id-data.
+	hole := regexp.MustCompile(`/Contents\s*<([0-9A-Fa-f]+)>`).FindSubmatchIndex(stamped)
+	padded, _ := hex.DecodeString(string(stamped[hole[2]:hole[3]]))
+	var token asn1.RawValue
+	if _, err := asn1.Unmarshal(padded, &token); err != nil {
+		t.Fatal(err)
+	}
+	directory := t.TempDir()
+	tokenPath, infoPath := filepath.Join(directory, "token.der"), filepath.Join(directory, "tstinfo.der")
+	os.WriteFile(tokenPath, token.FullBytes, 0o600)
+	if output, err := exec.Command("openssl", "cms", "-verify", "-noverify", "-inform", "DER", "-in", tokenPath, "-out", infoPath).CombinedOutput(); err != nil {
+		t.Fatalf("%v\n%s", err, output)
+	}
+	key, certificate := filepath.Join(directory, "k.pem"), filepath.Join(directory, "c.pem")
+	if output, err := exec.Command("openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", key, "-out", certificate,
+		"-days", "1", "-subj", "/CN=Not a TSA").CombinedOutput(); err != nil {
+		t.Fatalf("%v\n%s", err, output)
+	}
+	dataPath := filepath.Join(directory, "data.der")
+	if output, err := exec.Command("openssl", "cms", "-sign", "-binary", "-nodetach", "-in", infoPath, "-signer", certificate, "-inkey", key,
+		"-keyopt", "rsa_padding_mode:pss", "-md", "sha256", "-outform", "DER", "-out", dataPath).CombinedOutput(); err != nil {
+		t.Fatalf("%v\n%s", err, output)
+	}
+	data, _ := os.ReadFile(dataPath)
+	replacement := hex.EncodeToString(data)
+	width := hole[3] - hole[2]
+	if len(replacement) > width {
+		t.Skipf("the envelope does not fit")
+	}
+	replacement += strings.Repeat("0", width-len(replacement))
+	swapped := append(append(append([]byte{}, stamped[:hole[2]]...), replacement...), stamped[hole[3]:]...)
+	path := filepath.Join(directory, "swapped.pdf")
+	os.WriteFile(path, swapped, 0o600)
+	if report := only(t, verificationinfra.NewPDFVerifier(), path); report.Integrity == domain.StatusGood || report.Timestamped {
+		t.Errorf("signed id-data is read as a timestamp: %s %+v", report.Integrity, report.Findings)
+	}
+}

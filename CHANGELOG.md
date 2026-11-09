@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- A CMS signature over data that merely parses as a TSTInfo was read as a
+  timestamp token: the timestamp library does not check the declared
+  content type, nor did trebaruna's RSA-PSS fallback. A token must now
+  declare id-ct-TSTInfo (RFC 3161, 2.4.2) wherever it is read: CAdES and
+  XAdES signature timestamps, archive timestamps, ASiC and PDF timestamps.
+
 - The EU list of the lists, the root every national list is
   authenticated against, was trusted on TLS alone, and `--lotl` accepted
   plain http. It is now used only when its own signature, over all of
