@@ -143,6 +143,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Card signatures go through an own PKCS#11 session over `miekg/pkcs11`
+  instead of `crypto11` (ADR-0018): module parameters for software stores,
+  no PIN sent to keypad readers, issuers held by the token added to the chain;
+  three dependencies fewer. The licence table generator formats its output.
+
 - Desktop packages (`install-desktop`, `package-desktop`, the macOS bundle)
   ship the CLI built with cgo, so the window can sign with cards (ADR-0016);
   CI checks that the installed CLI reports PKCS#11 support.

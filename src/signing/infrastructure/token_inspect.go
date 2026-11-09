@@ -71,6 +71,9 @@ type TokenCertificate struct {
 type TokenInspector struct {
 	// Module is the path of the PKCS#11 shared library.
 	Module string
+	// Parameters are the initialisation parameters some modules need, such as
+	// the NSS profile directory; empty for cards.
+	Parameters string
 	// PIN, when set, is used to log in. Leaving it empty opens the token
 	// without a PIN, which is what a diagnostic should do first.
 	PIN string
@@ -78,7 +81,7 @@ type TokenInspector struct {
 
 // Inspect lists the slots and the certificates of the module.
 func (i TokenInspector) Inspect() ([]TokenSlot, error) {
-	return inspectToken(i.Module, i.PIN)
+	return inspectToken(i.Module, i.Parameters, i.PIN)
 }
 
 // describeCertificate renders the facts of a certificate that matter when

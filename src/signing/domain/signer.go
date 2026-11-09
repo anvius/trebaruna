@@ -15,6 +15,7 @@ type Signer struct {
 	pkcs11Module string
 	pkcs11Token  string
 	pkcs11PIN    string
+	pkcs11Params string
 	choice       CertificateChoice
 }
 
@@ -105,6 +106,12 @@ func WithToken(module, tokenLabel, pin string) SignerOption {
 	}
 }
 
+// WithModuleParameters passes the initialisation parameters a software store
+// needs to open, such as the profile directory of a Firefox (NSS) store.
+func WithModuleParameters(parameters string) SignerOption {
+	return func(s *Signer) { s.pkcs11Params = parameters }
+}
+
 // WithCertificateChoice says which certificate of the card signs. Without it
 // the card decides, and only when it leaves no doubt (CertificateChoice).
 func WithCertificateChoice(choice CertificateChoice) SignerOption {
@@ -131,6 +138,9 @@ func (s Signer) PKCS11Token() string { return s.pkcs11Token }
 
 // PKCS11PIN returns the token PIN.
 func (s Signer) PKCS11PIN() string { return s.pkcs11PIN }
+
+// PKCS11Parameters returns the module's initialisation parameters.
+func (s Signer) PKCS11Parameters() string { return s.pkcs11Params }
 
 // CertificateChoice returns how the certificate of the card is chosen.
 func (s Signer) CertificateChoice() CertificateChoice { return s.choice }

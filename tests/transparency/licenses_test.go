@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"go/format"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -129,7 +130,11 @@ func writeTable(t *testing.T, detected map[string]string) {
 	}
 	source.WriteString("}\n")
 	target := filepath.Join("..", "..", "src", "transparency", "infrastructure", "licenses.go")
-	if err := os.WriteFile(target, []byte(source.String()), 0o644); err != nil {
+	formatted, err := format.Source([]byte(source.String()))
+	if err != nil {
+		t.Fatalf("format the table: %v", err)
+	}
+	if err := os.WriteFile(target, formatted, 0o644); err != nil {
 		t.Fatal(err)
 	}
 }

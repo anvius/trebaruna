@@ -21,3 +21,4 @@ One decision per file. "Default pending owner confirmation" marks choices taken 
 | [ADR-0015](0015-office-documents.md) | ODF and OOXML signatures | Accepted (default pending owner confirmation) |
 | [ADR-0016](0016-desktop-ships-token-cli.md) | Desktop packages ship the PKCS#11-enabled CLI | Accepted |
 | [ADR-0017](0017-no-code-signing-yet.md) | Releases are not code-signed yet | Accepted |
+| [ADR-0018](0018-own-pkcs11-session.md) | Signatures go through an own PKCS#11 session | Accepted |

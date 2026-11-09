@@ -13,50 +13,24 @@ import (
 
 // inspectToken lists the slots and certificates a PKCS#11 module exposes.
 //
-// The module is reached through miekg/pkcs11 directly rather than through
-// crypto11, because crypto11 answers one question — "give me the key for this
-// label" — and a diagnostic needs a different one: "what is actually there".
+// The module is reached through the same plain binding the signatures use;
+// the diagnostic asks "what is actually there", before any login.
 //
 // The token is not logged in. Reading the public certificate objects does not
 // need a PIN on any card that follows the profile, and a diagnostic that
 // demands the PIN before it says anything is a diagnostic that cannot be run
 // without the thing it is diagnosing.
-func inspectToken(module, pin string) ([]TokenSlot, error) {
-	if module == "" {
-		return nil, fmt.Errorf("no PKCS#11 module given: use --module <path>")
+func inspectToken(path, parameters, pin string) ([]TokenSlot, error) {
+	loaded, err := loadModule(path, parameters)
+	if err != nil {
+		return nil, err
 	}
-
-	context := pkcs11.New(module)
-	if context == nil {
-		return nil, fmt.Errorf("cannot load the PKCS#11 module %s", module)
-	}
-	defer context.Destroy()
-
-	// Initialising a module that is already initialised is not an error worth
-	// stopping for. Several drivers are process-wide singletons: the first
-	// caller initialises them and every later caller is told the module is
-	// already up. Refusing to work in that case would make the diagnostic
-	// unusable in exactly the situation it exists for — a program that already
-	// talks to the card.
-	initialised := true
-	if err := context.Initialize(); err != nil {
-		if !alreadyInitialised(err) {
-			return nil, fmt.Errorf(
-				"cannot initialise the PKCS#11 module %s: %w\n"+
-					"  check: the path exists, the reader is connected, and pcscd is running",
-				module, err)
-		}
-		// The module was already up. Finalising it here would take it down for
-		// whoever else is using it.
-		initialised = false
-	}
-	if initialised {
-		defer context.Finalize()
-	}
+	defer loaded.unload()
+	context := loaded.context
 
 	slots, err := context.GetSlotList(false)
 	if err != nil {
-		return nil, fmt.Errorf("cannot list the slots of %s: %w", module, err)
+		return nil, fmt.Errorf("cannot list the slots of %s: %w", path, err)
 	}
 
 	result := make([]TokenSlot, 0, len(slots))
@@ -99,17 +73,6 @@ func inspectToken(module, pin string) ([]TokenSlot, error) {
 	}
 
 	return result, nil
-}
-
-// alreadyInitialised reports whether the error says the module was already up.
-//
-// The code is CKR_CRYPTOKI_ALREADY_INITIALIZED, 0x00000191. It is checked by
-// number because the constant is not exported by the PKCS#11 binding.
-func alreadyInitialised(err error) bool {
-	if err == nil {
-		return false
-	}
-	return strings.Contains(err.Error(), "0x191")
 }
 
 // describeLoginState renders the login state of a token.

@@ -3,50 +3,15 @@
 package infrastructure
 
 import (
-	"crypto"
 	"errors"
 	"fmt"
 	"strings"
 
 	"codeberg.org/simplicer/trebaruna/src/signing/domain"
-	"github.com/eclipse-keypont/crypto11"
 	"github.com/miekg/pkcs11"
 )
 
-// pkcs11Context adapts crypto11.Context to our tokenContext port.
-type pkcs11Context struct {
-	inner *crypto11.Context
-}
-
-// Pairs maps the library's tls.Certificate list onto our neutral type.
-func (p pkcs11Context) Pairs() ([]tokenPair, error) {
-	certificates, err := p.inner.FindAllPairedCertificates()
-	if err != nil {
-		return nil, err
-	}
-
-	pairs := make([]tokenPair, 0, len(certificates))
-	for _, certificate := range certificates {
-		signer, ok := certificate.PrivateKey.(crypto.Signer)
-		if !ok {
-			continue
-		}
-		if len(certificate.Certificate) == 0 {
-			continue
-		}
-		pairs = append(pairs, tokenPair{
-			Certificate: certificate.Certificate[0],
-			Chain:       certificate.Certificate[1:],
-			Signer:      signer,
-		})
-	}
-	return pairs, nil
-}
-
-// Close releases the PKCS#11 session.
-func (p pkcs11Context) Close() error { return p.inner.Close() }
-
-// openToken connects to the smartcard through crypto11.
+// openToken opens a session on the card (or software store) that signs.
 //
 // The card is found and its PIN state read before any login, so a locked card
 // or a missing PIN is reported without spending an attempt. Guarded by the cgo
@@ -67,16 +32,11 @@ func openToken(signer domain.Signer) (tokenContext, error) {
 		return nil, fmt.Errorf("%w (%s): give it in $TREBARUNA_PIN", domain.ErrPINMissing, name)
 	}
 
-	index := slot.Index
-	context, err := crypto11.Configure(&crypto11.Config{
-		Path:              signer.PKCS11Module(),
-		SlotNumber:        &index,
-		Pin:               signer.PKCS11PIN(),
-		LoginNotSupported: slot.PINState == domain.PINNotRequired,
-	})
+	opened, err := openSession(signer.PKCS11Module(), signer.PKCS11Parameters(), uint(slot.Index),
+		signer.PKCS11PIN(), slot.PINState != domain.PINNotRequired)
 	if err != nil {
 		if refused := pinRefusal(err); refused != nil {
-			if after := stateAfterRefusal(signer.PKCS11Module(), index); after != nil && !errors.Is(refused, after) {
+			if after := stateAfterRefusal(signer, slot.Index); after != nil && !errors.Is(refused, after) {
 				return nil, fmt.Errorf("%w (%s): %w", refused, name, after)
 			}
 			return nil, fmt.Errorf("%w (%s)", refused, name)
@@ -87,7 +47,7 @@ func openToken(signer domain.Signer) (tokenContext, error) {
 			name, signer.PKCS11Module(), err,
 		)
 	}
-	return pkcs11Context{inner: context}, nil
+	return opened, nil
 }
 
 // pinRefusal translates the card's answer to a login into the business error,
@@ -111,8 +71,8 @@ func pinRefusal(err error) error {
 // stateAfterRefusal reads the card again after a refused PIN, so the message
 // says whether the next mistake locks it (ErrLastAttempt) or it just did
 // (ErrCardLocked).
-func stateAfterRefusal(module string, index int) error {
-	slots, err := inspectToken(module, "")
+func stateAfterRefusal(signer domain.Signer, index int) error {
+	slots, err := inspectToken(signer.PKCS11Module(), signer.PKCS11Parameters(), "")
 	if err != nil {
 		return nil
 	}
@@ -141,7 +101,7 @@ func stateAfterRefusal(module string, index int) error {
 // that shows no certificate before login is still found when it is the only
 // card that fits.
 func slotFor(signer domain.Signer) (TokenSlot, error) {
-	slots, err := inspectToken(signer.PKCS11Module(), "")
+	slots, err := inspectToken(signer.PKCS11Module(), signer.PKCS11Parameters(), "")
 	if err != nil {
 		return TokenSlot{}, err
 	}
