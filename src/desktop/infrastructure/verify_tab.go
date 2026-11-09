@@ -71,6 +71,8 @@ var signedExtensions = []string{".pdf", ".p7m", ".p7s", ".xml", ".xsig", ".asice
 // verificationTab is the second tab of the window.
 type verificationTab struct {
 	window fyne.Window
+	// background starts the verification and the extraction off the UI thread.
+	background background
 	// ui holds the window strings (buttons, hints); report holds the wording of
 	// the findings. Two catalogues because they answer different questions and
 	// live in different slices.
@@ -96,7 +98,8 @@ type verificationTab struct {
 
 // newVerificationTab builds the tab.
 func newVerificationTab(window fyne.Window, ui messaging.Catalogue, report reportmessaging.Catalogue, palette Palette, binary string) *verificationTab {
-	return &verificationTab{window: window, ui: ui, report: report, palette: palette, binary: binary, open: openWithSystemViewer}
+	return &verificationTab{window: window, ui: ui, report: report, palette: palette, binary: binary,
+		open: openWithSystemViewer, background: offThread}
 }
 
 // content lays out the tab: what to check, then what was found.
@@ -167,7 +170,7 @@ func (v *verificationTab) run() {
 	v.check.Disable()
 
 	path, offline := v.path, !v.online.Checked
-	go func() {
+	v.background(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 		defer cancel()
 
@@ -187,7 +190,7 @@ func (v *verificationTab) run() {
 				v.render(report)
 			}
 		})
-	}()
+	})
 }
 
 func (v *verificationTab) showVerdict(verdict, explanation string, colour color.Color) {
@@ -362,7 +365,7 @@ func isEnvelope(path string) bool {
 func (v *verificationTab) extractDocument() {
 	envelope := v.path
 	output := freeName(domainExtractedName(envelope))
-	go func() {
+	v.background(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 		defer cancel()
 		raw, err := runCommand(ctx, v.binary, []string{"extract", envelope, "--out", output, "--json"})
@@ -377,7 +380,7 @@ func (v *verificationTab) extractDocument() {
 			v.extracted.SetText(fmt.Sprintf(v.ui.ExtractedAs, output))
 			v.open(output)
 		})
-	}()
+	})
 }
 
 // freeName returns path, or path with " (2)", " (3)"… before its extension

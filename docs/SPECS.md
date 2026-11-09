@@ -56,7 +56,7 @@ user seeing what is signed and where anything goes.
 | PKCS#11 cards and tokens from the CLI; certificate listing without PIN | built |
 | Pick a certificate on a card by serial or fingerprint; without one, the only certificate or the only non-repudiation one signs, never a guess; the card holding it is found without a label and without trying the PIN; OpenSC found automatically on each system | built |
 | PIN attempts are never spent needlessly: state read before login, no empty PIN, a refused PIN stops the run (a batch included), the state after a refusal stated | built |
-| Cards and tokens in the desktop window, with PIN attempts and locked cards stated | planned (C2) |
+| Cards and tokens in the desktop window: every certificate listed in full, the signing one chosen, PIN state and locked cards stated before typing, a refused PIN cleared and the card read again | built |
 | Firefox / NSS store used in place, without exporting | planned (C3) |
 | Change PIN, unlock with PUK | planned (C4) |
 | Windows and macOS system stores | planned (C5) |
@@ -109,6 +109,6 @@ user seeing what is signed and where anything goes.
 | signing | `SignDocument` | `Execute(ctx, Request) (Artefact, error)` |
 | verification | `VerifyDocument` | `Execute` |
 | trust | `VerifyList` | `Execute` |
-| desktop | `SignFromDesktop`, `PreviewPage`, `InspectCertificate` | `Execute` |
+| desktop | `SignFromDesktop`, `PreviewPage`, `InspectCertificate`, `ListCards` | `Execute` |
 
 New capabilities add use cases here as they are built.

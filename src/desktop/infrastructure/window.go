@@ -26,6 +26,7 @@ import (
 	"codeberg.org/simplicer/trebaruna/src/desktop/application"
 	"codeberg.org/simplicer/trebaruna/src/desktop/domain"
 	"codeberg.org/simplicer/trebaruna/src/desktop/messaging"
+	signing "codeberg.org/simplicer/trebaruna/src/signing/domain"
 	transparencyinfra "codeberg.org/simplicer/trebaruna/src/transparency/infrastructure"
 	reportmessaging "codeberg.org/simplicer/trebaruna/src/verification/messaging"
 )
@@ -37,6 +38,7 @@ var appIconPNG []byte
 type Window struct {
 	application *application.SignFromDesktop
 	inspect     *application.InspectCertificate
+	cards       *application.ListCards
 	preview     *application.PreviewPage
 	window      fyne.Window
 	messages    messaging.Catalogue
@@ -98,6 +100,7 @@ func newDesktop(window fyne.Window, catalogue messaging.Catalogue, binaryPath st
 	return &Window{
 		application: application.NewSignFromDesktop(CommandLineSigner{BinaryPath: binaryPath}, fileExists),
 		inspect:     application.NewInspectCertificate(CommandLineCertificateReader{BinaryPath: binaryPath}),
+		cards:       application.NewListCards(CommandLineCardReader{BinaryPath: binaryPath}),
 		preview:     application.NewPreviewPage(NewPopplerRenderer(), application.InkFinder{}),
 		binaryPath:  binaryPath,
 		window:      window,
@@ -118,7 +121,7 @@ func (w *Window) Run() {
 func (w *Window) buildContent(initialDocument string) fyne.CanvasObject {
 	w.pages = newPagePane(w.messages, w.palette, w.preview)
 	w.form = newSignForm(w.window, w.messages, w.palette, fyne.CurrentApp().Preferences(),
-		w.application, w.inspect, w.pages)
+		w.application, w.inspect, w.cards, w.pages)
 	w.form.onNetwork = w.activity.add
 	if initialDocument != "" {
 		w.form.setDocument(initialDocument)
@@ -425,6 +428,20 @@ func translate(err error, m messaging.Catalogue) string {
 		return m.NoOutputMessage(problem.Detail)
 	case domain.ProblemLockedCertificate:
 		return m.CertificateLocked
+	case domain.ProblemMissingPIN:
+		return m.MissingPIN
+	case domain.ProblemCardLocked:
+		return m.CardLocked
+	case domain.ProblemPINExpired:
+		return m.PINExpired
+	case domain.ProblemWrongPIN:
+		switch problem.Detail {
+		case string(signing.PINFinalTry):
+			return m.WrongPINFinalTry
+		case string(signing.PINLocked):
+			return m.WrongPINNowLocked
+		}
+		return m.WrongPIN
 	}
 	return err.Error()
 }

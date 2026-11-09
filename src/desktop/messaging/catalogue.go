@@ -117,25 +117,47 @@ type Catalogue struct {
 	StandingUntrusted          string
 	StandingExpired            string
 	CertificateExpiresSoon     string
-	FormatPAdESLabel           string
-	FormatCAdESLabel           string
-	FormatXAdESLabel           string
-	FormatOnlyCAdES            string
-	SealOnPagePane             string
-	MoreOptions                string
-	LevelBasicLabel            string
-	LevelTimestampLabel        string
-	LevelLongTermLabel         string
-	LevelArchiveLabel          string
-	LevelHint                  string
-	LocationPlaceholder        string
-	SignedAs                   string
-	OpenSigned                 string
-	ShowFolder                 string
-	CheckSignature             string
-	TSAUserLabel               string
-	TSAPasswordLabel           string
-	TSAAccountHint             string
+
+	// The card source of the signing form.
+	KeyFromFile         string
+	KeyFromCard         string
+	SearchCards         string
+	CardsSearching      string
+	NoCards             string
+	CardPlaceholder     string
+	CardSigningRole     string
+	CardOtherRole       string
+	CardWhere           string
+	PINPlaceholder      string
+	PINPadHint          string
+	PINCountLow         string
+	PINFinalTry         string
+	CardLocked          string
+	PINExpired          string
+	MissingPIN          string
+	WrongPIN            string
+	WrongPINFinalTry    string
+	WrongPINNowLocked   string
+	BatchNotTried       string
+	FormatPAdESLabel    string
+	FormatCAdESLabel    string
+	FormatXAdESLabel    string
+	FormatOnlyCAdES     string
+	SealOnPagePane      string
+	MoreOptions         string
+	LevelBasicLabel     string
+	LevelTimestampLabel string
+	LevelLongTermLabel  string
+	LevelArchiveLabel   string
+	LevelHint           string
+	LocationPlaceholder string
+	SignedAs            string
+	OpenSigned          string
+	ShowFolder          string
+	CheckSignature      string
+	TSAUserLabel        string
+	TSAPasswordLabel    string
+	TSAAccountHint      string
 
 	// Menus and dialogs.
 	MenuFile              string
@@ -283,6 +305,26 @@ var spanish = Catalogue{
 	StandingUntrusted:          "Ninguna lista de confianza respalda a este emisor: la firma será técnicamente correcta, pero sin respaldo legal.",
 	StandingExpired:            "Caducó el %s: ya no sirve para firmar.",
 	CertificateExpiresSoon:     "Caduca en %d días.",
+	KeyFromFile:                "Archivo",
+	KeyFromCard:                "Tarjeta",
+	SearchCards:                "Buscar tarjetas",
+	CardsSearching:             "Buscando tarjetas en los lectores…",
+	NoCards:                    "No hay ninguna tarjeta con certificados en los lectores. Inserta la tarjeta y pulsa «Buscar tarjetas».",
+	CardPlaceholder:            "Elige el certificado de la tarjeta",
+	CardSigningRole:            "para firmar",
+	CardOtherRole:              "otro uso",
+	CardWhere:                  "En la tarjeta «%s», %s.",
+	PINPlaceholder:             "PIN de la tarjeta",
+	PINPadHint:                 "Este lector pide el PIN en su propio teclado al firmar.",
+	PINCountLow:                "Ya se ha introducido un PIN erróneo: quedan pocos intentos antes de que la tarjeta se bloquee.",
+	PINFinalTry:                "Queda un solo intento: un PIN erróneo más bloqueará la tarjeta.",
+	CardLocked:                 "La tarjeta está bloqueada: desbloquéala con su PUK.",
+	PINExpired:                 "La tarjeta pide cambiar su PIN antes de firmar.",
+	MissingPIN:                 "Escribe el PIN de la tarjeta.",
+	WrongPIN:                   "La tarjeta ha rechazado el PIN. No se ha firmado nada.",
+	WrongPINFinalTry:           "La tarjeta ha rechazado el PIN. Queda un solo intento: un error más la bloqueará.",
+	WrongPINNowLocked:          "La tarjeta ha rechazado el PIN y se ha bloqueado: desbloquéala con su PUK.",
+	BatchNotTried:              "no se ha intentado, para no gastar otro intento de PIN",
 	FormatPAdESLabel:           "PDF firmado (PAdES): se abre en cualquier lector",
 	FormatCAdESLabel:           "Sobre .p7m (CAdES): el que piden algunas administraciones",
 	FormatXAdESLabel:           "XML firmado (XAdES)",
@@ -431,6 +473,26 @@ var italian = Catalogue{
 	StandingUntrusted:          "Nessuna lista di fiducia garantisce questo emittente: la firma sarà tecnicamente corretta, ma senza valore legale.",
 	StandingExpired:            "Scaduto il %s: non può più firmare.",
 	CertificateExpiresSoon:     "Scade tra %d giorni.",
+	KeyFromFile:                "File",
+	KeyFromCard:                "Carta",
+	SearchCards:                "Cerca carte",
+	CardsSearching:             "Ricerca delle carte nei lettori…",
+	NoCards:                    "Nessuna carta con certificati nei lettori. Inserisci la carta e premi «Cerca carte».",
+	CardPlaceholder:            "Scegli il certificato della carta",
+	CardSigningRole:            "per firmare",
+	CardOtherRole:              "altro uso",
+	CardWhere:                  "Sulla carta «%s», %s.",
+	PINPlaceholder:             "PIN della carta",
+	PINPadHint:                 "Questo lettore chiede il PIN sulla propria tastiera al momento della firma.",
+	PINCountLow:                "È già stato inserito un PIN errato: restano pochi tentativi prima che la carta si blocchi.",
+	PINFinalTry:                "Resta un solo tentativo: un altro PIN errato bloccherà la carta.",
+	CardLocked:                 "La carta è bloccata: sbloccala con il PUK.",
+	PINExpired:                 "La carta chiede di cambiare il PIN prima di firmare.",
+	MissingPIN:                 "Scrivi il PIN della carta.",
+	WrongPIN:                   "La carta ha rifiutato il PIN. Non è stato firmato nulla.",
+	WrongPINFinalTry:           "La carta ha rifiutato il PIN. Resta un solo tentativo: un altro errore la bloccherà.",
+	WrongPINNowLocked:          "La carta ha rifiutato il PIN e si è bloccata: sbloccala con il PUK.",
+	BatchNotTried:              "non tentato, per non sprecare un altro tentativo di PIN",
 	FormatPAdESLabel:           "PDF firmato (PAdES): si apre con qualsiasi lettore",
 	FormatCAdESLabel:           "Busta .p7m (CAdES): quella richiesta da molti uffici",
 	FormatXAdESLabel:           "XML firmato (XAdES)",
@@ -579,6 +641,26 @@ var english = Catalogue{
 	StandingUntrusted:          "No trusted list vouches for this issuer: the signature will be technically sound but carry no legal weight.",
 	StandingExpired:            "Expired on %s: it can no longer sign.",
 	CertificateExpiresSoon:     "Expires in %d days.",
+	KeyFromFile:                "File",
+	KeyFromCard:                "Smart card",
+	SearchCards:                "Look for cards",
+	CardsSearching:             "Looking for cards in the readers…",
+	NoCards:                    "No card with certificates is in the readers. Insert the card and press “Look for cards”.",
+	CardPlaceholder:            "Choose the card's certificate",
+	CardSigningRole:            "for signing",
+	CardOtherRole:              "other use",
+	CardWhere:                  "On the card “%s”, %s.",
+	PINPlaceholder:             "Card PIN",
+	PINPadHint:                 "This reader asks for the PIN on its own keypad when you sign.",
+	PINCountLow:                "A wrong PIN has already been entered: few attempts are left before the card locks.",
+	PINFinalTry:                "One attempt left: one more wrong PIN locks the card.",
+	CardLocked:                 "The card is locked: unlock it with its PUK.",
+	PINExpired:                 "The card asks for its PIN to be changed before it signs.",
+	MissingPIN:                 "Type the card's PIN.",
+	WrongPIN:                   "The card refused the PIN. Nothing was signed.",
+	WrongPINFinalTry:           "The card refused the PIN. One attempt left: one more mistake locks it.",
+	WrongPINNowLocked:          "The card refused the PIN and is now locked: unlock it with its PUK.",
+	BatchNotTried:              "not tried, so no other PIN attempt was spent",
 	FormatPAdESLabel:           "Signed PDF (PAdES): opens in any reader",
 	FormatCAdESLabel:           ".p7m envelope (CAdES): what some offices require",
 	FormatXAdESLabel:           "Signed XML (XAdES)",

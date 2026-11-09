@@ -73,6 +73,13 @@ type formFixture struct {
 
 func newFormFixture(t *testing.T, reader application.CertificateReader) formFixture {
 	t.Helper()
+	return newFormFixtureWithCards(t, reader, &scriptedCards{})
+}
+
+// newFormFixtureWithCards is newFormFixture with the cards in the readers
+// scripted too.
+func newFormFixtureWithCards(t *testing.T, reader application.CertificateReader, cards *scriptedCards) formFixture {
+	t.Helper()
 	test.NewTempApp(t)
 	// As main.go does before any widget exists.
 	InstallTranslations(messaging.Spanish)
@@ -82,9 +89,14 @@ func newFormFixture(t *testing.T, reader application.CertificateReader) formFixt
 	desktop := newDesktop(window, messaging.For(messaging.Spanish), "trebaruna")
 	desktop.application = application.NewSignFromDesktop(signer, func(string) bool { return true })
 	desktop.inspect = application.NewInspectCertificate(reader)
+	desktop.cards = application.NewListCards(cards)
 	desktop.preview = application.NewPreviewPage(blankRenderer{}, application.InkFinder{})
 	window.SetContent(desktop.withTabs(desktop.buildContent("")))
 	window.Resize(fyne.NewSize(1220, 800))
+	// The work the form starts runs in line: the test driver runs fyne.Do on
+	// the calling goroutine, so nothing may still be running when a test ends.
+	desktop.form.run, desktop.form.cards.run, desktop.pages.run = inLine, inLine, inLine
+	desktop.form.pause = 0
 	return formFixture{desktop: desktop, signer: signer}
 }
 

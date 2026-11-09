@@ -31,6 +31,7 @@ import (
 	"codeberg.org/simplicer/trebaruna/src/desktop/application"
 	"codeberg.org/simplicer/trebaruna/src/desktop/domain"
 	"codeberg.org/simplicer/trebaruna/src/desktop/messaging"
+	signing "codeberg.org/simplicer/trebaruna/src/signing/domain"
 	reportmessaging "codeberg.org/simplicer/trebaruna/src/verification/messaging"
 )
 
@@ -62,6 +63,16 @@ func TestScreenshots(t *testing.T) {
 		desktop.form.afterSign.Show()
 		desktop.form.report(fmt.Sprintf(desktop.messages.SignedAs, "contratto-di-locazione_signed.pdf"), widget.SuccessImportance)
 		capture(t, window, filepath.Join(directory, fmt.Sprintf("signed-%s.png", language)))
+
+		// The card source, with a card that already refused a PIN once.
+		desktop.form.cards.list = application.NewListCards(&scriptedCards{
+			listings: [][]domain.CardCertificate{identityCard(signing.PINCountLow)},
+		})
+		desktop.form.keySource.SetSelected(desktop.messages.KeyFromCard)
+		waitFor(t, func() bool { return desktop.form.summary != nil })
+		desktop.form.cards.pin.SetText("123456")
+		capture(t, window, filepath.Join(directory, fmt.Sprintf("card-%s.png", language)))
+		desktop.form.keySource.SetSelected(desktop.messages.KeyFromFile)
 
 		tabs := window.Content().(*container.AppTabs)
 		tabs.SelectIndex(1)

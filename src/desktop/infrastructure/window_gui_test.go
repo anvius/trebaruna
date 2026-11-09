@@ -85,6 +85,7 @@ func verificationFor(t *testing.T) *verificationTab {
 	test.NewTempApp(t)
 	tab := newVerificationTab(test.NewTempWindow(t, nil), messaging.For(messaging.Spanish),
 		reportmessaging.For("es"), DefaultPalette(), "trebaruna")
+	tab.background = inLine
 	tab.content()
 	return tab
 }

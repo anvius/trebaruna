@@ -16,6 +16,7 @@ import (
 
 	"codeberg.org/simplicer/trebaruna/src/desktop/application"
 	"codeberg.org/simplicer/trebaruna/src/desktop/domain"
+	signing "codeberg.org/simplicer/trebaruna/src/signing/domain"
 
 	transparencydomain "codeberg.org/simplicer/trebaruna/src/transparency/domain"
 )
@@ -36,6 +37,7 @@ func (s CommandLineSigner) Sign(ctx context.Context, intent domain.SigningIntent
 	// local user can list command lines, only the owner can read the environment.
 	command.Env = append(os.Environ(),
 		"TREBARUNA_PASSPHRASE="+intent.Key.Passphrase,
+		"TREBARUNA_PIN="+intent.Card.PIN,
 		"TREBARUNA_TSA_PASS="+intent.TimestampPassword,
 	)
 	command.Stdout = &stdout
@@ -44,6 +46,9 @@ func (s CommandLineSigner) Sign(ctx context.Context, intent domain.SigningIntent
 	if err := command.Run(); err != nil {
 		if locked(stderr.String()) {
 			return domain.Receipt{}, domain.Problem{Code: domain.ProblemLockedCertificate}
+		}
+		if problem, refused := cardRefusal(stderr.String()); refused {
+			return domain.Receipt{}, problem
 		}
 		return domain.Receipt{}, errors.New(meaningfulLine(stderr.String(), stdout.String(), err))
 	}
@@ -102,9 +107,14 @@ func signArguments(intent domain.SigningIntent) []string {
 		arguments = append(arguments, "--countersign", "leaves")
 	}
 
-	if strings.HasSuffix(strings.ToLower(intent.Key.Path), ".pem") {
+	switch {
+	case intent.Card.Chosen():
+		// The label narrows the readers and the fingerprint names the very
+		// certificate the person picked, so the command never chooses for them.
+		arguments = append(arguments, "--token", intent.Card.Token, "--certificate", intent.Card.Fingerprint)
+	case strings.HasSuffix(strings.ToLower(intent.Key.Path), ".pem"):
 		arguments = append(arguments, "--pem", intent.Key.Path)
-	} else {
+	default:
 		arguments = append(arguments, "--p12", intent.Key.Path)
 	}
 	if intent.Level.NeedsRevocation() {
@@ -145,6 +155,29 @@ func locked(stderr string) bool {
 	lower := strings.ToLower(stderr)
 	return strings.Contains(lower, "passphrase does not open") ||
 		strings.Contains(lower, "decryption password incorrect")
+}
+
+// cardRefusal recognises the card's refusals in the words the signing domain
+// gives them, which the command prints unchanged.
+func cardRefusal(stderr string) (domain.Problem, bool) {
+	switch {
+	case strings.Contains(stderr, signing.ErrWrongPIN.Error()):
+		problem := domain.Problem{Code: domain.ProblemWrongPIN}
+		switch {
+		case strings.Contains(stderr, signing.ErrLastAttempt.Error()):
+			problem.Detail = string(signing.PINFinalTry)
+		case strings.Contains(stderr, signing.ErrCardLocked.Error()):
+			problem.Detail = string(signing.PINLocked)
+		}
+		return problem, true
+	case strings.Contains(stderr, signing.ErrCardLocked.Error()):
+		return domain.Problem{Code: domain.ProblemCardLocked}, true
+	case strings.Contains(stderr, signing.ErrPINExpired.Error()):
+		return domain.Problem{Code: domain.ProblemPINExpired}, true
+	case strings.Contains(stderr, signing.ErrPINMissing.Error()):
+		return domain.Problem{Code: domain.ProblemMissingPIN}, true
+	}
+	return domain.Problem{}, false
 }
 
 // meaningfulLine picks the line a user can act on: the command explains its

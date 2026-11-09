@@ -14,9 +14,12 @@ import (
 type SigningIntent struct {
 	DocumentPath string
 	Key          CertificateFile
-	Format       SignatureFormat
-	Level        SignatureLevel
-	Seal         SealChoice
+	// Card is the certificate on a card to sign with; when chosen it replaces
+	// Key.
+	Card   CardKey
+	Format SignatureFormat
+	Level  SignatureLevel
+	Seal   SealChoice
 	// Invisible signs a PDF without any mark on its pages; Seal is ignored.
 	Invisible    bool
 	TimestampURL string
@@ -40,7 +43,11 @@ func (i SigningIntent) Validate() error {
 	if strings.TrimSpace(i.DocumentPath) == "" {
 		return Problem{Code: ProblemMissingDocument}
 	}
-	if strings.TrimSpace(i.Key.Path) == "" {
+	if i.Card.Chosen() {
+		if err := i.Card.problem(); err != nil {
+			return err
+		}
+	} else if strings.TrimSpace(i.Key.Path) == "" {
 		return Problem{Code: ProblemMissingKey}
 	}
 	if i.Level.NeedsTimestamp() && strings.TrimSpace(i.TimestampURL) == "" {
@@ -145,7 +152,30 @@ const (
 	// ProblemLockedCertificate means the passphrase does not open the
 	// certificate file.
 	ProblemLockedCertificate ProblemCode = "locked_certificate"
+
+	// ProblemMissingPIN means a card was chosen and its PIN not typed.
+	ProblemMissingPIN ProblemCode = "missing_pin"
+
+	// ProblemWrongPIN means the card refused the PIN and counted an attempt.
+	// Detail carries what the card says about the next one.
+	ProblemWrongPIN ProblemCode = "wrong_pin"
+
+	// ProblemCardLocked means the card takes no PIN until its PUK unlocks it.
+	ProblemCardLocked ProblemCode = "card_locked"
+
+	// ProblemPINExpired means the card wants its PIN set or changed first.
+	ProblemPINExpired ProblemCode = "pin_expired"
 )
+
+// StopsCard reports whether the problem forbids trying the card again with
+// the same PIN: in a batch, the next document would spend another attempt.
+func (p Problem) StopsCard() bool {
+	switch p.Code {
+	case ProblemMissingPIN, ProblemWrongPIN, ProblemCardLocked, ProblemPINExpired:
+		return true
+	}
+	return false
+}
 
 // Problem is a translatable validation error.
 type Problem struct {

@@ -46,6 +46,8 @@ type pagePane struct {
 	document string
 	page     int
 	identity SealIdentity
+	// run starts the render off the UI thread.
+	run background
 	// loading counts renders, so a slow render of a document the user has
 	// already replaced does not overwrite the newer one.
 	loading int
@@ -61,6 +63,7 @@ func newPagePane(messages messaging.Catalogue, palette Palette, preview *applica
 		hint:      widget.NewLabel(""),
 		page:      1,
 		identity:  SealIdentity{Name: messages.SealHolderPlaceholder},
+		run:       offThread,
 	}
 	pane.hint.Wrapping = fyne.TextWrapWord
 	pane.pageLabel.Alignment = fyne.TextAlignCenter
@@ -153,7 +156,7 @@ func (p *pagePane) render() {
 	ticket, document, page := p.loading, p.document, p.page
 	p.hint.SetText(p.messages.RenderingMessage)
 
-	go func() {
+	p.run(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 		defer cancel()
 
@@ -173,7 +176,7 @@ func (p *pagePane) render() {
 			}
 			p.present(result, decoded)
 		})
-	}()
+	})
 }
 
 // failed degrades to the signer's default corner: a missing renderer must

@@ -32,6 +32,7 @@ import (
 // the same TSA for years; passphrases and passwords never are.
 const (
 	preferenceCertificate = "certificate.path"
+	preferenceKeySource   = "certificate.source"
 	preferenceTimestamp   = "timestamp.url"
 	preferenceTSAUser     = "timestamp.user"
 	preferenceLevel       = "signature.level"
@@ -50,6 +51,7 @@ type signForm struct {
 	preferences fyne.Preferences
 	signing     *application.SignFromDesktop
 	inspect     *application.InspectCertificate
+	cards       *cardSource
 	pages       *pagePane
 	// onCheck hands a signed file to the verification tab.
 	onCheck func(path string)
@@ -67,8 +69,14 @@ type signForm struct {
 	summary     *domain.CertificateSummary
 	reading     int
 	debounce    *time.Timer
+	// run starts background work; pause is the wait after typing (zero: read
+	// at once).
+	run   background
+	pause time.Duration
 
 	documentRow    *fileRow
+	keySource      *widget.RadioGroup
+	fileSource     *fyne.Container
 	certificateRow *fileRow
 	passphrase     *widget.Entry
 	holder         *widget.Label
@@ -99,12 +107,14 @@ func newSignForm(
 	preferences fyne.Preferences,
 	signing *application.SignFromDesktop,
 	inspect *application.InspectCertificate,
+	cards *application.ListCards,
 	pages *pagePane,
 ) *signForm {
 	form := &signForm{
 		window: window, m: m, palette: palette, preferences: preferences,
 		signing: signing, inspect: inspect, pages: pages,
 		format: domain.FormatPAdES,
+		run:    offThread, pause: typingPause,
 	}
 
 	form.documentRow = newFileRow(m.ChooseDocument, m.ChangeButton, m.DropHint, form.pickDocument)
@@ -114,6 +124,15 @@ func newSignForm(
 	form.passphrase.SetPlaceHolder(m.PassphrasePlaceholder)
 	form.passphrase.OnChanged = func(string) { form.readCertificateSoon() }
 	form.passphrase.OnSubmitted = func(string) { form.readCertificate() }
+	form.fileSource = container.NewVBox(form.certificateRow.object(), form.passphrase)
+
+	// A card is offered next to the file, not in a menu: the Spanish DNIe and
+	// the Italian signature cards are how most people hold their certificate.
+	form.cards = newCardSource(m, cards, preferences, form.cardChosen, form.noCertificate)
+	form.cards.object().Hide()
+	form.keySource = widget.NewRadioGroup([]string{m.KeyFromFile, m.KeyFromCard}, func(string) { form.keySourceChanged() })
+	form.keySource.Horizontal = true
+	form.keySource.Required = true
 
 	form.holder = widget.NewLabelWithStyle("", fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
 	form.holder.Wrapping = fyne.TextWrapWord
@@ -163,6 +182,11 @@ func newSignForm(
 	)
 	form.afterSign.Hide()
 
+	if preferences.String(preferenceKeySource) == "card" {
+		form.keySource.SetSelected(m.KeyFromCard)
+		return form
+	}
+	form.keySource.SetSelected(m.KeyFromFile)
 	if remembered := preferences.String(preferenceCertificate); remembered != "" && fileExists(remembered) {
 		form.setCertificate(remembered)
 	}
@@ -178,8 +202,9 @@ func (f *signForm) object() fyne.CanvasObject {
 		f.step(1, m.StepDocument),
 		f.documentRow.object(),
 		f.step(2, m.StepCertificate),
-		f.certificateRow.object(),
-		f.passphrase,
+		f.keySource,
+		f.fileSource,
+		f.cards.object(),
 		card,
 		f.step(3, m.StepSignature),
 		f.formatChoice,
@@ -230,7 +255,7 @@ func (f *signForm) setDocument(path string) {
 	f.batch = nil
 	f.document = path
 	f.fingerprint = ""
-	go f.measure(path)
+	f.run(func() { f.measure(path) })
 	f.signedPath = ""
 	f.afterSign.Hide()
 	f.status.SetText("")
@@ -359,6 +384,9 @@ func (f *signForm) pickCertificate() {
 // setCertificate adopts a certificate file and reads it right away: a PEM or
 // an unprotected P12 needs no passphrase.
 func (f *signForm) setCertificate(path string) {
+	if f.keySource.Selected != f.m.KeyFromFile {
+		f.keySource.SetSelected(f.m.KeyFromFile)
+	}
 	f.certificate = path
 	f.certificateRow.show(path, "")
 	f.preferences.SetString(preferenceCertificate, path)
@@ -371,12 +399,16 @@ func (f *signForm) readCertificateSoon() {
 	if f.debounce != nil {
 		f.debounce.Stop()
 	}
-	f.debounce = time.AfterFunc(600*time.Millisecond, func() { fyne.Do(f.readCertificate) })
+	if f.pause == 0 {
+		f.readCertificate()
+		return
+	}
+	f.debounce = time.AfterFunc(f.pause, func() { fyne.Do(f.readCertificate) })
 }
 
 // readCertificate fills the certificate card from the certificate itself.
 func (f *signForm) readCertificate() {
-	if f.certificate == "" {
+	if f.certificate == "" || f.usesCard() {
 		return
 	}
 	f.reading++
@@ -384,7 +416,7 @@ func (f *signForm) readCertificate() {
 	file := domain.CertificateFile{Path: f.certificate, Passphrase: f.passphrase.Text}
 	f.showStanding(f.m.CertificateReading, widget.LowImportance)
 
-	go func() {
+	f.run(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 		summary, err := f.inspect.Execute(ctx, file)
@@ -398,14 +430,11 @@ func (f *signForm) readCertificate() {
 			}
 			f.certificateRead(summary)
 		})
-	}()
+	})
 }
 
 func (f *signForm) certificateFailed(err error, withoutPassphrase bool) {
-	f.summary = nil
-	f.holder.SetText("")
-	f.holderDetails.SetText("")
-	f.pages.setIdentity(SealIdentity{})
+	f.clearCertificate()
 
 	if problem, ok := err.(domain.Problem); ok && problem.Code == domain.ProblemLockedCertificate {
 		// An empty passphrase on a protected file is the normal first state,
@@ -454,6 +483,66 @@ func (f *signForm) certificateRead(summary domain.CertificateSummary) {
 	}
 	// Last, so a summary on record means the whole card has been filled.
 	f.summary = &summary
+}
+
+// clearCertificate empties the certificate card and the seal's identity.
+func (f *signForm) clearCertificate() {
+	f.summary = nil
+	f.holder.SetText("")
+	f.holderDetails.SetText("")
+	f.pages.setIdentity(SealIdentity{})
+}
+
+// noCertificate says why no certificate is chosen, in the verdict line.
+func (f *signForm) noCertificate(text string, importance widget.Importance) {
+	f.clearCertificate()
+	f.showStanding(text, importance)
+}
+
+// usesCard reports whether the key comes from a card.
+func (f *signForm) usesCard() bool { return f.keySource.Selected == f.m.KeyFromCard }
+
+// keySourceChanged swaps the file and the card halves of the step. A pending
+// file read is dropped: its answer would describe a certificate no longer in
+// use.
+func (f *signForm) keySourceChanged() {
+	f.reading++
+	f.clearCertificate()
+	f.showStanding("", widget.LowImportance)
+	if f.usesCard() {
+		f.preferences.SetString(preferenceKeySource, "card")
+		f.fileSource.Hide()
+		f.cards.object().Show()
+		f.cards.refresh()
+		return
+	}
+	f.preferences.SetString(preferenceKeySource, "file")
+	f.cards.object().Hide()
+	f.fileSource.Show()
+	f.readCertificate()
+}
+
+// cardChosen fills the certificate card from the card's certificate: the
+// listing already carries the holder and the issuer's standing.
+func (f *signForm) cardChosen(certificate domain.CardCertificate) {
+	f.certificateRead(certificate.Summary)
+}
+
+// keyIntent puts the key the step describes into the intent.
+func (f *signForm) keyIntent(intent *domain.SigningIntent) {
+	if f.usesCard() {
+		intent.Card = f.cards.key()
+		return
+	}
+	intent.Key = domain.CertificateFile{Path: f.certificate, Passphrase: f.passphrase.Text}
+}
+
+// cardRefused reacts to a PIN the card did not take: the PIN is cleared and
+// the cards read again, so the attempts left show before the next try.
+func (f *signForm) cardRefused(err error) {
+	if problem, ok := err.(domain.Problem); ok && problem.StopsCard() && f.usesCard() {
+		f.cards.refused()
+	}
 }
 
 // showStanding sets the verdict line under the certificate.
@@ -557,10 +646,17 @@ func (f *signForm) signBatch(base domain.SigningIntent) {
 	f.signButton.Disable()
 	f.afterSign.Hide()
 
-	go func() {
+	f.run(func() {
 		var failures []string
 		var signed []domain.Receipt
+		var refusal error
 		for index, document := range documents {
+			if refusal != nil {
+				// The card refused the PIN: the next document would spend another
+				// of its few attempts with the same PIN.
+				failures = append(failures, filepath.Base(document)+": "+f.m.BatchNotTried)
+				continue
+			}
 			fyne.Do(func() { f.report(fmt.Sprintf(f.m.BatchProgress, index+1, len(documents)), widget.LowImportance) })
 			intent := base
 			intent.DocumentPath = document
@@ -570,6 +666,9 @@ func (f *signForm) signBatch(base domain.SigningIntent) {
 			cancel()
 			if err != nil {
 				failures = append(failures, filepath.Base(document)+": "+translate(err, f.m))
+				if problem, ok := err.(domain.Problem); ok && problem.StopsCard() {
+					refusal = err
+				}
 				continue
 			}
 			signed = append(signed, receipt)
@@ -598,8 +697,11 @@ func (f *signForm) signBatch(base domain.SigningIntent) {
 				f.afterSign.Show()
 			}
 			f.report(message, importance)
+			if refusal != nil {
+				f.cardRefused(refusal)
+			}
 		})
-	}()
+	})
 }
 
 // ---- signing ----
@@ -609,7 +711,6 @@ func (f *signForm) sign() {
 
 	intent := domain.SigningIntent{
 		DocumentPath:      f.document,
-		Key:               domain.CertificateFile{Path: f.certificate, Passphrase: f.passphrase.Text},
 		Format:            f.format,
 		Level:             f.selectedLevel(),
 		Seal:              domain.SealChoice{Page: 1},
@@ -619,6 +720,7 @@ func (f *signForm) sign() {
 		Reason:            strings.TrimSpace(f.reason.Text),
 		Location:          strings.TrimSpace(f.location.Text),
 	}
+	f.keyIntent(&intent)
 	switch {
 	case f.format.HasVisibleSeal() && f.invisible.Checked:
 		intent.Invisible = true
@@ -645,7 +747,7 @@ func (f *signForm) sign() {
 	f.afterSign.Hide()
 	f.report(f.m.SigningMessage, widget.LowImportance)
 
-	go func() {
+	f.run(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 		defer cancel()
 		receipt, err := f.signing.Execute(ctx, intent)
@@ -654,6 +756,7 @@ func (f *signForm) sign() {
 			f.signButton.Enable()
 			if err != nil {
 				f.report(translate(err, f.m), widget.DangerImportance)
+				f.cardRefused(err)
 				return
 			}
 			f.preferences.SetString(preferenceLevel, string(intent.Level))
@@ -677,7 +780,7 @@ func (f *signForm) sign() {
 			f.report(message, importance)
 			f.afterSign.Show()
 		})
-	}()
+	})
 }
 
 func (f *signForm) report(text string, importance widget.Importance) {

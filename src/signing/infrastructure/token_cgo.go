@@ -76,7 +76,10 @@ func openToken(signer domain.Signer) (tokenContext, error) {
 	})
 	if err != nil {
 		if refused := pinRefusal(err); refused != nil {
-			return nil, fmt.Errorf("%w (%s)%s", refused, name, attemptsLeft(signer.PKCS11Module(), index))
+			if after := stateAfterRefusal(signer.PKCS11Module(), index); after != nil && !errors.Is(refused, after) {
+				return nil, fmt.Errorf("%w (%s): %w", refused, name, after)
+			}
+			return nil, fmt.Errorf("%w (%s)", refused, name)
 		}
 		return nil, fmt.Errorf(
 			"cannot open %s with module %s: %w\n"+
@@ -105,12 +108,13 @@ func pinRefusal(err error) error {
 	return nil
 }
 
-// attemptsLeft reads the card again after a refused PIN, so the message says
-// whether the next mistake locks it.
-func attemptsLeft(module string, index int) string {
+// stateAfterRefusal reads the card again after a refused PIN, so the message
+// says whether the next mistake locks it (ErrLastAttempt) or it just did
+// (ErrCardLocked).
+func stateAfterRefusal(module string, index int) error {
 	slots, err := inspectToken(module, "")
 	if err != nil {
-		return ""
+		return nil
 	}
 	for _, slot := range slots {
 		if slot.Index != index {
@@ -118,12 +122,12 @@ func attemptsLeft(module string, index int) string {
 		}
 		switch slot.PINState {
 		case domain.PINFinalTry:
-			return "; one more wrong PIN locks the card"
+			return domain.ErrLastAttempt
 		case domain.PINLocked:
-			return "; the card is now locked: unlock it with its PUK"
+			return domain.ErrCardLocked
 		}
 	}
-	return ""
+	return nil
 }
 
 // slotFor finds the reader whose card signs.

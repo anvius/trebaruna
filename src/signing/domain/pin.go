@@ -19,6 +19,10 @@ var (
 	// ErrPINMissing means no PIN was given for a card that needs one. Trying
 	// an empty PIN would spend an attempt for nothing.
 	ErrPINMissing = errors.New("the card needs its PIN")
+
+	// ErrLastAttempt accompanies a refused PIN when the card has one attempt
+	// left: the next mistake locks it.
+	ErrLastAttempt = errors.New("one more wrong PIN locks the card")
 )
 
 // StopsCard reports whether a card error forbids trying the card again in the

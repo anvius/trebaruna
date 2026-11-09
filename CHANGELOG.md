@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Desktop card source: step 2 offers **File** or **Card**. The card's
+  certificates are listed in full from `token --json` (no PIN), the signing one
+  chosen, with the card and reader named; the PIN state (attempts failed, last
+  attempt, locked, to be changed, keypad) is shown before typing; a locked card
+  or an empty PIN stops before the signer runs; a refused PIN is cleared and the
+  cards read again; a batch stops at the first refusal. The PIN travels in
+  `TREBARUNA_PIN`; the chosen certificate's fingerprint is remembered, never
+  the PIN. New use case `ListCards`; `ErrLastAttempt` names a refusal that
+  leaves one attempt.
+
 - Card PIN safety: the card's PIN state is read before any login (locked, to
   be changed, not set: refused without an attempt); an empty PIN is never sent
   except to a keypad reader; a refused PIN (`ErrWrongPIN`, `ErrCardLocked`,

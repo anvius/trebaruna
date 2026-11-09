@@ -47,7 +47,7 @@ Nothing the document or the certificate already says is asked for.
 | Step | What you do | What the window fills in |
 |---|---|---|
 | **1 Document** | Choose any file, or drop it on the window | The formats that fit it, and the name the signed file will get |
-| **2 Certificate** | Choose a `.p12`, `.pfx` or `.pem`; type its passphrase | Holder, identifier, issuer, expiry, and whether a trusted list vouches for it |
+| **2 Certificate** | **File**: choose a `.p12`, `.pfx` or `.pem` and type its passphrase. **Card**: pick a certificate of the card in the reader and type its PIN | Holder, identifier, issuer, expiry, and whether a trusted list vouches for it; for a card, which certificate signs and how many PIN attempts are at stake |
 | **3 Signature** | Pick signed PDF, `.p7m` envelope or detached `.p7s`; for a `.p7m`/`.p7s`, add a parallel signature, counter-sign, or wrap it again | The seal position, from where it sits on the page |
 
 The certificate is read as soon as the passphrase is typed, so a wrong
@@ -64,8 +64,36 @@ selectable so it can be compared elsewhere. The signer reports the fingerprint
 of what it actually signed; if the two differ because the file changed in
 between, the result says so and names the version that was signed.
 
-The certificate path, the level and the timestamp authority are remembered
-between sessions. The passphrase never is.
+The certificate path (or, for a card, the fingerprint of the certificate
+chosen), the level and the timestamp authority are remembered between sessions.
+The passphrase and the PIN never are.
+
+### Signing with a card
+
+Choose **Card** in step 2. The readers are read without the PIN, so looking at
+the cards never spends an attempt, and every certificate on them is listed in
+full (a list, not a drop-down that would cut a long name). The certificate the
+card signs with — the only one, or the only one that declares non-repudiation,
+such as the signature certificate of a Spanish DNIe — is chosen already; when
+two certificates name the same holder, each says whether it is the one *for
+signing*. Under the list, the card and the reader it sits in.
+
+What the card says about its PIN is shown before you type it:
+
+- *A wrong PIN has already been entered: few attempts are left before the card
+  locks.*
+- *One attempt left: one more wrong PIN locks the card.*
+- *The card is locked: unlock it with its PUK.* — the PIN field is disabled and
+  **Sign** refuses without trying.
+- a reader with its own keypad asks for the PIN there, and the field is disabled.
+
+If the card refuses the PIN, nothing is signed, the PIN field is cleared and the
+cards are read again, so the attempts left are on screen before the next try. In
+a batch, the remaining documents are reported as *not tried*: the same PIN is
+never sent twice. The PIN reaches the signer in its environment, like the
+passphrase. **Look for cards** reads the readers again after inserting a card.
+Choosing a certificate file (File → Choose certificate…, or dropping one)
+switches the step back to **File**.
 
 **More options** holds what is rarely changed: an invisible signature (signed
 PDF only; the page pane then says no seal will be drawn), the level (basic, with

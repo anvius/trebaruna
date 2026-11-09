@@ -95,6 +95,7 @@ check-gui:
 	fi
 	CGO_ENABLED=1 $(GO) vet -tags gui ./src/...
 	CGO_ENABLED=1 $(GO) build -tags gui -o /dev/null ./src/entrypoint/desktop
+	CGO_ENABLED=1 $(GO) test -tags gui -race -count=1 ./src/desktop/...
 
 package-desktop:
 	bash packaging/package-desktop.sh $(shell $(GO) env GOOS)
