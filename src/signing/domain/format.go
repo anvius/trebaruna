@@ -29,10 +29,19 @@ const (
 	// XAdES signature over every stream of the package, in
 	// META-INF/documentsignatures.xml.
 	Odf Format = "odf"
+
+	// Ooxml signs an Office Open XML file (.docx, .xlsx, .pptx) inside
+	// itself (ECMA-376 Part 2): a signature part whose Manifest covers the
+	// package, with XAdES properties, as Microsoft Office writes it.
+	Ooxml Format = "ooxml"
 )
 
 // IsXML reports an XML signature: XAdES or plain XMLDSig.
 func (f Format) IsXML() bool { return f == Xades || f == Xmldsig }
+
+// IsOfficePackage reports an office document signed inside itself: it
+// stays the document it was, with the signature in its package.
+func (f Format) IsOfficePackage() bool { return f == Odf || f == Ooxml }
 
 // Extension is the file suffix the format produces, following the
 // convention observed in existing signing tools.
@@ -61,6 +70,8 @@ func (f Format) Standard() string {
 		return "W3C XML-Signature 1.1"
 	case Odf:
 		return "OASIS ODF 1.2 Part 3, XAdES (ETSI EN 319 132-1)"
+	case Ooxml:
+		return "ECMA-376 Part 2 (OPC), XAdES (ETSI EN 319 132-1)"
 	}
 	return ""
 }
@@ -68,10 +79,10 @@ func (f Format) Standard() string {
 // ParseFormat reads a format from its external name.
 func ParseFormat(raw string) (Format, error) {
 	switch Format(raw) {
-	case Cades, Pades, Xades, Xmldsig, Odf:
+	case Cades, Pades, Xades, Xmldsig, Odf, Ooxml:
 		return Format(raw), nil
 	}
-	return "", fmt.Errorf("unknown signature format %q: use cades, pades, xades, xmldsig or odf", raw)
+	return "", fmt.Errorf("unknown signature format %q: use cades, pades, xades, xmldsig, odf or ooxml", raw)
 }
 
 // Level is the AdES baseline level. It determines whether a timestamp

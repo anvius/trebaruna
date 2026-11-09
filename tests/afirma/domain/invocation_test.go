@@ -131,7 +131,7 @@ func TestRequestsAreValidatedLikeAutoFirma(t *testing.T) {
 
 	cases := map[string]domain.FailureCode{
 		"afirma://sign?algorithm=SHA256withRSA":                                                            domain.Params,
-		"afirma://sign?format=OOXML&algorithm=SHA256withRSA":                                               domain.UnsupportedFormat,
+		"afirma://sign?format=PGP&algorithm=SHA256withRSA":                                                 domain.UnsupportedFormat,
 		"afirma://sign?format=CAdES&algorithm=sha256withrsa":                                               domain.Params,
 		"afirma://sign?format=CAdES&algorithm=SHA256&ver=5":                                                domain.UnsupportedProcedure,
 		"afirma://sign?format=CAdES&algorithm=SHA256&mcv=1.10":                                             domain.MinimumVersion,

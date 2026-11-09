@@ -70,6 +70,7 @@ type VerifyDocument struct {
 	xades DocumentExtractor
 	asic  DocumentExtractor
 	odf   DocumentExtractor
+	ooxml DocumentExtractor
 	trust TrustProvider
 	clock Clock
 	// revocation is nil until the caller asks for a network check.
@@ -97,6 +98,12 @@ func (u *VerifyDocument) WithAsic(asic DocumentExtractor) *VerifyDocument {
 // WithOdf attaches the OpenDocument verifier.
 func (u *VerifyDocument) WithOdf(odf DocumentExtractor) *VerifyDocument {
 	u.odf = odf
+	return u
+}
+
+// WithOoxml attaches the Office Open XML verifier.
+func (u *VerifyDocument) WithOoxml(ooxml DocumentExtractor) *VerifyDocument {
+	u.ooxml = ooxml
 	return u
 }
 
@@ -220,6 +227,8 @@ func (u *VerifyDocument) extractorFor(format string) DocumentExtractor {
 		return u.asic
 	case "odf":
 		return u.odf
+	case "ooxml":
+		return u.ooxml
 	}
 	return nil
 }
@@ -570,6 +579,12 @@ func detectFormat(path, explicit string) string {
 	for _, suffix := range []string{".odt", ".ods", ".odp", ".odg", ".odf", ".odm", ".ott", ".ots", ".otp", ".otg"} {
 		if hasSuffix(path, suffix) {
 			return "odf"
+		}
+	}
+	for _, suffix := range []string{".docx", ".docm", ".dotx", ".dotm", ".xlsx", ".xlsm", ".xltx", ".xltm",
+		".pptx", ".pptm", ".potx", ".potm", ".ppsx", ".ppsm"} {
+		if hasSuffix(path, suffix) {
+			return "ooxml"
 		}
 	}
 	return "unknown"

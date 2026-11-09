@@ -54,7 +54,7 @@ user seeing what is signed and where anything goes.
 | ASiC-E signed in one step (`sign a b c --asic e`): one XML signature referencing every document, or a CAdES signature over an `ASiCManifest` of their digests | built |
 | Handwritten-signature image next to the certificate data (ADR-0012) | planned (G3) |
 | ODF signatures (ADR-0015): `sign file.odt` signs inside the package as LibreOffice does, XAdES over every stream (mimetype and manifest included); added signatures keep the earlier ones; LibreOffice 26.2 reports them valid; verify reads ODF, LibreOffice's included | built |
-| OOXML signatures (ADR-0015) | planned (G2) |
+| OOXML signatures (ADR-0015): `sign file.docx` (`.xlsx`, `.pptx`, macro-enabled files and templates) signs inside the package as Microsoft Office does, a signature part whose Manifest covers every part but the document properties, the relationships through the RelationshipTransform; added signatures keep the earlier ones; LibreOffice 26.2 reports them valid, LibreOffice's and Office's earlier ones included; verify reads OOXML, Office's and LibreOffice's signatures included, and names parts added later | built |
 
 ### Keys
 

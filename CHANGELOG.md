@@ -8,6 +8,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Office Open XML signatures (ADR-0015): `sign offerta.docx` (and `.xlsx`,
+  `.pptx`, macro-enabled files, templates; `--format ooxml`) signs inside
+  the file as Microsoft Office does.
+  - One signature part under `_xmlsignatures`, Office's objects and XAdES
+    properties; its Manifest covers every part but the document
+    properties, the relationships through the RelationshipTransform.
+  - A file with no signature yet gets its relationships written compactly,
+    so Office and LibreOffice (whose libxmlsec reads the text between
+    relationships) agree on the digest. A signed file keeps its bytes, and
+    a new signature follows the form the earlier ones used.
+  - `verify` reads OOXML files, Office's and LibreOffice's signatures
+    included: every changed part is named, parts added later too, and
+    LibreOffice's form of the relationships is told. An unsigned file reads
+    as having no signatures.
+  - afirma:// `OOXML` and `OOXML (Office Open XML)`. The desktop offers it
+    first for Word, Excel and PowerPoint files, and the Check tab accepts
+    them.
+  - Judged with LibreOffice 26.2.6.3 through UNO: ours, two of ours, ours
+    added to LibreOffice's and to Office 2010's are all valid; a changed
+    part is not. xmlsec1 validates the XML signature; the transform matches
+    seven files Office signed (Apache POI's test data).
+
 - OpenDocument signatures (ADR-0015): `sign acta.odt` (and `.ods`, `.odp`,
   `.odg`, templates; `--format odf`) signs inside the file as LibreOffice
   does.

@@ -55,8 +55,8 @@ func (d Document) SignedName(format Format) string {
 
 	stem := strings.TrimSuffix(base, filepath.Ext(base))
 	extension := format.Extension()
-	if format == Odf {
-		// An OpenDocument file stays one, signed inside.
+	if format.IsOfficePackage() {
+		// An office document stays one, signed inside.
 		extension = filepath.Ext(base)
 	}
 	return filepath.Join(dir, stem+"_signed"+extension)
@@ -96,6 +96,8 @@ func (d Document) Supports(format Format) bool {
 		return d.Extension() == ".xml" || d.Extension() == ".xsd" || d.Extension() == ".svg"
 	case Odf:
 		return isOpenDocument(d.Extension())
+	case Ooxml:
+		return isOfficeOpenXML(d.Extension())
 	case Cades:
 		return true
 	}
@@ -122,8 +124,22 @@ func (d Document) InferFormat() Format {
 	if isOpenDocument(d.Extension()) {
 		return Odf
 	}
+	if isOfficeOpenXML(d.Extension()) {
+		return Ooxml
+	}
 	// Anything else is signed as a CMS container, which works for any bytes.
 	return Cades
+}
+
+// isOfficeOpenXML reports an Office Open XML suffix: Word, Excel and
+// PowerPoint documents, macro-enabled ones, templates and shows.
+func isOfficeOpenXML(extension string) bool {
+	switch extension {
+	case ".docx", ".docm", ".dotx", ".dotm", ".xlsx", ".xlsm", ".xltx", ".xltm",
+		".pptx", ".pptm", ".potx", ".potm", ".ppsx", ".ppsm":
+		return true
+	}
+	return false
 }
 
 // isOpenDocument reports an OpenDocument suffix: texts, spreadsheets,

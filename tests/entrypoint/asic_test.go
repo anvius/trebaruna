@@ -153,3 +153,33 @@ func TestSignAnOpenDocumentAndVerifyIt(t *testing.T) {
 		t.Error("an OpenDocument signature is never detached")
 	}
 }
+
+// TestSignAnOfficeDocumentAndVerifyIt: a Word file LibreOffice made is
+// signed inside itself, verifies, and takes a second signature.
+func TestSignAnOfficeDocumentAndVerifyIt(t *testing.T) {
+	key := writeProtectedP12(t, "segreto")
+	t.Setenv("TREBARUNA_PASSPHRASE", "segreto")
+	source, err := os.ReadFile(filepath.Join("..", "verification", "ooxml", "testdata", "unsigned.docx"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	document := writeDocument(t, "acta.docx", string(source))
+	if _, stderr, code := run("sign", document, "--p12", key); code != 0 {
+		t.Fatalf("exit %d: %s", code, stderr)
+	}
+	signed := strings.TrimSuffix(document, ".docx") + "_signed.docx"
+	if result := verifyJSON(t, signed); result.Signers[0].Integrity != "good" {
+		t.Errorf("verify: %+v", result.Signers)
+	}
+	if _, stderr, code := run("sign", signed, "--p12", key); code != 0 {
+		t.Fatalf("second signature: exit %d: %s", code, stderr)
+	}
+	twice := strings.TrimSuffix(signed, ".docx") + "_signed.docx"
+	stdout, _, _ := run("verify", twice, "--json")
+	if strings.Count(stdout, `"integrity": "good"`) != 2 {
+		t.Errorf("verify twice: %s", stdout)
+	}
+	if _, _, code := run("sign", document, "--p12", key, "--format", "ooxml", "--detached"); code == 0 {
+		t.Error("an Office Open XML signature is never detached")
+	}
+}

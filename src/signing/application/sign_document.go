@@ -26,11 +26,19 @@ type SignDocument struct {
 	containers ContainerWriter
 	// odf signs OpenDocument files inside themselves; nil without it.
 	odf OdfSigner
+	// ooxml signs Office Open XML files inside themselves; nil without it.
+	ooxml OoxmlSigner
 }
 
 // WithOdf lets the use case sign OpenDocument files.
 func (u *SignDocument) WithOdf(odf OdfSigner) *SignDocument {
 	u.odf = odf
+	return u
+}
+
+// WithOoxml lets the use case sign Office Open XML files.
+func (u *SignDocument) WithOoxml(ooxml OoxmlSigner) *SignDocument {
+	u.ooxml = ooxml
 	return u
 }
 
@@ -249,7 +257,7 @@ func (u *SignDocument) validate(request Request) error {
 	if err := request.Policy.FitsFormat(request.Format); err != nil {
 		return err
 	}
-	if len(request.ClaimedRoles) > 0 && request.Format != domain.Xades && request.Format != domain.Odf {
+	if len(request.ClaimedRoles) > 0 && request.Format != domain.Xades && !request.Format.IsOfficePackage() {
 		return fmt.Errorf("a claimed role goes in XAdES signatures, not %s", request.Format)
 	}
 	if (request.Cosign || request.Countersign != "") && request.Format != domain.Cades {
@@ -293,6 +301,13 @@ func (u *SignDocument) validate(request Request) error {
 		}
 		if request.detached() || request.Enveloping || request.Cosign || request.Countersign != "" {
 			return fmt.Errorf("an OpenDocument file is signed inside itself; sign the signed file again to add a signature")
+		}
+	case domain.Ooxml:
+		if u.ooxml == nil {
+			return fmt.Errorf("no Office Open XML adapter configured")
+		}
+		if request.detached() || request.Enveloping || request.Cosign || request.Countersign != "" {
+			return fmt.Errorf("an Office Open XML file is signed inside itself; sign the signed file again to add a signature")
 		}
 	default:
 		return fmt.Errorf("%w: %q", domain.ErrUnsupportedFormat, request.Format)
@@ -361,6 +376,8 @@ func (u *SignDocument) sign(ctx context.Context, request Request, content []byte
 		return u.xades.SignXades(ctx, u.xadesRequest(request, content))
 	case domain.Odf:
 		return u.odf.SignOdf(ctx, u.xadesRequest(request, content))
+	case domain.Ooxml:
+		return u.ooxml.SignOoxml(ctx, u.xadesRequest(request, content))
 	}
 
 	return nil, fmt.Errorf("%w: %q", domain.ErrUnsupportedFormat, request.Format)

@@ -136,6 +136,20 @@ func containsValue(values []string, wanted string) bool {
 	return false
 }
 
+// TestAnOfficeDocumentIsSignedInsideItselfFirst, named like the signer
+// names it.
+func TestAnOfficeDocumentIsSignedInsideItselfFirst(t *testing.T) {
+	for _, path := range []string{"/tmp/acta.docx", "/tmp/cuentas.XLSX", "/tmp/charla.pptx"} {
+		if formats := domain.FormatsFor(path); len(formats) == 0 || formats[0] != domain.FormatOOXML {
+			t.Errorf("formats for %s: %v", path, formats)
+		}
+	}
+	intent := domain.SigningIntent{DocumentPath: "/tmp/acta.docx", Format: domain.FormatOOXML}
+	if got := intent.OutputName(); got != "/tmp/acta_signed.docx" {
+		t.Errorf("output %q", got)
+	}
+}
+
 // TestAnOpenDocumentIsSignedInsideItselfFirst, named like the signer names it.
 func TestAnOpenDocumentIsSignedInsideItselfFirst(t *testing.T) {
 	formats := domain.FormatsFor("/tmp/acta.odt")

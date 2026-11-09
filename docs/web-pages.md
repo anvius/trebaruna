@@ -268,6 +268,8 @@ page names no variant, as AutoFirma; enveloped; and "XAdES Detached", the
 `AFIRMA` root holding `CONTENT` and the signature), XMLDSig in the same
 variants (no signed properties: a policy or a timestamp is refused, roles are
 left out as AutoFirma does), `ODF` (the document signed inside itself, as LibreOffice does),
+`OOXML` (a Word, Excel or PowerPoint file signed inside itself, as
+Microsoft Office does),
 `CAdES-ASiC-S` and `XAdES-ASiC-S` (the
 container, the data named `asicsFilename` or `dataobject.<extension>` as
 AutoFirma names it), and FacturaE (named, or recognised by `auto`: the invoice signed

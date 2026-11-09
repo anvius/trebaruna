@@ -71,7 +71,8 @@ type verifiedSigner struct {
 }
 
 // signedExtensions are the containers a signed document arrives in.
-var signedExtensions = []string{".pdf", ".p7m", ".p7s", ".xml", ".xsig", ".asice", ".asics", ".tsd", ".odt", ".ods", ".odp", ".odg"}
+var signedExtensions = []string{".pdf", ".p7m", ".p7s", ".xml", ".xsig", ".asice", ".asics", ".tsd", ".odt", ".ods", ".odp", ".odg",
+	".docx", ".xlsx", ".pptx"}
 
 // verificationTab is the second tab of the window.
 type verificationTab struct {

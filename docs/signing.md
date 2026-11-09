@@ -199,6 +199,26 @@ templates) are signed the same way; every level works.
 
 ---
 
+## Word, Excel and PowerPoint files
+
+`sign offerta.docx` signs inside the file, as Microsoft Office does: a
+signature part in `_xmlsignatures`, whose Manifest covers every part of the
+package but the document properties applications rewrite when they save.
+`offerta_signed.docx` opens in Word and in LibreOffice with the signature
+shown. `.xlsx`, `.pptx`, macro-enabled files and templates are signed the
+same way (`--format ooxml`); every level works.
+
+Signing a signed file adds a signature beside the earlier ones, Office's
+and LibreOffice's included. A file that has no signature yet gets its
+relationships parts written compactly first, as Office writes them, so
+that Office and LibreOffice agree on the digest (ADR-0015 tells why).
+
+`verify` reads them, names any part changed or added after the
+signature, and says when a signature digests the package's relationships
+the way LibreOffice does rather than as the standard says.
+
+---
+
 ## Remote signing (CSC)
 
 Some providers keep the key on their server and sign for you. trebaruna

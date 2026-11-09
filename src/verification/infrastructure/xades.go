@@ -48,6 +48,17 @@ type XadesVerifier struct {
 	// containerRoot, inside an ASiC container, is where references resolve:
 	// paths relative to the container's root, folders included, never out.
 	containerRoot string
+	// resolve, when set, resolves every reference to content outside the
+	// signature instead (a package's own rules).
+	resolve xmldsig.Resolver
+}
+
+// resolvingWith resolves the references to content outside the signature
+// with resolve.
+func (v *XadesVerifier) resolvingWith(resolve xmldsig.Resolver) *XadesVerifier {
+	clone := *v
+	clone.resolve = resolve
+	return &clone
 }
 
 // inContainer resolves references from the root of an unpacked container.
@@ -149,7 +160,11 @@ func (v *XadesVerifier) report(document *etree.Document, signature *etree.Elemen
 	embedded := extractCertificates(signature)
 
 	var used []string
-	err := validate(document, signature, certificate, v.beside(path, &used))
+	resolve := v.beside(path, &used)
+	if v.resolve != nil {
+		resolve = v.resolve
+	}
+	err := validate(document, signature, certificate, resolve)
 	if len(used) > 0 {
 		report.Findings = append(report.Findings, domain.Finding{
 			Code:    "content.detached",

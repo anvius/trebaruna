@@ -111,21 +111,8 @@ func idBeside(signature *etree.Element, name string) string {
 // signs SignedInfo. Formatting is never touched: re-indenting an element
 // changes its text nodes and therefore its digest.
 func (s *XadesSigner) SignXades(ctx context.Context, request application.XadesRequest) ([]byte, error) {
-	// XAdES-T needs a token over the signature value, which only exists after
-	// the signature is computed. Everything else is refused with its reason.
-	if request.Level.NeedsTimestamp() && request.TimestampURL == "" {
-		return nil, fmt.Errorf(
-			"%s for XAdES needs a timestamp authority: pass --tsa <url>",
-			request.Level,
-		)
-	}
-
-	// Accepting LTA and emitting B-T would report a level the file does not have.
-	// The archive timestamp covers a different input from the signature one and
-	// is built by its own function below.
-	if request.Level.Archival() && request.TimestampURL == "" {
-		return nil, fmt.Errorf(
-			"%s for XAdES needs a timestamp authority: pass --tsa <url>", request.Level)
+	if err := levelReady(request); err != nil {
+		return nil, err
 	}
 
 	keyPair, err := LoadKeyPair(request.Signer)
@@ -236,36 +223,8 @@ func (s *XadesSigner) SignXades(ctx context.Context, request application.XadesRe
 	}
 	signatureValueElement.SetText(base64.StdEncoding.EncodeToString(signatureValue))
 
-	// XAdES-T: the token seals the SignatureValue element, not the document. It
-	// lives in xades:UnsignedProperties, which is why it can be added after the
-	// signature exists at all.
-	if request.Level.NeedsTimestamp() {
-		if err := s.attachSignatureTimeStamp(ctx, signatureElement, request); err != nil {
-			return nil, err
-		}
-	}
-
-	// XAdES-LT: the revocation material goes into UnsignedSignatureProperties
-	// before the archive timestamp, because the archive timestamp must cover it.
-	if request.Level.EmbedsRevocation() {
-		if !request.EmbedRevocation {
-			return nil, fmt.Errorf(
-				"%s for XAdES needs embedded revocation and a source for it:\n"+
-					"    --level %s --online-revocation   query OCSP and attach the answers",
-				request.Level, request.Level)
-		}
-		if err := s.attachRevocationValues(ctx, signatureElement, keyPair); err != nil {
-			return nil, err
-		}
-	}
-
-	// XAdES-A: the archive timestamp covers every object of the signature,
-	// including the unsigned properties just written. It is the outermost layer,
-	// so nothing may be added to the signature afterwards.
-	if request.Level.Archival() {
-		if err := s.attachArchiveTimeStamp(ctx, tree, signatureElement, request, resolve); err != nil {
-			return nil, err
-		}
+	if err := s.extend(ctx, tree, signatureElement, request, keyPair, resolve); err != nil {
+		return nil, err
 	}
 
 	// The whole tree is written: the processing instructions and comments
@@ -281,6 +240,53 @@ func (s *XadesSigner) SignXades(ctx context.Context, request application.XadesRe
 		final = append([]byte(`<?xml version="1.0" encoding="UTF-8"?>`+"\n"), final...)
 	}
 	return final, nil
+}
+
+// levelReady refuses, before any key is used, a level the request cannot
+// reach: XAdES-T and above need a token over the signature value, which only
+// exists after the signature is computed, and accepting LTA while emitting
+// B-T would report a level the file does not have.
+func levelReady(request application.XadesRequest) error {
+	if (request.Level.NeedsTimestamp() || request.Level.Archival()) && request.TimestampURL == "" {
+		return fmt.Errorf("%s for XAdES needs a timestamp authority: pass --tsa <url>", request.Level)
+	}
+	return nil
+}
+
+// extend adds the unsigned properties the level asks for, in the order XAdES
+// layers them over a signature already computed.
+func (s *XadesSigner) extend(ctx context.Context, tree *etree.Document, signatureElement *etree.Element,
+	request application.XadesRequest, keyPair KeyPair, resolve xmldsig.Resolver) error {
+	// XAdES-T: the token seals the SignatureValue element, not the document. It
+	// lives in xades:UnsignedProperties, which is why it can be added after the
+	// signature exists at all.
+	if request.Level.NeedsTimestamp() {
+		if err := s.attachSignatureTimeStamp(ctx, signatureElement, request); err != nil {
+			return err
+		}
+	}
+
+	// XAdES-LT: the revocation material goes into UnsignedSignatureProperties
+	// before the archive timestamp, because the archive timestamp must cover it.
+	if request.Level.EmbedsRevocation() {
+		if !request.EmbedRevocation {
+			return fmt.Errorf(
+				"%s for XAdES needs embedded revocation and a source for it:\n"+
+					"    --level %s --online-revocation   query OCSP and attach the answers",
+				request.Level, request.Level)
+		}
+		if err := s.attachRevocationValues(ctx, signatureElement, keyPair); err != nil {
+			return err
+		}
+	}
+
+	// XAdES-A: the archive timestamp covers every object of the signature,
+	// including the unsigned properties just written. It is the outermost layer,
+	// so nothing may be added to the signature afterwards.
+	if request.Level.Archival() {
+		return s.attachArchiveTimeStamp(ctx, tree, signatureElement, request, resolve)
+	}
+	return nil
 }
 
 // placeholderDigest fills the skeleton until the real values are measured.

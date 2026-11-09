@@ -373,6 +373,8 @@ func (f *signForm) formatLabel(format domain.SignatureFormat) string {
 		return f.m.FormatXAdESLabel
 	case domain.FormatODF:
 		return f.m.FormatODFLabel
+	case domain.FormatOOXML:
+		return f.m.FormatOOXMLLabel
 	case domain.FormatCAdESDetached:
 		return f.m.FormatDetachedLabel
 	case domain.FormatCosign:

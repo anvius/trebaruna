@@ -89,7 +89,7 @@ func (i SigningIntent) OutputName() string {
 		return addedSignatureName(i.DocumentPath, "countersigned")
 	case FormatXAdES:
 		return trimExtension(i.DocumentPath) + "_signed.xml"
-	case FormatODF:
+	case FormatODF, FormatOOXML:
 		return trimExtension(i.DocumentPath) + "_signed" + i.DocumentPath[len(trimExtension(i.DocumentPath)):]
 	default:
 		return trimExtension(i.DocumentPath) + "_signed.pdf"

@@ -101,7 +101,7 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 	flags.SetOutput(stderr)
 
 	var (
-		format    = flags.String("format", "", "signature format: cades | pades | xades | xmldsig (default: from the suffix)")
+		format    = flags.String("format", "", "signature format: cades | pades | xades | xmldsig | odf | ooxml (default: from the suffix)")
 		level     = flags.String("level", "bes", "signature level: bes | t | lt | lta")
 		output    = flags.String("out", "", "output path (default: derived from the input)")
 		keys      = addKeyFlags(flags, "sign with")
@@ -196,7 +196,8 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 		infrastructure.NewCadesSigner(timestamper),
 		infrastructure.NewPadesSigner(timestamper),
 		xadesSigner,
-	).WithContainers(infrastructure.AsicContainers{}).WithOdf(infrastructure.NewOdfSigner(xadesSigner))
+	).WithContainers(infrastructure.AsicContainers{}).WithOdf(infrastructure.NewOdfSigner(xadesSigner)).
+		WithOoxml(infrastructure.NewOoxmlSigner(xadesSigner))
 
 	// Every document gets the same settings; each format is still inferred from
 	// its own suffix unless --format names one. One failure does not stop the
@@ -525,14 +526,14 @@ usage:
   trebaruna about [--json]                      (build, revision, dependencies and licences)
 
 flags:
-  --format   cades | pades | xades | xmldsig                default: from the suffix
-  --level    bes | t | lt | lta                            default: bes
+  --format   cades | pades | xades | xmldsig | odf | ooxml       default: from the suffix
+  --level    bes | t | lt | lta                                  default: bes
   --p12      PKCS#12 file (any authority, or self-signed)
   --pem      PEM bundle with certificate and private key
   --card     the card in the reader: card and signing certificate found
   --token    PKCS#11 token label (smartcard)
   --certificate  certificate of the card: serial or fingerprint  default: the signing one
-  --module   PKCS#11 module                                 default: OpenSC
+  --module   PKCS#11 module                                      default: OpenSC
   --firefox  a certificate of the Firefox store, used in place
   --nss-db   a certificate of this NSS store directory
   --policy   signature policy: age | age18 | facturae | facturae30
@@ -542,7 +543,7 @@ flags:
   --tsa      RFC 3161 timestamp authority URL
   --reason   reason for signing
   --location location of signing
-  --page     page for the visible seal                      default: 1
+  --page     page for the visible seal                           default: 1
   --box      seal box x1,y1,x2,y2 in PDF points
   --json     machine-readable output
   --out      output path

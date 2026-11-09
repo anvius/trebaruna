@@ -21,6 +21,10 @@ const (
 	// FormatODF signs inside an OpenDocument file, as LibreOffice does.
 	FormatODF SignatureFormat = "odf"
 
+	// FormatOOXML signs inside a Word, Excel or PowerPoint file, as
+	// Microsoft Office does.
+	FormatOOXML SignatureFormat = "ooxml"
+
 	// FormatCAdESDetached writes a .p7s beside the document, which stays
 	// untouched.
 	FormatCAdESDetached SignatureFormat = "cades-detached"
@@ -66,6 +70,9 @@ func FormatsFor(documentPath string) []SignatureFormat {
 		return []SignatureFormat{FormatXAdES, FormatCAdES, FormatCAdESDetached}
 	case ".odt", ".ods", ".odp", ".odg", ".odf", ".odm", ".ott", ".ots", ".otp", ".otg":
 		return []SignatureFormat{FormatODF, FormatCAdES, FormatCAdESDetached}
+	case ".docx", ".docm", ".dotx", ".dotm", ".xlsx", ".xlsm", ".xltx", ".xltm",
+		".pptx", ".pptm", ".potx", ".potm", ".ppsx", ".ppsm":
+		return []SignatureFormat{FormatOOXML, FormatCAdES, FormatCAdESDetached}
 	}
 	return []SignatureFormat{FormatCAdES, FormatCAdESDetached}
 }

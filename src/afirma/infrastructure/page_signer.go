@@ -27,6 +27,7 @@ type NativePageSigner struct {
 	pades signapp.PadesSigner
 	xades signapp.XadesSigner
 	odf   signapp.OdfSigner
+	ooxml signapp.OoxmlSigner
 }
 
 // NewNativePageSigner wires the signers with the RFC 3161 client.
@@ -38,6 +39,7 @@ func NewNativePageSigner() NativePageSigner {
 		pades: signinfra.NewPadesSigner(timestamps),
 		xades: xades,
 		odf:   signinfra.NewOdfSigner(xades),
+		ooxml: signinfra.NewOoxmlSigner(xades),
 	}
 }
 
@@ -82,8 +84,8 @@ func (s NativePageSigner) Sign(ctx context.Context, request application.PageSign
 		signature, err = s.signPades(ctx, request, level, tsa)
 	case family == "xades", family == "facturae", family == "xmldsig":
 		signature, err = s.signXades(ctx, request, level, tsa, policy)
-	case family == "odf":
-		signature, err = s.signOdf(ctx, request, level, tsa, policy)
+	case family == "odf", family == "ooxml":
+		signature, err = s.signOffice(ctx, request, family, level, tsa, policy)
 	default:
 		return application.Signed{}, domain.Failure{Code: domain.UnknownSigner}
 	}
@@ -279,17 +281,22 @@ func claimedRoles(properties map[string]string) []string {
 	return roles
 }
 
-// signOdf signs an OpenDocument file inside itself, as AutoFirma's ODF
-// signer and LibreOffice do.
-func (s NativePageSigner) signOdf(ctx context.Context, request application.PageSignature, level signing.Level, tsa string,
-	policy signing.SignaturePolicy) ([]byte, error) {
+// signOffice signs an office document inside itself, as AutoFirma's ODF
+// and OOXML signers, LibreOffice and Microsoft Office do.
+func (s NativePageSigner) signOffice(ctx context.Context, request application.PageSignature, family string,
+	level signing.Level, tsa string, policy signing.SignaturePolicy) ([]byte, error) {
 	if request.Crypto != domain.Sign {
-		return nil, domain.Failure{Code: domain.UnsupportedOperation, Cause: "an OpenDocument file takes more signatures by being signed again"}
+		return nil, domain.Failure{Code: domain.UnsupportedOperation, Cause: "an office document takes more signatures by being signed again"}
 	}
-	signed, err := s.odf.SignOdf(ctx, signapp.XadesRequest{Content: request.Data, Signer: request.Key, Level: level,
-		TimestampURL: tsa, Policy: policy, ClaimedRoles: claimedRoles(request.Properties)})
+	xadesRequest := signapp.XadesRequest{Content: request.Data, Signer: request.Key, Level: level,
+		TimestampURL: tsa, Policy: policy, ClaimedRoles: claimedRoles(request.Properties)}
+	sign := s.odf.SignOdf
+	if family == "ooxml" {
+		sign = s.ooxml.SignOoxml
+	}
+	signed, err := sign(ctx, xadesRequest)
 	switch {
-	case errors.Is(err, signinfra.ErrNotOpenDocument):
+	case errors.Is(err, signinfra.ErrNotOpenDocument), errors.Is(err, signinfra.ErrNotOfficeOpenXML):
 		return nil, domain.Failure{Code: domain.InvalidData, Cause: err.Error()}
 	case err != nil:
 		return nil, domain.Failure{Code: domain.SignatureFailed, Cause: err.Error()}

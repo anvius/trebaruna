@@ -150,6 +150,12 @@ type OdfSigner interface {
 	SignOdf(ctx context.Context, request XadesRequest) ([]byte, error)
 }
 
+// OoxmlSigner signs an Office Open XML package (.docx, .xlsx, .pptx)
+// inside itself; request.Content is the package.
+type OoxmlSigner interface {
+	SignOoxml(ctx context.Context, request XadesRequest) ([]byte, error)
+}
+
 // ContainerWriter packs documents and their signatures into an ASiC
 // container, and writes the ASiCManifest a CAdES signature of an ASiC-E
 // covers.

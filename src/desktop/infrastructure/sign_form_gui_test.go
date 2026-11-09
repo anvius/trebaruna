@@ -144,14 +144,30 @@ func TestAnyOtherFileGoesInAnEnvelopeOrBesideIt(t *testing.T) {
 	fixture := newFormFixture(t, scriptedCertificate{summary: qualifiedRossi()})
 	form := fixture.desktop.form
 
-	form.setDocument("/tmp/offerta.docx")
+	form.setDocument("/tmp/offerta.txt")
 
 	if form.format != domain.FormatCAdES || len(form.formatChoice.Options) != 2 {
-		t.Fatalf("format %s, options %v: a .docx goes in an envelope or gets a .p7s beside it", form.format, form.formatChoice.Options)
+		t.Fatalf("format %s, options %v: a .txt goes in an envelope or gets a .p7s beside it", form.format, form.formatChoice.Options)
 	}
 	form.formatChoice.SetSelected(form.m.FormatDetachedLabel)
-	if form.format != domain.FormatCAdESDetached || form.documentRow.note.Text != "Se guardará como offerta.docx.p7s" {
+	if form.format != domain.FormatCAdESDetached || form.documentRow.note.Text != "Se guardará como offerta.txt.p7s" {
 		t.Errorf("format %s, note %q", form.format, form.documentRow.note.Text)
+	}
+}
+
+// TestAWordFileIsSignedInsideFirst, as Office signs it, and still fits an
+// envelope.
+func TestAWordFileIsSignedInsideFirst(t *testing.T) {
+	fixture := newFormFixture(t, scriptedCertificate{summary: qualifiedRossi()})
+	form := fixture.desktop.form
+
+	form.setDocument("/tmp/offerta.docx")
+
+	if form.format != domain.FormatOOXML || len(form.formatChoice.Options) != 3 || form.formatChoice.Options[0] != form.m.FormatOOXMLLabel {
+		t.Fatalf("format %s, options %v", form.format, form.formatChoice.Options)
+	}
+	if form.documentRow.note.Text != "Se guardará como offerta_signed.docx" {
+		t.Errorf("note = %q", form.documentRow.note.Text)
 	}
 }
 

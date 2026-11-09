@@ -55,7 +55,7 @@ func TestAnApprovedAfirmaRequestPrintsTheAnswer(t *testing.T) {
 
 // TestAnInvalidAfirmaRequestIsExplained.
 func TestAnInvalidAfirmaRequestIsExplained(t *testing.T) {
-	stdout, _, code := run("afirma", "afirma://sign?format=OOXML&algorithm=SHA256")
+	stdout, _, code := run("afirma", "afirma://sign?format=PGP&algorithm=SHA256")
 	if code == 0 || !strings.HasPrefix(stdout, "SAF_06") {
 		t.Errorf("exit %d, stdout %q", code, stdout)
 	}

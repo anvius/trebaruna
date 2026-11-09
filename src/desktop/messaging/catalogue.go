@@ -147,6 +147,7 @@ type Catalogue struct {
 	FormatCAdESLabel           string
 	FormatXAdESLabel           string
 	FormatODFLabel             string
+	FormatOOXMLLabel           string
 	FormatOnlyCAdES            string
 	SealOnPagePane             string
 	MoreOptions                string
@@ -405,6 +406,7 @@ var spanish = Catalogue{
 	FormatCAdESLabel:           "Sobre .p7m (CAdES): el que piden algunas administraciones",
 	FormatXAdESLabel:           "XML firmado (XAdES)",
 	FormatODFLabel:             "Documento de LibreOffice firmado por dentro (ODF)",
+	FormatOOXMLLabel:           "Documento de Office firmado por dentro (OOXML)",
 	FormatOnlyCAdES:            "Este tipo de fichero se firma dentro de un sobre .p7m (CAdES).",
 	SealOnPagePane:             "El sello irá donde lo ves en la página de la derecha.",
 	MoreOptions:                "Más opciones",
@@ -645,6 +647,7 @@ var italian = Catalogue{
 	FormatCAdESLabel:           "Busta .p7m (CAdES): quella richiesta da molti uffici",
 	FormatXAdESLabel:           "XML firmato (XAdES)",
 	FormatODFLabel:             "Documento LibreOffice firmato al suo interno (ODF)",
+	FormatOOXMLLabel:           "Documento Office firmato al suo interno (OOXML)",
 	FormatOnlyCAdES:            "Questo tipo di file si firma in una busta .p7m (CAdES).",
 	SealOnPagePane:             "Il timbro andrà dove lo vedi nella pagina a destra.",
 	MoreOptions:                "Altre opzioni",
@@ -885,6 +888,7 @@ var english = Catalogue{
 	FormatCAdESLabel:           ".p7m envelope (CAdES): what some offices require",
 	FormatXAdESLabel:           "Signed XML (XAdES)",
 	FormatODFLabel:             "LibreOffice document signed inside (ODF)",
+	FormatOOXMLLabel:           "Office document signed inside (OOXML)",
 	FormatOnlyCAdES:            "This kind of file is signed inside a .p7m envelope (CAdES).",
 	SealOnPagePane:             "The seal goes where you see it on the page to the right.",
 	MoreOptions:                "More options",

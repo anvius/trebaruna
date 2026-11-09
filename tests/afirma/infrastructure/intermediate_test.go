@@ -202,7 +202,7 @@ func TestRefusalsAndFailuresReachThePage(t *testing.T) {
 		t.Errorf("a refusal reaches the page as CANCEL: %q", history)
 	}
 
-	invalid, _ := domain.ParseInvocation(base + "&format=OOXML")
+	invalid, _ := domain.ParseInvocation(base + "&format=PGP")
 	useCase(server, approving{}).Execute(context.Background(), invalid)
 	if history := server.History(id); history[len(history)-1] != "SAF_06: Formato de firma no soportado" {
 		t.Errorf("a failure reaches the page readable: %q", history[len(history)-1])

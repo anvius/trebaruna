@@ -171,7 +171,7 @@ func TestADataAddressIsShownThenFetched(t *testing.T) {
 // TestAnInvalidRequestReachesThePageAsAFailure.
 func TestAnInvalidRequestReachesThePageAsAFailure(t *testing.T) {
 	f := newFixture(t, true)
-	answer, err := f.use.Execute(context.Background(), invocation(t, "afirma://sign?format=OOXML&algorithm=SHA256"+intermediate))
+	answer, err := f.use.Execute(context.Background(), invocation(t, "afirma://sign?format=PGP&algorithm=SHA256"+intermediate))
 	var failure domain.Failure
 	if !errors.As(err, &failure) || failure.Code != domain.UnsupportedFormat {
 		t.Fatalf("got %v", err)

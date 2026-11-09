@@ -74,3 +74,24 @@ func TestAnODFPageGetsItsDocumentSigned(t *testing.T) {
 	_, err = signPage(t, "ODF", map[string]string{}, []byte("%PDF-1.4"))
 	wantFailure(t, err, domain.InvalidData, "a PDF as ODF")
 }
+
+// TestAnOOXMLPageGetsItsDocumentSigned inside itself, as AutoFirma's OOXML
+// signer does.
+func TestAnOOXMLPageGetsItsDocumentSigned(t *testing.T) {
+	document, err := os.ReadFile(filepath.Join("..", "..", "verification", "ooxml", "testdata", "unsigned.docx"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	signed, err := signPage(t, "OOXML (Office Open XML)", map[string]string{}, document)
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "firmado.docx")
+	os.WriteFile(path, signed.Signature, 0o600)
+	reports, err := verification.NewOoxmlVerifier(verification.NewXadesVerifier()).Extract(path)
+	if err != nil || len(reports) != 1 || reports[0].Integrity != verificationdomain.StatusGood {
+		t.Errorf("%+v %v", reports, err)
+	}
+	_, err = signPage(t, "OOXML", map[string]string{}, []byte("%PDF-1.4"))
+	wantFailure(t, err, domain.InvalidData, "a PDF as OOXML")
+}

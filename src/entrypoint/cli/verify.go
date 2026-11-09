@@ -71,7 +71,8 @@ func runVerify(args []string, stdout, stderr io.Writer) int {
 		systemClock{},
 	).WithXades(verificationinfra.NewXadesVerifier()).
 		WithAsic(verificationinfra.NewAsicVerifier(verificationinfra.NewCadesVerifier(), verificationinfra.NewXadesVerifier())).
-		WithOdf(verificationinfra.NewOdfVerifier(verificationinfra.NewXadesVerifier()))
+		WithOdf(verificationinfra.NewOdfVerifier(verificationinfra.NewXadesVerifier())).
+		WithOoxml(verificationinfra.NewOoxmlVerifier(verificationinfra.NewXadesVerifier()))
 
 	if !*offline {
 		// Our own checker replaces the library's: it distinguishes an answered

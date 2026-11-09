@@ -101,6 +101,7 @@ var Spanish = Catalogue{
 		"signature.unverifiable":                 "la firma usa algo que trebaruna no sabe comprobar (no es lo mismo que alterada)",
 		"container.covers":                       "la firma cubre estos archivos del contenedor",
 		"container.unsigned_files":               "el contenedor lleva archivos que ninguna firma cubre",
+		"relationships.libxmlsec_form":           "la huella de las relaciones del paquete está calculada como lo hace libxmlsec (LibreOffice), no como dice ECMA-376: Microsoft Office puede darla por rota",
 		"signature.modified":                     "el documento cambió después de firmarse",
 		"certificate.trusted":                    "el emisor es una autoridad reconocida",
 		"certificate.untrusted_issuer":           "el emisor no está en ninguna lista de confianza",
@@ -173,6 +174,7 @@ var Italian = Catalogue{
 		"signature.unverifiable":                 "la firma usa qualcosa che trebaruna non sa verificare (non vuol dire alterata)",
 		"container.covers":                       "la firma copre questi file del contenitore",
 		"container.unsigned_files":               "il contenitore contiene file che nessuna firma copre",
+		"relationships.libxmlsec_form":           "l'impronta delle relazioni del pacchetto è calcolata come fa libxmlsec (LibreOffice), non come dice ECMA-376: Microsoft Office potrebbe considerarla non valida",
 		"signature.modified":                     "il documento è cambiato dopo la firma",
 		"certificate.trusted":                    "l'emittente è un'autorità riconosciuta",
 		"certificate.untrusted_issuer":           "l'emittente non è in alcun elenco di fiducia",
@@ -245,6 +247,7 @@ var English = Catalogue{
 		"signature.unverifiable":                 "the signature uses something trebaruna cannot check (not the same as altered)",
 		"container.covers":                       "the signature covers these files of the container",
 		"container.unsigned_files":               "the container holds files no signature covers",
+		"relationships.libxmlsec_form":           "the package relationships are digested as libxmlsec (LibreOffice) computes them, not as ECMA-376 says: Microsoft Office may report the signature broken",
 		"signature.modified":                     "the document changed after it was signed",
 		"certificate.trusted":                    "the issuer is a recognised authority",
 		"certificate.untrusted_issuer":           "the issuer is not in any trust list",
@@ -341,7 +344,7 @@ func init() {
 		"timestamp.not_timestamping_certificate", "trustlist.unavailable",
 		"trustlist.stale", "format.unsupported", "verification.warning",
 		"signature.qualified", "signature.not_qualified",
-		"signature.unverifiable", "container.covers", "container.unsigned_files", "timestamp.legacy_form",
+		"signature.unverifiable", "container.covers", "container.unsigned_files", "relationships.libxmlsec_form", "timestamp.legacy_form",
 	}
 
 	for name, catalogue := range map[string]Catalogue{

@@ -44,6 +44,8 @@ func ParseFormat(name string) (Format, error) {
 		"facturae":                   {Family: "facturae"},
 		"odf":                        {Family: "odf"},
 		"odf (open document format)": {Family: "odf"},
+		"ooxml":                      {Family: "ooxml"},
+		"ooxml (office open xml)":    {Family: "ooxml"},
 		"factura-e":                  {Family: "facturae"},
 	}
 	format, known := formats[lower]
