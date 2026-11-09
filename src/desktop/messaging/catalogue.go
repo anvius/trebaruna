@@ -130,6 +130,18 @@ type Catalogue struct {
 	KeyFromFile                string
 	KeyFromCard                string
 	KeyFromFirefox             string
+	KeyFromRemote              string
+	RemoteAddressLabel         string
+	RemoteUserLabel            string
+	RemotePasswordLabel        string
+	RemoteClientLabel          string
+	RemoteAccountHint          string
+	RemoteOTPLabel             string
+	SearchRemote               string
+	NoRemoteCredentials        string
+	RemotePINPlaceholder       string
+	RemoteWhere                string
+	MissingService             string
 	FirefoxWhere               string
 	FirefoxPasswordPlaceholder string
 	NoFirefoxCertificates      string
@@ -433,6 +445,18 @@ var spanish = Catalogue{
 	KeyFromFile:                "Archivo",
 	KeyFromCard:                "Tarjeta",
 	KeyFromFirefox:             "Firefox",
+	KeyFromRemote:              "Servicio remoto",
+	RemoteAddressLabel:         "Dirección del servicio (CSC)",
+	RemoteUserLabel:            "Usuario",
+	RemotePasswordLabel:        "Contraseña",
+	RemoteClientLabel:          "Identificador de cliente para entrar desde el navegador (OAuth2)",
+	RemoteAccountHint:          "Con usuario y contraseña, o con el identificador que el proveedor da a trebaruna para entrar y autorizar en tu navegador. El documento no sale de aquí: solo viaja su huella.",
+	RemoteOTPLabel:             "Código de un solo uso (si el servicio lo pide)",
+	SearchRemote:               "Buscar credenciales",
+	NoRemoteCredentials:        "Escribe la dirección del servicio y cómo entrar, y pulsa «Buscar credenciales».",
+	RemotePINPlaceholder:       "PIN de la firma remota (si lo pide)",
+	RemoteWhere:                "Guardada por %s: firma allí; de aquí solo sale la huella del documento.",
+	MissingService:             "Escribe la dirección del servicio de firma remota.",
 	FirefoxWhere:               "En el almacén de certificados de Firefox: se usa allí mismo, sin exportarlo.",
 	FirefoxPasswordPlaceholder: "Contraseña maestra de Firefox",
 	NoFirefoxCertificates:      "Firefox no guarda ningún certificado con su clave. Impórtalo en Firefox (Ajustes, Privacidad y seguridad, Ver certificados) o elige otro origen.",
@@ -712,6 +736,18 @@ var italian = Catalogue{
 	KeyFromFile:                "File",
 	KeyFromCard:                "Carta",
 	KeyFromFirefox:             "Firefox",
+	KeyFromRemote:              "Servizio remoto",
+	RemoteAddressLabel:         "Indirizzo del servizio (CSC)",
+	RemoteUserLabel:            "Utente",
+	RemotePasswordLabel:        "Password",
+	RemoteClientLabel:          "Identificativo client per l'accesso dal browser (OAuth2)",
+	RemoteAccountHint:          "Con utente e password, oppure con l'identificativo che il fornitore dà a trebaruna per accedere e autorizzare nel tuo browser. Il documento non esce da qui: viaggia solo la sua impronta.",
+	RemoteOTPLabel:             "Codice monouso (se il servizio lo chiede)",
+	SearchRemote:               "Cerca credenziali",
+	NoRemoteCredentials:        "Scrivi l'indirizzo del servizio e come accedere, poi premi «Cerca credenziali».",
+	RemotePINPlaceholder:       "PIN della firma remota (se richiesto)",
+	RemoteWhere:                "Custodita da %s: firma lì; da qui esce solo l'impronta del documento.",
+	MissingService:             "Scrivi l'indirizzo del servizio di firma remota.",
 	FirefoxWhere:               "Nell'archivio certificati di Firefox: viene usato lì, senza esportarlo.",
 	FirefoxPasswordPlaceholder: "Password principale di Firefox",
 	NoFirefoxCertificates:      "Firefox non conserva alcun certificato con la sua chiave. Importalo in Firefox (Impostazioni, Privacy e sicurezza, Mostra certificati) o scegli un'altra origine.",
@@ -991,6 +1027,18 @@ var english = Catalogue{
 	KeyFromFile:                "File",
 	KeyFromCard:                "Smart card",
 	KeyFromFirefox:             "Firefox",
+	KeyFromRemote:              "Remote service",
+	RemoteAddressLabel:         "Service address (CSC)",
+	RemoteUserLabel:            "User",
+	RemotePasswordLabel:        "Password",
+	RemoteClientLabel:          "Client id for signing in from the browser (OAuth2)",
+	RemoteAccountHint:          "With a user and password, or with the id the provider gives trebaruna to sign in and authorise in your browser. The document stays here: only its hash travels.",
+	RemoteOTPLabel:             "One-time code (if the service asks)",
+	SearchRemote:               "Find credentials",
+	NoRemoteCredentials:        "Type the service's address and how to sign in, then press “Find credentials”.",
+	RemotePINPlaceholder:       "Remote signature PIN (if asked)",
+	RemoteWhere:                "Kept by %s: it signs there; only the document's hash leaves this computer.",
+	MissingService:             "Type the remote signing service's address.",
 	FirefoxWhere:               "In Firefox's certificate store: used there, never exported.",
 	FirefoxPasswordPlaceholder: "Firefox primary password",
 	NoFirefoxCertificates:      "Firefox holds no certificate with its key. Import it in Firefox (Settings, Privacy & Security, View Certificates) or choose another source.",

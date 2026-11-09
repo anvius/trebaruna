@@ -88,6 +88,14 @@ func TestScreenshots(t *testing.T) {
 		unlock.secret.SetText("12345678")
 		capture(t, window, filepath.Join(directory, fmt.Sprintf("pin-%s.png", language)))
 		unlock.dialog.Hide()
+
+		// A remote signing service, its one credential chosen.
+		desktop.form.remoteList = application.NewListCards(&scriptedCards{listings: [][]domain.CardCertificate{remoteCredentials()}})
+		desktop.form.remote.address.SetText("https://firma.provider.example/csc/v2")
+		desktop.form.remote.user.SetText("mario.rossi")
+		desktop.form.keySource.SetSelected(desktop.messages.KeyFromRemote)
+		waitFor(t, func() bool { return desktop.form.summary != nil && desktop.form.summary.Holder == "MARIO ROSSI" })
+		capture(t, window, filepath.Join(directory, fmt.Sprintf("remote-%s.png", language)))
 		desktop.form.keySource.SetSelected(desktop.messages.KeyFromFile)
 
 		tabs := window.Content().(*container.AppTabs)

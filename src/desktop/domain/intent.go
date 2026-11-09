@@ -211,6 +211,10 @@ const (
 	// was chosen.
 	ProblemMissingSaveTo ProblemCode = "missing_save_to"
 
+	// ProblemMissingService means a remote service's credential was chosen
+	// and the service's address then cleared.
+	ProblemMissingService ProblemCode = "missing_service"
+
 	// ProblemMissingRecipient means a document was to be encrypted for
 	// nobody.
 	ProblemMissingRecipient ProblemCode = "missing_recipient"

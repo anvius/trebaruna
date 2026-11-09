@@ -329,6 +329,17 @@ type signerOptions struct {
 	oauthRedirect string
 }
 
+// remoteService is the CSC service the flags name, with the secrets the
+// environment carries (ADR-0006).
+func (options signerOptions) remoteService() domain.RemoteService {
+	return domain.RemoteService{
+		Address: options.remote, Credential: options.credential,
+		Token: os.Getenv("TREBARUNA_CSC_TOKEN"), User: os.Getenv("TREBARUNA_CSC_USER"), Password: os.Getenv("TREBARUNA_CSC_PASSWORD"),
+		PIN: secretFrom(options.pin, pinVariable), OTP: os.Getenv("TREBARUNA_OTP"),
+		OAuthClient: options.oauthClient, OAuthSecret: os.Getenv("TREBARUNA_CSC_CLIENT_SECRET"), OAuthRedirect: options.oauthRedirect,
+	}
+}
+
 // buildSigner resolves the key source from the flags, enforcing exactly one.
 func buildSigner(options signerOptions) (domain.Signer, error) {
 	// Any card flag says the key is on a card; --card alone lets everything be found.
@@ -354,12 +365,7 @@ func buildSigner(options signerOptions) (domain.Signer, error) {
 	}
 
 	if remote {
-		return domain.NewSigner(displayName, domain.FromRemote, domain.WithRemoteService(domain.RemoteService{
-			Address: options.remote, Credential: options.credential,
-			Token: os.Getenv("TREBARUNA_CSC_TOKEN"), User: os.Getenv("TREBARUNA_CSC_USER"), Password: os.Getenv("TREBARUNA_CSC_PASSWORD"),
-			PIN: secretFrom(options.pin, pinVariable), OTP: os.Getenv("TREBARUNA_OTP"),
-			OAuthClient: options.oauthClient, OAuthSecret: os.Getenv("TREBARUNA_CSC_CLIENT_SECRET"), OAuthRedirect: options.oauthRedirect,
-		}))
+		return domain.NewSigner(displayName, domain.FromRemote, domain.WithRemoteService(options.remoteService()))
 	}
 
 	if card {

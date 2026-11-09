@@ -123,3 +123,22 @@ func TestSignWithASignatureAuthorisedInTheBrowser(t *testing.T) {
 		t.Errorf("a redirect off this computer: exit %d, %s", code, stderr)
 	}
 }
+
+// TestTheCredentialsOfAServiceAreListed: token --csc names each credential
+// beside its certificate, in text and in the cards' JSON.
+func TestTheCredentialsOfAServiceAreListed(t *testing.T) {
+	server := csc.Start(t)
+	t.Setenv("TREBARUNA_CSC_TOKEN", csc.Token)
+	text, stderr, code := run("token", "--csc", server.URL)
+	if code != 0 || !strings.Contains(text, "credential: rsa-explicit (--credential)") || !strings.Contains(text, "MARIO ROSSI (REMOTE)") {
+		t.Fatalf("exit %d: %s%s", code, text, stderr)
+	}
+	listing, _, code := run("token", "--csc", server.URL, "--credential", "rsa-explicit", "--json")
+	if code != 0 || !strings.Contains(listing, `"credential": "rsa-explicit"`) || strings.Contains(listing, "ecdsa-implicit") ||
+		!strings.Contains(listing, `"pin": "ready"`) || !strings.Contains(listing, `"signs_by_default": true`) {
+		t.Errorf("JSON: %s", listing)
+	}
+	if _, stderr, code := run("token", "--csc", "http://provider.example/csc/v2"); code == 0 || !strings.Contains(stderr, "https") {
+		t.Errorf("plain HTTP elsewhere: exit %d, %s", code, stderr)
+	}
+}

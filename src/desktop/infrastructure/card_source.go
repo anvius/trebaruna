@@ -87,11 +87,12 @@ func (c *cardSource) object() fyne.CanvasObject { return c.root }
 
 // switchTo lists another source of certificates — the cards, or the Firefox
 // store — with what to say when it holds none and what its PIN is called.
-func (c *cardSource) switchTo(list *application.ListCards, empty, pinName string) {
+func (c *cardSource) switchTo(list *application.ListCards, empty, pinName, search string) {
 	c.list, c.empty = list, empty
 	c.certificates, c.chosen = nil, nil
 	c.pin.SetText("")
 	c.pin.SetPlaceHolder(pinName)
+	c.search.SetText(search)
 	c.refresh()
 }
 
@@ -203,9 +204,12 @@ func (c *cardSource) choose(label string) {
 	certificate := c.certificates[index]
 	c.chosen = &certificate
 	c.preferences.SetString(preferenceCardCertificate, certificate.Fingerprint)
-	if certificate.Store == domain.StoreFirefox {
+	switch certificate.Store {
+	case domain.StoreFirefox:
 		c.where.SetText(c.m.FirefoxWhere)
-	} else {
+	case domain.StoreRemote:
+		c.where.SetText(fmt.Sprintf(c.m.RemoteWhere, certificate.Token))
+	default:
 		c.where.SetText(fmt.Sprintf(c.m.CardWhere, certificate.Token, certificate.Reader))
 	}
 	c.showPINState(certificate)

@@ -125,6 +125,20 @@ the file just signed.
 The passphrase reaches the signing process through its environment, never its
 command line, where other users of the machine could read it.
 
+### Signing with a remote service
+
+Choose **Remote service** in step 2 when a provider keeps the key and signs
+for you through the Cloud Signature Consortium API (ADR-0014). Type the
+service's address (`https://…/csc/v2`) and how to sign in: a user and
+password, or the client id the provider gives trebaruna, with which you sign
+in and authorise in your own browser (OAuth2). **Find credentials** lists the
+credentials of the account as a card's certificates, by holder; the one
+chosen says which provider keeps it. Type the PIN when the credential asks
+for one, and the one-time code when the service sends one. The address, the
+user and the client id are remembered; the password, the PIN and the code are
+not, and they reach the command in its environment. The document stays on
+this computer: only its hash travels to the provider.
+
 ### Placing the seal
 
 For a PDF signed as PAdES the right half of the window shows the page, with the

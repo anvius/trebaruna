@@ -98,29 +98,9 @@ func readCredential(service domain.RemoteService) (remoteCredential, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), remoteTimeout)
 	defer cancel()
 
-	var oauth *csc.OAuth
-	switch {
-	case service.Token != "":
-		client.UseToken(service.Token)
-	case service.User != "":
-		if err := client.Login(ctx, service.User, service.Password); err != nil {
-			return remoteCredential{}, err
-		}
-	case service.OAuthClient != "":
-		var err error
-		if oauth, err = oauthOf(ctx, client, service); err != nil {
-			return remoteCredential{}, err
-		}
-		signIn, cancelSignIn := context.WithTimeout(context.Background(), oauthTimeout)
-		token, err := oauth.ServiceToken(signIn)
-		cancelSignIn()
-		if err != nil {
-			return remoteCredential{}, err
-		}
-		client.UseToken(token)
-	default:
-		return remoteCredential{}, errors.New("a remote signing service needs $TREBARUNA_CSC_TOKEN, $TREBARUNA_CSC_USER and " +
-			"$TREBARUNA_CSC_PASSWORD, or --csc-client to sign in through the provider's OAuth2 server")
+	oauth, err := signIn(ctx, client, service)
+	if err != nil {
+		return remoteCredential{}, err
 	}
 
 	credentialID, err := chooseCredential(ctx, client, service.Credential)
@@ -168,6 +148,34 @@ func readCredential(service domain.RemoteService) (remoteCredential, error) {
 		key.oauth = oauth
 	}
 	return remoteCredential{key: key, certificate: certificate, chain: chain}, nil
+}
+
+// signIn signs the client in with what the service description carries: a
+// token, a user and password, or the person in their browser (whose OAuth2
+// server it returns, nil otherwise).
+func signIn(ctx context.Context, client *csc.Client, service domain.RemoteService) (*csc.OAuth, error) {
+	switch {
+	case service.Token != "":
+		client.UseToken(service.Token)
+		return nil, nil
+	case service.User != "":
+		return nil, client.Login(ctx, service.User, service.Password)
+	case service.OAuthClient != "":
+		oauth, err := oauthOf(ctx, client, service)
+		if err != nil {
+			return nil, err
+		}
+		inBrowser, cancel := context.WithTimeout(context.Background(), oauthTimeout)
+		defer cancel()
+		token, err := oauth.ServiceToken(inBrowser)
+		if err != nil {
+			return nil, err
+		}
+		client.UseToken(token)
+		return oauth, nil
+	}
+	return nil, errors.New("a remote signing service needs $TREBARUNA_CSC_TOKEN, $TREBARUNA_CSC_USER and " +
+		"$TREBARUNA_CSC_PASSWORD, or --csc-client to sign in through the provider's OAuth2 server")
 }
 
 // oauthOf is the service's OAuth2 server, as info names it, for the client

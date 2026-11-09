@@ -34,10 +34,37 @@ func runToken(args []string, stdout, stderr io.Writer) int {
 		nssDB     = flags.String("nss-db", "", "list this NSS store directory instead of the cards")
 		pin       = flags.String("pin", "", "PIN of the token, optional for listing (or $TREBARUNA_PIN)")
 		asJSON    = flags.Bool("json", false, "machine-readable output")
+		remote    = flags.String("csc", "", "list the credentials of a remote signing service (CSC API v2) instead of the cards; "+
+			"sign-in as for `sign --csc`")
+		credential    = flags.String("credential", "", "with --csc, only this credential")
+		oauthClient   = flags.String("csc-client", "", "with --csc, sign in through the provider's OAuth2 server with this client id")
+		oauthRedirect = flags.String("csc-redirect", "", "with --csc and --csc-client, the address the browser comes back to")
 	)
 
 	if err := flags.Parse(args); err != nil {
 		return exitUsage
+	}
+
+	if *remote != "" {
+		options := signerOptions{remote: *remote, credential: *credential, oauthClient: *oauthClient, oauthRedirect: *oauthRedirect, pin: *pin}
+		service := options.remoteService()
+		// The address is checked as signing checks it: https, or this computer.
+		if _, err := domain.NewSigner(domain.NameFromCertificate, domain.FromRemote, domain.WithRemoteService(service)); err != nil {
+			fmt.Fprintf(stderr, "%v\n", err)
+			return exitUsage
+		}
+		slots, err := infrastructure.RemoteInspector{Service: service}.Inspect()
+		if err != nil {
+			fmt.Fprintf(stderr, "%v\n", err)
+			return exitInvalid
+		}
+		if *asJSON {
+			return printTokenJSON(stdout, slots, *territory)
+		}
+		for _, slot := range slots {
+			fmt.Fprint(stdout, formatTokenSlot(slot))
+		}
+		return exitOK
 	}
 
 	path, parameters, err := cardModule(*module, storeOptions{firefox: *firefox, directory: *nssDB})
@@ -112,6 +139,8 @@ type tokenCertificateJSON struct {
 	Trusted        bool   `json:"trusted"`
 	Qualified      bool   `json:"qualified"`
 	Provider       string `json:"provider"`
+	// Credential names a remote service's credential (token --csc).
+	Credential string `json:"credential,omitempty"`
 }
 
 // printTokenJSON writes the slots as JSON, judging each certificate's issuer
@@ -136,6 +165,7 @@ func printTokenJSON(stdout io.Writer, slots []infrastructure.TokenSlot, territor
 				NotBefore:  certificate.NotBefore.UTC().Format(time.RFC3339),
 				NotAfter:   certificate.NotAfter.UTC().Format(time.RFC3339),
 				SelfSigned: certificate.SelfSigned, KeyUsage: strings.Join(certificate.KeyUsages, ","),
+				Credential: certificate.Credential,
 			}
 			if parsed := certificate.Parsed(); parsed != nil {
 				holder := identity.FromCertificate(parsed)
@@ -184,6 +214,9 @@ func formatTokenSlot(slot infrastructure.TokenSlot) string {
 
 	for _, certificate := range slot.Certificates {
 		out += fmt.Sprintf("  certificate: %s\n", certificate.Subject)
+		if certificate.Credential != "" {
+			out += fmt.Sprintf("    credential: %s (--credential)\n", certificate.Credential)
+		}
 		out += fmt.Sprintf("    issuer:    %s\n", certificate.Issuer)
 		out += fmt.Sprintf("    serial:    %s\n", certificate.Serial)
 		out += fmt.Sprintf("    sha-256:   %s\n", certificate.Fingerprint)

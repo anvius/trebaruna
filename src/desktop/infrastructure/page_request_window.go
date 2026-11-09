@@ -278,11 +278,11 @@ func (r *pageRequest) keySourceChanged() {
 	case r.m.KeyFromCard:
 		r.fileSource.Hide()
 		r.cards.object().Show()
-		r.cards.switchTo(r.cardList, r.m.NoCards, r.m.PINPlaceholder)
+		r.cards.switchTo(r.cardList, r.m.NoCards, r.m.PINPlaceholder, r.m.SearchCards)
 	case r.m.KeyFromFirefox:
 		r.fileSource.Hide()
 		r.cards.object().Show()
-		r.cards.switchTo(r.storeList, r.m.NoFirefoxCertificates, r.m.FirefoxPasswordPlaceholder)
+		r.cards.switchTo(r.storeList, r.m.NoFirefoxCertificates, r.m.FirefoxPasswordPlaceholder, r.m.SearchCards)
 	}
 }
 

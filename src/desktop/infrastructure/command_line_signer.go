@@ -33,13 +33,9 @@ type CommandLineSigner struct {
 func (s CommandLineSigner) Sign(ctx context.Context, intent domain.SigningIntent) (domain.Receipt, error) {
 	var stdout, stderr bytes.Buffer
 	command := exec.CommandContext(ctx, s.BinaryPath, signArguments(intent)...)
-	// Secrets travel in the environment, never as --pass or --tsa-pass: any
-	// local user can list command lines, only the owner can read the environment.
-	command.Env = append(os.Environ(),
-		"TREBARUNA_PASSPHRASE="+intent.Key.Passphrase,
-		"TREBARUNA_PIN="+intent.Card.PIN,
-		"TREBARUNA_TSA_PASS="+intent.TimestampPassword,
-	)
+	// Secrets travel in the environment, never as --pass or --tsa-pass.
+	command.Env = append(append(os.Environ(), keyEnvironment(intent.Key, intent.Card)...),
+		"TREBARUNA_TSA_PASS="+intent.TimestampPassword)
 	command.Stdout = &stdout
 	command.Stderr = &stderr
 
@@ -146,6 +142,8 @@ func signArguments(intent domain.SigningIntent) []string {
 // certificate, or a file.
 func keyArguments(key domain.CertificateFile, card domain.CardKey) []string {
 	switch {
+	case card.Chosen() && card.Store == domain.StoreRemote:
+		return remoteArguments(card.Account, card.Credential)
 	case card.Chosen() && card.Store == domain.StoreFirefox:
 		return []string{"--firefox", "--certificate", card.Fingerprint}
 	case card.Chosen():
@@ -156,6 +154,40 @@ func keyArguments(key domain.CertificateFile, card domain.CardKey) []string {
 		return []string{"--pem", key.Path}
 	}
 	return []string{"--p12", key.Path}
+}
+
+// remoteArguments name a remote service, its credential when chosen, and
+// the client of a sign-in in the browser.
+func remoteArguments(account domain.RemoteAccount, credential string) []string {
+	arguments := []string{"--csc", strings.TrimSpace(account.Address)}
+	if credential != "" {
+		arguments = append(arguments, "--credential", credential)
+	}
+	if client := strings.TrimSpace(account.OAuthClient); client != "" {
+		arguments = append(arguments, "--csc-client", client)
+	}
+	return arguments
+}
+
+// keyEnvironment carries the key's secrets to the command, never on its
+// command line: any local user can list command lines, only the owner can
+// read the environment.
+func keyEnvironment(key domain.CertificateFile, card domain.CardKey) []string {
+	return append([]string{"TREBARUNA_PASSPHRASE=" + key.Passphrase, "TREBARUNA_PIN=" + card.PIN},
+		remoteEnvironment(card.Account)...)
+}
+
+// remoteEnvironment carries a remote account's secrets, when it has any.
+func remoteEnvironment(account domain.RemoteAccount) []string {
+	var environment []string
+	for _, variable := range [][2]string{
+		{"TREBARUNA_CSC_USER", account.User}, {"TREBARUNA_CSC_PASSWORD", account.Password}, {"TREBARUNA_OTP", account.OTP},
+	} {
+		if variable[1] != "" {
+			environment = append(environment, variable[0]+"="+variable[1])
+		}
+	}
+	return environment
 }
 
 // keyFailure turns the command's refusal into the problem the window

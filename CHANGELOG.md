@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The window signs with a remote service: *Remote service* in step 2 takes
+  the service's address and a user and password, or the client id of an
+  OAuth2 sign-in in the browser, and an optional one-time code; *Find
+  credentials* lists the account's credentials as a card's certificates
+  (holder, issuer's standing, which provider keeps it) and the PIN is typed
+  when the credential asks. Address, user and client id are remembered;
+  secrets travel in the command's environment. `trebaruna token --csc`
+  lists a service's credentials, each with its `credential` id, in the
+  cards' JSON. The four key sources are listed one under another: side by
+  side they widened the form at the page's expense. A credential whose
+  service address is cleared says so.
+
 - Remote signing through a provider's OAuth2 server (CSC's
   authorization-code flow): `sign --csc … --csc-client <id>` signs the
   person in, or has each signature of an `oauth2code` credential

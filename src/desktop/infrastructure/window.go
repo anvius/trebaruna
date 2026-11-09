@@ -139,8 +139,11 @@ func (w *Window) Run() {
 // reading the document, so the page must stay visible next to the controls.
 func (w *Window) buildContent(initialDocument string) fyne.CanvasObject {
 	w.pages = newPagePane(w.messages, w.palette, w.preview)
-	w.form = newSignForm(w.window, w.messages, w.palette, fyne.CurrentApp().Preferences(),
-		w.application, w.inspect, w.cards, w.firefox, w.formFields, w.pages)
+	preferences := fyne.CurrentApp().Preferences()
+	account := newRemoteAccount(w.messages, preferences)
+	remote := application.NewListCards(CommandLineCardReader{BinaryPath: w.binaryPath, Store: domain.StoreRemote, Account: account.account})
+	w.form = newSignForm(w.window, w.messages, w.palette, preferences,
+		w.application, w.inspect, w.cards, w.firefox, remote, account, w.formFields, w.pages)
 	w.form.onNetwork = w.activity.add
 	if initialDocument != "" {
 		w.form.setDocument(initialDocument)
@@ -511,6 +514,8 @@ func translate(err error, m messaging.Catalogue) string {
 		return m.MissingSaveTo
 	case domain.ProblemMissingRecipient:
 		return m.MissingRecipient
+	case domain.ProblemMissingService:
+		return m.MissingService
 	case domain.ProblemMissingPUK:
 		return m.MissingPUK
 	case domain.ProblemPUKLocked:

@@ -24,10 +24,7 @@ func (o CommandLineEnvelopeOpener) Open(ctx context.Context, intent domain.Openi
 	arguments := append([]string{"decrypt", intent.EnvelopePath, "--json"}, keyArguments(intent.Key, intent.Card)...)
 	var stdout, stderr bytes.Buffer
 	command := exec.CommandContext(ctx, o.BinaryPath, arguments...)
-	command.Env = append(os.Environ(),
-		"TREBARUNA_PASSPHRASE="+intent.Key.Passphrase,
-		"TREBARUNA_PIN="+intent.Card.PIN,
-	)
+	command.Env = append(os.Environ(), keyEnvironment(intent.Key, intent.Card)...)
 	command.Stdout = &stdout
 	command.Stderr = &stderr
 	if err := command.Run(); err != nil {

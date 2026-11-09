@@ -60,6 +60,10 @@ type signForm struct {
 	// readers, or the Firefox store.
 	cardList  *application.ListCards
 	storeList *application.ListCards
+	// remoteList lists a remote service's credentials, reached as remote
+	// says.
+	remoteList *application.ListCards
+	remote     *remoteAccount
 	// formFields finds the boxes a PDF form reserves for signatures; fields
 	// are the current document's.
 	formFields *application.ListFormFields
@@ -131,6 +135,8 @@ func newSignForm(
 	inspect *application.InspectCertificate,
 	cards *application.ListCards,
 	firefox *application.ListCards,
+	remote *application.ListCards,
+	account *remoteAccount,
 	formFields *application.ListFormFields,
 	pages *pagePane,
 ) *signForm {
@@ -139,8 +145,9 @@ func newSignForm(
 		signing: signing, inspect: inspect, pages: pages,
 		format: domain.FormatPAdES,
 		run:    offThread, pause: typingPause,
-		cardList: cards, storeList: firefox, formFields: formFields,
+		cardList: cards, storeList: firefox, remoteList: remote, remote: account, formFields: formFields,
 	}
+	form.remote.object().Hide()
 
 	form.documentRow = newFileRow(m.ChooseDocument, m.ChangeButton, m.DropHint, form.pickDocument)
 	form.certificateRow = newFileRow(m.ChooseCertificate, m.ChangeButton, m.CertificateHint, form.pickCertificate)
@@ -155,9 +162,11 @@ func newSignForm(
 	// the Italian signature cards are how most people hold their certificate.
 	form.cards = newCardSource(m, cards, preferences, form.cardChosen, form.noCertificate)
 	form.cards.object().Hide()
-	form.keySource = widget.NewRadioGroup([]string{m.KeyFromFile, m.KeyFromCard, m.KeyFromFirefox},
+	form.keySource = widget.NewRadioGroup([]string{m.KeyFromFile, m.KeyFromCard, m.KeyFromFirefox, m.KeyFromRemote},
 		func(string) { form.keySourceChanged() })
-	form.keySource.Horizontal = true
+	// One under another: four sources side by side widened the form past
+	// its share of the window, at the page's expense, in every language.
+	form.keySource.Horizontal = false
 	form.keySource.Required = true
 
 	form.holder = widget.NewLabelWithStyle("", fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
@@ -227,6 +236,9 @@ func newSignForm(
 	case domain.StoreFirefox:
 		form.keySource.SetSelected(m.KeyFromFirefox)
 		return form
+	case domain.StoreRemote:
+		form.keySource.SetSelected(m.KeyFromRemote)
+		return form
 	}
 	form.keySource.SetSelected(m.KeyFromFile)
 	if remembered := preferences.String(preferenceCertificate); remembered != "" && fileExists(remembered) {
@@ -246,6 +258,7 @@ func (f *signForm) object() fyne.CanvasObject {
 		f.step(2, m.StepCertificate),
 		f.keySource,
 		f.fileSource,
+		f.remote.object(),
 		f.cards.object(),
 		card,
 		f.step(3, m.StepSignature),
@@ -668,7 +681,11 @@ func (f *signForm) noCertificate(text string, importance widget.Importance) {
 // usesCard reports whether the key comes from a card or the Firefox store,
 // both listed and opened the same way.
 func (f *signForm) usesCard() bool {
-	return f.keySource.Selected == f.m.KeyFromCard || f.keySource.Selected == f.m.KeyFromFirefox
+	switch f.keySource.Selected {
+	case f.m.KeyFromCard, f.m.KeyFromFirefox, f.m.KeyFromRemote:
+		return true
+	}
+	return false
 }
 
 // keySourceChanged swaps the file and the card halves of the step. A pending
@@ -678,12 +695,17 @@ func (f *signForm) keySourceChanged() {
 	f.reading++
 	f.clearCertificate()
 	f.showStanding("", widget.LowImportance)
+	f.remote.object().Hide()
 	switch f.keySource.Selected {
 	case f.m.KeyFromCard:
-		f.showListedSource("card", f.cardList, f.m.NoCards, f.m.PINPlaceholder)
+		f.showListedSource("card", f.cardList, f.m.NoCards, f.m.PINPlaceholder, f.m.SearchCards)
 		return
 	case f.m.KeyFromFirefox:
-		f.showListedSource(domain.StoreFirefox, f.storeList, f.m.NoFirefoxCertificates, f.m.FirefoxPasswordPlaceholder)
+		f.showListedSource(domain.StoreFirefox, f.storeList, f.m.NoFirefoxCertificates, f.m.FirefoxPasswordPlaceholder, f.m.SearchCards)
+		return
+	case f.m.KeyFromRemote:
+		f.remote.object().Show()
+		f.showListedSource(domain.StoreRemote, f.remoteList, f.m.NoRemoteCredentials, f.m.RemotePINPlaceholder, f.m.SearchRemote)
 		return
 	}
 	f.preferences.SetString(preferenceKeySource, "file")
@@ -694,11 +716,11 @@ func (f *signForm) keySourceChanged() {
 
 // showListedSource replaces the file half with the list of a card or store,
 // remembering which source was chosen.
-func (f *signForm) showListedSource(remembered string, list *application.ListCards, empty, pinName string) {
+func (f *signForm) showListedSource(remembered string, list *application.ListCards, empty, pinName, search string) {
 	f.preferences.SetString(preferenceKeySource, remembered)
 	f.fileSource.Hide()
 	f.cards.object().Show()
-	f.cards.switchTo(list, empty, pinName)
+	f.cards.switchTo(list, empty, pinName, search)
 }
 
 // cardToken is the label of the card chosen in the step, for card
@@ -728,6 +750,9 @@ func (f *signForm) cardChosen(certificate domain.CardCertificate) {
 func (f *signForm) keyIntent(intent *domain.SigningIntent) {
 	if f.usesCard() {
 		intent.Card = f.cards.key()
+		if f.keySource.Selected == f.m.KeyFromRemote {
+			intent.Card.Account = f.remote.account()
+		}
 		return
 	}
 	intent.Key = domain.CertificateFile{Path: f.certificate, Passphrase: f.passphrase.Text}

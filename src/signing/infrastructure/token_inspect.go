@@ -58,6 +58,9 @@ type TokenCertificate struct {
 	// SignsByDefault marks the certificate a signature uses when none is named
 	// (domain.CertificateChoice).
 	SignsByDefault bool
+	// Credential names a remote service's credential the certificate
+	// belongs to; empty on a card.
+	Credential string
 
 	certificate *x509.Certificate
 }

@@ -97,6 +97,7 @@ trebaruna sign <document> [flags]
 | `--csc` | — | Sign with a key a provider keeps, through its Cloud Signature Consortium API v2 (`https://…/csc/v2`) |
 | `--credential` | the only one | The provider's credential to sign with |
 | `--csc-client` | — | The client id the provider gave trebaruna: sign in, or authorise each signature of an `oauth2code` credential, in the browser |
+| `token --csc <base>` | — | List the service's credentials (with `--credential`, one), each with its certificate and `credential` id, as a card's certificates; sign-in as for `sign --csc` |
 | `--csc-redirect` | `http://127.0.0.1:<free port>/callback` | The address the browser comes back to, as registered with the provider; on this computer only |
 | `--pin` | — | Smartcard PIN |
 | `--pass` | — | Passphrase for the P12 or PEM |

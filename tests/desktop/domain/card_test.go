@@ -76,3 +76,23 @@ func TestOnlyCardProblemsStopABatch(t *testing.T) {
 		t.Error("a wrong PIN must stop the card")
 	}
 }
+
+// TestARemoteKeyNeedsItsService: a credential chosen from a service whose
+// address was then cleared cannot sign; a PIN is asked only when the
+// credential asks for one.
+func TestARemoteKeyNeedsItsService(t *testing.T) {
+	intent := domain.SigningIntent{DocumentPath: "/tmp/a.pdf", Seal: domain.SealChoice{Page: 1}, Level: domain.LevelBasic,
+		Card: domain.CardKey{Fingerprint: "bf00", Store: domain.StoreRemote, Credential: "c", State: signing.PINNotRequired}}
+	var problem domain.Problem
+	if err := intent.Validate(); !errors.As(err, &problem) || problem.Code != domain.ProblemMissingService {
+		t.Errorf("without an address: %v", err)
+	}
+	intent.Card.Account.Address = "https://provider.example/csc/v2"
+	if err := intent.Validate(); err != nil {
+		t.Errorf("an implicit credential: %v", err)
+	}
+	intent.Card.State = signing.PINReady
+	if err := intent.Validate(); !errors.As(err, &problem) || problem.Code != domain.ProblemMissingPIN {
+		t.Errorf("an explicit credential without its PIN: %v", err)
+	}
+}

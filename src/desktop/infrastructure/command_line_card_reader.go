@@ -8,7 +8,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	"codeberg.org/simplicer/trebaruna/src/desktop/application"
@@ -21,18 +23,32 @@ import (
 // lists, so the window shows the verdict the command prints.
 type CommandLineCardReader struct {
 	BinaryPath string
-	// Store lists a software store (domain.StoreFirefox) instead of the cards.
+	// Store lists a software store (domain.StoreFirefox) or a remote service
+	// (domain.StoreRemote) instead of the cards.
 	Store string
+	// Account is, for a remote service, how to reach it as the form says
+	// when the list is read.
+	Account func() domain.RemoteAccount
 }
 
 // Cards runs the command and flattens its slots into certificates.
 func (r CommandLineCardReader) Cards(ctx context.Context) ([]domain.CardCertificate, error) {
 	var stdout, stderr bytes.Buffer
 	arguments := []string{"token", "--json"}
-	if r.Store == domain.StoreFirefox {
+	var account domain.RemoteAccount
+	switch r.Store {
+	case domain.StoreFirefox:
 		arguments = append(arguments, "--firefox")
+	case domain.StoreRemote:
+		account = r.Account()
+		if strings.TrimSpace(account.Address) == "" {
+			// Nothing to ask yet: the list waits for the service's address.
+			return nil, nil
+		}
+		arguments = append(arguments, remoteArguments(account, "")...)
 	}
 	command := exec.CommandContext(ctx, r.BinaryPath, arguments...)
+	command.Env = append(os.Environ(), remoteEnvironment(account)...)
 	command.Stdout = &stdout
 	command.Stderr = &stderr
 	if err := command.Run(); err != nil {
@@ -57,6 +73,7 @@ func (r CommandLineCardReader) Cards(ctx context.Context) ([]domain.CardCertific
 				SelfSigned     bool   `json:"self_signed"`
 				Trusted        bool   `json:"trusted"`
 				Qualified      bool   `json:"qualified"`
+				Credential     string `json:"credential"`
 			} `json:"certificates"`
 		} `json:"slots"`
 	}
@@ -80,6 +97,7 @@ func (r CommandLineCardReader) Cards(ctx context.Context) ([]domain.CardCertific
 				Serial:         certificate.Serial,
 				SignsByDefault: certificate.SignsByDefault,
 				Store:          r.Store,
+				Credential:     certificate.Credential,
 				Summary: domain.CertificateSummary{
 					Holder:     certificate.Name,
 					Identifier: certificate.Identifier,
