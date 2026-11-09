@@ -35,6 +35,9 @@ look plausible".
 This is the part that distinguishes a verification tool from a downloader.
 
 ```
+Official Journal notice ── announces the keys the Commission signs the LOTL with
+    │                        (embedded in trebaruna; pivot lists follow key changes)
+    │
 LOTL (EU) ── lists every national TSL, with its signing certificates
     │
     └── TSL (IT, ES, DE, …) ── signed XML
@@ -51,10 +54,20 @@ list naming their own CA as qualified.
 
 Concretely, `trebaruna trust sync`:
 
-1. Downloads the LOTL from `https://ec.europa.eu/tools/lotl/eu-lotl.xml`,
-   once for the whole run.
+1. Downloads the LOTL from `https://ec.europa.eu/tools/lotl/eu-lotl.xml`
+   (`--lotl` takes another https address, or an http one on this computer),
+   once for the whole run, and uses it only when its own signature, covering
+   all of it, was made with a certificate the Official Journal announced:
+   the six of notice C/2026/1944, embedded in trebaruna
+   (`src/trust/infrastructure/officialjournal/PROVENANCE.md`). When the
+   Commission has changed its key since, the pivot lists the LOTL names
+   after that notice lead from the announced keys to the new one, each
+   signed with a key of the set before it. When the LOTL no longer names the
+   notice, it is refused until trebaruna carries the newer one. TLS to the
+   Commission's site is not what makes it trusted.
 2. For each territory, extracts the list URL **and the certificates authorised to
-   sign it**.
+   sign it**. A territory code is two capital letters; an entry with any
+   other code is ignored, since the code names the file in the cache.
 3. Downloads the national list.
 4. Verifies the national list's own XML signature (the one under its root)
    against those certificates, with the same verifier as signed documents.

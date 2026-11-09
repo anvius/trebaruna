@@ -5,6 +5,8 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -87,12 +89,18 @@ func runTrustSync(args []string, stdout, stderr io.Writer) int {
 	if cache == "" {
 		cache = verificationinfra.DefaultCacheDirectory()
 	}
+	if !secureOrLocal(*lotlURL) {
+		fmt.Fprintf(stderr, "--lotl must be an https address (http only on this computer): %s\n", *lotlURL)
+		return exitUsage
+	}
 
 	syncer := &trustapplication.SyncTerritory{
-		LOTL:          trustinfra.WebLOTL{URL: *lotlURL},
-		Lists:         trustinfra.WebList{},
-		CacheDir:      cache,
-		QuarantineDir: filepath.Join(cache, "rejected"),
+		LOTL:               trustinfra.WebLOTL{URL: *lotlURL},
+		Lists:              trustinfra.WebList{},
+		CacheDir:           cache,
+		QuarantineDir:      filepath.Join(cache, "rejected"),
+		LOTLAnchors:        trustinfra.OfficialJournalAnchors(),
+		AnchorAnnouncement: trustinfra.OfficialJournalAnnouncement,
 	}
 
 	territories, err := selectTerritories(syncer, *territory)
@@ -397,4 +405,14 @@ func runTrustTSA(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stdout, "\nThe list says who is qualified, not who answers without an account: some authorities want one (--tsa-user).")
 	}
 	return exitOK
+}
+
+// secureOrLocal accepts an https address, or an http one on this computer.
+func secureOrLocal(address string) bool {
+	parsed, err := url.Parse(address)
+	if err != nil || parsed.Host == "" {
+		return false
+	}
+	host := parsed.Hostname()
+	return parsed.Scheme == "https" || parsed.Scheme == "http" && (host == "localhost" || net.ParseIP(host).IsLoopback())
 }

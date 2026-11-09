@@ -55,7 +55,9 @@ func (p CachedTrustProvider) Load(territory string) (domain.TrustList, error) {
 
 	var lastErr error
 	for _, candidate := range candidates {
-		if candidate == "" {
+		// A territory names a file: only a two-letter code may, never a path.
+		if !domain.ValidTerritory(candidate) {
+			lastErr = fmt.Errorf("%q is not a territory code", candidate)
 			continue
 		}
 		path := filepath.Join(p.Directory, candidate+".xml")

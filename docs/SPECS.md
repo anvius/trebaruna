@@ -78,6 +78,7 @@ user seeing what is signed and where anything goes.
 |---|---|
 | RFC 3161 tokens (`.tsr`) and their verification; authorities with an account | built |
 | Time-stamped data `.tsd` (RFC 5544): create, verify (renewals included, DER or BER), extract (nested `.p7m.tsd`) | built |
+| Trusted lists synced from the EU list of the lists (`trust sync`): the list of the lists authenticated against the keys the Official Journal announced (notice C/2026/1944, embedded) and the pivot lists after it, each national list against the certificates it publishes; territory codes are two capital letters; `--lotl` https or local | built |
 | Qualified timestamping services named from the trusted list (`trust tsa`); every timestamp says whether its authority is qualified, offline. The lists (IT, ES, AT, BE) publish no service addresses, so the address comes from the provider | built |
 
 ### Verify
@@ -164,7 +165,7 @@ user seeing what is signed and where anything goes.
 | signing | `CosignContainer` (shared by `SignDocument` and afirma://) | `Execute(ctx, Request, container) ([]byte, error)` |
 | signing | `ChangeCardPIN`, `UnlockCard` | `Execute(ctx, Card, secret, newPIN) error` |
 | verification | `VerifyDocument` | `Execute` |
-| trust | `VerifyList` | `Execute` |
+| trust | `SyncTerritory` | `Execute(territory) (Result, error)` |
 | encryption | `EncryptDocument`, `DecryptDocument` | `Execute` |
 | afirma | `AnswerPage` | `Execute(ctx, Invocation) (Answer, error)` |
 | desktop | `SignFromDesktop`, `PreviewPage`, `InspectCertificate`, `ListCards`, `ListFormFields`, `ChangeCardPIN`, `ReviewPageRequest`, `EncryptForRecipients`, `OpenEnvelope` | `Execute` |

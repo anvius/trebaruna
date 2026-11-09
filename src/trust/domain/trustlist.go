@@ -403,6 +403,29 @@ type LOTL struct {
 	Entries    []LOTLEntry
 	Issued     time.Time
 	NextUpdate time.Time
+	// Announcements are the addresses the list names in its scheme
+	// information, in its order: the Official Journal notices that
+	// announced the keys the Commission signs it with, and the pivot lists
+	// that changed those keys since, newest first.
+	Announcements []string
+	// Signers are the certificates the list publishes, in its pointer to
+	// itself, as the ones it may be signed with.
+	Signers []*x509.Certificate
+}
+
+// ValidTerritory reports a territory code a list can be named by: two
+// capital letters, as ISO 3166 and the EU list write them. A code becomes
+// a file name in the cache, so nothing else is accepted.
+func ValidTerritory(code string) bool {
+	if len(code) != 2 {
+		return false
+	}
+	for index := 0; index < len(code); index++ {
+		if code[index] < 'A' || code[index] > 'Z' {
+			return false
+		}
+	}
+	return true
 }
 
 // Find returns the entry for a territory.

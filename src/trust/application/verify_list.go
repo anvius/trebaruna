@@ -3,9 +3,12 @@ package application
 
 import (
 	"bytes"
+	"crypto/x509"
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"time"
 
 	"codeberg.org/simplicer/trebaruna/src/trust/domain"
@@ -35,6 +38,13 @@ type ListSource interface {
 type SyncTerritory struct {
 	LOTL  LOTLSource
 	Lists ListSource
+	// LOTLAnchors are the certificates the Official Journal announced for
+	// signing the EU list of the lists, and AnchorAnnouncement the address
+	// of that notice as the list names it: the list is used only when one
+	// of them signed it whole, or a chain of pivot lists leads from them to
+	// its signer.
+	LOTLAnchors        []*x509.Certificate
+	AnchorAnnouncement string
 	// CacheDir is where authenticated lists are stored.
 	CacheDir string
 	// QuarantineDir keeps rejected downloads for inspection.
@@ -96,12 +106,14 @@ func (u *SyncTerritory) Execute(territory string) (Result, error) {
 	if !integrity.Trusted {
 		// Keep the rejected file for diagnosis, never in the cache.
 		if u.QuarantineDir != "" {
-			_ = writeInto(u.QuarantineDir, territory+"-rejected.xml", content)
+			_ = writeInto(u.QuarantineDir, entry.Territory+"-rejected.xml", content)
 		}
 		return result, nil
 	}
 
-	if err := writeInto(u.CacheDir, territory+".xml", content); err != nil {
+	// The file is named by the code the authenticated EU list publishes,
+	// which the parser accepts only as two capital letters.
+	if err := writeInto(u.CacheDir, entry.Territory+".xml", content); err != nil {
 		return result, err
 	}
 	result.Written = true
@@ -151,8 +163,59 @@ func (u *SyncTerritory) lotl() (domain.LOTL, error) {
 	if err != nil {
 		return domain.LOTL{}, err
 	}
+	if err := u.authenticateLOTL(content, lotl); err != nil {
+		return domain.LOTL{}, err
+	}
 	u.fetched = &lotl
 	return lotl, nil
+}
+
+// authenticateLOTL accepts the EU list of the lists only when its own
+// signature, covering it whole, was made with a certificate the Official
+// Journal announced, or with one a chain of pivot lists announced after
+// that notice (ETSI TS 119 615): each pivot signed with a certificate of
+// the set before it, naming the next set in its pointer to itself. TLS to
+// the Commission's site is not what makes the list trusted.
+func (u *SyncTerritory) authenticateLOTL(content []byte, lotl domain.LOTL) error {
+	if len(u.LOTLAnchors) == 0 {
+		return fmt.Errorf("no anchors for the EU list of the lists: it cannot be authenticated")
+	}
+	if trustinfrastructure.InspectListSignatureWithAnchors(content, u.LOTLAnchors).Trusted {
+		return nil
+	}
+	announced := slices.Index(lotl.Announcements, u.AnchorAnnouncement)
+	if announced < 0 {
+		return fmt.Errorf("the EU list of the lists is not signed with the certificates of the notice trebaruna knows (%s) "+
+			"and no longer names it: a newer trebaruna carries the notice that replaced it", u.AnchorAnnouncement)
+	}
+	// The pivots named before the notice came after it; the list names
+	// them newest first.
+	var pivots []string
+	for _, address := range lotl.Announcements[:announced] {
+		if strings.HasSuffix(strings.ToLower(address), ".xml") {
+			pivots = append(pivots, address)
+		}
+	}
+	slices.Reverse(pivots)
+	signers := u.LOTLAnchors
+	for _, address := range pivots {
+		pivot, err := u.Lists.Fetch(address)
+		if err != nil {
+			return fmt.Errorf("fetch the pivot list %s: %w", address, err)
+		}
+		if !trustinfrastructure.InspectListSignatureWithAnchors(pivot, signers).Trusted {
+			return fmt.Errorf("the pivot list %s is not signed with a certificate announced before it", address)
+		}
+		parsed, err := trustinfrastructure.LOTLParser{}.Parse(bytes.NewReader(pivot))
+		if err != nil || len(parsed.Signers) == 0 {
+			return fmt.Errorf("the pivot list %s names no certificates to sign with", address)
+		}
+		signers = parsed.Signers
+	}
+	if !trustinfrastructure.InspectListSignatureWithAnchors(content, signers).Trusted {
+		return fmt.Errorf("the EU list of the lists is not signed whole with a certificate the Official Journal or its pivots announced")
+	}
+	return nil
 }
 
 // writeInto writes content into a directory, creating it if needed.

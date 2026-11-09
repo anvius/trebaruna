@@ -6,6 +6,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- The EU list of the lists, the root every national list is
+  authenticated against, was trusted on TLS alone, and `--lotl` accepted
+  plain http. It is now used only when its own signature, over all of
+  it, was made with a certificate the Official Journal announced (the
+  six of notice C/2026/1944, embedded with their provenance), or with one
+  a chain of pivot lists announced after that notice; a list that no
+  longer names the notice is refused until trebaruna carries the newer
+  one. `--lotl` takes https, or http on this computer only. Checked live:
+  the Commission's list authenticates and Spain's syncs.
+- A territory code from the EU list, or given to `verify`, named a file in
+  the cache unchecked: a hostile list could write `../` paths outside it.
+  Only two capital letters are a territory now; the cache file is named by
+  the code the authenticated list publishes.
+
 ### Fixed
 
 - A PAdES-T whose timestamp authority is on no trusted list was reported

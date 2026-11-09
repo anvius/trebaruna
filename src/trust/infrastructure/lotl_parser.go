@@ -45,12 +45,13 @@ func (LOTLParser) Parse(reader io.Reader) (domain.LOTL, error) {
 	decoder.CharsetReader = charsetReader
 
 	var (
-		result     domain.LOTL
-		current    lotlPointer
-		inPointer  bool
-		depth      int
-		issued     string
-		nextUpdate string
+		result      domain.LOTL
+		current     lotlPointer
+		inPointer   bool
+		inSchemeURI bool
+		depth       int
+		issued      string
+		nextUpdate  string
 	)
 
 	for {
@@ -69,6 +70,15 @@ func (LOTLParser) Parse(reader io.Reader) (domain.LOTL, error) {
 			case "OtherTSLPointer":
 				inPointer = true
 				current = lotlPointer{}
+			case "SchemeInformationURI":
+				// The list's own, not a pointer's: the Official Journal
+				// notices and pivot lists behind its signing keys.
+				inSchemeURI = !inPointer
+			case "URI":
+				if text, err := readText(decoder); err == nil && inSchemeURI {
+					result.Announcements = append(result.Announcements, strings.TrimSpace(text))
+				}
+				depth--
 			case "TSLLocation":
 				if text, err := readText(decoder); err == nil {
 					current.location = strings.TrimSpace(text)
@@ -109,12 +119,23 @@ func (LOTLParser) Parse(reader io.Reader) (domain.LOTL, error) {
 			}
 		case xml.EndElement:
 			depth--
+			if element.Name.Local == "SchemeInformationURI" {
+				inSchemeURI = false
+			}
 			if element.Name.Local == "OtherTSLPointer" && inPointer {
 				inPointer = false
 
-				// A pointer to another pointer (the EU list pointing at itself) is
-				// not a national list.
-				if current.territory == "" || current.location == "" || current.territory == "EU" {
+				// The EU list pointing at itself names the certificates it
+				// may be signed with; it is not a national list.
+				if current.territory == "EU" || strings.HasSuffix(current.tslType, "/EUlistofthelists") {
+					if strings.HasSuffix(current.tslType, "/EUlistofthelists") {
+						result.Signers = append(result.Signers, current.certificates...)
+					}
+					continue
+				}
+				// A territory names a file in the cache: an entry whose code
+				// is not two capital letters cannot be one.
+				if !domain.ValidTerritory(current.territory) || current.location == "" {
 					continue
 				}
 
