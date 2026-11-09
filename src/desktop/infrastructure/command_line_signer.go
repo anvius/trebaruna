@@ -44,13 +44,7 @@ func (s CommandLineSigner) Sign(ctx context.Context, intent domain.SigningIntent
 	command.Stderr = &stderr
 
 	if err := command.Run(); err != nil {
-		if locked(stderr.String()) {
-			return domain.Receipt{}, domain.Problem{Code: domain.ProblemLockedCertificate}
-		}
-		if problem, refused := cardRefusal(stderr.String()); refused {
-			return domain.Receipt{}, problem
-		}
-		return domain.Receipt{}, errors.New(meaningfulLine(stderr.String(), stdout.String(), err))
+		return domain.Receipt{}, keyFailure(stderr.String(), stdout.String(), err)
 	}
 
 	var printed struct {
@@ -110,18 +104,7 @@ func signArguments(intent domain.SigningIntent) []string {
 		arguments = append(arguments, "--rubric", intent.RubricPath)
 	}
 
-	switch {
-	case intent.Card.Chosen() && intent.Card.Store == domain.StoreFirefox:
-		arguments = append(arguments, "--firefox", "--certificate", intent.Card.Fingerprint)
-	case intent.Card.Chosen():
-		// The label narrows the readers and the fingerprint names the very
-		// certificate the person picked, so the command never chooses for them.
-		arguments = append(arguments, "--token", intent.Card.Token, "--certificate", intent.Card.Fingerprint)
-	case strings.HasSuffix(strings.ToLower(intent.Key.Path), ".pem"):
-		arguments = append(arguments, "--pem", intent.Key.Path)
-	default:
-		arguments = append(arguments, "--p12", intent.Key.Path)
-	}
+	arguments = append(arguments, keyArguments(intent.Key, intent.Card)...)
 	if intent.Level.NeedsRevocation() {
 		// LT and LTA embed the OCSP answers, which the command only fetches
 		// when told it may use the network.
@@ -157,6 +140,35 @@ func signArguments(intent domain.SigningIntent) []string {
 		arguments = append(arguments, "--location", intent.Location)
 	}
 	return arguments
+}
+
+// keyArguments are the flags that name the key: a card or store
+// certificate, or a file.
+func keyArguments(key domain.CertificateFile, card domain.CardKey) []string {
+	switch {
+	case card.Chosen() && card.Store == domain.StoreFirefox:
+		return []string{"--firefox", "--certificate", card.Fingerprint}
+	case card.Chosen():
+		// The label narrows the readers and the fingerprint names the very
+		// certificate the person picked, so the command never chooses for them.
+		return []string{"--token", card.Token, "--certificate", card.Fingerprint}
+	case strings.HasSuffix(strings.ToLower(key.Path), ".pem"):
+		return []string{"--pem", key.Path}
+	}
+	return []string{"--p12", key.Path}
+}
+
+// keyFailure turns the command's refusal into the problem the window
+// explains: a passphrase that does not open the file, a card's refusal, or
+// the line the command printed.
+func keyFailure(stderr, stdout string, err error) error {
+	if locked(stderr) {
+		return domain.Problem{Code: domain.ProblemLockedCertificate}
+	}
+	if problem, refused := cardRefusal(stderr); refused {
+		return problem
+	}
+	return errors.New(meaningfulLine(stderr, stdout, err))
 }
 
 // locked recognises a passphrase that does not open the certificate, in the

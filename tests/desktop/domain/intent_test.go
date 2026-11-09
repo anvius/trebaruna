@@ -161,3 +161,14 @@ func TestAnOpenDocumentIsSignedInsideItselfFirst(t *testing.T) {
 		t.Errorf("output %q", got)
 	}
 }
+
+// TestAnEnvelopeIsKnownByItsSuffix: .p7e in any case, nothing else.
+func TestAnEnvelopeIsKnownByItsSuffix(t *testing.T) {
+	for path, want := range map[string]bool{
+		"/tmp/offerta.pdf.p7e": true, "/tmp/OFFERTA.P7E": true, "/tmp/offerta.p7m": false, "/tmp/p7e.pdf": false,
+	} {
+		if got := domain.IsEnvelope(path); got != want {
+			t.Errorf("%s: %v", path, got)
+		}
+	}
+}

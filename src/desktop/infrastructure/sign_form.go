@@ -69,6 +69,9 @@ type signForm struct {
 	onCheck func(path string)
 	// onNetwork receives the connections a signature reported.
 	onNetwork func([]transparency.Connection)
+	// onKeyChange hears that a certificate was read or cleared: the
+	// envelopes window opens with the same key.
+	onKeyChange func()
 
 	document string
 	// batch holds the documents of a batch; empty when one document is signed.
@@ -627,6 +630,7 @@ func (f *signForm) certificateRead(summary domain.CertificateSummary) {
 	}
 	// Last, so a summary on record means the whole card has been filled.
 	f.summary = &summary
+	f.keyChanged()
 }
 
 // clearCertificate empties the certificate card and the seal's identity.
@@ -635,6 +639,24 @@ func (f *signForm) clearCertificate() {
 	f.holder.SetText("")
 	f.holderDetails.SetText("")
 	f.pages.setIdentity(SealIdentity{})
+	f.keyChanged()
+}
+
+func (f *signForm) keyChanged() {
+	if f.onKeyChange != nil {
+		f.onKeyChange()
+	}
+}
+
+// chosenKey is the key the step describes, to open an envelope with, and
+// its holder's name; ok is false while no certificate is read.
+func (f *signForm) chosenKey() (domain.OpeningIntent, string, bool) {
+	if f.summary == nil {
+		return domain.OpeningIntent{}, "", false
+	}
+	var intent domain.SigningIntent
+	f.keyIntent(&intent)
+	return domain.OpeningIntent{Key: intent.Key, Card: intent.Card}, f.summary.Holder, true
 }
 
 // noCertificate says why no certificate is chosen, in the verdict line.

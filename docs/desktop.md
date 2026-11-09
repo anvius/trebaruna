@@ -234,6 +234,29 @@ cannot approve one on its own.
 
 See [Web pages](web-pages.md) for the full flow.
 
+## Encrypted envelopes (.p7e)
+
+**File → Encrypt for others…** and **File → Open an encrypted envelope…** open
+a separate window, for the same reason as the requests window: envelopes are
+rare next to signatures.
+
+- **Encrypt for others**: a document and the certificates of the people who
+  may open it (`.pem`, `.cer`, `.crt`, `.der`), each listed by the holder's
+  name read from it. **Encrypt** writes `<document>.p7e` beside the document
+  and names who can open it. Only they can: add your own certificate to open
+  it yourself.
+- **Open an envelope**: a `.p7e` and the key chosen in step 2 of the Sign tab
+  (file, card or Firefox store, with its passphrase or PIN), which the window
+  names and follows while it is open; without one it offers to go and choose
+  it. **Open envelope** writes the document beside the envelope; **Open**
+  shows it with the system's viewer. A card's refusals are explained as when
+  signing, and the card is read again.
+
+A `.p7e` dropped on the main window, or opened with trebaruna from a file
+manager, goes to this window. Both halves drive `trebaruna encrypt` and
+`trebaruna decrypt`; the passphrase and the PIN travel in the command's
+environment, never on its command line.
+
 ---
 
 ## Network activity
@@ -256,6 +279,7 @@ Linux and Windows, `Cmd` on macOS):
 | File | Open document to sign… | `Ctrl+O` |
 | File | Choose certificate… | `Ctrl+K` |
 | File | Check a signed document… | `Ctrl+Shift+O` |
+| File | Encrypt for others…, Open an encrypted envelope… | — |
 | Signature | Sign | `Ctrl+Enter` |
 | Signature | Previous page / Next page | `Ctrl+PgUp` / `Ctrl+PgDn` |
 | Signature | Find free space | `Ctrl+F` |
@@ -270,8 +294,8 @@ corner of their first page (or none, with the invisible option); the result
 lists what failed and why.
 
 Dropping a file on the window does what the file suggests: a `.p12`, `.pfx` or
-`.pem` becomes the certificate; on the Check tab any file is checked; anywhere
-else it becomes the document to sign.
+`.pem` becomes the certificate; a `.p7e` goes to the envelopes window; on the
+Check tab any file is checked; anywhere else it becomes the document to sign.
 
 ---
 

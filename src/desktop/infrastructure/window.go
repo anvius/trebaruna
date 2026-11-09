@@ -57,6 +57,10 @@ type Window struct {
 	binaryPath string
 	// formFields lists a PDF form's empty signature fields.
 	formFields *application.ListFormFields
+	// envelopes is the open envelopes window, nil while it is closed.
+	envelopes *envelopesPanel
+	// tabs are the signing and verification tabs.
+	tabs *container.AppTabs
 }
 
 // Options configures the window.
@@ -84,6 +88,13 @@ func NewWindow(options Options) *Window {
 	// TREBARUNA_SKIP_WELCOME opens the form directly, for the diagnostic runs and
 	// for users who sign several documents a day and find the cover an obstacle.
 	// Opening a document skips the cover: the user already made a choice.
+	// An envelope opened from a file manager goes to the envelopes window,
+	// over the signing tab whose key opens it.
+	if domain.IsEnvelope(options.DocumentPath) {
+		window.SetContent(desktop.withTabs(desktop.buildContent("")))
+		desktop.showEnvelopes(options.DocumentPath)
+		return desktop
+	}
 	if os.Getenv("TREBARUNA_SKIP_WELCOME") != "" || options.DocumentPath != "" {
 		window.SetContent(desktop.withTabs(desktop.buildContent(options.DocumentPath)))
 		return desktop
@@ -158,6 +169,7 @@ func (w *Window) withTabs(signingContent fyne.CanvasObject) fyne.CanvasObject {
 		container.NewTabItemWithIcon(w.messages.VerifyTab, theme.SearchIcon(), verification.content()),
 	)
 	tabs.SetTabLocation(container.TabLocationTop)
+	w.tabs = tabs
 
 	checkFile := func(path string) {
 		tabs.SelectIndex(1)
@@ -193,6 +205,8 @@ func (w *Window) withTabs(signingContent fyne.CanvasObject) fyne.CanvasObject {
 // anything on the verification tab is checked, anything else is signed.
 func (w *Window) dropped(path string, verifying bool, checkFile func(string)) {
 	switch {
+	case domain.IsEnvelope(path):
+		w.showEnvelopes(path)
 	case isCertificateFile(path):
 		w.form.setCertificate(path)
 	case verifying:
@@ -268,6 +282,12 @@ func (w *Window) mainMenu(tabs *container.AppTabs, checkFile func(string)) *fyne
 	})
 	checkDocument.Shortcut = &desktop.CustomShortcut{KeyName: fyne.KeyO, Modifier: control | fyne.KeyModifierShift}
 
+	encrypt := fyne.NewMenuItem(m.MenuEncrypt, func() { w.showEnvelopes("") })
+	openEnvelope := fyne.NewMenuItem(m.MenuOpenEnvelope, func() {
+		w.showEnvelopes("")
+		newFileOpen(w.envelopes.window, []string{".p7e"}, w.envelopes.setEnvelope).Show()
+	})
+
 	sign := fyne.NewMenuItem(m.SignButton, func() {
 		tabs.SelectIndex(0)
 		w.form.sign()
@@ -282,7 +302,8 @@ func (w *Window) mainMenu(tabs *container.AppTabs, checkFile func(string)) *fyne
 	freeSpace.Shortcut = &desktop.CustomShortcut{KeyName: fyne.KeyF, Modifier: control}
 
 	return fyne.NewMainMenu(
-		fyne.NewMenu(m.MenuFile, openDocument, signFolder, chooseCertificate, fyne.NewMenuItemSeparator(), checkDocument),
+		fyne.NewMenu(m.MenuFile, openDocument, signFolder, chooseCertificate, fyne.NewMenuItemSeparator(), checkDocument,
+			fyne.NewMenuItemSeparator(), encrypt, openEnvelope),
 		fyne.NewMenu(m.MenuSignature, sign, fyne.NewMenuItemSeparator(), previous, next, freeSpace),
 		fyne.NewMenu(m.MenuCard,
 			fyne.NewMenuItem(m.MenuChangePIN, func() { w.showPINDialog(domain.ChangePIN) }),
@@ -297,6 +318,38 @@ func (w *Window) mainMenu(tabs *container.AppTabs, checkFile func(string)) *fyne
 			fyne.NewMenuItem(m.MenuAbout, w.showAbout),
 		),
 	)
+}
+
+// showEnvelopes opens the envelopes window, or brings it forward, with an
+// envelope to open when one is given. It opens envelopes with the key
+// chosen in the signing tab, which it follows while open.
+func (w *Window) showEnvelopes(envelope string) {
+	if w.envelopes == nil {
+		window := fyne.CurrentApp().NewWindow(w.messages.EnvelopesTitle)
+		panel := newEnvelopesPanel(window, w.messages, w.palette)
+		panel.encrypt = application.NewEncryptForRecipients(CommandLineEncrypter{BinaryPath: w.binaryPath})
+		panel.open = application.NewOpenEnvelope(CommandLineEnvelopeOpener{BinaryPath: w.binaryPath})
+		panel.inspect = w.inspect
+		panel.key = w.form.chosenKey
+		panel.refused = w.form.cardRefused
+		panel.chooseKey = func() {
+			w.tabs.SelectIndex(0)
+			w.window.RequestFocus()
+		}
+		w.form.onKeyChange = panel.refreshKey
+		window.SetContent(panel.content())
+		window.Resize(fyne.NewSize(1040, 600))
+		window.SetOnClosed(func() {
+			w.form.onKeyChange = nil
+			w.envelopes = nil
+		})
+		w.envelopes = panel
+		window.Show()
+	}
+	if envelope != "" {
+		w.envelopes.setEnvelope(envelope)
+	}
+	w.envelopes.window.RequestFocus()
 }
 
 // showRequests opens the web-page requests in their own window.
@@ -456,6 +509,8 @@ func translate(err error, m messaging.Catalogue) string {
 		return m.WrongPIN
 	case domain.ProblemMissingSaveTo:
 		return m.MissingSaveTo
+	case domain.ProblemMissingRecipient:
+		return m.MissingRecipient
 	case domain.ProblemMissingPUK:
 		return m.MissingPUK
 	case domain.ProblemPUKLocked:

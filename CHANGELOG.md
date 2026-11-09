@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The window encrypts and opens `.p7e` envelopes, in a window of its own
+  from the File menu (*Encrypt for others…*, *Open an encrypted
+  envelope…*). Encrypting lists each recipient by the holder's name read
+  from the certificate added, refuses a file that is no certificate, and
+  writes `<document>.p7e`; opening uses the key chosen in step 2 of the
+  Sign tab (file, card or Firefox store), which the window names and
+  follows, and offers to choose one when there is none; a card's refusal
+  is explained as when signing. A `.p7e` dropped on the window or opened
+  from a file manager goes there; the launcher offers trebaruna for
+  `application/pkcs7-mime`. It drives `trebaruna encrypt` and
+  `trebaruna decrypt`, passphrase and PIN in the environment.
+
 - The Flatpak signs with smart cards. The runtime has no PC/SC, so it
   carries OpenSC 0.27.1 and the PC/SC client library of pcsc-lite 2.5.3
   (the tarball's signature by its maintainer checked), and reaches the

@@ -49,18 +49,26 @@ func (i SigningIntent) Validate() error {
 	if strings.TrimSpace(i.DocumentPath) == "" {
 		return Problem{Code: ProblemMissingDocument}
 	}
-	if i.Card.Chosen() {
-		if err := i.Card.problem(); err != nil {
-			return err
-		}
-	} else if strings.TrimSpace(i.Key.Path) == "" {
-		return Problem{Code: ProblemMissingKey}
+	if err := keyProblem(i.Key, i.Card); err != nil {
+		return err
 	}
 	if i.Level.NeedsTimestamp() && strings.TrimSpace(i.TimestampURL) == "" {
 		return Problem{Code: ProblemMissingTSA, Detail: string(i.Level)}
 	}
 	if i.Seal.Page < 1 {
 		return Problem{Code: ProblemInvalidPage}
+	}
+	return nil
+}
+
+// keyProblem is what stops the key chosen, a card or a file, before
+// anything is spawned.
+func keyProblem(key CertificateFile, card CardKey) error {
+	if card.Chosen() {
+		return card.problem()
+	}
+	if strings.TrimSpace(key.Path) == "" {
+		return Problem{Code: ProblemMissingKey}
 	}
 	return nil
 }
@@ -202,6 +210,10 @@ const (
 	// ProblemMissingSaveTo means a page asked to save a file and no place
 	// was chosen.
 	ProblemMissingSaveTo ProblemCode = "missing_save_to"
+
+	// ProblemMissingRecipient means a document was to be encrypted for
+	// nobody.
+	ProblemMissingRecipient ProblemCode = "missing_recipient"
 )
 
 // StopsCard reports whether the problem forbids trying the card again with

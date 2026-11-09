@@ -20,6 +20,6 @@ Exec=trebaruna-desktop %U
 Icon=trebaruna
 Terminal=false
 Categories=Office;Graphics;
-MimeType=application/pdf;text/xml;application/xml;x-scheme-handler/trebaruna;x-scheme-handler/afirma;
+MimeType=application/pdf;text/xml;application/xml;application/pkcs7-mime;x-scheme-handler/trebaruna;x-scheme-handler/afirma;
 Keywords=sign;signature;firma;firma digitale;signatura;sinatura;sinadura;pades;cades;xades;pdf;
 StartupNotify=true

@@ -100,7 +100,7 @@ user seeing what is signed and where anything goes.
 | Rule | Status |
 |---|---|
 | `.p7e` envelopes for recipients' certificates and their decryption with a file, a card or a store (ADR-0011): CLI | built |
-| `.p7e` encryption and decryption in the window | planned |
+| `.p7e` encryption and decryption in the window: its own window from the File menu, recipients read from their certificates, opened with the key chosen to sign; a dropped or opened `.p7e` goes there | built |
 
 ### Web entry points
 
@@ -166,6 +166,6 @@ user seeing what is signed and where anything goes.
 | trust | `VerifyList` | `Execute` |
 | encryption | `EncryptDocument`, `DecryptDocument` | `Execute` |
 | afirma | `AnswerPage` | `Execute(ctx, Invocation) (Answer, error)` |
-| desktop | `SignFromDesktop`, `PreviewPage`, `InspectCertificate`, `ListCards`, `ChangeCardPIN`, `ReviewPageRequest` | `Execute` |
+| desktop | `SignFromDesktop`, `PreviewPage`, `InspectCertificate`, `ListCards`, `ListFormFields`, `ChangeCardPIN`, `ReviewPageRequest`, `EncryptForRecipients`, `OpenEnvelope` | `Execute` |
 
 New capabilities add use cases here as they are built.

@@ -114,6 +114,29 @@ func TestScreenshots(t *testing.T) {
 		capture(t, window, filepath.Join(directory, fmt.Sprintf("check-container-%s.png", language)))
 	}
 
+	// The envelopes window: a document encrypted for two people, and an
+	// envelope about to be opened with the certificate chosen to sign.
+	{
+		window := test.NewTempWindow(t, nil)
+		desktop := newDesktop(window, messaging.For(messaging.Spanish), "trebaruna")
+		desktop.inspect = application.NewInspectCertificate(portraitReader{})
+		window.SetContent(desktop.withTabs(desktop.buildContent(document)))
+		desktop.form.setCertificate("/home/mario/Documenti/firma/rossi-mario-infocert.p12")
+		waitFor(t, func() bool { return desktop.form.summary != nil })
+		desktop.showEnvelopes("/home/mario/Documenti/offerta-tecnica.pdf.p7e")
+		panel := desktop.envelopes
+		panel.setDocument("/home/mario/Documenti/capitolato-di-gara.pdf")
+		panel.recipients = []recipient{
+			{path: "/home/mario/Documenti/certificati/bianchi-anna.cer", holder: "ANNA BIANCHI"},
+			{path: "/home/mario/Documenti/certificati/verdi-luca.pem", holder: "LUCA VERDI"},
+		}
+		panel.showRecipients()
+		panel.report(panel.encryptStatus, fmt.Sprintf(desktop.messages.EncryptedAs, "capitolato-di-gara.pdf.p7e", "ANNA BIANCHI, LUCA VERDI"),
+			widget.SuccessImportance)
+		capture(t, panel.window, filepath.Join(directory, "envelopes-es.png"))
+		panel.window.Close()
+	}
+
 	// The light palette, as a light desktop gets it.
 	app.Settings().SetTheme(NewAppTheme(LightPalette()))
 	window := test.NewTempWindow(t, nil)

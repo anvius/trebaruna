@@ -261,6 +261,28 @@ type Catalogue struct {
 	NewPINTooShort         string
 	NewPINTooLong          string
 	MenuRequests           string
+	MenuEncrypt            string
+	MenuOpenEnvelope       string
+	EnvelopesTitle         string
+	EncryptSection         string
+	EncryptIntro           string
+	RecipientsLabel        string
+	AddRecipient           string
+	RemoveRecipient        string
+	NoRecipients           string
+	EncryptButton          string
+	EncryptingMessage      string
+	EncryptedAs            string
+	MissingRecipient       string
+	OpenSection            string
+	ChooseEnvelope         string
+	EnvelopeHint           string
+	OpensWith              string
+	NoKeyToOpen            string
+	GoToCertificate        string
+	OpenEnvelopeButton     string
+	OpeningMessage         string
+	OpenedAs               string
 	MenuHelp               string
 	MenuManual             string
 	MenuAbout              string
@@ -537,6 +559,28 @@ var spanish = Catalogue{
 	NewPINTooShort:             "El PIN nuevo es demasiado corto: la tarjeta pide al menos %s caracteres.",
 	NewPINTooLong:              "El PIN nuevo es demasiado largo: la tarjeta admite como mucho %s caracteres.",
 	MenuRequests:               "Peticiones de páginas web…",
+	MenuEncrypt:                "Cifrar para otros…",
+	MenuOpenEnvelope:           "Abrir un sobre cifrado…",
+	EnvelopesTitle:             "Sobres cifrados",
+	EncryptSection:             "Cifrar para otros",
+	EncryptIntro:               "Solo podrán abrirlo las personas cuyos certificados añadas. Añade el tuyo si también quieres abrirlo.",
+	RecipientsLabel:            "Destinatarios",
+	AddRecipient:               "Añadir certificado…",
+	RemoveRecipient:            "Quitar",
+	NoRecipients:               "Ningún destinatario todavía.",
+	EncryptButton:              "Cifrar",
+	EncryptingMessage:          "Cifrando…",
+	EncryptedAs:                "Cifrado como %s. Lo pueden abrir: %s.",
+	MissingRecipient:           "Añade el certificado de al menos un destinatario.",
+	OpenSection:                "Abrir un sobre",
+	ChooseEnvelope:             "Elegir sobre (.p7e)…",
+	EnvelopeHint:               "Un .p7e que te han enviado cifrado para tu certificado.",
+	OpensWith:                  "Se abre con el certificado elegido para firmar: %s.",
+	NoKeyToOpen:                "Elige tu certificado en Firmar (paso 2) para abrir sobres.",
+	GoToCertificate:            "Elegir certificado",
+	OpenEnvelopeButton:         "Abrir sobre",
+	OpeningMessage:             "Abriendo…",
+	OpenedAs:                   "Abierto como %s (%s).",
 	MenuHelp:                   "Ayuda",
 	MenuManual:                 "Manual",
 	MenuAbout:                  "Acerca de trebaruna",
@@ -794,6 +838,28 @@ var italian = Catalogue{
 	NewPINTooShort:             "Il nuovo PIN è troppo corto: la carta ne chiede almeno %s caratteri.",
 	NewPINTooLong:              "Il nuovo PIN è troppo lungo: la carta ne accetta al massimo %s caratteri.",
 	MenuRequests:               "Richieste dalle pagine web…",
+	MenuEncrypt:                "Cifra per altri…",
+	MenuOpenEnvelope:           "Apri una busta cifrata…",
+	EnvelopesTitle:             "Buste cifrate",
+	EncryptSection:             "Cifra per altri",
+	EncryptIntro:               "Potranno aprirlo solo le persone di cui aggiungi il certificato. Aggiungi il tuo se vuoi aprirlo anche tu.",
+	RecipientsLabel:            "Destinatari",
+	AddRecipient:               "Aggiungi certificato…",
+	RemoveRecipient:            "Rimuovi",
+	NoRecipients:               "Ancora nessun destinatario.",
+	EncryptButton:              "Cifra",
+	EncryptingMessage:          "Cifratura in corso…",
+	EncryptedAs:                "Cifrato come %s. Possono aprirlo: %s.",
+	MissingRecipient:           "Aggiungi il certificato di almeno un destinatario.",
+	OpenSection:                "Apri una busta",
+	ChooseEnvelope:             "Scegli busta (.p7e)…",
+	EnvelopeHint:               "Un .p7e che ti hanno inviato cifrato per il tuo certificato.",
+	OpensWith:                  "Si apre con il certificato scelto per firmare: %s.",
+	NoKeyToOpen:                "Scegli il tuo certificato in Firma (passo 2) per aprire le buste.",
+	GoToCertificate:            "Scegli certificato",
+	OpenEnvelopeButton:         "Apri busta",
+	OpeningMessage:             "Apertura in corso…",
+	OpenedAs:                   "Aperto come %s (%s).",
 	MenuHelp:                   "Aiuto",
 	MenuManual:                 "Manuale",
 	MenuAbout:                  "Informazioni su trebaruna",
@@ -1051,6 +1117,28 @@ var english = Catalogue{
 	NewPINTooShort:             "The new PIN is too short: the card wants at least %s characters.",
 	NewPINTooLong:              "The new PIN is too long: the card takes at most %s characters.",
 	MenuRequests:               "Requests from web pages…",
+	MenuEncrypt:                "Encrypt for others…",
+	MenuOpenEnvelope:           "Open an encrypted envelope…",
+	EnvelopesTitle:             "Encrypted envelopes",
+	EncryptSection:             "Encrypt for others",
+	EncryptIntro:               "Only the people whose certificates you add can open it. Add your own if you want to open it too.",
+	RecipientsLabel:            "Recipients",
+	AddRecipient:               "Add certificate…",
+	RemoveRecipient:            "Remove",
+	NoRecipients:               "No recipients yet.",
+	EncryptButton:              "Encrypt",
+	EncryptingMessage:          "Encrypting…",
+	EncryptedAs:                "Encrypted as %s. It opens for: %s.",
+	MissingRecipient:           "Add the certificate of at least one recipient.",
+	OpenSection:                "Open an envelope",
+	ChooseEnvelope:             "Choose envelope (.p7e)…",
+	EnvelopeHint:               "A .p7e someone sent you, encrypted for your certificate.",
+	OpensWith:                  "It opens with the certificate chosen to sign: %s.",
+	NoKeyToOpen:                "Choose your certificate under Sign (step 2) to open envelopes.",
+	GoToCertificate:            "Choose certificate",
+	OpenEnvelopeButton:         "Open envelope",
+	OpeningMessage:             "Opening…",
+	OpenedAs:                   "Opened as %s (%s).",
 	MenuHelp:                   "Help",
 	MenuManual:                 "Manual",
 	MenuAbout:                  "About trebaruna",
