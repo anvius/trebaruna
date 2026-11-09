@@ -435,8 +435,9 @@ Signing an already-signed PDF adds an **incremental update**: the earlier bytes
 are untouched, so the earlier signatures stay valid.
 
 ```bash
-trebaruna sign atto.pdf       --p12 k1.p12 --pass a    # → atto_signed.pdf
-trebaruna sign atto_signed.pdf --p12 k2.p12 --pass b   # → atto_signed_signed.pdf
+read -rs TREBARUNA_PASSPHRASE && export TREBARUNA_PASSPHRASE   # the passphrase, never on the command line
+trebaruna sign atto.pdf       --p12 k1.p12    # → atto_signed.pdf (k1's passphrase in $TREBARUNA_PASSPHRASE)
+trebaruna sign atto_signed.pdf --p12 k2.p12   # → atto_signed_signed.pdf (then k2's)
 ```
 
 Verified with up to five chained signatures. Each is reported separately by
@@ -538,7 +539,7 @@ trusting our own encoder.
 ### A contract, signed once, with a visible seal
 
 ```bash
-trebaruna sign contratto.pdf --p12 k.p12 --pass x \
+trebaruna sign contratto.pdf --p12 k.p12 \
     --reason "Accettazione" --box 60,60,300,170
 ```
 
@@ -551,7 +552,7 @@ trebaruna sign fattura.xml --pem k.pem --level t --tsa https://freetsa.org/tsr
 ### A document that must stay verifiable for 20 years
 
 ```bash
-trebaruna sign mutuo.pdf --p12 k.p12 --pass x \
+trebaruna sign mutuo.pdf --p12 k.p12 \
     --level lta --tsa https://freetsa.org/tsr --online-revocation \
     --tsa-user me --tsa-pass secret
 ```
@@ -573,7 +574,7 @@ app, drop several files on the window, or use **File → Sign a folder…**.
 ### Sign and check in one go
 
 ```bash
-trebaruna sign doc.pdf --p12 k.p12 --pass x >/dev/null &&
+trebaruna sign doc.pdf --p12 k.p12 >/dev/null &&
 trebaruna verify doc_signed.pdf
 ```
 

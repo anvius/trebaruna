@@ -55,6 +55,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.64.1-unstable" date="2026-11-09">
+      <description>
+        <p>Clearer messages for a missing document or passphrase.</p>
+      </description>
+    </release>
     <release version="0.64.0-unstable" date="2026-11-09">
       <description>
         <p>Approving a signature prepared by a site's server names that server.</p>

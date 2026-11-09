@@ -146,7 +146,8 @@ the certificate by other means.
 ## Inspecting a certificate
 
 ```bash
-trebaruna certificate mia-chiave.p12 --pass segreto
+read -rs TREBARUNA_PASSPHRASE && export TREBARUNA_PASSPHRASE   # the passphrase, never on the command line
+trebaruna certificate mia-chiave.p12
 ```
 
 ```
@@ -162,13 +163,13 @@ trebaruna certificate mia-chiave.p12 --pass segreto
 Machine-readable:
 
 ```bash
-trebaruna certificate k.p12 --pass x --json
+trebaruna certificate k.p12 --json
 ```
 
 To see where the issuer sits in the trust lists:
 
 ```bash
-trebaruna certificate k.p12 --pass x --territory IT
+trebaruna certificate k.p12 --territory IT
 ```
 
 Useful **before** signing: if your issuer is not listed, your counterparty will

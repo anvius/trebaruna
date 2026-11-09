@@ -21,8 +21,9 @@ The errors you will actually hit, what each one means, and what to do.
 Three questions resolve most problems:
 
 ```bash
+read -rs TREBARUNA_PASSPHRASE && export TREBARUNA_PASSPHRASE   # the passphrase, never on the command line
 trebaruna version                 # what am I running?
-trebaruna certificate key.p12 --pass x   # what is my certificate?
+trebaruna certificate key.p12   # what is my certificate?
 trebaruna verify out.pdf          # what did I actually produce?
 ```
 
@@ -48,7 +49,7 @@ trebaruna sign doc.xml --format xades     # or just omit --format
 No key was given. Exactly one is required:
 
 ```bash
-trebaruna sign doc.pdf --p12 k.p12 --pass secret
+trebaruna sign doc.pdf --p12 k.p12
 ```
 
 ### "ambiguous key source: use only one of --p12, --pem, --token"
@@ -60,7 +61,7 @@ Two were given. The tool refuses to guess which one you meant.
 The level you asked for includes a timestamp, and no authority was named:
 
 ```bash
-trebaruna sign doc.pdf --p12 k.p12 --pass x --level t --tsa https://freetsa.org/tsr
+trebaruna sign doc.pdf --p12 k.p12 --level t --tsa https://freetsa.org/tsr
 ```
 
 Or use `--level bes` if you do not need one.
@@ -70,7 +71,7 @@ Or use `--level bes` if you do not need one.
 `lt` and `lta` need to query OCSP, which is opt-in:
 
 ```bash
-trebaruna sign doc.pdf --p12 k.p12 --pass x --level lt \
+trebaruna sign doc.pdf --p12 k.p12 --level lt \
     --tsa https://freetsa.org/tsr --online-revocation
 ```
 
@@ -105,7 +106,7 @@ The cryptography is fine; the issuer is not supervised in the lists you have.
 trebaruna trust sync
 trebaruna trust list                     # is anything cached?
 trebaruna verify doc.pdf --territory IT  # right country?
-trebaruna certificate k.p12 --pass x     # is it self-signed?
+trebaruna certificate k.p12     # is it self-signed?
 ```
 
 Most common causes, in order:

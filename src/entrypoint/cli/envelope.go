@@ -105,7 +105,7 @@ func runDecrypt(args []string, stdout, stderr io.Writer) int {
 	decrypted, err := application.NewDecryptDocument(infrastructure.LocalFiles{}, infrastructure.KeyOpener{}).
 		Execute(context.Background(), application.DecryptRequest{Envelope: positional[0], Key: key, Output: *output})
 	if err != nil {
-		fmt.Fprintf(stderr, "%v\n", err)
+		fmt.Fprintf(stderr, "%v\n", passphraseHint(err))
 		return exitInvalid
 	}
 	if *asJSON {

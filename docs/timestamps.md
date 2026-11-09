@@ -50,7 +50,8 @@ The level decides:
 | `lta` | The entire document, including the validation material |
 
 ```bash
-trebaruna sign atto.pdf --p12 k.p12 --pass x --level t --tsa https://freetsa.org/tsr
+read -rs TREBARUNA_PASSPHRASE && export TREBARUNA_PASSPHRASE   # the passphrase, never on the command line
+trebaruna sign atto.pdf --p12 k.p12 --level t --tsa https://freetsa.org/tsr
 ```
 
 The authority is contacted during signing. Without `--tsa`, a level that needs a
@@ -200,7 +201,7 @@ unproven while looking implemented.
 validation material added by `lt`:
 
 ```bash
-trebaruna sign mutuo.pdf --p12 k.p12 --pass x \
+trebaruna sign mutuo.pdf --p12 k.p12 \
     --level lta --tsa https://freetsa.org/tsr --online-revocation
 ```
 

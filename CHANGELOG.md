@@ -744,6 +744,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Usage and key errors said what the person can act on: `verify`,
+  `extract` and `certificate` without a document said "sign needs a
+  document path"; a PKCS#12 file that did not open named a placeholder
+  ("certificate holder") and not the cause. It now says whether no
+  passphrase was given (and that it goes in $TREBARUNA_PASSPHRASE) or the
+  one given does not open it. The help and the documentation no longer
+  show passphrases on the command line in their examples.
+
 - A PAdES-T whose timestamp authority is on no trusted list was reported
   as not timestamped, the claimed signing time shown instead: the PDF
   library drops a token whose authority it cannot chain to its roots.

@@ -100,8 +100,9 @@ trebaruna://sign?document=%2Ftmp%2Fatto%20firmato.pdf
 ## Approving
 
 ```bash
+read -rs TREBARUNA_PASSPHRASE && export TREBARUNA_PASSPHRASE   # the passphrase, never on the command line
 trebaruna handler "trebaruna://sign?document=/tmp/atto.pdf&format=pdf" \
-    --root /tmp --p12 key.p12 --pass secret
+    --root /tmp --p12 key.p12
 ```
 
 ```
@@ -216,7 +217,7 @@ The desktop entry launches the window. For a server or a terminal session, call
 the CLI directly and wire your own browser handler:
 
 ```bash
-trebaruna handler "%1" --root ~/Documents --p12 ~/Documents/key.p12 --pass secret
+trebaruna handler "%1" --root ~/Documents --p12 ~/Documents/key.p12
 ```
 
 ---

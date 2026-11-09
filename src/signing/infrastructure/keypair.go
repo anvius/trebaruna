@@ -68,7 +68,15 @@ func loadP12(signer domain.Signer) (KeyPair, error) {
 	// keybundle reads DER and the BER that Firefox and Thunderbird export.
 	key, cert, chain, err := keybundle.Decode(signer.KeyMaterial(), signer.Passphrase())
 	if err != nil {
-		return KeyPair{}, fmt.Errorf("decode p12 %q: %w", signer.Name(), err)
+		// Said in the person's terms: which file is wrong is theirs to
+		// know, whether a passphrase was given is not.
+		switch {
+		case !strings.Contains(err.Error(), "password"):
+			return KeyPair{}, fmt.Errorf("the PKCS#12 file cannot be read: %w", err)
+		case signer.Passphrase() == "":
+			return KeyPair{}, fmt.Errorf("the PKCS#12 file does not open without its passphrase: %w", err)
+		}
+		return KeyPair{}, fmt.Errorf("the passphrase does not open the PKCS#12 file: %w", err)
 	}
 
 	cryptoSigner, ok := key.(crypto.Signer)

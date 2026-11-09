@@ -172,7 +172,7 @@ Override with `--out`.
 The common case — a PDF, the simplest signature:
 
 ```bash
-trebaruna sign contratto.pdf --p12 mia-chiave.p12 --pass segreto
+trebaruna sign contratto.pdf --p12 mia-chiave.p12
 ```
 
 An XML invoice with a timestamp:
@@ -184,7 +184,7 @@ trebaruna sign fattura.xml --pem bundle.pem --level t --tsa https://freetsa.org/
 A PDF with a visible seal in the bottom-left corner, long-term valid:
 
 ```bash
-trebaruna sign atto.pdf --p12 k.p12 --pass x \
+trebaruna sign atto.pdf --p12 k.p12 \
     --level lt --tsa https://freetsa.org/tsr --online-revocation \
     --box 60,60,280,160 --reason "Contratto di fornitura"
 ```
@@ -192,7 +192,7 @@ trebaruna sign atto.pdf --p12 k.p12 --pass x \
 Two seals on different pages, one signature:
 
 ```bash
-trebaruna sign atto.pdf --p12 k.p12 --pass x \
+trebaruna sign atto.pdf --p12 k.p12 \
     --box 1:60,60,280,160 --box 3:60,60,280,160
 ```
 
@@ -396,7 +396,7 @@ trebaruna certificate <file> [flags]
 Reads a certificate without signing anything.
 
 ```bash
-trebaruna certificate mia-chiave.p12 --pass segreto
+trebaruna certificate mia-chiave.p12
 trebaruna certificate bundle.pem --json
 trebaruna certificate certificate.cer --territory IT
 ```
@@ -491,7 +491,7 @@ Receives a URI from a web page, verifies the document, and asks for approval.
 
 ```bash
 trebaruna handler "trebaruna://sign?document=/tmp/atto.pdf&format=pdf" \
-    --root /tmp --p12 key.p12 --pass secret
+    --root /tmp --p12 key.p12
 ```
 
 | Flag | Meaning |

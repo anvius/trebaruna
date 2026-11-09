@@ -261,7 +261,7 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 			EmbedRevocation: *onlineRev,
 		})
 		if err != nil {
-			return application.Artefact{}, fmt.Errorf("signing failed: %w", err)
+			return application.Artefact{}, fmt.Errorf("signing failed: %w", passphraseHint(err))
 		}
 		return artefact, nil
 	}
@@ -283,17 +283,26 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 	return signBatch(documents, func(path string) (application.Artefact, error) { return signOne(path) }, *asJSON, stdout, stderr)
 }
 
+// passphraseHint adds where the passphrase goes when none was given.
+func passphraseHint(err error) error {
+	if strings.Contains(err.Error(), "does not open without its passphrase") {
+		return fmt.Errorf("%w; give it in $%s", err, passphraseVariable)
+	}
+	return err
+}
+
 // extractDocument pulls the single positional argument out of the argument
-// list, wherever it appears, and returns the flags around it.
-func extractDocument(args []string) (documentPath string, remaining []string, err error) {
+// list, wherever it appears, and returns the flags around it; command names
+// the command in the errors.
+func extractDocument(command string, args []string) (documentPath string, remaining []string, err error) {
 	positional, remaining := splitSignArguments(args)
 	switch len(positional) {
 	case 0:
-		return "", remaining, fmt.Errorf("sign needs a document path")
+		return "", remaining, fmt.Errorf("%s needs a document path", command)
 	case 1:
 		return positional[0], remaining, nil
 	default:
-		return "", remaining, fmt.Errorf("sign takes one document, got %d: %v", len(positional), positional)
+		return "", remaining, fmt.Errorf("%s takes one document, got %d: %v", command, len(positional), positional)
 	}
 }
 
@@ -582,7 +591,8 @@ flags:
   --out      output path
 
 examples:
-  trebaruna sign contratto.pdf --p12 mario.p12 --pass secret --reason Contratto
+  read -rs TREBARUNA_PASSPHRASE && export TREBARUNA_PASSPHRASE
+  trebaruna sign contratto.pdf --p12 mario.p12 --reason Contratto
   trebaruna sign fattura.xml --format cades --p12 mario.p12 --level t --tsa https://tsa.example/
   trebaruna sign atto.pdf --token "Carta de Ejemplo" --box 300,60,540,140
   trebaruna sign atto.pdf --p12 mario.p12 --rubric firma.png

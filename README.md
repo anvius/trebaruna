@@ -18,7 +18,8 @@ No proprietary code, no browser engine, no JVM. The whole CLI is ~9 MB and needs
 nothing installed.
 
 ```bash
-trebaruna sign contratto.pdf --p12 key.p12 --pass secret \
+read -rs TREBARUNA_PASSPHRASE && export TREBARUNA_PASSPHRASE   # the passphrase, never on the command line
+trebaruna sign contratto.pdf --p12 key.p12 \
     --reason "Fornitura" --box 100,600,300,700
 # → contratto_signed.pdf, PAdES-B, ETSI EN 319 142-1
 ```
@@ -190,7 +191,7 @@ render.
 ### Keys
 
 ```bash
---p12 key.p12 --pass secret        # PKCS#12 from any authority
+--p12 key.p12                      # PKCS#12 from any authority; its passphrase in $TREBARUNA_PASSPHRASE
 --pem bundle.pem                   # certificate + key in one PEM
 --token "My Smartcard" --pin 1234  # PKCS#11, needs make build-token
 ```
@@ -296,7 +297,7 @@ usage, and a granted qualified authority in an authenticated list can issue it.
 ## Certificates
 
 ```bash
-trebaruna certificate key.p12 --pass secret
+trebaruna certificate key.p12
 trebaruna certificate bundle.pem --json
 ```
 
@@ -511,7 +512,7 @@ seconds).
 After approval the signature is produced and posted to the declared callback:
 
 ```bash
-trebaruna handler "trebaruna://sign?document=/tmp/atto.xml&format=pdf&origin=https://sede.example.gob.es&callback=https://sede.example.gob.es/result" --root /tmp --p12 key.p12 --pass secret
+trebaruna handler "trebaruna://sign?document=/tmp/atto.xml&format=pdf&origin=https://sede.example.gob.es&callback=https://sede.example.gob.es/result" --root /tmp --p12 key.p12
 ```
 
 ```

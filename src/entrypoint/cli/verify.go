@@ -50,7 +50,7 @@ func runVerify(args []string, stdout, stderr io.Writer) int {
 		flags.PrintDefaults()
 	}
 
-	path, remaining, err := extractDocument(args)
+	path, remaining, err := extractDocument("verify", args)
 	if err != nil {
 		fmt.Fprintf(stderr, "%v\n", err)
 		flags.Usage()

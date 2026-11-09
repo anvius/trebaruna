@@ -25,7 +25,7 @@ func runExtract(args []string, stdout, stderr io.Writer) int {
 		flags.PrintDefaults()
 	}
 
-	envelope, remaining, err := extractDocument(args)
+	envelope, remaining, err := extractDocument("extract", args)
 	if err != nil {
 		fmt.Fprintf(stderr, "%v\n", err)
 		flags.Usage()

@@ -236,7 +236,7 @@ not supervised under eIDAS. For internal use that is expected and fine.
 
 **4. Is it self-signed?**
 
-`trebaruna certificate k.p12 --pass x` will say so. Self-signed means no third
+`trebaruna certificate k.p12` will say so. Self-signed means no third
 party vouches for the identity, and no list will ever change that.
 
 **5. Is the list stale?**
