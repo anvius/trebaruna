@@ -66,7 +66,7 @@ var Catalan = Catalogue{
 		"timestamp.invalid":                      "el segell de temps existeix però no supera la verificació",
 		"timestamp.bound":                        "el segell de temps cobreix aquesta signatura",
 		"timestamp.legacy_form":                  "el segell cobreix el valor de signatura tal com l'escrivia trebaruna abans de la 0.38.2, no la seva forma canònica: altres validadors no l'acceptaran",
-		"timestamp.archival":                     "la signatura porta un segell d'arxiu (XAdES-A)",
+		"timestamp.archival":                     "la signatura porta un segell d'arxiu (AdES-A)",
 		"timestamp.accredited":                   "l'autoritat de segellat de temps és un servei qualificat d'una llista autenticada",
 		"timestamp.untrusted_authority":          "el segell cobreix la signatura, però la seva autoritat no està acreditada",
 		"timestamp.not_timestamping_certificate": "el certificat del segell no té l'ús «segellat de temps»",

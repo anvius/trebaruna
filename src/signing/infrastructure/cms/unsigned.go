@@ -13,6 +13,12 @@ import (
 // parsing of an RFC 3161 token is unnecessary and error-prone, because the
 // token must be embedded verbatim for validators to check its own signature.
 func appendUnsignedAttribute(contentInfoDER []byte, attributeOID asn1.ObjectIdentifier, valueDER []byte) ([]byte, error) {
+	return appendUnsignedAttributeTo(contentInfoDER, -1, attributeOID, valueDER)
+}
+
+// appendUnsignedAttributeTo injects the attribute into the SignerInfo at
+// index of the set, or into every one when index is negative.
+func appendUnsignedAttributeTo(contentInfoDER []byte, index int, attributeOID asn1.ObjectIdentifier, valueDER []byte) ([]byte, error) {
 	encoder := &der{}
 	attribute := encoder.seq(
 		encoder.oid(attributeOID),
@@ -44,7 +50,7 @@ func appendUnsignedAttribute(contentInfoDER []byte, attributeOID asn1.ObjectIden
 	}
 
 	signerInfosDER := signedDataFields[len(signedDataFields)-1]
-	rebuiltSignerInfos, err := injectIntoSignerInfos(signerInfosDER, attribute)
+	rebuiltSignerInfos, err := injectIntoSignerInfos(signerInfosDER, index, attribute)
 	if err != nil {
 		return nil, err
 	}
@@ -58,8 +64,8 @@ func appendUnsignedAttribute(contentInfoDER []byte, attributeOID asn1.ObjectIden
 }
 
 // injectIntoSignerInfos rebuilds the SET OF SignerInfo with the attribute
-// added to each entry.
-func injectIntoSignerInfos(signerInfosDER []byte, attribute []byte) ([]byte, error) {
+// added to the entry at index, or to each when index is negative.
+func injectIntoSignerInfos(signerInfosDER []byte, index int, attribute []byte) ([]byte, error) {
 	encoder := &der{}
 
 	body, err := sequenceBody(signerInfosDER)
@@ -72,8 +78,15 @@ func injectIntoSignerInfos(signerInfosDER []byte, attribute []byte) ([]byte, err
 		return nil, err
 	}
 
+	if index >= len(entries) {
+		return nil, fmt.Errorf("cms: no SignerInfo %d among %d", index, len(entries))
+	}
 	rebuilt := make([][]byte, 0, len(entries))
-	for _, entry := range entries {
+	for position, entry := range entries {
+		if index >= 0 && position != index {
+			rebuilt = append(rebuilt, entry)
+			continue
+		}
 		updated, err := addUnsignedAttribute(entry, attribute)
 		if err != nil {
 			return nil, err
@@ -175,19 +188,4 @@ func WithRevocationValuesFrom(signedDER []byte, ocspResponses, crls [][]byte) ([
 	}
 	return appendUnsignedAttribute(signedDER, OIDRevocationValues,
 		RevocationValues(ocspResponses, crls))
-}
-
-// WithArchiveTimeStamp attaches the CAdES-LTA archive timestamp.
-//
-// The token is produced by the caller over the digest of the container as it
-// stands, so everything already attached is covered. Adding anything afterwards
-// invalidates it, which is why this is the last step.
-func WithArchiveTimeStamp(signedDER, tokenDER []byte) ([]byte, error) {
-	if len(signedDER) == 0 {
-		return nil, fmt.Errorf("cms: no container to archive")
-	}
-	if len(tokenDER) == 0 {
-		return nil, fmt.Errorf("cms: no archive timestamp token")
-	}
-	return appendUnsignedAttribute(signedDER, OIDArchiveTimeStampV3, tokenDER)
 }

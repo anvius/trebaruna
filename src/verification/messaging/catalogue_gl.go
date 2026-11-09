@@ -65,7 +65,7 @@ var Galician = Catalogue{
 		"timestamp.invalid":                      "o selo de tempo existe pero non verifica",
 		"timestamp.bound":                        "o selo de tempo cobre esta sinatura",
 		"timestamp.legacy_form":                  "o selo cobre o valor de sinatura tal como o escribía trebaruna antes de 0.38.2, non a súa forma canónica: outros validadores non o aceptarán",
-		"timestamp.archival":                     "a sinatura leva un selo de arquivo (XAdES-A)",
+		"timestamp.archival":                     "a sinatura leva un selo de arquivo (AdES-A)",
 		"timestamp.accredited":                   "a autoridade de selado de tempo é un servizo cualificado dunha lista autenticada",
 		"timestamp.untrusted_authority":          "o selo cobre a sinatura, pero a súa autoridade non está acreditada",
 		"timestamp.not_timestamping_certificate": "o certificado do selo non ten o uso «selado de tempo»",

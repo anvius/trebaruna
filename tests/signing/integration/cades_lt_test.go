@@ -8,6 +8,9 @@ package integration_test
 import (
 	"bytes"
 	"context"
+	"crypto"
+	"crypto/sha256"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -17,6 +20,8 @@ import (
 	"codeberg.org/simplicer/trebaruna/src/signing/application"
 	signingdomain "codeberg.org/simplicer/trebaruna/src/signing/domain"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure"
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/cms"
+	verificationinfra "codeberg.org/simplicer/trebaruna/src/verification/infrastructure"
 )
 
 // cadesFixture returns a document and a signer whose certificate publishes an OCSP
@@ -167,13 +172,15 @@ func TestCadesLtaAddsTheArchiveTimeStamp(t *testing.T) {
 	}
 
 	output := runAsn1Parse(t, path)
-	if !strings.Contains(output, "archiveTimestamp") {
+	// archive-time-stamp-v3 and, in its token, ats-hash-index-v3: openssl's
+	// names for 0.4.0.1733.2.4 and 0.4.0.19122.1.5.
+	if !strings.Contains(output, "id-aa-ets-archiveTimestampV3") || !strings.Contains(output, "id-aa-ATSHashIndex-v3") {
 		t.Errorf("the container carries no archive timestamp:\n%s", output)
 	}
 
 	// The archive timestamp must come after the revocation material: it covers it.
 	revocationAt := strings.Index(output, "revocationValues")
-	archiveAt := strings.Index(output, "archiveTimestamp")
+	archiveAt := strings.Index(output, "id-aa-ets-archiveTimestampV3")
 	if revocationAt < 0 || archiveAt < revocationAt {
 		t.Error("the archive timestamp must be written after the revocation material it covers")
 	}
@@ -208,4 +215,80 @@ func runAsn1Parse(t *testing.T, path string) string {
 		t.Fatalf("openssl asn1parse: %v\n%s", err, output)
 	}
 	return string(output)
+}
+
+// TestACadesArchiveTimestampSealsWhatEN319122Says: the archive-time-stamp-v3
+// covers the content, the SignerInfo and the hash index of the
+// certificates, revocation values and unsigned attributes (EN 319 122-1,
+// 5.5.2 and 5.5.3), and the verifier recomputes it. A token over the
+// container's DER, how trebaruna sealed it before 0.50.1, proves nothing;
+// a hash index listing an element the signature lost does not hold.
+func TestACadesArchiveTimestampSealsWhatEN319122Says(t *testing.T) {
+	content, signer := cadesFixture(t)
+	authority := newLocalTSA(t)
+	lta, err := infrastructure.NewCadesSigner(authority).SignCades(context.Background(), application.CadesRequest{
+		Content: content, Signer: signer, Level: signingdomain.LTA,
+		TimestampURL: "http://tsa.example.invalid", EmbedRevocation: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if finding := archiveFinding(t, lta); finding != "timestamp.archival" {
+		t.Errorf("a trebaruna CAdES-LTA: %q", finding)
+	}
+
+	lt, err := infrastructure.NewCadesSigner(authority).SignCades(context.Background(), application.CadesRequest{
+		Content: content, Signer: signer, Level: signingdomain.LT,
+		TimestampURL: "http://tsa.example.invalid", EmbedRevocation: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	whole := sha256.Sum256(lt)
+	response, err := authority.Token(context.Background(), whole[:], "", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	token, err := cms.ExtractToken(response)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, index, err := cms.ArchiveTimeStampV3Input(lt, 0, content, crypto.SHA256)
+	if err != nil {
+		t.Fatal(err)
+	}
+	overTheContainer, err := cms.WithArchiveTimeStampV3(lt, 0, token, index)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if finding := archiveFinding(t, overTheContainer); finding != "timestamp.archive_unbound" {
+		t.Errorf("a token over the container's DER: %q", finding)
+	}
+
+	_, current, err := cms.ArchiveTimeStampV3Input(lta, 0, content, crypto.SHA256)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := cms.HashIndexHolds(current, index); !errors.Is(err, cms.ErrArchiveMismatch) {
+		t.Errorf("an index listing the archive timestamp the signature no longer has: %v", err)
+	}
+}
+
+// archiveFinding verifies an envelope and returns its archive finding.
+func archiveFinding(t *testing.T, envelope []byte) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "lta.p7m")
+	if err := os.WriteFile(path, envelope, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	reports, err := verificationinfra.NewCadesVerifier().Extract(path)
+	if err != nil || len(reports) != 1 {
+		t.Fatalf("%v %v", reports, err)
+	}
+	for _, finding := range reports[0].Findings {
+		if strings.HasPrefix(finding.Code, "timestamp.archiv") {
+			return finding.Code
+		}
+	}
+	return ""
 }

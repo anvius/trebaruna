@@ -467,8 +467,14 @@ attributes. `.p7m` is the conventional name.
 - **CAdES-T** adds a `signature-time-stamp` unsigned attribute.
 - **CAdES-LT** adds `revocationValues` (`1.2.840.113549.1.9.16.2.24`) carrying the
   OCSP responses, so the signature stays checkable after the responder is gone.
-- **CAdES-LTA** adds `archiveTimestampV3` over the container as it stands,
-  revocation material included.
+- **CAdES-LTA** adds an `archive-time-stamp-v3` (`0.4.0.1733.2.4`, EN 319 122-1
+  5.5.3): a token over the signed content's type and digest, the SignerInfo
+  (version to signature value) and an `ats-hash-index-v3` (`0.4.0.19122.1.5`,
+  5.5.2) listing the digest of every certificate, revocation value and unsigned
+  attribute value the envelope holds, revocation material included. The index
+  travels in the token's own unsigned attributes, and `verify` recomputes all of
+  it. Before 0.50.1 the token covered the container's DER under the v2 OID
+  (`1.2.840.113549.1.9.16.2.48`): no validator could check it.
 
 The revocation attribute's OID is worth stating: `.24` is `revocationValues`, and
 the neighbouring `.23` is `certificateValues`. Using the wrong one produces a

@@ -109,12 +109,13 @@ func (s *CadesSigner) SignCades(ctx context.Context, request application.CadesRe
 	return s.withArchiveTimeStamp(ctx, withRevocation, request)
 }
 
-// withArchiveTimeStamp adds the CAdES-LTA archive timestamp.
+// withArchiveTimeStamp adds the CAdES-LTA archive timestamp, an
+// archive-time-stamp-v3 (ETSI EN 319 122-1, 5.5.3).
 //
-// The token covers the container as it stands — signature, timestamps and the
-// revocation material attached a moment ago — so the validation data's own state
-// is proven at this instant. That is what survives the responder and the CA
-// disappearing.
+// The token seals the signed content, the signature and, through the hash
+// index it carries, every certificate, revocation value and unsigned
+// attribute the container holds now, the revocation material attached a
+// moment ago included: what survives the responder and the CA disappearing.
 func (s *CadesSigner) withArchiveTimeStamp(
 	ctx context.Context,
 	container []byte,
@@ -123,15 +124,14 @@ func (s *CadesSigner) withArchiveTimeStamp(
 	if s.timestamps == nil || request.TimestampURL == "" {
 		return nil, fmt.Errorf("level %s needs a timestamp authority: pass --tsa <url>", request.Level)
 	}
-
-	// ETSI defines the coverage as the DER of the container as it stands, which is
-	// what makes the token reproducible by any validator: no canonicalisation step
-	// that could differ between implementations.
-	digest, err := digestFor(container, crypto.SHA256)
+	prefix, hashIndex, err := cms.ArchiveTimeStampV3Input(container, 0, request.Content, crypto.SHA256)
 	if err != nil {
 		return nil, err
 	}
-
+	digest, err := digestFor(append(prefix, hashIndex...), crypto.SHA256)
+	if err != nil {
+		return nil, err
+	}
 	response, err := s.timestamps.Token(
 		ctx, digest, request.TimestampURL,
 		request.TimestampUser, request.TimestampSecret,
@@ -139,12 +139,11 @@ func (s *CadesSigner) withArchiveTimeStamp(
 	if err != nil {
 		return nil, err
 	}
-
 	tokenDER, err := cms.ExtractToken(response)
 	if err != nil {
 		return nil, err
 	}
-	return cms.WithArchiveTimeStamp(container, tokenDER)
+	return cms.WithArchiveTimeStampV3(container, 0, tokenDER, hashIndex)
 }
 
 // withRevocationValues attaches the CAdES-LT revocation material.

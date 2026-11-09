@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- CAdES-LTA's archive timestamp is an archive-time-stamp-v3 as ETSI EN
+  319 122-1 defines it: the token covers the signed content's type and
+  digest, the SignerInfo and an ats-hash-index-v3 of the certificates,
+  revocation values and unsigned attribute values (5.5.2, 5.5.3), the index
+  carried in the token, under id-aa-ets-archiveTimestampV3
+  (0.4.0.1733.2.4). It covered the container's DER under the v2 OID
+  (1.2.840.113549.1.9.16.2.48), which no validator could check, and nothing
+  checked it: verify now recomputes it (timestamp.archival, or
+  timestamp.archive_unbound when what it sealed changed or is gone). The
+  signer and the verifier share cms.ArchiveTimeStampV3Input; the archive
+  timestamp is added to one SignerInfo, not to every one.
+
 - A PAdES B-LT signature added to a PDF signed before keys its /DSS /VRI
   entry to its own signature value: the first signature field's was taken,
   someone else's in a co-signed PDF or a form, so validators could not

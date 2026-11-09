@@ -54,6 +54,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.50.1-unstable" date="2026-11-09">
+      <description>
+        <p>CAdES-LTA archive timestamps follow EN 319 122-1 and are checked by verification.</p>
+      </description>
+    </release>
     <release version="0.50.0-unstable" date="2026-11-09">
       <description>
         <p>The window and web pages sign a PDF form in its signature field; trebaruna fields lists a form's empty fields.</p>

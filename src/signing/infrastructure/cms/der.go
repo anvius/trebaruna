@@ -174,10 +174,8 @@ var OIDRevocationValues = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 16, 2, 
 // SignedData.
 var OIDCertificateValues = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 16, 2, 23}
 
-// OIDArchiveTimeStampV3 is the CAdES archive timestamp attribute.
-//
-// ETSI EN 319 122-1: the token covers the encapContentInfo, the certificates
-// referenced by the signature, and every unsigned attribute added so far,
-// including the revocation material. It is what makes CAdES-LTA: the proof of the
-// validation data's state travels inside the same sealed bytes.
-var OIDArchiveTimeStampV3 = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 16, 2, 48}
+// OIDArchiveTimeStampV3 is archive-time-stamp-v3, id-aa-ets-archiveTimestampV3
+// (ETSI EN 319 122-1, 5.5.3): a token over the signed content, the
+// SignerInfo and the hash index of everything the signature holds (see
+// ArchiveTimeStampV3Input). It is what makes CAdES-LTA.
+var OIDArchiveTimeStampV3 = asn1.ObjectIdentifier{0, 4, 0, 1733, 2, 4}

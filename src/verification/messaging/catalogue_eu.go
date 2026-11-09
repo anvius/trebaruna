@@ -67,7 +67,7 @@ var Basque = Catalogue{
 		"timestamp.invalid":                      "denbora-zigilua badago, baina ez du egiaztapena gainditzen",
 		"timestamp.bound":                        "denbora-zigiluak sinadura hau hartzen du",
 		"timestamp.legacy_form":                  "zigiluak sinadura-balioa hartzen du 0.38.2 bertsioa baino lehenagoko trebaruna programak idazten zuen moduan, ez haren forma kanonikoa: beste balidatzaile batzuek ez dute onartuko",
-		"timestamp.archival":                     "sinadurak artxibo-zigilu bat du (XAdES-A)",
+		"timestamp.archival":                     "sinadurak artxibo-zigilu bat du (AdES-A)",
 		"timestamp.accredited":                   "denbora-zigiluen agintaritza zerrenda autentifikatu bateko zerbitzu kualifikatua da",
 		"timestamp.untrusted_authority":          "zigiluak sinadura hartzen du, baina haren agintaritza ez dago akreditatuta",
 		"timestamp.not_timestamping_certificate": "zigiluaren ziurtagiriak ez du «denbora-zigilatzea» erabilera",

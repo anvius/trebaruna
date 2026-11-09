@@ -240,6 +240,9 @@ func (v *CadesVerifier) extractEnvelope(content []byte) ([]domain.SignerReport, 
 	report.Revocation.Issuer = issuerFromSet(parsed.Certificates, signer)
 
 	v.describeTime(content, parsed, &report)
+	if treeErr == nil && len(tree.signers) == 1 {
+		describeArchiveTimeStamps(tree.der, 0, tree.signers[0].UnsignedAttrs, parsed.Content, &report)
+	}
 
 	// The chain is validated at the proven signing time, not at the wall clock.
 	// A certificate valid when the signature was made but expired since must not

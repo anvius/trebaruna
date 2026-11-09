@@ -55,6 +55,8 @@ type treeAttribute struct {
 
 // signatureTree is a parsed envelope ready to be checked node by node.
 type signatureTree struct {
+	// der is the envelope, its BER made DER.
+	der          []byte
 	content      []byte
 	certificates []*x509.Certificate
 	signers      []treeSignerInfo
@@ -79,7 +81,7 @@ func parseSignatureTree(envelope, detached []byte) (signatureTree, error) {
 		return signatureTree{}, err
 	}
 
-	tree := signatureTree{content: detached}
+	tree := signatureTree{der: normalised, content: detached}
 	var encapsulated struct {
 		Type    asn1.ObjectIdentifier
 		Content []byte `asn1:"optional,explicit,tag:0"`
@@ -160,7 +162,9 @@ func (v *CadesVerifier) extractTree(tree signatureTree) ([]domain.SignerReport, 
 	var reports []domain.SignerReport
 	for index, signer := range tree.signers {
 		field := fmt.Sprintf("CMS #%d", index+1)
+		start := len(reports)
 		reports = v.checkNode(tree, signer, tree.content, field, "", reports)
+		describeArchiveTimeStamps(tree.der, index, signer.UnsignedAttrs, tree.content, &reports[start])
 	}
 	return reports, nil
 }
