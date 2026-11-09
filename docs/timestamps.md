@@ -130,11 +130,23 @@ Free, qualified where it matters:
 | **DFN** (Germany) | `https://zeitstempel.dfn.de/` | Free for research and education |
 | National qualified providers | see below | Required when the recipient expects a qualified timestamp |
 
-To list the **qualified** authorities your national list publishes:
+To list the **qualified** timestamping services your national list grants:
 
 ```bash
-trebaruna trust sync
-trebaruna trust show IT | grep -i QTST
+trebaruna trust sync --territory IT
+trebaruna trust tsa IT            # provider and service, one per line
+```
+
+The trusted list says *who* is qualified, not *where* to reach them: the
+Italian, Spanish, Austrian and Belgian lists (checked November 2026) publish no
+address for any of their qualified timestamping services, so the RFC 3161
+address comes from the provider (Aruba, InfoCert, Actalis, FNMT…). Once you
+have it, `trebaruna timestamp` says whether the token you got is qualified,
+offline, against the cached list of your territory:
+
+```
+  status  qualified timestamp (Actalis S.p.A.: CN=Actalis TSA 1 EIDAS,…)
+  status  not a qualified timestamp: the IT trusted list grants no such service to this authority
 ```
 
 A timestamp from a free authority is cryptographically valid and proves the time.
@@ -144,7 +156,7 @@ exactly what the `timestamp.accredited` finding checks.
 Some authorities require credentials; the tool supports Basic auth:
 
 ```bash
---tsa https://tsa.example/tsr --tsa-user account --tsa-pass secret
+--tsa https://tsa.example/tsr --tsa-user account   # password in $TREBARUNA_TSA_PASS
 ```
 
 ---

@@ -411,16 +411,11 @@ func (u *VerifyDocument) evaluateTimestamp(signer *verification.SignerReport, li
 }
 
 // timestampService finds the granted qualified time-stamping service that covers
-// the token's certificate.
-//
-// The exact certificate is tried first, and the order is measured, not stylistic:
-// across the 18 authenticated lists, 227 of 231 granted TSA/QTST services publish
-// the time-stamping unit's own certificate while only 60 can be reached through
-// their issuer. Searching by issuer first would leave 167 qualified authorities
-// unproven, which is the difference between an advance and a decoration.
+// the token's certificate (TrustList.QualifiedTimestampService), falling back to
+// the issuer name the evidence recorded when the certificate is not at hand.
 func timestampService(list trustdomain.TrustList, evidence *verification.TimestampEvidence) (trustdomain.TrustService, bool) {
-	if services := list.TimestampServiceForCertificate(evidence.Certificate); len(services) > 0 {
-		return services[0], true
+	if service, found := list.QualifiedTimestampService(evidence.Certificate); found {
+		return service, true
 	}
 	if evidence.CertificateIssuerDN != "" {
 		if services := list.TimestampServicesFor(evidence.CertificateIssuerDN); len(services) > 0 {

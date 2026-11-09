@@ -162,3 +162,30 @@ func withRenewal(t *testing.T, authority *tsa.Authority, original, covered []byt
 	}
 	return rebuilt
 }
+
+// TestATimestampSaysWhetherItsAuthorityIsQualified, offline, from the cached
+// trusted list: unknown without one, "not qualified" for an authority the list
+// does not grant (the test authority, checked against a real list when
+// TREBARUNA_TSL_CACHE points at an XDG cache filled by `trust sync`).
+func TestATimestampSaysWhetherItsAuthorityIsQualified(t *testing.T) {
+	authority := tsa.New(t)
+	t.Setenv("LC_ALL", "it_IT.UTF-8")
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+	document := writeDocument(t, "atto.txt", "atto\n")
+
+	stdout, stderr, code := run("timestamp", document, "--tsa", authority.URL(t), "--json")
+	if code != 0 || !strings.Contains(stdout, `"qualified": false`) || !strings.Contains(stdout, "not cached") {
+		t.Fatalf("exit %d: %s %s", code, stdout, stderr)
+	}
+
+	cache := os.Getenv("TREBARUNA_TSL_CACHE")
+	if cache == "" {
+		t.Skip("set TREBARUNA_TSL_CACHE to an XDG cache holding the IT list to check against it")
+	}
+	t.Setenv("XDG_CACHE_HOME", cache)
+	os.Remove(document + ".tsr")
+	stdout, _, _ = run("timestamp", document, "--tsa", authority.URL(t), "--json")
+	if !strings.Contains(stdout, `"qualified": false`) || !strings.Contains(stdout, "grants no such service") {
+		t.Errorf("the test authority is not qualified by the IT list: %s", stdout)
+	}
+}

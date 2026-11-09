@@ -68,7 +68,7 @@ user seeing what is signed and where anything goes.
 |---|---|
 | RFC 3161 tokens (`.tsr`) and their verification; authorities with an account | built |
 | Time-stamped data `.tsd` (RFC 5544): create, verify (renewals included, DER or BER), extract (nested `.p7m.tsd`) | built |
-| Choose a qualified authority from the trusted list | planned (F1) |
+| Qualified timestamping services named from the trusted list (`trust tsa`); every timestamp says whether its authority is qualified, offline. The lists (IT, ES, AT, BE) publish no service addresses, so the address comes from the provider | built |
 
 ### Verify
 

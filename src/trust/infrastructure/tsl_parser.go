@@ -131,6 +131,15 @@ func (TSLParser) Parse(reader io.Reader) (domain.TrustList, error) {
 					}
 				}
 				depth--
+			case "ServiceSupplyPoint":
+				// Where the service is reached: for a timestamping authority,
+				// usually the address that answers RFC 3161 requests.
+				if text, err := readText(decoder); err == nil && inService && !inHistory {
+					if point := strings.TrimSpace(text); point != "" {
+						current.SupplyPoints = append(current.SupplyPoints, point)
+					}
+				}
+				depth--
 			case "SchemeTerritory":
 				if text, err := readText(decoder); err == nil {
 					if territory == "" {

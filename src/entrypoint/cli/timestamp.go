@@ -25,6 +25,7 @@ import (
 
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/tsd"
+	verificationinfra "codeberg.org/simplicer/trebaruna/src/verification/infrastructure"
 	"github.com/digitorus/timestamp"
 )
 
@@ -141,17 +142,21 @@ func runTimestamp(args []string, stdout, stderr io.Writer) int {
 		return exitInvalid
 	}
 
+	standing := timestampStanding(token)
 	if *asJSON {
 		encodeJSONValue(stdout, map[string]any{
-			"path":       destination,
-			"digest":     hex.EncodeToString(digest),
-			"algorithm":  "sha256",
-			"time":       token.Time.UTC().Format(time.RFC3339),
-			"tsa":        firstCertificateName(token),
-			"serial":     token.SerialNumber.String(),
-			"policy":     token.Policy.String(),
-			"size_bytes": len(written),
-			"network":    connections(),
+			"qualified":    standing.qualified,
+			"qualified_by": standing.service,
+			"standing":     standing.note,
+			"path":         destination,
+			"digest":       hex.EncodeToString(digest),
+			"algorithm":    "sha256",
+			"time":         token.Time.UTC().Format(time.RFC3339),
+			"tsa":          firstCertificateName(token),
+			"serial":       token.SerialNumber.String(),
+			"policy":       token.Policy.String(),
+			"size_bytes":   len(written),
+			"network":      connections(),
 		})
 		return exitOK
 	}
@@ -160,8 +165,36 @@ func runTimestamp(args []string, stdout, stderr io.Writer) int {
 	fmt.Fprintf(stdout, "  time    %s\n", token.Time.UTC().Format(time.RFC3339))
 	fmt.Fprintf(stdout, "  tsa     %s\n", firstCertificateName(token))
 	fmt.Fprintf(stdout, "  digest  %s\n", hex.EncodeToString(digest))
+	fmt.Fprintf(stdout, "  status  %s\n", standing.note)
 	printConnections(stdout)
 	return exitOK
+}
+
+// authorityStanding is whether a timestamp authority is qualified, by the
+// cached list.
+type authorityStanding struct {
+	qualified bool
+	service   string
+	note      string
+}
+
+// timestampStanding judges the token's authority against the authenticated
+// list of the territory already cached: offline, as every verdict is by default.
+func timestampStanding(token *timestamp.Timestamp) authorityStanding {
+	territory := defaultTerritory()
+	list, err := verificationinfra.NewCachedTrustProvider().Load(territory)
+	if err != nil || !list.Authenticated {
+		return authorityStanding{note: fmt.Sprintf("qualification unknown: the %s trusted list is not cached (trebaruna trust sync)", territory)}
+	}
+	if len(token.Certificates) == 0 {
+		return authorityStanding{note: "qualification unknown: the token carries no certificate"}
+	}
+	service, found := list.QualifiedTimestampService(token.Certificates[0])
+	if !found {
+		return authorityStanding{note: fmt.Sprintf("not a qualified timestamp: the %s trusted list grants no such service to this authority", territory)}
+	}
+	name := service.ProviderName + ": " + service.ServiceName
+	return authorityStanding{qualified: true, service: name, note: "qualified timestamp (" + name + ")"}
 }
 
 // runVerifyTimestamp checks a .tsr against a file or a digest.

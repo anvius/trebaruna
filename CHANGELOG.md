@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Qualified timestamping from the trusted list: `trebaruna trust tsa
+  [territory]` lists the granted TSA/QTST services (and their addresses when a
+  list publishes them, which IT, ES, AT and BE do not), and `trebaruna
+  timestamp` reports whether the authority used is qualified by the cached
+  list (`status`; `qualified`, `qualified_by` in JSON), offline. The TSL parser
+  reads ServiceSupplyPoint; TrustList.QualifiedTimestampService is shared with
+  verification.
+
 - Encrypted envelopes (`.p7e`, ADR-0011): `trebaruna encrypt <file> --to
   <cert> [--to …] [--oaep]` and `trebaruna decrypt <file.p7e>` with the key
   flags of `sign` (file, card, Firefox store). CMS EnvelopedData written in

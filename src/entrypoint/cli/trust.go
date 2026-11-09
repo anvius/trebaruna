@@ -49,7 +49,7 @@ var knownSources = []trustSource{
 // runTrust implements `trebaruna trust` with `sync` and `list`.
 func runTrust(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
-		fmt.Fprintln(stderr, "usage: trebaruna trust sync|list|show [--territory XX]")
+		fmt.Fprintln(stderr, "usage: trebaruna trust sync|list|show|tsa [--territory XX]")
 		return exitUsage
 	}
 
@@ -60,6 +60,8 @@ func runTrust(args []string, stdout, stderr io.Writer) int {
 		return runTrustList(args[1:], stdout, stderr)
 	case "show":
 		return runTrustShow(args[1:], stdout, stderr)
+	case "tsa":
+		return runTrustTSA(args[1:], stdout, stderr)
 	}
 
 	fmt.Fprintf(stderr, "unknown trust command %q\n", args[0])
@@ -343,4 +345,73 @@ func firstPositional(args []string) int {
 		return index
 	}
 	return -1
+}
+
+// runTrustTSA lists the qualified timestamping authorities of an
+// authenticated list with the addresses it publishes, to choose a --tsa from
+// what the trusted list vouches for rather than from a web search.
+func runTrustTSA(args []string, stdout, stderr io.Writer) int {
+	flags := flag.NewFlagSet("trust tsa", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	var (
+		territory = flags.String("territory", "", "territory, e.g. IT or ES")
+		asJSON    = flags.Bool("json", false, "machine-readable output")
+		directory = flags.String("dir", "", "cache directory (default: XDG cache)")
+	)
+	remaining := args
+	if territoryAt := firstPositional(args); territoryAt >= 0 {
+		*territory = args[territoryAt]
+		remaining = append(append([]string{}, args[:territoryAt]...), args[territoryAt+1:]...)
+	}
+	if err := flags.Parse(remaining); err != nil {
+		return exitUsage
+	}
+	code := strings.ToUpper(strings.TrimSpace(*territory))
+	if code == "" {
+		code = defaultTerritory()
+	}
+
+	cache := *directory
+	if cache == "" {
+		cache = verificationinfra.DefaultCacheDirectory()
+	}
+	list, err := verificationinfra.CachedTrustProvider{Directory: cache}.Load(code)
+	if err != nil {
+		fmt.Fprintf(stderr, "cannot read the cached list for %s: %v\n", code, err)
+		fmt.Fprintf(stderr, "  download it with: trebaruna trust sync --territory %s\n", code)
+		return exitUnverified
+	}
+	if !list.Authenticated {
+		fmt.Fprintf(stderr, "the cached list for %s is not authenticated; sync it again\n", code)
+		return exitUnverified
+	}
+
+	authorities := list.TimestampAuthorities()
+	if *asJSON {
+		entries := make([]map[string]any, 0, len(authorities))
+		for _, authority := range authorities {
+			entries = append(entries, map[string]any{"provider": authority.Provider, "service": authority.Service, "urls": authority.URLs})
+		}
+		encodeJSONValue(stdout, map[string]any{"territory": code, "authorities": entries})
+		return exitOK
+	}
+	if len(authorities) == 0 {
+		fmt.Fprintf(stdout, "the %s list grants no qualified timestamping service\n", code)
+		return exitOK
+	}
+	addresses := 0
+	for _, authority := range authorities {
+		fmt.Fprintf(stdout, "%s: %s\n", authority.Provider, authority.Service)
+		for _, url := range authority.URLs {
+			fmt.Fprintf(stdout, "  %s\n", url)
+			addresses++
+		}
+	}
+	if addresses == 0 {
+		fmt.Fprintf(stdout, "\nThe %s list names the qualified services but publishes none of their addresses: "+
+			"ask the provider for its RFC 3161 address. `trebaruna timestamp` says whether the authority you use is one of these.\n", code)
+	} else {
+		fmt.Fprintln(stdout, "\nThe list says who is qualified, not who answers without an account: some authorities want one (--tsa-user).")
+	}
+	return exitOK
 }

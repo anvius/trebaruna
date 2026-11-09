@@ -35,6 +35,9 @@ type TrustService struct {
 	Qualified bool
 	// Certificates are the service's certificates, when the TSL publishes them.
 	Certificates []*x509.Certificate
+	// SupplyPoints are the addresses where the service is reached, as the
+	// list publishes them.
+	SupplyPoints []string
 }
 
 // Statuses an ETSI TS 119 612 list publishes. Only "granted" means the service
@@ -83,6 +86,39 @@ func (s TrustService) CanTimestamp() bool {
 		return false
 	}
 	return s.ServiceType == "TSA/QTST"
+}
+
+// QualifiedTimestamping is a granted qualified timestamping service: its
+// provider, its name and the web addresses the list gives, which most lists
+// (Italy's and Spain's among them) leave out.
+type QualifiedTimestamping struct {
+	Provider string
+	Service  string
+	URLs     []string
+}
+
+// TimestampAuthorities lists the granted qualified timestamping services of
+// the list, once each. The list says who is qualified, not where it answers or
+// whether an account is needed (Aruba's and InfoCert's want one).
+func (l TrustList) TimestampAuthorities() []QualifiedTimestamping {
+	var authorities []QualifiedTimestamping
+	seen := map[string]bool{}
+	for _, service := range l.Services {
+		key := service.ProviderName + "\x00" + service.ServiceName
+		if !service.CanTimestamp() || seen[key] {
+			continue
+		}
+		seen[key] = true
+		var urls []string
+		for _, point := range service.SupplyPoints {
+			lower := strings.ToLower(point)
+			if strings.HasPrefix(lower, "http://") || strings.HasPrefix(lower, "https://") {
+				urls = append(urls, point)
+			}
+		}
+		authorities = append(authorities, QualifiedTimestamping{Provider: service.ProviderName, Service: service.ServiceName, URLs: urls})
+	}
+	return authorities
 }
 
 // TrustList is a national trusted list.

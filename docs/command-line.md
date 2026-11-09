@@ -268,7 +268,9 @@ trebaruna timestamp <file> --tsa <url> [--tsd]
 trebaruna timestamp --hash <hex> --tsa <url>
 ```
 
-Obtains an RFC 3161 token proving a document existed at a moment. With
+Obtains an RFC 3161 token proving a document existed at a moment, and says
+whether the authority is a qualified one according to the cached trusted list
+of your territory (`qualified`, `qualified_by` in `--json`; offline). With
 `--tsd` the document and its token travel together in `<file>.tsd`
 (time-stamped data, RFC 5544: what Italian offices keep as
 `name.pdf.p7m.tsd`), the file name and media type recorded beside them.
@@ -350,6 +352,7 @@ Accepts `.p12`, `.pfx`, `.pem`, `.crt`, `.cer`. See
 trebaruna trust sync  [--territory XX]
 trebaruna trust list
 trebaruna trust show <territory>
+trebaruna trust tsa  [<territory>] [--json]
 ```
 
 Downloads and **authenticates** the EU trust lists.
@@ -359,6 +362,7 @@ trebaruna trust sync               # all territories
 trebaruna trust sync --territory IT
 trebaruna trust list               # what is cached, and how old
 trebaruna trust show IT            # services of one territory
+trebaruna trust tsa IT             # its qualified timestamping services
 ```
 
 `sync` verifies each national list against the certificates the EU list
