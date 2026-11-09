@@ -244,6 +244,10 @@ func (p *pagePane) describe() {
 		return
 	}
 	p.hint.Importance = widget.MediumImportance
+	if p.result.Preview.Approximate {
+		p.hint.SetText(p.messages.SealHint + " " + p.messages.PreviewApproximate)
+		return
+	}
 	p.hint.SetText(p.messages.SealHint)
 }
 

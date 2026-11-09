@@ -131,6 +131,12 @@ user seeing what is signed and where anything goes.
 | Windows installer (WiX v4, per user, `afirma://` optional and off by default) | in CI, not yet run |
 | CI on Windows (tests, window, zip, MSI) and macOS (tests, `.app`); Linux `.deb` installed and removed, AppImage, Flatpak | written, not yet run (needs publishing) |
 
+### Page preview
+
+| Capability | Status |
+|---|---|
+| Page preview without poppler: trebaruna draws the page itself (text in place in Go's typeface, shapes, JPEG/Flate pictures with transparency, forms, annotation appearances, OCR text left out), poppler preferred when installed, the window saying which | built |
+
 ### Languages
 
 | Capability | Status |

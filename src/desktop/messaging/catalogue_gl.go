@@ -244,4 +244,5 @@ var galician = Catalogue{
 	BatchProgress:              "Asinando %d de %d…",
 	BatchDone:                  "Asinados %d de %d.",
 	MenuSignFolder:             "Asinar un cartafol…",
+	PreviewApproximate:         "É un bosquexo de trebaruna: o texto vai noutra tipografía. Con poppler (pdftoppm) instalado verás a páxina exacta.",
 }

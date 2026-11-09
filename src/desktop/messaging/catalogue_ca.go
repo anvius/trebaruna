@@ -245,4 +245,5 @@ var catalan = Catalogue{
 	BatchProgress:              "S'està signant el %d de %d…",
 	BatchDone:                  "S'han signat %d de %d.",
 	MenuSignFolder:             "Signa una carpeta…",
+	PreviewApproximate:         "És un esbós de trebaruna: el text fa servir una altra tipografia. Amb el poppler (pdftoppm) instal·lat veuràs la pàgina exacta.",
 }

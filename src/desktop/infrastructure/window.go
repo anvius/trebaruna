@@ -105,12 +105,13 @@ func newDesktop(window fyne.Window, catalogue messaging.Catalogue, binaryPath st
 		cards:       application.NewListCards(CommandLineCardReader{BinaryPath: binaryPath}),
 		firefox:     application.NewListCards(CommandLineCardReader{BinaryPath: binaryPath, Store: domain.StoreFirefox}),
 		pinChange:   application.NewChangeCardPIN(CommandLinePINChanger{BinaryPath: binaryPath}),
-		preview:     application.NewPreviewPage(NewPopplerRenderer(), application.InkFinder{}),
-		binaryPath:  binaryPath,
-		window:      window,
-		messages:    catalogue,
-		palette:     DefaultPalette(),
-		activity:    &networkActivity{},
+		preview: application.NewPreviewPage(FirstAvailableRenderer{NewPopplerRenderer(), NewBuiltInRenderer()},
+			application.InkFinder{}),
+		binaryPath: binaryPath,
+		window:     window,
+		messages:   catalogue,
+		palette:    DefaultPalette(),
+		activity:   &networkActivity{},
 	}
 }
 

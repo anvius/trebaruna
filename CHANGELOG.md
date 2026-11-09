@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Page preview without poppler (plan G7): when `pdftoppm` is not installed
+  the window draws the page itself, in plain Go, instead of falling back to
+  the default corner.
+  - Text where the PDF puts it (simple fonts by their widths and encodings,
+    composite fonts through their ToUnicode maps), in Go's typeface; lines,
+    rectangles and fills in their colours; JPEG and Flate pictures (grey,
+    RGB, CMYK, ICC, indexed) with their soft masks, others as grey boxes;
+    forms; the appearances of form fields and earlier signatures. The
+    invisible OCR layer of a scan is left out.
+  - poppler stays first when installed; the line under the page says when
+    the preview is trebaruna's sketch, in every language.
+  - Compared by eye with pdftoppm on real documents (a cover with pictures,
+    a dense page of a contract, a signed page with a rubric): the same
+    layout, another typeface.
+
 - CI (plan G6): the test suite on Windows and macOS; on Windows the window,
   the card CLI, the zip and the MSI (WiX 5); on Linux the .deb installed
   and removed for real, the AppImage (appimagetool 1.9.1 pinned by digest)

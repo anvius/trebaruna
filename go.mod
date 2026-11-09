@@ -13,6 +13,7 @@ require (
 	github.com/russellhaering/goxmldsig v1.6.1
 	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78
 	golang.org/x/crypto v0.57.0
+	golang.org/x/image v0.46.0
 	software.sslmate.com/src/go-pkcs12 v0.7.4
 )
 
@@ -49,7 +50,6 @@ require (
 	github.com/srwiley/rasterx v0.0.0-20220730225603-2ab79fcdd4ef // indirect
 	github.com/stretchr/testify v1.11.1 // indirect
 	github.com/yuin/goldmark v1.8.2 // indirect
-	golang.org/x/image v0.46.0 // indirect
 	golang.org/x/net v0.58.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/text v0.42.0 // indirect

@@ -248,4 +248,5 @@ var basque = Catalogue{
 	BatchProgress:              "Sinatzen: %d / %d…",
 	BatchDone:                  "Sinatuta: %d / %d.",
 	MenuSignFolder:             "Sinatu karpeta bat…",
+	PreviewApproximate:         "trebaruna programaren zirriborroa da: testuak beste letra-tipo bat du. Poppler (pdftoppm) instalatuta, orrialde zehatza ikusiko duzu.",
 }

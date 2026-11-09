@@ -161,6 +161,7 @@ type Catalogue struct {
 	RubricHint                 string
 	RemoveRubric               string
 	RubricInvalid              string
+	PreviewApproximate         string
 	FormatOnlyCAdES            string
 	SealOnPagePane             string
 	MoreOptions                string
@@ -573,6 +574,7 @@ var spanish = Catalogue{
 	BatchProgress:              "Firmando %d de %d…",
 	BatchDone:                  "Firmados %d de %d.",
 	MenuSignFolder:             "Firmar una carpeta…",
+	PreviewApproximate:         "Es un esbozo de trebaruna: el texto va en otra tipografía. Con poppler (pdftoppm) instalado verás la página exacta.",
 }
 
 var italian = Catalogue{
@@ -819,6 +821,7 @@ var italian = Catalogue{
 	BatchProgress:              "Firma %d di %d…",
 	BatchDone:                  "Firmati %d di %d.",
 	MenuSignFolder:             "Firma una cartella…",
+	PreviewApproximate:         "È un abbozzo di trebaruna: il testo usa un altro carattere. Con poppler (pdftoppm) installato vedrai la pagina esatta.",
 }
 
 var english = Catalogue{
@@ -1065,6 +1068,7 @@ var english = Catalogue{
 	BatchProgress:              "Signing %d of %d…",
 	BatchDone:                  "Signed %d of %d.",
 	MenuSignFolder:             "Sign a folder…",
+	PreviewApproximate:         "This is trebaruna's sketch: the text is in another typeface. With poppler (pdftoppm) installed you see the exact page.",
 }
 
 // LevelName renders a level name for display.

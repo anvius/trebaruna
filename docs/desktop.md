@@ -285,18 +285,23 @@ Catalan, Galician and Basque, because Fyne does not ship them.
 
 ## Without poppler
 
-The page preview and the automatic free-space detection use **poppler**
-(`pdftoppm`).
+The page preview draws the page with **poppler** (`pdftoppm`) when it is
+installed. Without it trebaruna draws the page itself, with no program
+outside it:
 
-Without it:
+- the text where the PDF puts it, in Go's own typeface (so letters look
+  different, but every line and paragraph is where it is on paper);
+- lines, rectangles and filled shapes in their colours;
+- pictures (JPEG, and uncompressed or Flate pictures in grey, RGB, CMYK or
+  indexed colour, with their transparency); others, such as fax-compressed
+  scans, as grey boxes;
+- the appearance of form fields and of earlier visible signatures;
+- not the invisible text layer an OCR program lays over a scan.
 
-- the page pane explains that poppler is missing;
-- the seal goes in the signer's default place, the bottom-right corner of page 1;
-- **signing still works**.
-
-The window says this explicitly rather than showing a blank preview that looks
-like a broken document. On macOS install it with `brew install poppler`; on Linux
-it is usually `poppler-utils`.
+The line under the page says the preview is trebaruna's sketch. The free
+space is found and the seal placed exactly as with poppler; signing does not
+depend on either. On macOS poppler is `brew install poppler`; on Linux
+usually `poppler-utils`.
 
 ---
 

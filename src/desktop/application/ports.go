@@ -23,6 +23,9 @@ type PagePreview struct {
 	Ink domain.InkMap
 	// PageCount is the total number of pages in the document.
 	PageCount int
+	// Approximate says the page is trebaruna's own sketch of it, not the
+	// page as a PDF reader draws it.
+	Approximate bool
 }
 
 // Geometry exposes the conversion between raster cells and PDF points.
