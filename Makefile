@@ -8,7 +8,7 @@ PREFIX  ?= /usr/local
 DESTDIR ?= 
 LDFLAGS := -s -w -X codeberg.org/simplicer/trebaruna/src/entrypoint/cli.injectedVersion=$(VERSION)
 
-.PHONY: help build build-token build-gui deps-gui test test-verbose check cross install install-desktop clean version
+.PHONY: afirma-default afirma-autofirma help build build-token build-gui deps-gui test test-verbose check cross install install-desktop clean version
 
 help:
 	@echo "make build        binario estático (P12/PEM), sin dependencias"
@@ -74,6 +74,16 @@ install-desktop: build-token build-gui
 	install -Dm644 assets/icons/trebaruna-64.png  $(DESTDIR)$(PREFIX)/share/icons/hicolor/64x64/apps/trebaruna.png
 	install -Dm644 packaging/trebaruna.desktop $(DESTDIR)$(PREFIX)/share/applications/trebaruna.desktop
 	@echo "instalado en $(DESTDIR)$(PREFIX); ejecuta: update-desktop-database"
+
+# afirma-default makes trebaruna this user's handler for AutoFirma's afirma://
+# links; afirma-autofirma gives them back to AutoFirma. Nothing system-wide.
+afirma-default:
+	xdg-mime default trebaruna.desktop x-scheme-handler/afirma
+	@xdg-mime query default x-scheme-handler/afirma
+
+afirma-autofirma:
+	xdg-mime default afirma.desktop x-scheme-handler/afirma
+	@xdg-mime query default x-scheme-handler/afirma
 
 version:
 	@echo $(VERSION)

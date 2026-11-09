@@ -38,6 +38,19 @@
       <key>CFBundleTypeRole</key>
       <string>Viewer</string>
     </dict>
+    <!-- AutoFirma's protocol, used by Spanish administration pages. macOS keeps
+         one default per scheme: installing trebaruna next to AutoFirma does not
+         take it over. -->
+    <dict>
+      <key>CFBundleURLName</key>
+      <string>codeberg.anvius.trebaruna.afirma</string>
+      <key>CFBundleURLSchemes</key>
+      <array>
+        <string>afirma</string>
+      </array>
+      <key>CFBundleTypeRole</key>
+      <string>Viewer</string>
+    </dict>
   </array>
   <key>CFBundleDocumentTypes</key>
   <array>

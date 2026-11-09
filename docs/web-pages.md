@@ -177,10 +177,32 @@ make install-desktop
 xdg-mime default trebaruna.desktop x-scheme-handler/trebaruna
 ```
 
+### AutoFirma's afirma:// links (Linux)
+
+The same entry declares `x-scheme-handler/afirma`, so trebaruna is offered for
+AutoFirma's links without taking them from AutoFirma: with both installed, the
+default stays where it was until you choose.
+
+```bash
+make afirma-default        # this user: afirma:// links open trebaruna
+make afirma-autofirma      # back to AutoFirma
+xdg-mime query default x-scheme-handler/afirma
+```
+
+Firefox: the AutoFirma package installs `/etc/firefox/pref/Autofirma.js`,
+which sets `network.protocol-handler.app.afirma` to `/usr/bin/autofirma` and
+so bypasses the choice above. With AutoFirma installed, point that preference
+at `trebaruna-desktop` in `about:config` (or remove AutoFirma's file) for
+Firefox to open trebaruna. Without AutoFirma, Firefox asks which application to
+use the first time. trebaruna installs no browser preference of its own.
+
 ### macOS
 
 `packaging/macos/Info.plist` declares `CFBundleURLTypes` with the `trebaruna`
-scheme. The bundle picks the URI up when the system dispatches it.
+and `afirma` schemes. macOS keeps one default per scheme, so trebaruna does not
+take `afirma` over from an installed AutoFirma. Not verified on macOS here: the
+system hands a URL to an app as an Apple Event, and the window has only been
+tested receiving it as an argument (Linux).
 
 ### Windows
 

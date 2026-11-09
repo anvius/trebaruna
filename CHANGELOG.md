@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- afirma:// handler registration: the desktop entry declares
+  `x-scheme-handler/afirma` and the macOS bundle the `afirma` scheme, so
+  trebaruna is offered for AutoFirma's links without taking them over;
+  `make afirma-default` / `make afirma-autofirma` switch this user's default.
+  docs/web-pages.md explains the Firefox preference AutoFirma's package sets,
+  which bypasses the system choice. No browser preference is installed.
+
 - afirma:// approval window: `trebaruna-desktop afirma://…` opens a window
   with the request in full (operation, site, the page's own name, data or its
   address, batch documents, filters, translated warnings), the certificate
