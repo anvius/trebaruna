@@ -275,19 +275,18 @@ func lastEnvelope(t *testing.T, signed []byte) ([]byte, []byte) {
 	start, _ := strconv.Atoi(string(last[1]))
 	end, _ := strconv.Atoi(string(last[2]))
 	length, _ := strconv.Atoi(string(last[3]))
-	hexed := strings.TrimRight(string(signed[start+1:end-1]), "0")
-	if len(hexed)%2 == 1 {
-		hexed += "0"
-	}
-	envelope, err := hex.DecodeString(hexed)
+	// The whole hole, padding included: the envelope's DER length says where
+	// it ends. Trimming the hexadecimal zeros cut an envelope that happened
+	// to end in a zero byte.
+	padded, err := hex.DecodeString(string(signed[start+1 : end-1]))
 	if err != nil {
 		t.Fatal(err)
 	}
-	var envelopeDER asn1.RawValue
-	if _, err := asn1.Unmarshal(envelope, &envelopeDER); err == nil {
-		envelope = envelopeDER.FullBytes
+	var envelope asn1.RawValue
+	if _, err := asn1.Unmarshal(padded, &envelope); err != nil {
+		t.Fatal(err)
 	}
-	return envelope, append(append([]byte{}, signed[:start]...), signed[end:end+length]...)
+	return envelope.FullBytes, append(append([]byte{}, signed[:start]...), signed[end:end+length]...)
 }
 
 // TestXadesDeclaresWhereItWasMade: SignatureProductionPlaceV2 between the
