@@ -22,6 +22,9 @@ import (
 // from the command line. The request is shown in full on stderr; it is
 // signed only with --approve and a key, otherwise the site hears CANCEL.
 func runAfirma(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
+	if len(args) > 0 && args[0] == "local-tls" {
+		return runLocalTLS(args[1:], stdout, stderr)
+	}
 	flags := flag.NewFlagSet("afirma", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	keys := addKeyFlags(flags, "sign with")

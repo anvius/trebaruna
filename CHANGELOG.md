@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `trebaruna afirma local-tls install|status|remove`: the certificate the
+  afirma:// WebSocket channel will serve on 127.0.0.1 (ADR-0019, proposed).
+  Its root is made per user, signs that certificate once and its key is
+  destroyed, never written; its critical name constraints permit only
+  127.0.0.1 and localhost. Installing it in the user's NSS stores (Firefox
+  profiles, ~/.pki/nssdb) is explicit and `remove` undoes it; the system's
+  stores are never touched.
+
 - Approving a three-phase afirma:// signature ("…tri") names the site's
   server that prepares and assembles it, and says that what is signed is
   what that server computes, which trebaruna cannot show: the person

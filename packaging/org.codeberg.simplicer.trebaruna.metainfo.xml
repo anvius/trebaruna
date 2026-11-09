@@ -55,6 +55,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.65.0-unstable" date="2026-11-09">
+      <description>
+        <p>The certificate for the local channel AutoFirma pages use, opt-in.</p>
+      </description>
+    </release>
     <release version="0.64.1-unstable" date="2026-11-09">
       <description>
         <p>Clearer messages for a missing document or passphrase.</p>
