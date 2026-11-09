@@ -1,9 +1,9 @@
 // Package xmldsig holds the XML-Signature primitives trebaruna's XAdES signer
 // and verifier share: canonical forms (W3C C14N 1.0, 1.1 and exclusive) and
 // the complete check of a signature, every reference and the value over
-// SignedInfo. Canonicalisers come from goxmldsig; dereferencing, transforms
-// and the signature check are written here, because goxmldsig validates only
-// the reference to the element it is given.
+// SignedInfo. All of it is written here: goxmldsig validates only the
+// reference to the element it is given, and its canonicaliser sorted
+// prefixed attributes by local name instead of namespace URI.
 package xmldsig
 
 import (
@@ -12,8 +12,6 @@ import (
 	"strings"
 
 	"github.com/beevik/etree"
-	dsig "github.com/russellhaering/goxmldsig"
-	"github.com/russellhaering/goxmldsig/etreeutils"
 )
 
 // Namespace is the XML-Signature namespace.
@@ -54,34 +52,11 @@ func IsCanonicalization(algorithm string) bool {
 // its document: the namespaces and xml: attributes it inherits are part of
 // it. prefixes is the InclusiveNamespaces PrefixList of exclusive C14N.
 func Canonicalize(element *etree.Element, algorithm, prefixes string) ([]byte, error) {
-	switch algorithm {
-	case C14N10:
-		return dsig.MakeC14N10RecCanonicalizer().Canonicalize(element)
-	case C14N10Comments:
-		return dsig.MakeC14N10WithCommentsCanonicalizer().Canonicalize(element)
+	m, known := modeFor(algorithm, prefixes)
+	if !known {
+		return nil, fmt.Errorf("%w: canonicalisation %s", ErrUnverifiable, algorithm)
 	}
-
-	// The other canonicalisers read only the element they are given, so it is
-	// copied with every namespace in scope declared on it.
-	context, err := etreeutils.NSBuildParentContext(element)
-	if err != nil {
-		return nil, err
-	}
-	detached, err := etreeutils.NSDetatch(context, element)
-	if err != nil {
-		return nil, err
-	}
-	switch algorithm {
-	case ExcC14N:
-		return dsig.MakeC14N10ExclusiveCanonicalizerWithPrefixList(prefixes).Canonicalize(detached)
-	case ExcC14NComments:
-		return dsig.MakeC14N10ExclusiveWithCommentsCanonicalizerWithPrefixList(prefixes).Canonicalize(detached)
-	case C14N11:
-		return dsig.MakeC14N11Canonicalizer().Canonicalize(detached)
-	case C14N11Comments:
-		return dsig.MakeC14N11WithCommentsCanonicalizer().Canonicalize(detached)
-	}
-	return nil, fmt.Errorf("%w: canonicalisation %s", ErrUnverifiable, algorithm)
+	return canonicalize(element, m), nil
 }
 
 // CanonicalizeDocument returns the canonical form of a whole document (C14N

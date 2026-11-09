@@ -1,0 +1,5 @@
+<raiz xmlns="urn:defecto" xmlns:a="urn:a">
+  <hijo xmlns="">sin espacio</hijo>
+  <a:otro xmlns:a="urn:a" xmlns:b="urn:b"><b:dentro xmlns="urn:defecto"/></a:otro>
+  <nieto xmlns:a="urn:otro-a"><a:x a:y="1"/></nieto>
+</raiz>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<f:Factura xmlns:f="urn:factura" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="urn:factura factura.xsd" xml:lang="es" version="1.0">
+  <f:Linea f:importe="10" xsi:type="f:LineaSimple" importe="10" xml:space="preserve">Café &amp; té &lt;dos&gt; "comillas" &#x9;tab</f:Linea>
+  <!-- comentario -->
+  <?procesar dato="1"?>
+  <f:Nota><![CDATA[a < b && c > d]]></f:Nota>
+  <f:Atributos texto="a&#9;b&#10;c&#13;d" cita='dijo "hola"'/>
+</f:Factura>

@@ -26,19 +26,18 @@ import (
 	verificationdomain "codeberg.org/simplicer/trebaruna/src/verification/domain"
 	verificationinfra "codeberg.org/simplicer/trebaruna/src/verification/infrastructure"
 	"github.com/beevik/etree"
-	dsig "github.com/russellhaering/goxmldsig"
 )
 
 // XadesSigner produces XAdES-BES (ETSI EN 319 132-1).
 //
-// Digests are computed over real c14n output, produced by goxmldsig's
-// canonicalizer and applied to an etree tree. Hashing hand-written strings does
+// Digests are computed over real c14n output, produced by the xmldsig
+// package's canonicaliser on an etree tree. Hashing hand-written strings does
 // not work: every verifier re-parses and canonicalises before hashing, so a
 // digest taken over the source text never matches.
 //
 // A third-party XAdES builder was rejected (artemkunich/goxades: 10 stars, no
-// commits since 2023), but a canonicalizer is a well-scoped primitive and is
-// reused rather than reimplemented.
+// commits since 2023). goxmldsig's canonicaliser was used until it was found
+// to sort prefixed attributes by local name instead of namespace URI.
 type XadesSigner struct {
 	timestamps Timestamper
 }
@@ -339,8 +338,7 @@ func parseFragment(fragment string) (*etree.Element, error) {
 
 // canonicalDigest applies inclusive c14n and returns the SHA-256 digest.
 func canonicalDigest(element *etree.Element) ([]byte, error) {
-	canonicalizer := dsig.MakeC14N10RecCanonicalizer()
-	canonical, err := canonicalizer.Canonicalize(element)
+	canonical, err := xmldsig.Canonicalize(element, xmldsig.C14N10, "")
 	if err != nil {
 		return nil, fmt.Errorf("canonicalise XML: %w", err)
 	}
@@ -808,8 +806,7 @@ func findUnsignedSignatureProperties(signature *etree.Element) *etree.Element {
 
 // canonicalise returns the inclusive c14n form of an element.
 func canonicalise(element *etree.Element) ([]byte, error) {
-	canonicalizer := dsig.MakeC14N10RecCanonicalizer()
-	canonical, err := canonicalizer.Canonicalize(element)
+	canonical, err := xmldsig.Canonicalize(element, xmldsig.C14N10, "")
 	if err != nil {
 		return nil, fmt.Errorf("canonicalise for the archive timestamp: %w", err)
 	}

@@ -142,6 +142,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- XML is canonicalised with trebaruna's own C14N.
+  - goxmldsig's canonicaliser sorted prefixed attributes by local name
+    instead of namespace URI. LibreOffice's content.xml, or any element with
+    `xml:lang` and `xsi:` attributes, came out in a different order from
+    every other implementation: a signature over such XML did not verify
+    elsewhere, and trebaruna misjudged other producers' signatures over it.
+  - The new canonicaliser (C14N 1.0 and 1.1, exclusive with
+    InclusiveNamespaces, with and without comments) handles the document
+    node, subsets with their inherited namespaces and xml: attributes,
+    `xmlns=""`, superfluous declarations, and attribute and text escaping.
+  - It is used everywhere the signer and verifier canonicalise.
+  - It matches libxml2 (xmllint --c14n, --c14n11, --exc-c14n) byte for byte
+    on LibreOffice's XML and a corpus of namespace and escaping cases.
+
 - The XAdES-A archive timestamp covers the signed document. Its input
   skipped the enveloped document reference (`URI=""`), so the token covered
   the signature's objects but not the document, and no other validator could
