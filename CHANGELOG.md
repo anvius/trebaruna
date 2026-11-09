@@ -227,6 +227,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A seal word wider than its line (a long identifier) was cut by bytes, so a
+  word with accents could be split inside a character and print garbage. It is
+  now cut between characters. The Helvetica metrics moved to a shared package
+  (`signing/infrastructure/helvetica`) for the verification report.
+
 - The card session is closed after each signature. A process that signs more
   than once, such as the local API, kept every session open and went on seeing
   the readers as they were at its first signature.

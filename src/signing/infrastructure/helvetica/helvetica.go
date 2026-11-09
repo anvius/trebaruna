@@ -1,17 +1,16 @@
-package infrastructure
-
-// Helvetica advance widths in 1/1000 em, from the Adobe AFM metrics.
+// Package helvetica measures and wraps text in the base-14 Helvetica fonts
+// every PDF reader has, with the advance widths of the Adobe AFM metrics.
 //
-// A seal has to wrap text inside a fixed width, and guessing character widths
-// with a fixed average produces either clipped lines or a ragged block. These
-// tables make the wrap exact for the base-14 fonts every PDF reader has, so the
-// layout is stable across viewers and across machines.
-//
-// Unknown runes fall back to a digit width, which errs on the wide side: the
-// wrap breaks earlier rather than letting text overflow the box.
+// A seal or a report page has to wrap text inside a fixed width, and guessing
+// character widths with a fixed average produces either clipped lines or a
+// ragged block. Unknown runes fall back to a digit width, which errs on the
+// wide side: the wrap breaks earlier rather than letting text overflow.
+package helvetica
 
-// helveticaRegular maps ASCII to advance widths for Helvetica.
-var helveticaRegular = map[rune]int{
+import "strings"
+
+// regular maps ASCII to advance widths for Helvetica.
+var regular = map[rune]int{
 	' ': 278, '!': 278, '"': 355, '#': 556, '$': 556, '%': 889, '&': 667,
 	'\'': 191, '(': 333, ')': 333, '*': 389, '+': 584, ',': 278, '-': 333,
 	'.': 278, '/': 278,
@@ -30,8 +29,9 @@ var helveticaRegular = map[rune]int{
 	'{': 334, '|': 260, '}': 334, '~': 584,
 }
 
-// helveticaBold maps the characters the name line needs.
-var helveticaBold = map[rune]int{
+// bold maps ASCII to advance widths for Helvetica-Bold, as far as the
+// texts printed need.
+var bold = map[rune]int{
 	' ': 278, '-': 333, '.': 278, '\'': 238, ',': 278,
 	'0': 556, '1': 556, '2': 556, '3': 556, '4': 556,
 	'5': 556, '6': 556, '7': 556, '8': 556, '9': 556,
@@ -48,13 +48,12 @@ var helveticaBold = map[rune]int{
 // fallbackWidth is used for runes outside the tables (accents, CJK, symbols).
 const fallbackWidth = 556
 
-// textWidth returns the rendered width of a string in points.
-func textWidth(text string, size float64, bold bool) float64 {
-	table := helveticaRegular
-	if bold {
-		table = helveticaBold
+// Width returns the rendered width of a string in points.
+func Width(text string, size float64, bolded bool) float64 {
+	table := regular
+	if bolded {
+		table = bold
 	}
-
 	total := 0
 	for _, character := range text {
 		width, ok := table[character]
@@ -66,21 +65,20 @@ func textWidth(text string, size float64, bold bool) float64 {
 	return float64(total) * size / 1000.0
 }
 
-// wrapToWidth breaks text so every line fits within maxWidth points.
+// Wrap breaks text so every line fits within maxWidth points.
 //
-// It never splits a word unless the word alone is wider than the line, in which
-// case it splits on rune boundaries: a fiscal identifier with no spaces must
-// still be printable, and dropping it would be worse than breaking it.
-func wrapToWidth(text string, maxWidth, size float64, bold bool) []string {
+// It never splits a word unless the word alone is wider than the line, in
+// which case it splits on rune boundaries: a fiscal identifier with no spaces
+// must still be printable, and dropping it would be worse than breaking it.
+func Wrap(text string, maxWidth, size float64, bolded bool) []string {
 	var lines []string
 	current := ""
-
-	for _, word := range splitWords(text) {
+	for _, word := range strings.Fields(text) {
 		candidate := word
 		if current != "" {
 			candidate = current + " " + word
 		}
-		if textWidth(candidate, size, bold) <= maxWidth {
+		if Width(candidate, size, bolded) <= maxWidth {
 			current = candidate
 			continue
 		}
@@ -88,41 +86,20 @@ func wrapToWidth(text string, maxWidth, size float64, bold bool) []string {
 			lines = append(lines, current)
 			current = ""
 		}
-		// The word alone may still be too long.
-		for textWidth(word, size, bold) > maxWidth && len(word) > 1 {
-			cut := len(word)
-			for cut > 1 && textWidth(word[:cut], size, bold) > maxWidth {
+		// The word alone may still be too long: cut it between runes.
+		runes := []rune(word)
+		for Width(string(runes), size, bolded) > maxWidth && len(runes) > 1 {
+			cut := len(runes)
+			for cut > 1 && Width(string(runes[:cut]), size, bolded) > maxWidth {
 				cut--
 			}
-			lines = append(lines, word[:cut])
-			word = word[cut:]
+			lines = append(lines, string(runes[:cut]))
+			runes = runes[cut:]
 		}
-		current = word
+		current = string(runes)
 	}
 	if current != "" {
 		lines = append(lines, current)
 	}
 	return lines
-}
-
-// splitWords splits on whitespace, collapsing runs.
-func splitWords(text string) []string {
-	var words []string
-	start := -1
-	for index, character := range text {
-		if character == ' ' || character == '\t' || character == '\n' || character == '\r' {
-			if start >= 0 {
-				words = append(words, text[start:index])
-				start = -1
-			}
-			continue
-		}
-		if start < 0 {
-			start = index
-		}
-	}
-	if start >= 0 {
-		words = append(words, text[start:])
-	}
-	return words
 }

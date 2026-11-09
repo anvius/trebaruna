@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"codeberg.org/simplicer/trebaruna/src/signing/domain/identity"
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/helvetica"
 	"github.com/digitorus/pdfsign"
 )
 
@@ -99,7 +100,7 @@ func DrawSeal(width, height float64, holder identity.Holder, moment time.Time) (
 		return nil, fmt.Errorf("seal %.0f pt wide leaves no room for text", width)
 	}
 
-	nameLines := wrapToWidth(holder.Name, innerWidth, typography.nameSize, true)
+	nameLines := helvetica.Wrap(holder.Name, innerWidth, typography.nameSize, true)
 	if len(nameLines) == 0 {
 		return nil, fmt.Errorf("the certificate carries no printable name")
 	}
@@ -139,10 +140,10 @@ func sealDetailLines(holder identity.Holder, moment time.Time, width float64, ty
 		// Identifier and date together when they fit: fewer lines means a
 		// tighter block, and the identifier is what a verifier looks for.
 		combined := holder.Identifier + " · " + date
-		if textWidth(combined, typography.detailSize, false) <= width {
+		if helvetica.Width(combined, typography.detailSize, false) <= width {
 			details = append(details, combined)
 		} else {
-			details = append(details, wrapToWidth(holder.Identifier, width, typography.detailSize, false)...)
+			details = append(details, helvetica.Wrap(holder.Identifier, width, typography.detailSize, false)...)
 			details = append(details, date)
 		}
 	default:
@@ -151,7 +152,7 @@ func sealDetailLines(holder identity.Holder, moment time.Time, width float64, ty
 
 	// The time keeps its offset: without it a reader cannot tell whether the
 	// stamp refers to UTC or to the signer's desk.
-	details = append(details, wrapToWidth(clock, width, typography.timeSize, false)...)
+	details = append(details, helvetica.Wrap(clock, width, typography.timeSize, false)...)
 	return details, nil
 }
 
