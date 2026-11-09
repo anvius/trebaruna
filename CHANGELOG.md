@@ -6,7 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
+### Fixed
+
+- A PDF changed under a document timestamp whose authority signed with
+  RSA-PSS was reported unaltered. The PDF library cannot read such a token
+  and stops before comparing its imprint with the document; trebaruna's
+  own check then verified the token's signature over its TSTInfo and took
+  that for the document. A document timestamp (its content a TSTInfo) is
+  now checked as one: the token's signature, then its imprint against the
+  bytes its /ByteRange covers, with the same code as ASiC timestamps.
+- A PDF signature whose signature timestamp an authority signed with
+  RSA-PSS was "unverifiable": the library stops at the token before
+  checking the signature. Such a signature now gets the CAdES checks,
+  timestamp included.
 
 - The window signs with a remote service: *Remote service* in step 2 takes
   the service's address and a user and password, or the client id of an

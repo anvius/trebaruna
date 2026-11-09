@@ -56,11 +56,17 @@ type treeAttribute struct {
 // signatureTree is a parsed envelope ready to be checked node by node.
 type signatureTree struct {
 	// der is the envelope, its BER made DER.
-	der          []byte
-	content      []byte
+	der     []byte
+	content []byte
+	// contentType is the encapsulated content's type: id-data for a
+	// document, id-ct-TSTInfo for a timestamp token.
+	contentType  asn1.ObjectIdentifier
 	certificates []*x509.Certificate
 	signers      []treeSignerInfo
 }
+
+// oidTSTInfo is id-ct-TSTInfo (RFC 3161): the content of a timestamp token.
+var oidTSTInfo = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 16, 1, 4}
 
 // parseSignatureTree reads an envelope; content is the document for a
 // detached envelope.
@@ -86,8 +92,11 @@ func parseSignatureTree(envelope, detached []byte) (signatureTree, error) {
 		Type    asn1.ObjectIdentifier
 		Content []byte `asn1:"optional,explicit,tag:0"`
 	}
-	if _, err := asn1.Unmarshal(signed.EncapContentInfo.FullBytes, &encapsulated); err == nil && len(encapsulated.Content) > 0 {
-		tree.content = encapsulated.Content
+	if _, err := asn1.Unmarshal(signed.EncapContentInfo.FullBytes, &encapsulated); err == nil {
+		tree.contentType = encapsulated.Type
+		if len(encapsulated.Content) > 0 {
+			tree.content = encapsulated.Content
+		}
 	}
 
 	for rest := signed.Certificates.Bytes; len(rest) > 0; {

@@ -21,31 +21,12 @@ func (v *AsicVerifier) timeStamp(unpacked container, entry string) ([]domain.Sig
 	if err != nil {
 		return nil, nil, err
 	}
-	report := domain.SignerReport{Format: "RFC 3161"}
-	token, err := parseTimeStamp(raw)
-	if err != nil {
-		report.Integrity = domain.StatusBad
-		report.Findings = append(report.Findings, domain.Finding{Code: "timestamp.invalid", Status: domain.StatusBad,
-			Message: "the timestamp cannot be parsed or does not verify", Detail: err.Error()})
-		report.Trust = trustFromReport(report)
-		return []domain.SignerReport{report}, names, nil
+	report, parsed := v.cades.timeStampReport(raw, covered)
+	report.Format = "RFC 3161"
+	if parsed {
+		// The manifest it covers must still describe the files.
+		checkManifest(unpacked, references, &report)
 	}
-	report.SignedAt, report.Timestamped = token.Time, true
-	if len(token.Certificates) > 0 {
-		describeCertificate(token.Certificates[0], &report)
-		v.cades.describeIssuer(token.Certificates[0], token.Certificates, token.Time, &report)
-	}
-	if tokenCovers(token, covered) {
-		report.Integrity = domain.StatusGood
-		report.Findings = append(report.Findings, domain.Finding{Code: "signature.intact", Status: domain.StatusGood,
-			Message: "the timestamped content is unaltered"})
-	} else {
-		report.Integrity = domain.StatusBad
-		report.Findings = append(report.Findings, domain.Finding{Code: "signature.modified", Status: domain.StatusBad,
-			Message: "the content changed after it was timestamped"})
-	}
-	// The manifest it covers must still describe the files.
-	checkManifest(unpacked, references, &report)
 	report.Trust = trustFromReport(report)
 	return []domain.SignerReport{report}, names, nil
 }

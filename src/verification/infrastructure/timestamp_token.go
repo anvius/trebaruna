@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/digitorus/timestamp"
+
+	"codeberg.org/simplicer/trebaruna/src/verification/domain"
 )
 
 // parseTimeStamp reads an RFC 3161 token and checks its signature: through
@@ -32,6 +34,49 @@ func parseTimeStamp(der []byte) (*timestamp.Timestamp, error) {
 		return nil, fmt.Errorf("the timestamp's RSASSA-PSS signature does not verify")
 	}
 	return readTSTInfo(der, tree)
+}
+
+// timeStampReport judges a token that stands on its own (an ASiC
+// timestamp, a PDF document timestamp): its signature, then whether its
+// imprint is that of what it covers; its authority is named and checked
+// like a signer. parsed is false when the token itself does not verify.
+// The report's trust is left to the caller, who may check more.
+func (v *CadesVerifier) timeStampReport(raw, covered []byte) (domain.SignerReport, bool) {
+	var report domain.SignerReport
+	token, err := parseTimeStamp(raw)
+	if err != nil {
+		report.Integrity = domain.StatusBad
+		report.Findings = append(report.Findings, domain.Finding{Code: "timestamp.invalid", Status: domain.StatusBad,
+			Message: "the timestamp cannot be parsed or does not verify", Detail: err.Error()})
+		return report, false
+	}
+	report.SignedAt, report.Timestamped = token.Time, true
+	if len(token.Certificates) > 0 {
+		describeCertificate(token.Certificates[0], &report)
+		v.describeIssuer(token.Certificates[0], token.Certificates, token.Time, &report)
+	}
+	if tokenCovers(token, covered) {
+		report.Integrity = domain.StatusGood
+		report.Findings = append(report.Findings, domain.Finding{Code: "signature.intact", Status: domain.StatusGood,
+			Message: "the timestamped content is unaltered"})
+	} else {
+		report.Integrity = domain.StatusBad
+		report.Findings = append(report.Findings, domain.Finding{Code: "signature.modified", Status: domain.StatusBad,
+			Message: "the content changed after it was timestamped"})
+	}
+	return report, true
+}
+
+// timeStampedWithPSS reports a SignerInfo whose signature timestamp an
+// authority signed with RSASSA-PSS, which the PDF library cannot read.
+func timeStampedWithPSS(signer treeSignerInfo) bool {
+	for _, token := range attributeValues(signer.UnsignedAttrs, oidAttributeTimestamp) {
+		tree, err := parseSignatureTree(token, nil)
+		if err == nil && len(tree.signers) == 1 && isPSS(tree.signers[0].SignatureAlgorithm) {
+			return true
+		}
+	}
+	return false
 }
 
 // tstInfo is RFC 3161's TSTInfo, as far as a report reads it.

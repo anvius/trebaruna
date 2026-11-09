@@ -147,17 +147,27 @@ func (v *PDFVerifier) Extract(path string) ([]domain.SignerReport, error) {
 	return reports, nil
 }
 
-// checkHere verifies a signature the PDF library does not implement
-// (RSASSA-PSS) with the CAdES checks: a PDF signature is a detached CMS over
-// its byte ranges. Its envelope is the unchecked one with the same /Name.
-// The revocation data of the document's /DSS is not read for it.
+// checkHere verifies what the PDF library leaves unchecked for want of
+// RSASSA-PSS, with trebaruna's own checks. Its envelope is the unchecked
+// one with the same /Name. The revocation data of the document's /DSS is
+// not read for it.
+//
+//   - A document timestamp (its content a TSTInfo): the token's signature,
+//     then its imprint against the bytes the /ByteRange covers.
+//   - A signature signed with PSS, or whose signature timestamp is: the
+//     CAdES checks, a PDF signature being a detached CMS over its byte
+//     ranges.
 func (v *PDFVerifier) checkHere(path string, signer *verify.Signer, index int, envelopes []pdfEnvelope, taken map[int]bool) (domain.SignerReport, bool) {
 	if signer.ValidSignature || !libraryCannotCheck(signer) {
 		return domain.SignerReport{}, false
 	}
 	for candidate, envelope := range envelopes {
-		if taken[candidate] || envelope.name != signer.Name || len(envelope.tree.signers) != 1 ||
-			!isPSS(envelope.tree.signers[0].SignatureAlgorithm) {
+		if taken[candidate] || envelope.name != signer.Name || len(envelope.tree.signers) != 1 {
+			continue
+		}
+		node := envelope.tree.signers[0]
+		documentTimestamp := envelope.tree.contentType.Equal(oidTSTInfo)
+		if !documentTimestamp && !isPSS(node.SignatureAlgorithm) && !timeStampedWithPSS(node) {
 			continue
 		}
 		taken[candidate] = true
@@ -166,6 +176,12 @@ func (v *PDFVerifier) checkHere(path string, signer *verify.Signer, index int, e
 			return domain.SignerReport{}, false
 		}
 		cades := &CadesVerifier{Roots: v.Roots, Now: v.Now, Anchors: v.Anchors}
+		if documentTimestamp {
+			report, _ := cades.timeStampReport(envelope.der, signed)
+			report.FieldName, report.Format = fieldName(signer, index), "PAdES"
+			report.Trust = trustFromReport(report)
+			return report, true
+		}
 		reports, err := cades.envelopeReports(envelope.der, signed)
 		if err != nil || len(reports) != 1 {
 			return domain.SignerReport{}, false
