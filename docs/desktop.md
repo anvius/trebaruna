@@ -103,7 +103,8 @@ passphrase. **Look for cards** reads the readers again after inserting a card.
 Choosing a certificate file (File → Choose certificate…, or dropping one)
 switches the step back to **File**.
 
-**Card → Change the PIN…** and **Card → Unlock with the PUK…** act on the card
+**Card → Change the PIN…**, **Card → Unlock with the PUK…** and **Card → Change
+the PUK…** act on the card
 chosen in step 2 (or the only card present). The dialog asks for the current PIN
 or the PUK, and the new PIN twice; two new PINs that differ, an empty secret or
 a new PIN the card cannot take are said in the dialog without reaching the card.
@@ -327,7 +328,7 @@ Linux and Windows, `Cmd` on macOS):
 | Signature | Sign | `Ctrl+Enter` |
 | Signature | Previous page / Next page | `Ctrl+PgUp` / `Ctrl+PgDn` |
 | Signature | Find free space | `Ctrl+F` |
-| Card | Change the PIN…, Unlock with the PUK… | — |
+| Card | Change the PIN…, Unlock with the PUK…, Change the PUK… | — |
 | Tools | Requests from web pages… | — |
 | Help | Manual, About trebaruna | — |
 

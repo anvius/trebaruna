@@ -311,6 +311,7 @@ func (w *Window) mainMenu(tabs *container.AppTabs, checkFile func(string)) *fyne
 		fyne.NewMenu(m.MenuCard,
 			fyne.NewMenuItem(m.MenuChangePIN, func() { w.showPINDialog(domain.ChangePIN) }),
 			fyne.NewMenuItem(m.MenuUnlockPIN, func() { w.showPINDialog(domain.UnlockPIN) }),
+			fyne.NewMenuItem(m.MenuChangePUK, func() { w.showPINDialog(domain.ChangePUK) }),
 		),
 		fyne.NewMenu(m.MenuTools,
 			fyne.NewMenuItem(m.MenuNetwork, w.showNetworkActivity),

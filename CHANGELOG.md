@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Changing a card's PUK: `trebaruna-token pin change-puk` ($TREBARUNA_PUK,
+  $TREBARUNA_NEW_PUK) and the window's Card → Change the PUK…. A security
+  officer login with the current PUK, then C_SetPIN; a locked PUK, or a
+  new one outside the card's limits, is refused without an attempt, and a
+  wrong one is named with what the card says of the next try. Checked
+  against SoftHSM (whose security officer PIN plays the PUK): the new PUK
+  unlocks, the old one is refused; the token suite (now 44 tests) runs
+  against an extracted SoftHSM.
+
 - Window: ASiC containers, FacturaE invoices and declared policies. Any
   document can go in an ASiC-S container (`.asics`, with a CAdES
   signature); a batch can go in one ASiC-E container under one XAdES

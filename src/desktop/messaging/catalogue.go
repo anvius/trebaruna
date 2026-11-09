@@ -266,6 +266,14 @@ type Catalogue struct {
 	MenuCard                 string
 	MenuChangePIN            string
 	MenuUnlockPIN            string
+	MenuChangePUK            string
+	ChangePUKTitle           string
+	ChangePUKHint            string
+	NewPUKLabel              string
+	RepeatPUKLabel           string
+	ChangePUKButton          string
+	PUKChanged               string
+	CurrentPUKLabel          string
 	ChangePINTitle           string
 	UnlockPINTitle           string
 	ChangePINHint            string
@@ -612,6 +620,14 @@ var spanish = Catalogue{
 	MenuCard:                   "Tarjeta",
 	MenuChangePIN:              "Cambiar el PIN…",
 	MenuUnlockPIN:              "Desbloquear con el PUK…",
+	MenuChangePUK:              "Cambiar el PUK…",
+	ChangePUKTitle:             "Cambiar el PUK",
+	ChangePUKHint:              "Escribe el PUK actual y el nuevo dos veces. Si te equivocas con el PUK, la tarjeta cuenta un intento; agotados, solo quien la emitió puede desbloquearla.",
+	NewPUKLabel:                "PUK nuevo",
+	RepeatPUKLabel:             "Repite el PUK nuevo",
+	ChangePUKButton:            "Cambiar el PUK",
+	PUKChanged:                 "PUK cambiado: la tarjeta ya acepta el nuevo.",
+	CurrentPUKLabel:            "PUK actual",
 	ChangePINTitle:             "Cambiar el PIN de la tarjeta",
 	UnlockPINTitle:             "Desbloquear la tarjeta con el PUK",
 	ChangePINHint:              "La tarjeta comprueba el PIN actual una sola vez: si es erróneo, gasta uno de sus pocos intentos.",
@@ -939,6 +955,14 @@ var italian = Catalogue{
 	MenuCard:                   "Carta",
 	MenuChangePIN:              "Cambia il PIN…",
 	MenuUnlockPIN:              "Sblocca con il PUK…",
+	MenuChangePUK:              "Cambia il PUK…",
+	ChangePUKTitle:             "Cambia il PUK",
+	ChangePUKHint:              "Scrivi il PUK attuale e quello nuovo due volte. Se sbagli il PUK, la carta conta un tentativo; esauriti, solo chi l'ha emessa può sbloccarla.",
+	NewPUKLabel:                "Nuovo PUK",
+	RepeatPUKLabel:             "Ripeti il nuovo PUK",
+	ChangePUKButton:            "Cambia il PUK",
+	PUKChanged:                 "PUK cambiato: la carta ora accetta quello nuovo.",
+	CurrentPUKLabel:            "PUK attuale",
 	ChangePINTitle:             "Cambia il PIN della carta",
 	UnlockPINTitle:             "Sblocca la carta con il PUK",
 	ChangePINHint:              "La carta controlla il PIN attuale una sola volta: se è errato, consuma uno dei suoi pochi tentativi.",
@@ -1266,6 +1290,14 @@ var english = Catalogue{
 	MenuCard:                   "Card",
 	MenuChangePIN:              "Change the PIN…",
 	MenuUnlockPIN:              "Unlock with the PUK…",
+	MenuChangePUK:              "Change the PUK…",
+	ChangePUKTitle:             "Change the PUK",
+	ChangePUKHint:              "Type the current PUK and the new one twice. A wrong PUK costs one of the card's attempts; once they run out, only its issuer can unlock it.",
+	NewPUKLabel:                "New PUK",
+	RepeatPUKLabel:             "Repeat the new PUK",
+	ChangePUKButton:            "Change the PUK",
+	PUKChanged:                 "PUK changed: the card now takes the new one.",
+	CurrentPUKLabel:            "Current PUK",
 	ChangePINTitle:             "Change the card PIN",
 	UnlockPINTitle:             "Unlock the card with the PUK",
 	ChangePINHint:              "The card checks the current PIN once: a wrong one spends one of its few attempts.",

@@ -8,6 +8,9 @@ const (
 	ChangePIN PINAction = "change"
 	// UnlockPIN sets a new PIN with the PUK, for a locked or forgotten PIN.
 	UnlockPIN PINAction = "unlock"
+	// ChangePUK replaces the PUK, given the current one; NewPIN and Repeat
+	// then hold the new PUK.
+	ChangePUK PINAction = "change-puk"
 )
 
 // PINChange is what the PIN dialog collects. The secrets travel to the
@@ -16,7 +19,7 @@ type PINChange struct {
 	Action PINAction
 	// Token is the card's label, empty when the only card present is meant.
 	Token string
-	// Secret is the current PIN (change) or the PUK (unlock).
+	// Secret is the current PIN (change) or the PUK (unlock, change-puk).
 	Secret string
 	NewPIN string
 	Repeat string
@@ -27,7 +30,7 @@ type PINChange struct {
 // would make permanent.
 func (c PINChange) Validate() error {
 	switch {
-	case c.Secret == "" && c.Action == UnlockPIN:
+	case c.Secret == "" && (c.Action == UnlockPIN || c.Action == ChangePUK):
 		return Problem{Code: ProblemMissingPUK}
 	case c.Secret == "":
 		return Problem{Code: ProblemMissingPIN}

@@ -121,3 +121,57 @@ func TestTheCommandLineChangesThePINFromTheEnvironment(t *testing.T) {
 		t.Errorf("an empty PUK must be refused before the card: %d %s", code, stderr.String())
 	}
 }
+
+// TestThePUKIsChangedWithTheCurrentOne: afterwards the new PUK unlocks the
+// card and the old one is refused.
+func TestThePUKIsChangedWithTheCurrentOne(t *testing.T) {
+	token, _, _ := cardWithTwoCertificates(t, "digitalSignature", "nonRepudiation")
+	card := cardOf(t, token)
+
+	if err := (infrastructure.CardPUKChanger{}).ChangePUK(context.Background(), card, environment.soPin, "87654321"); err != nil {
+		t.Fatalf("change the PUK: %v", err)
+	}
+	if err := (infrastructure.CardUnlocker{}).UnlockPIN(context.Background(), card, environment.soPin, "2468"); !errors.Is(err, domain.ErrWrongPUK) {
+		t.Errorf("the old PUK must be refused, got %v", err)
+	}
+	if err := (infrastructure.CardUnlocker{}).UnlockPIN(context.Background(), card, "87654321", "2468"); err != nil {
+		t.Errorf("the new PUK must unlock: %v", err)
+	}
+	if err := signsWith(t, token, "2468"); err != nil {
+		t.Errorf("the PIN it set must sign: %v", err)
+	}
+}
+
+// TestAWrongCurrentPUKChangesNothing, and a new PUK the card cannot take is
+// refused before the card is asked.
+func TestAWrongCurrentPUKChangesNothing(t *testing.T) {
+	token, _, _ := cardWithTwoCertificates(t, "digitalSignature", "nonRepudiation")
+	card := cardOf(t, token)
+
+	if err := (infrastructure.CardPUKChanger{}).ChangePUK(context.Background(), card, "000000", "87654321"); !errors.Is(err, domain.ErrWrongPUK) {
+		t.Fatalf("a wrong current PUK must be named, got %v", err)
+	}
+	if err := (infrastructure.CardPUKChanger{}).ChangePUK(context.Background(), card, environment.soPin, "12"); !errors.Is(err, domain.ErrNewPINRejected) ||
+		!strings.Contains(err.Error(), "the new PUK") {
+		t.Fatalf("a short PUK must be refused with the card's limit, got %v", err)
+	}
+	if err := (infrastructure.CardUnlocker{}).UnlockPIN(context.Background(), card, environment.soPin, "2468"); err != nil {
+		t.Errorf("the PUK must be unchanged: %v", err)
+	}
+}
+
+// TestTheCommandLineChangesThePUKFromTheEnvironment.
+func TestTheCommandLineChangesThePUKFromTheEnvironment(t *testing.T) {
+	token, _, _ := cardWithTwoCertificates(t, "digitalSignature", "nonRepudiation")
+	t.Setenv("TREBARUNA_PUK", environment.soPin)
+	t.Setenv("TREBARUNA_NEW_PUK", "11223344")
+
+	var stdout, stderr bytes.Buffer
+	if code := cli.Run([]string{"pin", "change-puk", "--module", token.module, "--token", token.label, "--json"}, &stdout, &stderr); code != 0 ||
+		!strings.Contains(stdout.String(), `"change-puk"`) {
+		t.Fatalf("pin change-puk exited %d: %s %s", code, stdout.String(), stderr.String())
+	}
+	if err := (infrastructure.CardUnlocker{}).UnlockPIN(context.Background(), cardOf(t, token), "11223344", "2468"); err != nil {
+		t.Errorf("the new PUK must unlock: %v", err)
+	}
+}

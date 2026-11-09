@@ -255,21 +255,27 @@ trebaruna-token sign atto.pdf --nss-db ~/.pki/nssdb --certificate 3f2a91c0
   no empty password is tried, a wrong one stops the run.
 - Certificates of authorities the store keeps are never chosen to sign.
 
-### Changing the PIN, unlocking with the PUK
+### Changing the PIN, unlocking with the PUK, changing the PUK
 
 ```bash
 read -rs TREBARUNA_PIN TREBARUNA_NEW_PIN && export TREBARUNA_PIN TREBARUNA_NEW_PIN
 trebaruna-token pin change
 read -rs TREBARUNA_PUK TREBARUNA_NEW_PIN && export TREBARUNA_PUK TREBARUNA_NEW_PIN
 trebaruna-token pin unlock --token "Carta Nazionale"
+read -rs TREBARUNA_PUK TREBARUNA_NEW_PUK && export TREBARUNA_PUK TREBARUNA_NEW_PUK
+trebaruna-token pin change-puk --token "Carta Nazionale"
 ```
 
 The PUK is the PKCS#11 security officer PIN, which is how OpenSC maps the PUK
 of national and qualified signature cards; unlocking is a security officer
-login followed by `C_InitPIN`. The PUK has few attempts too, and a locked PUK
+login followed by `C_InitPIN`; changing the PUK is the same login followed by
+`C_SetPIN`, which in that session changes the security officer's PIN. The PUK
+has few attempts too, and a locked PUK
 means only the issuer can help, so it is never tried when the card says it is
-locked, and never empty. In the window: **Card → Change the PIN…** and **Card
-→ Unlock with the PUK…**. Some cards cannot change their PIN through PKCS#11
+locked, and never empty. In the window: **Card → Change the PIN…**, **Card
+→ Unlock with the PUK…** and **Card → Change the PUK…**. Checked against
+SoftHSM, whose security officer PIN plays the PUK: after the change the new PUK
+unlocks and the old one is refused. Some cards cannot change their PIN through PKCS#11
 (the Spanish DNIe changes it at the police terminals); the card's own refusal
 is shown then.
 

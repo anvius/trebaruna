@@ -70,7 +70,7 @@ user seeing what is signed and where anything goes.
 | PIN attempts are never spent needlessly: state read before login, no empty PIN, a refused PIN stops the run (a batch included), the state after a refusal stated | built |
 | Cards and tokens in the desktop window: every certificate listed in full, the signing one chosen, PIN state and locked cards stated before typing, a refused PIN cleared and the card read again | built |
 | Firefox / NSS store used in place, without exporting: read-only, primary password as PIN, CLI (`--firefox`, `--nss-db`) and window | built |
-| Change PIN, unlock with PUK: state and length checked before any attempt, secrets only in the environment, CLI (`pin`) and window (Card menu) | built |
+| Change PIN, unlock with PUK, change the PUK: state and length checked before any attempt, secrets only in the environment, CLI (`pin change|unlock|change-puk`) and window (Card menu); checked against SoftHSM | built |
 | Windows and macOS system stores | planned (C5) |
 | Remote signing through the CSC API v2 only (ADR-0014): `--csc` and `--credential`; token, user/password or an OAuth2 sign-in in the browser (`--csc-client`, PKCE, loopback redirect); PIN and OTP per signature for explicit credentials, the browser for `oauth2code` ones; the receipt names the provider; every connection recorded; `token --csc` lists the credentials; in the window, a *Remote service* source in step 2 | built |
 

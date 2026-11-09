@@ -183,3 +183,19 @@ func TestTheCardsAnswersToAPINChangeBecomeProblems(t *testing.T) {
 		}
 	}
 }
+
+// TestAPUKChangeCarriesTheCurrentAndTheNewPUKInTheEnvironment.
+func TestAPUKChangeCarriesTheCurrentAndTheNewPUKInTheEnvironment(t *testing.T) {
+	seen := filepath.Join(t.TempDir(), "environment")
+	binary, recorded := fakeCommand(t, "printf '%s %s %s' \"$TREBARUNA_PUK\" \"$TREBARUNA_NEW_PUK\" \"$TREBARUNA_NEW_PIN\" > "+seen+"; echo '{\"changed\":true}'")
+	change := domain.PINChange{Action: domain.ChangePUK, Secret: "87654321", NewPIN: "11223344", Repeat: "11223344"}
+	if err := (infrastructure.CommandLinePINChanger{BinaryPath: binary}).Apply(context.Background(), change); err != nil {
+		t.Fatalf("Apply: %v", err)
+	}
+	if arguments := recordedArguments(t, recorded); arguments[0] != "pin" || arguments[1] != "change-puk" {
+		t.Errorf("arguments %v", arguments)
+	}
+	if got, _ := os.ReadFile(seen); string(got) != "87654321 11223344 " {
+		t.Errorf("environment carried %q: the new PUK in TREBARUNA_NEW_PUK, not the new PIN's variable", got)
+	}
+}

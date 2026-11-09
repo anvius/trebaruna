@@ -24,6 +24,11 @@ func (r *recordingCard) UnlockPIN(_ context.Context, _ domain.Card, puk, replace
 	return r.err
 }
 
+func (r *recordingCard) ChangePUK(_ context.Context, _ domain.Card, current, replacement string) error {
+	r.calls = append(r.calls, "change-puk "+current+" "+replacement)
+	return r.err
+}
+
 func someCard(t *testing.T) domain.Card {
 	t.Helper()
 	card, err := domain.NewCard("/usr/lib/opensc-pkcs11.so", "Carta Nazionale")
@@ -71,5 +76,29 @@ func TestTheCardsRefusalIsReturned(t *testing.T) {
 	card := &recordingCard{err: domain.ErrWrongPUK}
 	if err := application.NewUnlockCard(card).Execute(context.Background(), someCard(t), "0000", "2468"); !errors.Is(err, domain.ErrWrongPUK) {
 		t.Errorf("got %v", err)
+	}
+}
+
+// TestThePUKIsChangedWithWhatWasTyped, and empty secrets never reach the
+// card.
+func TestThePUKIsChangedWithWhatWasTyped(t *testing.T) {
+	card := &recordingCard{}
+	change := application.NewChangeCardPUK(card)
+	if err := change.Execute(context.Background(), someCard(t), "", "87654321"); !errors.Is(err, domain.ErrPUKMissing) {
+		t.Errorf("empty PUK: %v", err)
+	}
+	if err := change.Execute(context.Background(), someCard(t), "12345678", ""); !errors.Is(err, domain.ErrNewPINRejected) {
+		t.Errorf("empty new PUK: %v", err)
+	}
+	if len(card.calls) != 0 {
+		t.Fatalf("the card was reached: %v", card.calls)
+	}
+	if err := change.Execute(context.Background(), someCard(t), "12345678", "87654321"); err != nil || len(card.calls) != 1 ||
+		card.calls[0] != "change-puk 12345678 87654321" {
+		t.Errorf("calls %v, %v", card.calls, err)
+	}
+	refused := &recordingCard{err: domain.ErrWrongPUK}
+	if err := application.NewChangeCardPUK(refused).Execute(context.Background(), someCard(t), "0000", "87654321"); !errors.Is(err, domain.ErrWrongPUK) {
+		t.Errorf("the card's refusal: %v", err)
 	}
 }

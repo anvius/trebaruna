@@ -16,8 +16,9 @@ import (
 	signing "codeberg.org/simplicer/trebaruna/src/signing/domain"
 )
 
-// CommandLinePINChanger changes or unlocks a card's PIN by running
-// `trebaruna pin change|unlock`, which reads the card before any attempt.
+// CommandLinePINChanger changes or unlocks a card's PIN, or changes its
+// PUK, by running `trebaruna pin change|unlock|change-puk`, which reads the
+// card before any attempt.
 type CommandLinePINChanger struct {
 	BinaryPath string
 }
@@ -28,14 +29,17 @@ func (c CommandLinePINChanger) Apply(ctx context.Context, change domain.PINChang
 	if change.Token != "" {
 		arguments = append(arguments, "--token", change.Token)
 	}
-	secret := "TREBARUNA_PIN="
-	if change.Action == domain.UnlockPIN {
+	secret, replacement := "TREBARUNA_PIN=", "TREBARUNA_NEW_PIN="
+	switch change.Action {
+	case domain.UnlockPIN:
 		secret = "TREBARUNA_PUK="
+	case domain.ChangePUK:
+		secret, replacement = "TREBARUNA_PUK=", "TREBARUNA_NEW_PUK="
 	}
 
 	var stdout, stderr bytes.Buffer
 	command := exec.CommandContext(ctx, c.BinaryPath, arguments...)
-	command.Env = append(os.Environ(), secret+change.Secret, "TREBARUNA_NEW_PIN="+change.NewPIN)
+	command.Env = append(os.Environ(), secret+change.Secret, replacement+change.NewPIN)
 	command.Stdout = &stdout
 	command.Stderr = &stderr
 	if err := command.Run(); err != nil {

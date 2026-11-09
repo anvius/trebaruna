@@ -14,6 +14,8 @@ func TestAPINChangeIsCheckedBeforeTheCard(t *testing.T) {
 	}{
 		{domain.PINChange{Action: domain.ChangePIN, NewPIN: "5678", Repeat: "5678"}, domain.ProblemMissingPIN},
 		{domain.PINChange{Action: domain.UnlockPIN, NewPIN: "5678", Repeat: "5678"}, domain.ProblemMissingPUK},
+		{domain.PINChange{Action: domain.ChangePUK, NewPIN: "11223344", Repeat: "11223344"}, domain.ProblemMissingPUK},
+		{domain.PINChange{Action: domain.ChangePUK, Secret: "87654321", NewPIN: "11223344", Repeat: "11223345"}, domain.ProblemPINMismatch},
 		{domain.PINChange{Action: domain.ChangePIN, Secret: "1234"}, domain.ProblemNewPINRejected},
 		{domain.PINChange{Action: domain.ChangePIN, Secret: "1234", NewPIN: "5678", Repeat: "5679"}, domain.ProblemPINMismatch},
 	}

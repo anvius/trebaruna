@@ -26,3 +26,11 @@ type CardUnlocker struct{}
 
 // UnlockPIN says the build cannot use a card.
 func (CardUnlocker) UnlockPIN(context.Context, domain.Card, string, string) error { return errNoCards }
+
+// CardPUKChanger cannot reach a card in this build.
+type CardPUKChanger struct{}
+
+// ChangePUK says the build cannot use a card.
+func (CardPUKChanger) ChangePUK(context.Context, domain.Card, string, string) error {
+	return errNoCards
+}

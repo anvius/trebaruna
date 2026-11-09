@@ -92,3 +92,22 @@ func TestARefusedPUKIsClearedAndExplained(t *testing.T) {
 		t.Error("a refused PUK is cleared and the dialog stays open")
 	}
 }
+
+// TestThePUKDialogAsksForTheCurrentAndTheNewPUK, and says so when done.
+func TestThePUKDialogAsksForTheCurrentAndTheNewPUK(t *testing.T) {
+	changer := &scriptedPINChanger{}
+	fixture := pinFixture(t, changer)
+	m := fixture.desktop.messages
+
+	dialog := fixture.desktop.showPINDialog(domain.ChangePUK)
+	dialog.secret.SetText("87654321")
+	dialog.newPIN.SetText("11223344")
+	dialog.repeat.SetText("11223344")
+	if dialog.apply.Text != m.ChangePUKButton {
+		t.Errorf("button %q", dialog.apply.Text)
+	}
+	test.Tap(dialog.apply)
+	if len(changer.changes) != 1 || changer.changes[0].Action != domain.ChangePUK || changer.changes[0].NewPIN != "11223344" || !dialog.closed {
+		t.Errorf("changes %+v, closed %t", changer.changes, dialog.closed)
+	}
+}

@@ -55,6 +55,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.75.0-unstable" date="2026-11-09">
+      <description>
+        <p>Change a card's PUK, from the command line or the Card menu.</p>
+      </description>
+    </release>
     <release version="0.74.0-unstable" date="2026-11-09">
       <description>
         <p>The window makes ASiC containers, signs FacturaE invoices as such and declares signature policies.</p>

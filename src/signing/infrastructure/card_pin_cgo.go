@@ -81,6 +81,40 @@ func (CardUnlocker) UnlockPIN(_ context.Context, card domain.Card, puk, replacem
 	return nil
 }
 
+// CardPUKChanger replaces a card's PUK: C_Login as the security officer
+// with the current PUK, then C_SetPIN, which in that session changes the
+// security officer's PIN.
+type CardPUKChanger struct{}
+
+// ChangePUK reads the card first: a locked PUK, or a new one outside the
+// card's limits, is refused without an attempt.
+func (CardPUKChanger) ChangePUK(_ context.Context, card domain.Card, current, replacement string) error {
+	slot, err := findSlot(card.Module(), "", card.Label(), domain.ChooseCertificateBy(""))
+	if err != nil {
+		return err
+	}
+	name := fmt.Sprintf("token %q", slot.TokenLabel)
+	if slot.PUKState == domain.PINLocked {
+		return fmt.Errorf("%w (%s)", domain.ErrPUKLocked, name)
+	}
+	if err := slot.Limits.Accept(replacement); err != nil {
+		return fmt.Errorf("the new PUK: %w (%s)", err, name)
+	}
+
+	opened, err := openSession(card.Module(), "", uint(slot.Index), pkcs11.CKU_SO, current, true)
+	if err != nil {
+		if refused := pukRefusal(err); refused != nil {
+			return withStateAfter(refused, name, stateAfterRefusal(card.Module(), "", slot.Index, cardPUK))
+		}
+		return fmt.Errorf("cannot open %s with module %s: %w", name, card.Module(), err)
+	}
+	defer opened.Close()
+	if err := opened.module.context.SetPIN(opened.handle, current, replacement); err != nil {
+		return fmt.Errorf("the card did not change the PUK (%s): %w", name, err)
+	}
+	return nil
+}
+
 // pukRefusal translates the card's answer to a PUK login.
 func pukRefusal(err error) error {
 	var code pkcs11.Error
@@ -100,4 +134,5 @@ func pukRefusal(err error) error {
 var (
 	_ application.PINChanger  = CardPINChanger{}
 	_ application.PINUnlocker = CardUnlocker{}
+	_ application.PUKChanger  = CardPUKChanger{}
 )

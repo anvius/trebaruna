@@ -71,9 +71,9 @@ func TestTheMenuNamesEveryActionWithItsShortcut(t *testing.T) {
 		t.Errorf("the menu lacks %q", label)
 	}
 	card := menu.Items[2]
-	if card.Label != m.MenuCard || len(card.Items) != 2 ||
-		card.Items[0].Label != m.MenuChangePIN || card.Items[1].Label != m.MenuUnlockPIN {
-		t.Errorf("the Card menu must offer changing and unlocking the PIN: %+v", card)
+	if card.Label != m.MenuCard || len(card.Items) != 3 ||
+		card.Items[0].Label != m.MenuChangePIN || card.Items[1].Label != m.MenuUnlockPIN || card.Items[2].Label != m.MenuChangePUK {
+		t.Errorf("the Card menu must offer changing and unlocking the PIN, and changing the PUK: %+v", card)
 	}
 }
 

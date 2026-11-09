@@ -576,8 +576,9 @@ Trust lists: `~/.cache/trebaruna/`. Nothing else is cached.
 | `XDG_RUNTIME_DIR` | `serve`, `handler` | Default token directory |
 | `TREBARUNA_PASSPHRASE` | `sign`, `certificate` | Passphrase of the `.p12` / `.pem` |
 | `TREBARUNA_PIN` | `sign`, `token`, `pin change` | Card PIN, or Firefox's primary password |
-| `TREBARUNA_PUK` | `pin unlock` | Card PUK (no flag exists) |
+| `TREBARUNA_PUK` | `pin unlock`, `pin change-puk` | Card PUK, the current one (no flag exists) |
 | `TREBARUNA_NEW_PIN` | `pin change`, `pin unlock` | The new PIN (no flag exists) |
+| `TREBARUNA_NEW_PUK` | `pin change-puk` | The new PUK (no flag exists) |
 | `TREBARUNA_TSA_PASS` | `sign`, `timestamp` | Timestamp authority password |
 | `TREBARUNA_CSC_TOKEN` | `sign --csc` | Access token of the remote signing service |
 | `TREBARUNA_CSC_USER`, `TREBARUNA_CSC_PASSWORD` | `sign --csc` | Sign in to the service when there is no token |
@@ -630,13 +631,16 @@ read -rs TREBARUNA_PIN TREBARUNA_NEW_PIN && export TREBARUNA_PIN TREBARUNA_NEW_P
 trebaruna-token pin change [--token label] [--module path] [--json]
 read -rs TREBARUNA_PUK TREBARUNA_NEW_PIN && export TREBARUNA_PUK TREBARUNA_NEW_PIN
 trebaruna-token pin unlock [--token label] [--module path] [--json]
+read -rs TREBARUNA_PUK TREBARUNA_NEW_PUK && export TREBARUNA_PUK TREBARUNA_NEW_PUK
+trebaruna-token pin change-puk [--token label] [--module path] [--json]
 ```
 
 `change` replaces the card's PIN given the current one; `unlock` sets a new PIN
-with the PUK (for a locked PIN, or a forgotten one). The secrets are read only
+with the PUK (for a locked PIN, or a forgotten one); `change-puk` replaces the
+PUK given the current one. The secrets are read only
 from the environment: there are no flags for them. Before any attempt the card
-is read, so a locked card (for `change`), a locked PUK (for `unlock`) or a new
-PIN outside the lengths the card declares is refused without the card counting
+is read, so a locked card (for `change`), a locked PUK (for `unlock` and
+`change-puk`) or a new PIN or PUK outside the lengths the card declares is refused without the card counting
 a try; a refused PIN or PUK is named, with a warning when one attempt is left.
 `--json` prints `{"changed": true, "action": …}`, or `"changed": false` with the
 error.

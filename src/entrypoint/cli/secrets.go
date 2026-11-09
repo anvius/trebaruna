@@ -17,6 +17,7 @@ const (
 	// typed by a person, and a person can set them without echo.
 	pukVariable    = "TREBARUNA_PUK"
 	newPINVariable = "TREBARUNA_NEW_PIN"
+	newPUKVariable = "TREBARUNA_NEW_PUK"
 )
 
 // secretFrom prefers an explicit flag and falls back to the environment.

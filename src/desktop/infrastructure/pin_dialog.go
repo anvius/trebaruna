@@ -45,8 +45,13 @@ func (w *Window) showPINDialog(action domain.PINAction) *pinDialog {
 	}
 
 	title, hint, secretLabel, confirm := m.ChangePINTitle, m.ChangePINHint, m.CurrentPINLabel, m.ChangePINButton
-	if action == domain.UnlockPIN {
+	newLabel, repeatLabel := m.NewPINLabel, m.RepeatPINLabel
+	switch action {
+	case domain.UnlockPIN:
 		title, hint, secretLabel, confirm = m.UnlockPINTitle, m.UnlockPINHint, m.PUKLabel, m.UnlockPINButton
+	case domain.ChangePUK:
+		title, hint, secretLabel, confirm = m.ChangePUKTitle, m.ChangePUKHint, m.CurrentPUKLabel, m.ChangePUKButton
+		newLabel, repeatLabel = m.NewPUKLabel, m.RepeatPUKLabel
 	}
 	card := m.PINDialogOnlyCard
 	if d.token != "" {
@@ -61,8 +66,8 @@ func (w *Window) showPINDialog(action domain.PINAction) *pinDialog {
 		explanation,
 		widget.NewForm(
 			widget.NewFormItem(secretLabel, d.secret),
-			widget.NewFormItem(m.NewPINLabel, d.newPIN),
-			widget.NewFormItem(m.RepeatPINLabel, d.repeat),
+			widget.NewFormItem(newLabel, d.newPIN),
+			widget.NewFormItem(repeatLabel, d.repeat),
 		),
 		d.status,
 	)
@@ -102,8 +107,11 @@ func (w *Window) applyPINChange(d *pinDialog) {
 			}
 			d.dialog.Hide()
 			done := m.PINChanged
-			if d.action == domain.UnlockPIN {
+			switch d.action {
+			case domain.UnlockPIN:
 				done = m.CardUnlocked
+			case domain.ChangePUK:
+				done = m.PUKChanged
 			}
 			dialog.ShowInformation(m.MenuCard, done, w.window)
 			w.form.cardsChanged()
