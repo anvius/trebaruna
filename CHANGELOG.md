@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Card PIN safety: the card's PIN state is read before any login (locked, to
+  be changed, not set: refused without an attempt); an empty PIN is never sent
+  except to a keypad reader; a refused PIN (`ErrWrongPIN`, `ErrCardLocked`,
+  `ErrPINExpired`, `ErrPINMissing`) stops a batch, whose remaining documents
+  are reported as not tried; after a refusal the message says when the next
+  mistake locks the card. `sign --card` signs with the card in the reader, and
+  `--module` alone now means a card too. `token` prints the PIN state (`pin:`;
+  `pin`, `pinpad` in `--json`) and, in `--json`, each certificate's holder,
+  identifier, issuer name, locality and trusted-list standing (`--territory`).
+  Two cards with the same label are told apart by the certificate.
+
 - Card certificate choice: `sign --certificate <serial|fingerprint>` picks the
   certificate of a card and finds the reader that holds it without `--token`.
   Without it, the only certificate or the only one declaring non-repudiation

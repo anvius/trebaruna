@@ -88,6 +88,7 @@ trebaruna sign <document> [flags]
 | `--level` | `bes` | `bes`, `t`, `lt` or `lta` — see [Signing](signing.md) |
 | `--p12` | — | PKCS#12 file with the certificate and key |
 | `--pem` | — | PEM bundle containing certificate and key |
+| `--card` | — | Sign with the card in the reader; card and signing certificate are found |
 | `--token` | — | PKCS#11 token label (needs `trebaruna-token`) |
 | `--certificate` | the signing one | Certificate of the card: serial or SHA-256 fingerprint (8+ digits); finds the card without `--token` |
 | `--module` | OpenSC, found on the system | PKCS#11 module path |
@@ -187,7 +188,8 @@ trebaruna sign backup.zip --format cades --pem bundle.pem
 Sign from a smartcard:
 
 ```bash
-trebaruna-token sign atto.pdf --token "Carta Nazionale"     # PIN from $TREBARUNA_PIN
+trebaruna-token sign atto.pdf --card                        # PIN from $TREBARUNA_PIN
+trebaruna-token sign atto.pdf --token "Carta Nazionale"
 trebaruna-token sign atto.pdf --certificate 4a2b1d          # the card holding it
 ```
 

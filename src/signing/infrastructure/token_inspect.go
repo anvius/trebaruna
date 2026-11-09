@@ -22,6 +22,11 @@ type TokenSlot struct {
 	Manufacturer string
 	// LoginState says whether the session is logged in.
 	LoginState string
+	// PINState is what the card says about its PIN before anyone types it:
+	// attempts failed, last attempt, locked.
+	PINState domain.PINState
+	// PINPad reports a reader that takes the PIN on its own keypad.
+	PINPad bool
 	// Certificates are the certificates the token holds, one per key object
 	// that has a certificate attached.
 	Certificates []TokenCertificate
@@ -94,6 +99,10 @@ func describeCertificate(certificate *x509.Certificate) TokenCertificate {
 		certificate: certificate,
 	}
 }
+
+// Parsed returns the certificate itself, for checks beyond the description
+// such as the issuer's standing on a trusted list.
+func (c TokenCertificate) Parsed() *x509.Certificate { return c.certificate }
 
 // markDefault flags the certificate the card would sign with when none is
 // named, so the listing shows the choice before anything is signed.

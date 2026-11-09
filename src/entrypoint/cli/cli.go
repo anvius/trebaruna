@@ -95,6 +95,7 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 		passphrase = flags.String("pass", "", "passphrase for the P12 or PEM file (or $TREBARUNA_PASSPHRASE)")
 		pin        = flags.String("pin", "", "PIN for PKCS#11 tokens (or $TREBARUNA_PIN)")
 		tokenLabel = flags.String("token", "", "PKCS#11 token label (smartcard)")
+		useCard    = flags.Bool("card", false, "sign with the card in the reader (OpenSC; the card and its signing certificate are found)")
 		cardCert   = flags.String("certificate", "", "certificate of the card to sign with: serial or SHA-256 fingerprint (see `trebaruna token`)")
 		module     = flags.String("module", "", "PKCS#11 module path (default: OpenSC, found on this system)")
 		name       = flags.String("name", "", "signer display name (default: the holder printed on the certificate)")
@@ -151,7 +152,7 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 
 	signer, err := buildSigner(signerOptions{
 		name: *name, p12Path: *p12Path, pemPath: *pemPath, passphrase: *passphrase,
-		pin: *pin, tokenLabel: *tokenLabel, certificate: *cardCert, module: *module,
+		pin: *pin, card: *useCard, tokenLabel: *tokenLabel, certificate: *cardCert, module: *module,
 	})
 	if err != nil {
 		fmt.Fprintf(stderr, "%v\n", err)
@@ -281,6 +282,7 @@ type signerOptions struct {
 	pemPath     string
 	passphrase  string
 	pin         string
+	card        bool
 	tokenLabel  string
 	certificate string
 	module      string
@@ -288,7 +290,8 @@ type signerOptions struct {
 
 // buildSigner resolves the key source from the flags, enforcing exactly one.
 func buildSigner(options signerOptions) (domain.Signer, error) {
-	card := options.tokenLabel != "" || options.certificate != ""
+	// Any card flag says the key is on a card; --card alone lets everything be found.
+	card := options.card || options.tokenLabel != "" || options.certificate != "" || options.module != ""
 	sources := 0
 	for _, chosen := range []bool{options.p12Path != "", options.pemPath != "", card} {
 		if chosen {
@@ -296,10 +299,10 @@ func buildSigner(options signerOptions) (domain.Signer, error) {
 		}
 	}
 	if sources == 0 {
-		return domain.Signer{}, errors.New("no key source: use --p12, --pem, or --token / --certificate for a card")
+		return domain.Signer{}, errors.New("no key source: use --p12, --pem, or --card (with --token / --certificate to choose)")
 	}
 	if sources > 1 {
-		return domain.Signer{}, errors.New("ambiguous key source: use only one of --p12, --pem, or a card (--token / --certificate)")
+		return domain.Signer{}, errors.New("ambiguous key source: use only one of --p12, --pem, or a card (--card, --token, --certificate, --module)")
 	}
 
 	displayName := options.name
@@ -474,6 +477,7 @@ flags:
   --level    bes | t | lt | lta                            default: bes
   --p12      PKCS#12 file (any authority, or self-signed)
   --pem      PEM bundle with certificate and private key
+  --card     the card in the reader: card and signing certificate found
   --token    PKCS#11 token label (smartcard)
   --certificate  certificate of the card: serial or fingerprint  default: the signing one
   --module   PKCS#11 module                                 default: OpenSC
@@ -491,6 +495,7 @@ examples:
   trebaruna sign contratto.pdf --p12 mario.p12 --pass secret --reason Contratto
   trebaruna sign fattura.xml --format cades --p12 mario.p12 --level t --tsa https://tsa.example/
   trebaruna sign atto.pdf --token "Carta de Ejemplo" --box 300,60,540,140
+  trebaruna sign atto.pdf --card
   trebaruna sign atto.pdf --certificate 3f2a91c0 --format cades
   trebaruna sign doc.pdf --p12 self.p12 --json
 `)

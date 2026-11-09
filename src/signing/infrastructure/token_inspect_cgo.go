@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"codeberg.org/simplicer/trebaruna/src/signing/domain"
 	"github.com/miekg/pkcs11"
 )
 
@@ -82,6 +83,15 @@ func inspectToken(module, pin string) ([]TokenSlot, error) {
 		entry.TokenSerial = strings.TrimSpace(token.SerialNumber)
 		entry.Manufacturer = strings.TrimSpace(token.ManufacturerID)
 		entry.LoginState = describeLoginState(token)
+		entry.PINState = domain.PINStateOf(domain.PINFlags{
+			Initialized:   token.Flags&pkcs11.CKF_USER_PIN_INITIALIZED != 0,
+			LoginRequired: token.Flags&pkcs11.CKF_LOGIN_REQUIRED != 0,
+			CountLow:      token.Flags&pkcs11.CKF_USER_PIN_COUNT_LOW != 0,
+			FinalTry:      token.Flags&pkcs11.CKF_USER_PIN_FINAL_TRY != 0,
+			Locked:        token.Flags&pkcs11.CKF_USER_PIN_LOCKED != 0,
+			ToBeChanged:   token.Flags&pkcs11.CKF_USER_PIN_TO_BE_CHANGED != 0,
+		})
+		entry.PINPad = token.Flags&pkcs11.CKF_PROTECTED_AUTHENTICATION_PATH != 0
 		entry.Certificates = readCertificates(context, slot, pin)
 		markDefault(entry.Certificates)
 

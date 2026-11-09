@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"codeberg.org/simplicer/trebaruna/src/signing/application"
+	"codeberg.org/simplicer/trebaruna/src/signing/domain"
 	transparencydomain "codeberg.org/simplicer/trebaruna/src/transparency/domain"
 )
 
@@ -29,13 +30,27 @@ type batchJSON struct {
 // any failed, so a script can tell a partial batch from a complete one.
 func signBatch(documents []string, signOne func(string) (application.Artefact, error), asJSON bool, stdout, stderr io.Writer) int {
 	report := batchJSON{}
+	var stopped error
 	for _, document := range documents {
+		if stopped != nil {
+			// The card refused the PIN on an earlier document. Trying it again
+			// would spend another of the few attempts before the card locks.
+			report.Failed++
+			report.Results = append(report.Results, batchResult{Document: document, Error: notTried(stopped)})
+			if !asJSON {
+				fmt.Fprintf(stderr, "%s: %s\n", document, notTried(stopped))
+			}
+			continue
+		}
 		artefact, err := signOne(document)
 		if err != nil {
 			report.Failed++
 			report.Results = append(report.Results, batchResult{Document: document, Error: err.Error()})
 			if !asJSON {
 				fmt.Fprintf(stderr, "%s: %v\n", document, err)
+			}
+			if domain.StopsCard(err) {
+				stopped = err
 			}
 			continue
 		}
@@ -61,6 +76,11 @@ func signBatch(documents []string, signOne func(string) (application.Artefact, e
 		return exitInvalid
 	}
 	return exitOK
+}
+
+// notTried explains a document left unsigned after the card refused the PIN.
+func notTried(cause error) string {
+	return "not tried, so no other PIN attempt was spent: " + cause.Error()
 }
 
 // receiptOf is the JSON receipt of one signature, shared with single runs.

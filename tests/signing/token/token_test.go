@@ -20,6 +20,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -33,8 +34,11 @@ import (
 
 // softHSM is a running, initialised token.
 type softHSM struct {
-	module    string
-	label     string
+	module string
+	label  string
+	// slot is the identifier SoftHSM gave the token; helpers select by it, as
+	// two tokens may share a label.
+	slot      string
 	pin       string
 	directory string
 }
@@ -75,6 +79,13 @@ type softHSMEnvironment struct {
 // into a temporary directory.
 func startSoftHSM(t *testing.T) softHSM {
 	t.Helper()
+	return startSoftHSMLabelled(t, "")
+}
+
+// startSoftHSMLabelled is startSoftHSM with a chosen label, so two cards can
+// carry the same one, as two identity cards do.
+func startSoftHSMLabelled(t *testing.T, chosen string) softHSM {
+	t.Helper()
 
 	environmentOnce.Do(func() { environment, environmentErr = buildSoftHSMEnvironment() })
 	if environmentErr != nil {
@@ -88,6 +99,9 @@ func startSoftHSM(t *testing.T) softHSM {
 	// tests never see each other's objects no matter which order they run in.
 	slot := nextSlot.Add(1) - 1
 	label := fmt.Sprintf("trebaruna-%d", slot)
+	if chosen != "" {
+		label = chosen
+	}
 
 	utility, err := exec.LookPath("softhsm2-util")
 	if err != nil {
@@ -96,13 +110,19 @@ func startSoftHSM(t *testing.T) softHSM {
 	command := exec.Command(utility, "--module", environment.module, "--init-token",
 		"--slot", strconv.FormatUint(uint64(slot), 10), "--label", label,
 		"--pin", environment.pin, "--so-pin", environment.soPin)
-	if output, err := command.CombinedOutput(); err != nil {
+	output, err := command.CombinedOutput()
+	if err != nil {
 		t.Fatalf("initialise token: %v\n%s", err, output)
+	}
+	assigned := regexp.MustCompile(`slot (\d+)`).FindStringSubmatch(string(output))
+	if assigned == nil {
+		t.Fatalf("SoftHSM did not say which slot holds the token:\n%s", output)
 	}
 
 	return softHSM{
 		module:    environment.module,
 		label:     label,
+		slot:      assigned[1],
 		pin:       environment.pin,
 		directory: t.TempDir(),
 	}
@@ -164,7 +184,7 @@ func (h softHSM) keyPair(t *testing.T, identifier, label string) {
 		t.Skip("pkcs11-tool is not available")
 	}
 
-	command := exec.Command(tool, "--module", h.module, "--token-label", h.label,
+	command := exec.Command(tool, "--module", h.module, "--slot", h.slot,
 		"--login", "--pin", h.pin,
 		"--keypairgen", "--key-type", "rsa:2048", "--id", identifier, "--label", label)
 	if output, err := command.CombinedOutput(); err != nil {
@@ -268,7 +288,7 @@ func issueCertificateWithUsage(t *testing.T, token softHSM, identifier, keyUsage
 
 	// The public key, as DER and PEM.
 	publicPath := filepath.Join(token.directory, "public-"+identifier+".der")
-	command := exec.Command(tool, "--module", token.module, "--token-label", token.label, "--login", "--pin", token.pin,
+	command := exec.Command(tool, "--module", token.module, "--slot", token.slot, "--login", "--pin", token.pin,
 		"--id", identifier, "--read-object", "--type", "pubkey", "--output-file", publicPath)
 	if output, err := command.CombinedOutput(); err != nil {
 		t.Fatalf("read public key: %v\n%s", err, output)
@@ -301,7 +321,7 @@ func issueCertificateWithUsage(t *testing.T, token softHSM, identifier, keyUsage
 	buildCertificationRequest(t, token, identifier, request)
 
 	signature := filepath.Join(token.directory, "request-"+identifier+".sig")
-	sign := exec.Command(tool, "--module", token.module, "--token-label", token.label, "--login", "--pin", token.pin,
+	sign := exec.Command(tool, "--module", token.module, "--slot", token.slot, "--login", "--pin", token.pin,
 		"--id", identifier, "--sign", "--mechanism", "SHA256-RSA-PKCS",
 		"--input-file", request, "--output-file", signature)
 	if output, err := sign.CombinedOutput(); err != nil {
@@ -390,7 +410,7 @@ func importCertificate(t *testing.T, token softHSM, identifier, label string, ce
 		t.Fatalf("write certificate: %v", err)
 	}
 
-	command := exec.Command(tool, "--module", token.module, "--token-label", token.label, "--login", "--pin", token.pin,
+	command := exec.Command(tool, "--module", token.module, "--slot", token.slot, "--login", "--pin", token.pin,
 		"--id", identifier, "--write-object", path, "--type", "cert", "--label", label)
 	if output, err := command.CombinedOutput(); err != nil {
 		t.Fatalf("import certificate: %v\n%s", err, output)

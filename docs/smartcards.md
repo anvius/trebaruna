@@ -180,7 +180,8 @@ The PIN is read from `TREBARUNA_PIN` (or `--pin`, which leaves it in the shell
 history; ADR-0006).
 
 ```bash
-export TREBARUNA_PIN   # set it without echoing, e.g. read -rs TREBARUNA_PIN
+read -rs TREBARUNA_PIN && export TREBARUNA_PIN   # typed without echo
+trebaruna-token sign atto.pdf --card              # the card in the reader
 trebaruna-token sign atto.pdf --token "Carta Nazionale"
 ```
 
@@ -208,7 +209,24 @@ certificates with their serial and fingerprint. A `--certificate` that matches
 nothing on the card is refused: the signature never goes out under another
 certificate than the one asked for.
 
-**Which card.** With `--token`, the card with that label. Without it, the card
+**The PIN and its attempts.** A card allows a few PIN attempts (three on most)
+before it locks, and unlocking it needs the PUK. trebaruna spends none it can
+avoid:
+
+- the card's state is read before any login: a locked card, or one whose PIN
+  must be changed, is reported without trying;
+- an empty PIN is never sent (the card would count it), except to a reader with
+  its own keypad, which asks for it;
+- a refused PIN stops the run: in a batch the remaining documents are reported
+  as *not tried* instead of trying the same PIN on each;
+- after a refusal the card is read again, and the message says when the next
+  mistake would lock it.
+
+`trebaruna token` prints the state as `pin:` (a wrong PIN was entered, one
+attempt left, locked, must be changed) and `pin` / `pinpad` in `--json`.
+
+**Which card.** With `--token`, the card with that label; two cards with the
+same label, such as two identity cards, are told apart by `--certificate`. Without it, the card
 that holds the named certificate, or the only card present. The readers are
 read without the PIN, so the PIN is never tried on a card that is not the one
 meant. With two cards that both fit, nothing is signed and the error names their

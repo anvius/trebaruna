@@ -4,9 +4,15 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"slices"
 	"strings"
+	"time"
 
+	"codeberg.org/simplicer/trebaruna/src/signing/domain"
+	"codeberg.org/simplicer/trebaruna/src/signing/domain/identity"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure"
+	trustdomain "codeberg.org/simplicer/trebaruna/src/trust/domain"
+	verificationinfra "codeberg.org/simplicer/trebaruna/src/verification/infrastructure"
 )
 
 // runToken implements `trebaruna token`.
@@ -21,9 +27,10 @@ func runToken(args []string, stdout, stderr io.Writer) int {
 	flags.SetOutput(stderr)
 
 	var (
-		module = flags.String("module", "", "path of the PKCS#11 module (default: OpenSC, found on this system)")
-		pin    = flags.String("pin", "", "PIN of the token, optional for listing (or $TREBARUNA_PIN)")
-		asJSON = flags.Bool("json", false, "machine-readable output")
+		module    = flags.String("module", "", "path of the PKCS#11 module (default: OpenSC, found on this system)")
+		territory = flags.String("territory", defaultTerritory(), "trust list for the issuers' standing in --json")
+		pin       = flags.String("pin", "", "PIN of the token, optional for listing (or $TREBARUNA_PIN)")
+		asJSON    = flags.Bool("json", false, "machine-readable output")
 	)
 
 	if err := flags.Parse(args); err != nil {
@@ -48,7 +55,7 @@ func runToken(args []string, stdout, stderr io.Writer) int {
 	}
 
 	if *asJSON {
-		return printTokenJSON(stdout, slots)
+		return printTokenJSON(stdout, slots, *territory)
 	}
 
 	if len(slots) == 0 {
@@ -64,47 +71,77 @@ func runToken(args []string, stdout, stderr io.Writer) int {
 	return exitOK
 }
 
-// printTokenJSON writes the slots as JSON.
-func printTokenJSON(stdout io.Writer, slots []infrastructure.TokenSlot) int {
-	fmt.Fprintln(stdout, "{")
-	fmt.Fprintln(stdout, `  "slots": [`)
-	for index, slot := range slots {
-		fmt.Fprintln(stdout, "    {")
-		fmt.Fprintf(stdout, "      \"index\": %d,\n", slot.Index)
-		fmt.Fprintf(stdout, "      \"description\": %s,\n", quoteJSON(slot.Description))
-		fmt.Fprintf(stdout, "      \"token\": %s,\n", quoteJSON(slot.TokenLabel))
-		fmt.Fprintf(stdout, "      \"manufacturer\": %s,\n", quoteJSON(slot.Manufacturer))
-		fmt.Fprintf(stdout, "      \"serial\": %s,\n", quoteJSON(slot.TokenSerial))
-		fmt.Fprintf(stdout, "      \"login\": %s,\n", quoteJSON(slot.LoginState))
-		fmt.Fprintln(stdout, `      "certificates": [`)
-		for position, certificate := range slot.Certificates {
-			separator := ","
-			if position == len(slot.Certificates)-1 {
-				separator = ""
+// tokenSlotJSON is one slot of `token --json`.
+type tokenSlotJSON struct {
+	Index        int                    `json:"index"`
+	Description  string                 `json:"description"`
+	Token        string                 `json:"token"`
+	Manufacturer string                 `json:"manufacturer"`
+	Serial       string                 `json:"serial"`
+	Login        string                 `json:"login"`
+	PIN          string                 `json:"pin"`
+	PINPad       bool                   `json:"pinpad"`
+	Certificates []tokenCertificateJSON `json:"certificates"`
+}
+
+// tokenCertificateJSON is one certificate of a card, with the same identity
+// and trust fields `certificate --json` prints for a file.
+type tokenCertificateJSON struct {
+	Subject        string `json:"subject"`
+	Name           string `json:"name"`
+	Identifier     string `json:"identifier"`
+	Issuer         string `json:"issuer"`
+	IssuerName     string `json:"issuer_name"`
+	Locality       string `json:"locality"`
+	Serial         string `json:"serial"`
+	Fingerprint    string `json:"fingerprint"`
+	SignsByDefault bool   `json:"signs_by_default"`
+	NotBefore      string `json:"not_before"`
+	NotAfter       string `json:"not_after"`
+	SelfSigned     bool   `json:"self_signed"`
+	KeyUsage       string `json:"key_usage"`
+	Trusted        bool   `json:"trusted"`
+	Qualified      bool   `json:"qualified"`
+	Provider       string `json:"provider"`
+}
+
+// printTokenJSON writes the slots as JSON, judging each certificate's issuer
+// against the trusted list of the territory.
+func printTokenJSON(stdout io.Writer, slots []infrastructure.TokenSlot, territory string) int {
+	list, _ := verificationinfra.NewCachedTrustProvider().Load(territory)
+	roots, _, _ := list.AnchorPool()
+
+	printed := struct {
+		Slots []tokenSlotJSON `json:"slots"`
+	}{Slots: []tokenSlotJSON{}}
+	for _, slot := range slots {
+		entry := tokenSlotJSON{
+			Index: slot.Index, Description: slot.Description, Token: slot.TokenLabel,
+			Manufacturer: slot.Manufacturer, Serial: slot.TokenSerial, Login: slot.LoginState,
+			PIN: string(slot.PINState), PINPad: slot.PINPad, Certificates: []tokenCertificateJSON{},
+		}
+		for _, certificate := range slot.Certificates {
+			described := tokenCertificateJSON{
+				Subject: certificate.Subject, Issuer: certificate.Issuer, Serial: certificate.Serial,
+				Fingerprint: certificate.Fingerprint, SignsByDefault: certificate.SignsByDefault,
+				NotBefore:  certificate.NotBefore.UTC().Format(time.RFC3339),
+				NotAfter:   certificate.NotAfter.UTC().Format(time.RFC3339),
+				SelfSigned: certificate.SelfSigned, KeyUsage: strings.Join(certificate.KeyUsages, ","),
 			}
-			fmt.Fprintf(stdout, "        {\"subject\": %s, \"issuer\": %s, \"serial\": %s, \"fingerprint\": %s, "+
-				"\"signs_by_default\": %t, "+
-				"\"not_before\": %s, \"not_after\": %s, \"self_signed\": %t, \"key_usage\": %s}%s\n",
-				quoteJSON(certificate.Subject),
-				quoteJSON(certificate.Issuer),
-				quoteJSON(certificate.Serial),
-				quoteJSON(certificate.Fingerprint),
-				certificate.SignsByDefault,
-				quoteJSON(certificate.NotBefore.UTC().Format("2006-01-02T15:04:05Z07:00")),
-				quoteJSON(certificate.NotAfter.UTC().Format("2006-01-02T15:04:05Z07:00")),
-				certificate.SelfSigned,
-				quoteJSON(strings.Join(certificate.KeyUsages, ",")),
-				separator)
+			if parsed := certificate.Parsed(); parsed != nil {
+				holder := identity.FromCertificate(parsed)
+				verdict := trustdomain.EvaluateIssuer(parsed, roots, list)
+				described.Name, described.Identifier = holder.Name, holder.Identifier
+				described.IssuerName = firstOf(append(parsed.Issuer.Organization, parsed.Issuer.CommonName)...)
+				described.Locality = firstNonEmptyString(slices.Concat(parsed.Subject.Locality, parsed.Subject.Province)...)
+				described.Trusted, described.Qualified = verdict.Trusted, verdict.Qualified
+				described.Provider = string(verdict.Provider)
+			}
+			entry.Certificates = append(entry.Certificates, described)
 		}
-		fmt.Fprintln(stdout, "      ]")
-		separator := ","
-		if index == len(slots)-1 {
-			separator = ""
-		}
-		fmt.Fprintf(stdout, "    }%s\n", separator)
+		printed.Slots = append(printed.Slots, entry)
 	}
-	fmt.Fprintln(stdout, "  ]")
-	fmt.Fprintln(stdout, "}")
+	encodeJSONValue(stdout, printed)
 	return exitOK
 }
 
@@ -127,6 +164,9 @@ func formatTokenSlot(slot infrastructure.TokenSlot) string {
 		out += fmt.Sprintf("  serial:     %s\n", slot.TokenSerial)
 	}
 	out += fmt.Sprintf("  login:      %s\n", slot.LoginState)
+	if note := pinNote(slot); note != "" {
+		out += fmt.Sprintf("  pin:        %s\n", note)
+	}
 
 	if len(slot.Certificates) == 0 {
 		out += "  (no certificates readable on this token)\n"
@@ -163,6 +203,23 @@ func formatTokenSlot(slot infrastructure.TokenSlot) string {
 	return out
 }
 
+// pinNote says what the PIN state means for the next attempt, or nothing in
+// the ordinary case.
+func pinNote(slot infrastructure.TokenSlot) string {
+	notes := map[domain.PINState]string{
+		domain.PINCountLow:    "a wrong PIN was entered: few attempts are left",
+		domain.PINFinalTry:    "one more wrong PIN locks the card",
+		domain.PINLocked:      "locked: unlock it with its PUK",
+		domain.PINToBeChanged: "must be changed before the card signs",
+		domain.PINNotSet:      "not set yet",
+	}
+	note := notes[slot.PINState]
+	if slot.PINPad {
+		note = strings.TrimPrefix(note+"; typed on the reader's keypad", "; ")
+	}
+	return note
+}
+
 // signsDocuments reports whether the certificate declares a usage that allows
 // signing a document.
 //
@@ -178,11 +235,4 @@ func signsDocuments(certificate infrastructure.TokenCertificate) bool {
 		}
 	}
 	return false
-}
-
-// quoteJSON renders a string as a JSON literal.
-func quoteJSON(value string) string {
-	replaced := strings.ReplaceAll(value, `\`, `\\`)
-	replaced = strings.ReplaceAll(replaced, `"`, `\"`)
-	return `"` + replaced + `"`
 }
