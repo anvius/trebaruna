@@ -476,3 +476,24 @@ Trust lists: `~/.cache/trebaruna/`. Nothing else is cached.
 | `TREBARUNA_TOKEN_DIR` | `serve`, `handler` | Where to write the token |
 | `XDG_RUNTIME_DIR` | `serve`, `handler` | Default token directory |
 | `SOFTHSM2_MODULE` | tests only | PKCS#11 module for the test suite |
+
+---
+
+## `about`
+
+```
+trebaruna about [--json]
+```
+
+What the binary is and what it contains: version, platform, Go release, source
+revision (and whether it had local changes), whether it supports cards, and
+every module linked into it with its version and licence. Anyone can rebuild
+from the revision and compare (ADR-0017).
+
+The licence table is regenerated from each module's licence file and checked by
+a test that fails on any module whose licence is unknown or not free:
+
+```bash
+go test ./tests/transparency -run TestEveryLinkedModuleHasAFreeReviewedLicense -update
+```
+

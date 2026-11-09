@@ -5,6 +5,8 @@ package infrastructure
 import (
 	"context"
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -218,4 +220,25 @@ func collectTexts(object fyne.CanvasObject) string {
 	}
 	visit(object)
 	return builder.String()
+}
+
+func TestAboutReadsTheBuildTheCommandDescribes(t *testing.T) {
+	directory := t.TempDir()
+	binary := filepath.Join(directory, "trebaruna")
+	script := "#!/bin/sh\necho '{\"version\":\"0.9.0-unstable\",\"go\":\"go1.27\",\"platform\":\"linux/amd64\",\"pkcs11\":true," +
+		"\"dependencies\":[{\"path\":\"fyne.io/fyne/v2\",\"version\":\"v2.8.2\",\"license\":\"BSD-3-Clause\"}]}'\n"
+	if err := os.WriteFile(binary, []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	test.NewTempApp(t)
+	desktop := newDesktop(test.NewTempWindow(t, nil), messaging.For(messaging.Spanish), binary)
+
+	build, err := desktop.describeBuild()
+	if err != nil {
+		t.Fatalf("describeBuild: %v", err)
+	}
+	if build.Version != "0.9.0-unstable" || !build.PKCS11 || len(build.Dependencies) != 1 || build.Dependencies[0].License != "BSD-3-Clause" {
+		t.Errorf("build = %+v", build)
+	}
+	desktop.showAbout() // must build the dialog without failing
 }

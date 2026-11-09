@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `trebaruna about [--json]`: version, platform, source revision, card support
+  and every linked module with its licence; the desktop About dialog shows the
+  same. A test regenerates the licence table from the modules' licence files and
+  fails on any unknown or non-free licence (today: 42 modules, all MIT, BSD,
+  Apache-2.0 or ISC).
+
 - Transparency: the receipt carries `document_sha256` and `signed_sha256`; the
   window shows the document's fingerprint before signing and warns if the
   signer reports a different one (the file changed after it was chosen).

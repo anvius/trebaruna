@@ -96,7 +96,7 @@ user seeing what is signed and where anything goes.
 |---|---|
 | Connection record in every JSON result and in the window (ADR-0010) | built |
 | Document fingerprint in the receipt and before signing | built |
-| Dependencies and licences embedded and printable | planned (A4) |
+| Dependencies and licences embedded and printable | built |
 | Reproducible release with SBOM and checksums (ADR-0017) | planned (A5) |
 
 ## Use cases (application layer)

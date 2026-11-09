@@ -62,3 +62,6 @@ func openToken(signer domain.Signer) (tokenContext, error) {
 	}
 	return pkcs11Context{inner: context}, nil
 }
+
+// PKCS11Available reports that this build can talk to smartcards and tokens.
+const PKCS11Available = true

@@ -182,6 +182,10 @@ type Catalogue struct {
 	PurposeUnattributed  string
 	DocumentFingerprint  string
 	DocumentChanged      string
+	AboutCardsYes        string
+	AboutCardsNo         string
+	AboutRevision        string
+	AboutDependencies    string
 }
 
 // For returns the catalogue for a language.
@@ -323,6 +327,10 @@ var spanish = Catalogue{
 	PurposeUnattributed:        "sin motivo identificado",
 	DocumentFingerprint:        "Huella SHA-256: %s",
 	DocumentChanged:            "Atención: el documento cambió después de elegirlo. Se ha firmado la versión con huella %s.",
+	AboutCardsYes:              "Admite tarjetas y tokens (PKCS#11).",
+	AboutCardsNo:               "Esta compilación no admite tarjetas: es la versión estática sin cgo.",
+	AboutRevision:              "Revisión del código: %s",
+	AboutDependencies:          "Dependencias y licencias (%d)",
 }
 
 var italian = Catalogue{
@@ -452,6 +460,10 @@ var italian = Catalogue{
 	PurposeUnattributed:        "motivo non identificato",
 	DocumentFingerprint:        "Impronta SHA-256: %s",
 	DocumentChanged:            "Attenzione: il documento è cambiato dopo la scelta. È stata firmata la versione con impronta %s.",
+	AboutCardsYes:              "Supporta smart card e token (PKCS#11).",
+	AboutCardsNo:               "Questa build non supporta le smart card: è la versione statica senza cgo.",
+	AboutRevision:              "Revisione del codice: %s",
+	AboutDependencies:          "Dipendenze e licenze (%d)",
 }
 
 var english = Catalogue{
@@ -581,6 +593,10 @@ var english = Catalogue{
 	PurposeUnattributed:        "no identified purpose",
 	DocumentFingerprint:        "SHA-256 fingerprint: %s",
 	DocumentChanged:            "Warning: the document changed after it was chosen. The version with fingerprint %s was signed.",
+	AboutCardsYes:              "Supports smartcards and tokens (PKCS#11).",
+	AboutCardsNo:               "This build does not support smartcards: it is the static build without cgo.",
+	AboutRevision:              "Source revision: %s",
+	AboutDependencies:          "Dependencies and licences (%d)",
 }
 
 // LevelName renders a level name for display.

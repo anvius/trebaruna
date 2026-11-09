@@ -65,6 +65,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		return runRequests(args[1:], stdout, stderr)
 	case "decide":
 		return runDecide(args[1:], stdout, stderr)
+	case "about":
+		return runAbout(args[1:], stdout, stderr)
 	case "version", "--version", "-v":
 		fmt.Fprintln(stdout, version)
 		return exitOK
@@ -445,6 +447,7 @@ usage:
   trebaruna token --module <pkcs11.so>       (list cards and their certificates)
   trebaruna asic <document> <signature>        (ASiC-S / ASiC-E container)
   trebaruna serve --root <dir> --listen 127.0.0.1:0   (local HTTP API)
+  trebaruna about [--json]                      (build, revision, dependencies and licences)
 
 flags:
   --format   cades (.p7m) | pades (.pdf) | xades (.xml)   default: pades

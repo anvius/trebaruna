@@ -15,3 +15,7 @@ func openToken(signer domain.Signer) (tokenContext, error) {
 			"  use a P12 file, or rebuild with CGO_ENABLED=1 to enable smartcard support",
 	)
 }
+
+// PKCS11Available reports that this build cannot talk to smartcards: it was
+// built without cgo. Desktop packages ship the cgo build (ADR-0016).
+const PKCS11Available = false

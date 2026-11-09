@@ -165,3 +165,20 @@ func TestVerifyFlagsAfterPositionals(t *testing.T) {
 		t.Errorf("the flag was mistaken for a file: %q", stderr)
 	}
 }
+
+// TestAboutListsWhatTheBinaryContains: every linked module with a reviewed
+// licence, and whether cards are supported.
+func TestAboutListsWhatTheBinaryContains(t *testing.T) {
+	stdout, _, code := run("about", "--json")
+	if code != 0 {
+		t.Fatalf("about exited %d", code)
+	}
+	for _, want := range []string{`"license": "AGPL-3.0-or-later"`, `"dependencies"`, `"pkcs11"`} {
+		if !strings.Contains(stdout, want) {
+			t.Errorf("about --json lacks %s", want)
+		}
+	}
+	if strings.Contains(stdout, `"unreviewed"`) {
+		t.Errorf("a linked module has no reviewed licence:\n%s", stdout)
+	}
+}

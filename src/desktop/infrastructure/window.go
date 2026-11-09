@@ -5,6 +5,7 @@ package infrastructure
 import (
 	"context"
 	_ "embed"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"os"
@@ -25,6 +26,7 @@ import (
 	"codeberg.org/simplicer/trebaruna/src/desktop/application"
 	"codeberg.org/simplicer/trebaruna/src/desktop/domain"
 	"codeberg.org/simplicer/trebaruna/src/desktop/messaging"
+	transparencyinfra "codeberg.org/simplicer/trebaruna/src/transparency/infrastructure"
 	reportmessaging "codeberg.org/simplicer/trebaruna/src/verification/messaging"
 )
 
@@ -255,26 +257,64 @@ func (w *Window) showNetworkActivity() {
 	window.Show()
 }
 
-// showAbout states what the program is, which version, and under which licence.
+// showAbout states what the program is, which build it is, and every
+// dependency linked into it with its licence (`trebaruna about --json`).
 func (w *Window) showAbout() {
-	version := w.messages.UnknownVersion
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if output, err := runCommand(ctx, w.binaryPath, []string{"version"}); err == nil {
-		version = strings.TrimSpace(output)
+	m := w.messages
+	build, err := w.describeBuild()
+	version := m.UnknownVersion
+	if err == nil {
+		version = build.Version
 	}
 
-	text := widget.NewLabel(fmt.Sprintf(w.messages.AboutText, version))
+	text := widget.NewLabel(fmt.Sprintf(m.AboutText, version))
 	text.Wrapping = fyne.TextWrapWord
 	source := widget.NewHyperlink(sourceURL().String(), sourceURL())
 	logo := canvas.NewImageFromImage(decodeIcon())
 	logo.FillMode = canvas.ImageFillContain
 	logo.SetMinSize(fyne.NewSize(96, 96))
+	content := container.NewVBox(logo, text, source)
 
-	about := dialog.NewCustom(w.messages.MenuAbout, w.messages.CloseButton,
-		container.NewVBox(logo, text, source), w.window)
-	about.Resize(fyne.NewSize(460, 360))
+	if err == nil {
+		cards := m.AboutCardsNo
+		if build.PKCS11 {
+			cards = m.AboutCardsYes
+		}
+		details := []string{build.Platform + ", " + build.Go, cards}
+		if build.Revision != "" {
+			details = append(details, fmt.Sprintf(m.AboutRevision, build.Revision))
+		}
+		content.Add(caption(strings.Join(details, "\n")))
+
+		var listing strings.Builder
+		for _, dependency := range build.Dependencies {
+			fmt.Fprintf(&listing, "%s %s — %s\n", dependency.Path, dependency.Version, dependency.License)
+		}
+		dependencies := selectableCaption()
+		dependencies.SetText(strings.TrimSpace(listing.String()))
+		content.Add(widget.NewAccordion(widget.NewAccordionItem(
+			fmt.Sprintf(m.AboutDependencies, len(build.Dependencies)),
+			container.NewVScroll(dependencies))))
+	}
+
+	about := dialog.NewCustom(m.MenuAbout, m.CloseButton, content, w.window)
+	about.Resize(fyne.NewSize(560, 520))
 	about.Show()
+}
+
+// describeBuild asks the command what it is.
+func (w *Window) describeBuild() (transparencyinfra.Build, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	output, err := runCommand(ctx, w.binaryPath, []string{"about", "--json"})
+	if err != nil {
+		return transparencyinfra.Build{}, err
+	}
+	var build transparencyinfra.Build
+	if err := json.Unmarshal([]byte(output), &build); err != nil {
+		return transparencyinfra.Build{}, err
+	}
+	return build, nil
 }
 
 func sourceURL() *url.URL {
