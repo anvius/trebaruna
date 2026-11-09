@@ -12,6 +12,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"image/color"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -85,11 +87,15 @@ type verificationTab struct {
 	verdict     *canvas.Text
 	explanation *widget.Label
 	signers     *fyne.Container
+	extract     *widget.Button
+	extracted   *widget.Label
+	// open shows a file in the system viewer; tests replace it.
+	open func(path string)
 }
 
 // newVerificationTab builds the tab.
 func newVerificationTab(window fyne.Window, ui messaging.Catalogue, report reportmessaging.Catalogue, palette Palette, binary string) *verificationTab {
-	return &verificationTab{window: window, ui: ui, report: report, palette: palette, binary: binary}
+	return &verificationTab{window: window, ui: ui, report: report, palette: palette, binary: binary, open: openWithSystemViewer}
 }
 
 // content lays out the tab: what to check, then what was found.
@@ -112,6 +118,11 @@ func (v *verificationTab) content() fyne.CanvasObject {
 	v.explanation = widget.NewLabel("")
 	v.explanation.Wrapping = fyne.TextWrapWord
 	v.signers = container.NewVBox()
+	v.extract = widget.NewButtonWithIcon(v.ui.ExtractButton, theme.DownloadIcon(), v.extractDocument)
+	v.extract.Hide()
+	v.extracted = widget.NewLabel("")
+	v.extracted.Wrapping = fyne.TextWrapWord
+	v.extracted.Hide()
 
 	heading := canvas.NewText(v.ui.VerifySection, v.palette.Text)
 	heading.TextSize = 16
@@ -125,6 +136,8 @@ func (v *verificationTab) content() fyne.CanvasObject {
 		widget.NewSeparator(),
 		v.verdict,
 		v.explanation,
+		v.extract,
+		v.extracted,
 		v.signers,
 	)
 	// A reading column, not a full-width sheet: findings are prose, and lines
@@ -187,6 +200,12 @@ func (v *verificationTab) showVerdict(verdict, explanation string, colour color.
 func (v *verificationTab) render(report verifyReport) {
 	m := v.report
 	verdict := domain.TrustLevel(report.Verdict)
+	v.extracted.Hide()
+	if isEnvelope(v.path) {
+		v.extract.Show()
+	} else {
+		v.extract.Hide()
+	}
 	if v.onNetwork != nil && len(report.Network) > 0 {
 		v.onNetwork(report.Network)
 	}
@@ -324,4 +343,56 @@ func (c readingColumn) MinSize(objects []fyne.CanvasObject) fyne.Size {
 		size = size.Max(object.MinSize())
 	}
 	return size
+}
+
+// domainExtractedName is the verification slice's naming rule.
+var domainExtractedName = domain.ExtractedName
+
+// isEnvelope reports a CAdES envelope whose document can be taken out.
+func isEnvelope(path string) bool {
+	return strings.HasSuffix(strings.ToLower(path), ".p7m")
+}
+
+// extractDocument writes the document inside the envelope next to it, under
+// a name that is free, and offers to open it.
+func (v *verificationTab) extractDocument() {
+	envelope := v.path
+	output := freeName(domainExtractedName(envelope))
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		defer cancel()
+		raw, err := runCommand(ctx, v.binary, []string{"extract", envelope, "--out", output, "--json"})
+		fyne.Do(func() {
+			v.extracted.Show()
+			if err != nil {
+				v.extracted.Importance = widget.DangerImportance
+				v.extracted.SetText(strings.TrimSpace(raw))
+				return
+			}
+			v.extracted.Importance = widget.SuccessImportance
+			v.extracted.SetText(fmt.Sprintf(v.ui.ExtractedAs, output))
+			v.open(output)
+		})
+	}()
+}
+
+// freeName returns path, or path with " (2)", " (3)"… before its extension
+// when something is already there.
+func freeName(path string) string {
+	if !exists(path) {
+		return path
+	}
+	extension := filepath.Ext(path)
+	stem := strings.TrimSuffix(path, extension)
+	for number := 2; ; number++ {
+		candidate := fmt.Sprintf("%s (%d)%s", stem, number, extension)
+		if !exists(candidate) {
+			return candidate
+		}
+	}
+}
+
+func exists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }

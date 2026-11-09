@@ -481,6 +481,22 @@ Trust lists: `~/.cache/trebaruna/`. Nothing else is cached.
 
 ---
 
+## `extract`
+
+```
+trebaruna extract <document.p7m> [--out path] [--json]
+```
+
+Takes the signed document out of a CAdES envelope: what AutoFirma calls
+*extraer datos*. Nested envelopes
+(`contratto.pdf.p7m.p7m`, two people signing one after the other) are opened
+down to the document; DER, BER, PEM and bare Base64 envelopes are all read.
+The default output is the envelope's name without `.p7m`; an existing file is
+never overwritten (exit 2). Extraction checks nothing: verify the envelope.
+A detached `.p7s` has no document inside and is refused with that reason.
+
+---
+
 ## `about`
 
 ```

@@ -242,3 +242,56 @@ func TestAboutReadsTheBuildTheCommandDescribes(t *testing.T) {
 	}
 	desktop.showAbout() // must build the dialog without failing
 }
+
+func TestAnEnvelopeOffersItsDocument(t *testing.T) {
+	tab := verificationFor(t)
+	report := decodeReport(t, `{"signed":true,"verdict":"advanced","signers":[{"signer":"MARIO ROSSI","integrity":"good"}]}`)
+
+	tab.path = "/tmp/atto.pdf.p7m"
+	tab.render(report)
+	if !tab.extract.Visible() {
+		t.Error("a .p7m must offer its document")
+	}
+	tab.path = "/tmp/atto_signed.pdf"
+	tab.render(report)
+	if tab.extract.Visible() {
+		t.Error("a signed PDF is its own document")
+	}
+}
+
+func TestExtractionNeverTakesAnOccupiedName(t *testing.T) {
+	directory := t.TempDir()
+	taken := filepath.Join(directory, "atto.pdf")
+	if err := os.WriteFile(taken, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if got := freeName(taken); got != filepath.Join(directory, "atto (2).pdf") {
+		t.Errorf("freeName = %q", got)
+	}
+	if got := freeName(filepath.Join(directory, "nuovo.pdf")); got != filepath.Join(directory, "nuovo.pdf") {
+		t.Errorf("a free name must be kept, got %q", got)
+	}
+}
+
+func TestExtractingReportsWhereTheDocumentWent(t *testing.T) {
+	directory := t.TempDir()
+	binary := filepath.Join(directory, "trebaruna")
+	script := "#!/bin/sh\necho '{\"layers\":1}'\n"
+	if err := os.WriteFile(binary, []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	tab := verificationFor(t)
+	tab.binary = binary
+	tab.path = filepath.Join(directory, "atto.pdf.p7m")
+	var opened string
+	tab.open = func(path string) { opened = path }
+
+	tab.extractDocument()
+	settle(t, func() bool { return tab.extracted.Visible() })
+	if tab.extracted.Importance != widget.SuccessImportance || !strings.Contains(tab.extracted.Text, "atto.pdf") {
+		t.Errorf("extracted = %q", tab.extracted.Text)
+	}
+	if opened != filepath.Join(directory, "atto.pdf") {
+		t.Errorf("opened %q, want the extracted document", opened)
+	}
+}

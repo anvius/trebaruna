@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `trebaruna extract`: the document inside a `.p7m`, through nested envelopes,
+  from DER, BER, PEM or Base64, never overwriting; the desktop Check tab offers
+  it for `.p7m` files. `verify` now also reads PEM and Base64 `.p7m` files.
+
 - CAdES detached signatures: `sign --format cades --detached` writes
   `<document>.p7s`; `verify` checks it against `--content`, or the document of
   the same name beside it, and reports unknown integrity, not tampering, when

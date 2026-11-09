@@ -127,6 +127,9 @@ result reads top to bottom:
   seal prints it, with the offset), integrity, and the findings that are not
   good, in the window language.
 
+For a `.p7m`, **Extract the signed document** writes the document inside next
+to the envelope (under a free name, never over an existing file) and opens it.
+
 Checking runs **offline** by default, like the CLI. The checkbox *Ask over the
 network whether the certificate was revoked (OCSP)* turns revocation on and
 checks again.

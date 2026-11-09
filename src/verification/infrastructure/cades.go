@@ -111,6 +111,9 @@ func (v *CadesVerifier) Extract(path string) ([]domain.SignerReport, error) {
 		return nil, fmt.Errorf("read %q: %w", path, err)
 	}
 
+	// .p7m files also arrive as PEM or bare Base64; the rest of the checks
+	// read the binary form.
+	content = CMSBytes(content)
 	parsed, err := pkcs7.Parse(content)
 	if err != nil {
 		return nil, fmt.Errorf("parse CMS in %q: %w", path, err)

@@ -75,7 +75,7 @@ user seeing what is signed and where anything goes.
 | PAdES, CAdES, XAdES; chain at the proven signing time; qualification from three independent conditions; offline by default, OCSP when allowed | built |
 | Verdicts: qualified, advanced, untrusted, invalid, broken, unknown — words and exit codes stable | built |
 | Detached signatures with their document; signature trees (co- and counter-signatures) | planned (B2, B4) |
-| Extract the signed document from `.p7m` (nested) and ASiC | planned (B3) |
+| Extract the signed document from `.p7m` (nested, DER/BER/PEM/Base64); ASiC through `asic --extract` | built |
 | Exportable report | planned (F2) |
 
 ### Encrypt
