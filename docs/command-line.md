@@ -72,6 +72,11 @@ else
 fi
 ```
 
+With `--json`, a command that fails without writing its own result prints
+`{"error": "…", "exit_code": n}` on stdout, the same reason it gives on stderr
+(without the usage text a wrong flag prints for a person). `verify` writes its
+report whatever the verdict, so its failures are in the report.
+
 ---
 
 ## `sign`

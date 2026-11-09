@@ -55,6 +55,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.83.1-unstable" date="2026-11-10">
+      <description>
+        <p>Failures are JSON too when JSON is asked for.</p>
+      </description>
+    </release>
     <release version="0.83.0-unstable" date="2026-11-10">
       <description>
         <p>Trusted lists' brainpool authorities anchor signatures like any other.</p>

@@ -3,6 +3,7 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -37,6 +38,46 @@ func Run(args []string, stdout, stderr io.Writer) int {
 // RunIO is Run with the standard input given: the interactive afirma
 // protocol reads the person's decision from it.
 func RunIO(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
+	if !askedForJSON(args) {
+		return dispatch(args, stdin, stdout, stderr)
+	}
+	// With --json, a failure is JSON too: what the command said on stderr,
+	// on stdout, when it wrote nothing there itself (verify writes its
+	// report whatever the verdict).
+	var said bytes.Buffer
+	written := &countingWriter{writer: stdout}
+	code := dispatch(args, stdin, written, io.MultiWriter(stderr, &said))
+	if code != exitOK && written.count == 0 {
+		// The usage a command prints after a wrong flag is for a person.
+		message, _, _ := strings.Cut(said.String(), "usage:")
+		encodeJSONValue(stdout, map[string]any{"error": strings.TrimSpace(message), "exit_code": code})
+	}
+	return code
+}
+
+// askedForJSON reports --json among the arguments.
+func askedForJSON(args []string) bool {
+	for _, argument := range args {
+		if argument == "--json" || argument == "-json" || argument == "--json=true" || argument == "-json=true" {
+			return true
+		}
+	}
+	return false
+}
+
+// countingWriter counts the bytes written through it.
+type countingWriter struct {
+	writer io.Writer
+	count  int
+}
+
+func (w *countingWriter) Write(data []byte) (int, error) {
+	written, err := w.writer.Write(data)
+	w.count += written
+	return written, err
+}
+
+func dispatch(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	// Each command reports the connections it made, not those of an earlier
 	// command run in the same process (tests, the local server).
 	transparency.Reset()

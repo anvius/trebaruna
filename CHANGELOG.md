@@ -920,6 +920,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- With `--json`, a failure left nothing on stdout, only text on stderr:
+  any command that fails without writing its own result now prints
+  `{"error", "exit_code"}` on stdout, the reason it gives on stderr,
+  without the usage text a wrong flag prints for a person.
+
 - A signature with a seal, made by trebaruna's own PDF writer, wrote the
   signer's name, the reason and the place as UTF-8 bytes in PDF text
   strings, which readers take as PDFDocEncoding: "José García Núñez" read
