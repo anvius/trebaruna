@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"unicode/utf16"
 
 	"github.com/digitorus/pdf"
 )
@@ -76,6 +77,25 @@ func serialize(parent, value pdf.Value, depth int) string {
 func reference(value pdf.Value) string {
 	pointer := value.GetPtr()
 	return fmt.Sprintf("%d %d R", pointer.GetID(), pointer.GetGen())
+}
+
+// pdfText writes a text string a reader shows (ISO 32000-1, 7.9.2.2): as
+// is when it is plain ASCII, otherwise in UTF-16BE behind its byte order
+// mark; the bytes of UTF-8 would read as PDFDocEncoding, "Müller" as
+// "MÃ¼ller".
+func pdfText(text string) string {
+	plain := true
+	for _, character := range text {
+		plain = plain && character >= 0x20 && character < 0x7F
+	}
+	if plain {
+		return pdfString(text)
+	}
+	encoded := []byte{0xFE, 0xFF}
+	for _, unit := range utf16.Encode([]rune(text)) {
+		encoded = append(encoded, byte(unit>>8), byte(unit))
+	}
+	return fmt.Sprintf("<%X>", encoded)
 }
 
 // pdfString writes a string in hexadecimal, which needs no escaping.

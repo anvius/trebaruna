@@ -907,6 +907,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A signature with a seal, made by trebaruna's own PDF writer, wrote the
+  signer's name, the reason and the place as UTF-8 bytes in PDF text
+  strings, which readers take as PDFDocEncoding: "José García Núñez" read
+  as "JosÃ© GarcÃ­a NÃºÃ±ez" (qpdf saw them as binary). They are now
+  ASCII when they can be, UTF-16BE behind its byte order mark otherwise
+  (ISO 32000-1, 7.9.2.2). Invisible signatures were already right. Found
+  while testing brainpool PDF signatures.
+
 - afirma:// pages asking for `FacturaEtri` or `Adobe PDF TriPhase` were
   answered SAF_06 (unknown format), though signing through the site's
   server was built for both families; and NONE's other names, `PKCS1` and

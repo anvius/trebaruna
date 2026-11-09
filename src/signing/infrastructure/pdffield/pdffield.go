@@ -436,7 +436,7 @@ func (u *update) signaturePlaceholder(id uint32, signature Signature) {
 	fmt.Fprintf(&dictionary, " /M %s", pdfString(pdfDate(signature.SignedAt)))
 	for _, entry := range [][2]string{{"Name", signature.Name}, {"Reason", signature.Reason}, {"Location", signature.Location}} {
 		if entry[1] != "" {
-			fmt.Fprintf(&dictionary, " /%s %s", entry[0], pdfString(entry[1]))
+			fmt.Fprintf(&dictionary, " /%s %s", entry[0], pdfText(entry[1]))
 		}
 	}
 	dictionary.WriteString(" >>")
