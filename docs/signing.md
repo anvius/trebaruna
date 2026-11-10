@@ -600,7 +600,10 @@ attributes. `.p7m` is the conventional name.
 
 - **CAdES-T** adds a `signature-time-stamp` unsigned attribute.
 - **CAdES-LT** adds `revocationValues` (`1.2.840.113549.1.9.16.2.24`) carrying the
-  OCSP responses, so the signature stays checkable after the responder is gone.
+  OCSP responses, so the signature stays checkable after the responder is gone:
+  `ocspVals [1]`, a sequence of the responders' `BasicOCSPResponse`s as RFC 5126
+  lays it out. Up to 0.104.1 each answer went inside an OCTET STRING, which EU
+  DSS could not read, so it saw no revocation in the signature.
 - **CAdES-LTA** adds an `archive-time-stamp-v3` (`0.4.0.1733.2.4`, EN 319 122-1
   5.5.3): a token over the signed content's type and digest, the SignerInfo
   (version to signature value) and an `ats-hash-index-v3` (`0.4.0.19122.1.5`,

@@ -133,35 +133,55 @@ func addUnsignedAttribute(signerInfoDER []byte, attribute []byte) ([]byte, error
 	return encoder.tagged(0x30, rebuilt...), nil
 }
 
-// RevocationValues builds the CAdES-LT attribute payload.
+// RevocationValues builds the CAdES-LT attribute payload (RFC 5126,
+// 6.3.4; EN 319 122-1, 5.4.2.2), its tags explicit as the CAdES module
+// writes them:
 //
 //	RevocationValues ::= SEQUENCE {
-//	    crlVals  [0] SEQUENCE OF OCTET STRING OPTIONAL,
-//	    ocspVals [1] SEQUENCE OF OCTET STRING OPTIONAL }
+//	    crlVals  [0] SEQUENCE OF CertificateList OPTIONAL,
+//	    ocspVals [1] SEQUENCE OF BasicOCSPResponse OPTIONAL }
 //
-// The entries are the DER of the CRLs and BasicOCSPResponses as the responders
-// produced them: a validator re-parses them, so re-encoding would break the
-// signature the responder attached.
+// The CRLs go in as the authorities wrote them, and each OCSP answer as
+// the BasicOCSPResponse inside the OCSPResponse a responder sends: a
+// validator re-parses them, so re-encoding would break the signature the
+// responder attached. Up to 0.104.0 each entry went inside an OCTET STRING,
+// which only trebaruna read; EU DSS could not, and saw no revocation.
 func RevocationValues(ocspResponses, crls [][]byte) []byte {
 	encoder := &der{}
 
 	var fields [][]byte
 	if len(crls) > 0 {
-		entries := make([][]byte, 0, len(crls))
-		for _, crl := range crls {
-			entries = append(entries, encoder.octetString(crl))
-		}
-		fields = append(fields, encoder.tagged(0xa0, entries...))
+		fields = append(fields, encoder.tagged(0xa0, encoder.seq(crls...)))
 	}
 	if len(ocspResponses) > 0 {
-		entries := make([][]byte, 0, len(ocspResponses))
+		basics := make([][]byte, 0, len(ocspResponses))
 		for _, response := range ocspResponses {
-			entries = append(entries, encoder.octetString(response))
+			basics = append(basics, basicOCSPResponse(response))
 		}
-		fields = append(fields, encoder.tagged(0xa1, entries...))
+		fields = append(fields, encoder.tagged(0xa1, encoder.seq(basics...)))
 	}
 	return encoder.seq(fields...)
 }
+
+// basicOCSPResponse is the BasicOCSPResponse an OCSPResponse carries in its
+// responseBytes (RFC 6960, 4.2.1), as the responder wrote it; anything that
+// is not an OCSPResponse is taken to be a BasicOCSPResponse already.
+func basicOCSPResponse(response []byte) []byte {
+	var envelope struct {
+		Status asn1.Enumerated
+		Bytes  struct {
+			Type     asn1.ObjectIdentifier
+			Response []byte
+		} `asn1:"explicit,tag:0"`
+	}
+	if rest, err := asn1.Unmarshal(response, &envelope); err != nil || len(rest) > 0 || !envelope.Bytes.Type.Equal(oidOCSPBasic) {
+		return response
+	}
+	return envelope.Bytes.Response
+}
+
+// oidOCSPBasic is id-pkix-ocsp-basic (RFC 6960, 4.2.1).
+var oidOCSPBasic = asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 48, 1, 1}
 
 // WithRevocationValues rebuilds the container with a RevocationValues attribute.
 //

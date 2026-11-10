@@ -969,6 +969,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- CAdES-LT revocation values follow RFC 5126: `ocspVals [1]` is a sequence
+  of the responders' BasicOCSPResponses, each as the responder signed it.
+  trebaruna wrapped every OCSP answer, whole, in an OCTET STRING; EU DSS
+  (BouncyCastle) could not parse the attribute and found no revocation in
+  the signature, so a CAdES-LT read as T and its chain as not conclusive.
+
 - CAdES-LTA archive timestamps are accepted by EU DSS: the
   ats-hash-index-v3 now names its hash algorithm even when it is SHA-256.
   DSS takes that field as required in the v2 and v3 indexes and rebuilds the

@@ -16,8 +16,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"slices"
+	"strconv"
 	"strings"
 	"testing"
+
+	"golang.org/x/crypto/ocsp"
 
 	"codeberg.org/simplicer/trebaruna/src/signing/application"
 	signingdomain "codeberg.org/simplicer/trebaruna/src/signing/domain"
@@ -88,6 +93,52 @@ func TestCadesLtCarriesRevocationValues(t *testing.T) {
 	// under that name is worse than failing, because it looks correct.
 	if strings.Contains(output, "certValues") {
 		t.Error("the container mislabels its revocation material as certValues")
+	}
+
+	// RFC 5126's layout, as openssl reads it: the attribute's SET holds
+	// RevocationValues, whose ocspVals [1] is a SEQUENCE OF BasicOCSPResponse
+	// (each a SEQUENCE starting with its tbsResponseData). Up to 0.104.1 each
+	// answer sat in an OCTET STRING, which EU DSS could not read.
+	lines := strings.Split(output, "\n")
+	at := slices.IndexFunc(lines, func(line string) bool { return strings.Contains(line, ":id-smime-aa-ets-revocationValues") })
+	if at < 0 || at+6 >= len(lines) {
+		t.Fatalf("no revocationValues in:\n%s", output)
+	}
+	want := []string{"SET", "SEQUENCE", "cont [ 1 ]", "SEQUENCE", "SEQUENCE", "SEQUENCE"}
+	var basic []byte
+	for position, kind := range want {
+		line := lines[at+1+position]
+		if got := strings.TrimSpace(line[strings.Index(line, "cons:")+len("cons:"):]); !strings.Contains(line, "cons:") || got != kind {
+			t.Fatalf("revocationValues element %d is %q, want %q:\n%s", position, strings.TrimSpace(line), kind, strings.Join(lines[at:at+8], "\n"))
+		}
+		if position == 4 {
+			fields := regexp.MustCompile(`^\s*(\d+):d=\d+\s+hl=(\d+)\s+l=\s*(\d+)`).FindStringSubmatch(line)
+			if fields == nil {
+				t.Fatalf("unreadable asn1parse line %q", line)
+			}
+			offset, _ := strconv.Atoi(fields[1])
+			header, _ := strconv.Atoi(fields[2])
+			length, _ := strconv.Atoi(fields[3])
+			basic = signed[offset : offset+header+length]
+		}
+	}
+	// Each entry is the responder's BasicOCSPResponse: put back in an
+	// OCSPResponse, x/crypto/ocsp reads it as the good answer it was.
+	wrapped, err := asn1.Marshal(struct {
+		Status asn1.Enumerated
+		Bytes  struct {
+			Type     asn1.ObjectIdentifier
+			Response []byte
+		} `asn1:"explicit,tag:0"`
+	}{Bytes: struct {
+		Type     asn1.ObjectIdentifier
+		Response []byte
+	}{asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 48, 1, 1}, basic}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if answer, err := ocsp.ParseResponse(wrapped, nil); err != nil || answer.Status != ocsp.Good {
+		t.Errorf("the embedded BasicOCSPResponse: %v", err)
 	}
 }
 
