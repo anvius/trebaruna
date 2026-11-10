@@ -75,6 +75,8 @@ type Signature struct {
 	SignedAt time.Time
 	// Reserve is the room for the CMS envelope, in bytes.
 	Reserve int
+	// SubFilter is the envelope's encoding, ETSI.CAdES.detached when empty.
+	SubFilter string
 	// Envelope builds the CMS envelope over the bytes the signature covers.
 	Envelope func(signed []byte) ([]byte, error)
 }
@@ -437,7 +439,11 @@ const byteRangeMarker = "/ByteRange [0 0000000000 0000000000 0000000000]"
 // field's FieldMDP reference, or empty.
 func (u *update) signaturePlaceholder(id uint32, signature Signature, lock string) {
 	var dictionary strings.Builder
-	dictionary.WriteString("<< /Type /Sig /Filter /Adobe.PPKLite /SubFilter /ETSI.CAdES.detached ")
+	subFilter := signature.SubFilter
+	if subFilter == "" {
+		subFilter = SubFilterCAdES
+	}
+	dictionary.WriteString("<< /Type /Sig /Filter /Adobe.PPKLite /SubFilter " + name(subFilter) + " ")
 	dictionary.WriteString(byteRangeMarker)
 	fmt.Fprintf(&dictionary, " /Contents <%s>", strings.Repeat("0", 2*reserveOf(signature)))
 	fmt.Fprintf(&dictionary, " /M %s", pdfString(pdfDate(signature.SignedAt)))

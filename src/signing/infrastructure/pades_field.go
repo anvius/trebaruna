@@ -46,6 +46,22 @@ func (s *PadesSigner) signInField(ctx context.Context, request application.Pades
 	index := slices.IndexFunc(fields, func(field pdffield.Field) bool { return field.Name == request.Field })
 	moment := signingMoment(request)
 
+	// What the form asks of a signature in this field (its seed values).
+	subFilter := pdffield.SubFilterCAdES
+	if index >= 0 {
+		seeds := fields[index].Seeds()
+		if subFilter, err = seeds.SubFilter(); err != nil {
+			return nil, err
+		}
+		timestampURL := ""
+		if request.Level.NeedsTimestamp() {
+			timestampURL = request.TimestampURL
+		}
+		if err := seeds.Admit(keyPair.Certificates(), request.Reason, timestampURL); err != nil {
+			return nil, err
+		}
+	}
+
 	var appearance *pdffield.Appearance
 	if index >= 0 && !request.Invisible {
 		field := fields[index]
@@ -63,6 +79,7 @@ func (s *PadesSigner) signInField(ctx context.Context, request application.Pades
 	}
 
 	return s.signWithRoom(ctx, request, keyPair, func(signature pdffield.Signature) ([]byte, error) {
+		signature.SubFilter = subFilter
 		return pdffield.Sign(request.Content, request.Field, appearance, signature)
 	})
 }

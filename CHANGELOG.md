@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A PDF signature field's seed values (`/SV`, ISO 32000-1 tables 234 and
+  235) are honoured: the encoding is the first of the field's that
+  trebaruna writes (`adbe.pkcs7.detached` when the form asks for it), and
+  what the field requires (a reason from its list, a timestamp from its
+  authority, SHA-256 among its digests, the signer's certificate, issuer,
+  policy, holder's name or key usage) is met or the signature refused,
+  saying what the form asks; certification signatures, other handlers,
+  legal attestations and embedded revocation information are refused.
+
 - A PDF signature field's lock (`/Lock`, ISO 32000-1 12.7.4.5) is recorded
   when the field is signed, as a FieldMDP reference over the catalogue
   with the lock's action, fields and PDF 2.0 permissions; earlier

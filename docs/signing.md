@@ -202,6 +202,18 @@ them locked is not signed, and after one that allows no change (`/P 1`) no
 signature is added at all. The locked fields are not marked read-only in the
 update.
 
+A field may also say what it expects of the signature made in it (its seed
+values, `/SV`). The encoding is the first of the field's that trebaruna
+writes (`ETSI.CAdES.detached` or `adbe.pkcs7.detached`). What the field
+marks as required is met or the signature is refused, saying what the form
+asks: a reason from its list (`--reason`), a timestamp from its authority
+(level T with `--tsa` set to it), SHA-256 among its digests, and a signer's
+certificate among the ones it names, issued by one of its authorities,
+under one of its policies, with a holder's name or key usage it describes.
+A field that requires a certification signature, another handler, legal
+attestations or revocation information inside the signature is refused:
+trebaruna writes none of those. What a field only advises is not enforced.
+
 ### PDF/A documents
 
 A PDF/A document stays PDF/A when it is signed. trebaruna reads the part its
