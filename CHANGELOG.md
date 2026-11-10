@@ -954,6 +954,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Signing a PDF field whose lock covers other fields (`/Lock`) marks
+  those fields read-only in the update, keeping the flags each had or
+  inherited, so a reader no longer lets anyone fill them in after the
+  signature; the lock was recorded but the fields stayed editable. A name
+  in a lock now covers the fields under it too, for the read-only marks
+  and for refusing to sign a field an earlier signature locked. A field
+  written inside another object (ISO 32000-1 asks for a reference) was
+  rewritten as that object, which would have overwritten the form: a
+  locked one is left as it is and a signature field written so is refused.
+
 - A PDF whose author certified it against any change (DocMDP permissions
   1) was refused only when signed in a field: an invisible signature, which
   the PDF library writes, went ahead and broke the certification. Every

@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -41,6 +42,9 @@ type Field struct {
 	Rect [4]float64
 
 	field, widget pdf.Value
+	// standalone: the field and its widget are objects of their own, which
+	// an update can write again; one written inside another object cannot.
+	standalone bool
 }
 
 // Width and Height are the size of the widget, in points.
@@ -103,10 +107,7 @@ func emptyFields(reader *pdf.Reader) []Field {
 		}
 		for index := 0; index < fields.Len(); index++ {
 			field := fields.Index(index)
-			name := prefix
-			if partial := field.Key("T").Text(); partial != "" {
-				name = strings.TrimPrefix(prefix+"."+partial, ".")
-			}
+			name := qualifiedName(prefix, field)
 			fieldType := inheritedType
 			if own := field.Key("FT").Name(); own != "" {
 				fieldType = own
@@ -116,7 +117,8 @@ func emptyFields(reader *pdf.Reader) []Field {
 				if fieldType == "Sig" && field.Key("V").IsNull() {
 					if widget, ok := widgetOf(field); ok {
 						found = append(found, Field{Name: name, Page: pages[widget.Key("P").GetPtr()],
-							Rect: rectangle(widget.Key("Rect")), field: field, widget: widget})
+							Rect: rectangle(widget.Key("Rect")), field: field, widget: widget,
+							standalone: ownObject(field, fields) && (merged(field) || ownObject(widget, kids))})
 					}
 				}
 				continue
@@ -142,13 +144,34 @@ func terminal(field pdf.Value) bool {
 // widgetOf is the field's one widget: the field itself when they are
 // merged, or its only kid.
 func widgetOf(field pdf.Value) (pdf.Value, bool) {
-	if field.Key("Subtype").Name() == "Widget" || field.Key("Kids").IsNull() {
+	if merged(field) {
 		return field, true
 	}
 	if kids := field.Key("Kids"); kids.Len() == 1 {
 		return kids.Index(0), true
 	}
 	return pdf.Value{}, false
+}
+
+// qualifiedName is the field's fully qualified name under its parent's:
+// its partial name joined with a dot, or the parent's when it has none.
+func qualifiedName(prefix string, field pdf.Value) string {
+	if partial := field.Key("T").Text(); partial != "" {
+		return strings.TrimPrefix(prefix+"."+partial, ".")
+	}
+	return prefix
+}
+
+// merged reports a field that is its own widget.
+func merged(field pdf.Value) bool {
+	return field.Key("Subtype").Name() == "Widget" || field.Key("Kids").IsNull()
+}
+
+// ownObject reports a value read from container that is an object of its
+// own: the PDF reader gives a value written inside another object that
+// object's number.
+func ownObject(value, container pdf.Value) bool {
+	return value.GetPtr() != container.GetPtr()
 }
 
 // pageNumbers maps each page object to its number.
@@ -187,6 +210,9 @@ func Sign(content []byte, name string, appearance *Appearance, signature Signatu
 		return nil, missingField(name, fields)
 	}
 	field := fields[index]
+	if !field.standalone {
+		return nil, fmt.Errorf("%w: the field %q is written inside another object", ErrUnsupported, name)
+	}
 	if err := lockedAgainst(reader, name); err != nil {
 		return nil, err
 	}
@@ -213,6 +239,11 @@ func Sign(content []byte, name string, appearance *Appearance, signature Signatu
 	}
 	if err := update.rewrite(field.field, fieldChanges); err != nil {
 		return nil, err
+	}
+	for _, locked := range lockedFields(reader, field.field) {
+		if err := update.rewrite(locked.field, map[string]string{"Ff": strconv.FormatInt(locked.flags, 10)}); err != nil {
+			return nil, err
+		}
 	}
 	if err := update.markSigned(reader); err != nil {
 		return nil, err

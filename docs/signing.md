@@ -197,10 +197,15 @@ A field whose form locks other fields when it is signed (its `/Lock`: all
 of them, the ones named, or all but them, and in PDF 2.0 the changes still
 allowed) is signed with that lock recorded, a FieldMDP reference in the
 signature (ISO 32000-1, 12.8.2.4), so a reader can tell when a locked field
-changed afterwards. Earlier signatures' locks are respected: a field one of
-them locked is not signed, and after one that allows no change (`/P 1`) no
-signature is added at all. The locked fields are not marked read-only in the
-update.
+changed afterwards, and the fields it locks are marked read-only in the
+update (their `/Ff` keeps every flag they had or inherited, plus ReadOnly),
+so a reader does not let anyone fill them in after the signature. A name in
+the lock covers that field and the ones under it. Earlier signatures' locks
+are respected: a field one of them locked is not signed, and after one that
+allows no change (`/P 1`) no signature is added at all. A field written
+inside another object rather than as one of its own, which ISO 32000-1 does
+not allow, is never rewritten: a locked one is left as it is, and a
+signature field (or its widget) written so is refused.
 
 A field may also say what it expects of the signature made in it (its seed
 values, `/SV`). The encoding is the first of the field's that trebaruna

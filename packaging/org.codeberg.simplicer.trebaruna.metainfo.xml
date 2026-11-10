@@ -55,6 +55,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.103.1-unstable" date="2026-11-10">
+      <description>
+        <p>The PDF form fields a signature locks become read-only.</p>
+      </description>
+    </release>
     <release version="0.103.0-unstable" date="2026-11-10">
       <description>
         <p>PDF form fields that set requirements for their signature are honoured.</p>

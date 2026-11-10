@@ -3,6 +3,7 @@ package pdffield
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/digitorus/pdf"
 )
@@ -72,13 +73,15 @@ func fieldLocks(reader *pdf.Reader) []pdf.Value {
 	return found
 }
 
-// locks reports whether FieldMDP parameters lock the field: every field,
-// the ones named, or all but them.
+// locks reports whether a lock, or the FieldMDP parameters copied from
+// one, covers the field: every field, the ones named and their
+// descendants, or all but them.
 func locks(parameters pdf.Value, field string) bool {
 	named := false
 	fields := parameters.Key("Fields")
 	for index := 0; index < fields.Len(); index++ {
-		named = named || fields.Index(index).Text() == field
+		name := fields.Index(index).Text()
+		named = named || field == name || strings.HasPrefix(field, name+".")
 	}
 	switch parameters.Key("Action").Name() {
 	case "All":
@@ -89,4 +92,44 @@ func locks(parameters pdf.Value, field string) bool {
 		return !named
 	}
 	return false
+}
+
+// lockedField is a field signing will make read-only, and the field flags
+// it will carry: its own, or those it inherited, with ReadOnly set.
+type lockedField struct {
+	field pdf.Value
+	flags int64
+}
+
+// readOnlyField is the ReadOnly field flag (ISO 32000-1, table 221).
+const readOnlyField = 1
+
+// lockedFields are the terminal fields the signing field's lock covers
+// that are not read-only yet, the signing field aside: a reader is to keep
+// them as they were signed (12.7.4.5), and the flag tells it so. A field
+// written inside another object cannot be rewritten alone and stays as it
+// is; the lock in the signature still names it.
+func lockedFields(reader *pdf.Reader, signing pdf.Value) []lockedField {
+	lock := signing.Key("Lock")
+	var found []lockedField
+	var visit func(fields pdf.Value, prefix string, inherited int64, depth int)
+	visit = func(fields pdf.Value, prefix string, inherited int64, depth int) {
+		for index := 0; index < fields.Len() && depth < 16; index++ {
+			field := fields.Index(index)
+			name := qualifiedName(prefix, field)
+			flags := inherited
+			if own := field.Key("Ff"); !own.IsNull() {
+				flags = own.Int64()
+			}
+			if !terminal(field) {
+				visit(field.Key("Kids"), name, flags, depth+1)
+				continue
+			}
+			if field.GetPtr() != signing.GetPtr() && ownObject(field, fields) && flags&readOnlyField == 0 && locks(lock, name) {
+				found = append(found, lockedField{field: field, flags: flags | readOnlyField})
+			}
+		}
+	}
+	visit(reader.Trailer().Key("Root").Key("AcroForm").Key("Fields"), "", 0, 0)
+	return found
 }
