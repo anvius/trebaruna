@@ -8,7 +8,7 @@ PREFIX  ?= /usr/local
 DESTDIR ?= 
 LDFLAGS := -s -w -X codeberg.org/simplicer/trebaruna/src/entrypoint/cli.injectedVersion=$(VERSION)
 
-.PHONY: afirma-default afirma-autofirma help build build-token build-gui deps-gui test test-verbose check cross install install-desktop clean version
+.PHONY: afirma-default afirma-autofirma help build build-token build-gui deps-gui test test-verbose check check-dss cross install install-desktop clean version
 
 help:
 	@echo "make build        binario estático (P12/PEM), sin dependencias"
@@ -96,6 +96,11 @@ format:
 
 test-race:
 	CGO_ENABLED=1 $(GO) test ./tests/... -count=1 -race
+
+# EU DSS as an independent judge of what trebaruna signs (tests/support/dss).
+check-dss:
+	@test -n "$(DSS_LIB)" || (echo "DSS_LIB must name EU DSS's jars: see tests/support/dss/README.md"; exit 1)
+	DSS_LIB=$(DSS_LIB) $(GO) test ./tests/signing/integration/ -run TestDSS -count=1 -v
 
 check-gui:
 	@if ! pkg-config --exists gl 2>/dev/null; then \
