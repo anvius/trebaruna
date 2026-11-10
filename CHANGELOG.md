@@ -930,6 +930,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `verify` read only the first archive timestamp of a XAdES signature: a
+  renewed XAdES-A's later ones went unchecked, a false one included. Each
+  is now checked. A XAdES signature was also searched into the
+  counter-signatures nested in it: one without a timestamp, counter-signed
+  at level T, was reported "timestamp invalid" with its counter-signature's
+  token. A signature's signing time, timestamps and properties are now its
+  own, and an archive timestamp's token is never taken for a signature
+  timestamp.
+
 - A detached XML signature (`.xsig`) could not be counter-signed: without
   `--format` it was read as a CMS envelope ("ber: truncated encoding"),
   with `--format xades` refused (".xsig cannot hold a xades signature").

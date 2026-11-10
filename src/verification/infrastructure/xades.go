@@ -229,7 +229,7 @@ func (v *XadesVerifier) report(document *etree.Document, signature *etree.Elemen
 
 	v.describeSigningTime(signature, &report)
 	v.describeSignatureTimeStamp(signature, &report)
-	v.describeArchiveTimeStamp(document, signature, resolve, &report)
+	v.describeArchiveTimeStamps(document, signature, resolve, &report)
 
 	switch {
 	case report.Integrity == domain.StatusBad:
@@ -436,13 +436,28 @@ func walk(element *etree.Element, visit func(*etree.Element)) {
 	}
 }
 
+// walkOwn visits a signature's own elements depth-first: a counter-signature
+// nested in its unsigned properties is another signature, with its own
+// signing time and timestamps, and is left out.
+func walkOwn(signature *etree.Element, visit func(*etree.Element)) {
+	if signature == nil {
+		return
+	}
+	visit(signature)
+	for _, child := range signature.ChildElements() {
+		if !isSignature(child) {
+			walkOwn(child, visit)
+		}
+	}
+}
+
 // validate checks the signature with the embedded certificate as the trust anchor.
 //
 // xmlSignatureFormat names the signature: XAdES when it carries qualifying
 // properties, plain XMLDSig otherwise.
 func xmlSignatureFormat(signature *etree.Element) string {
 	format := "XMLDSig"
-	walk(signature, func(element *etree.Element) {
+	walkOwn(signature, func(element *etree.Element) {
 		if element.Tag == "QualifyingProperties" && strings.HasPrefix(element.NamespaceURI(), "http://uri.etsi.org/01903/") {
 			format = "XAdES"
 		}
@@ -541,7 +556,7 @@ func describeIntegrity(err error, report *domain.SignerReport) {
 // XAdES-BES carries the claimed time only. Without a SignatureTimeStamp it is
 // the signer's word, so the report says exactly that.
 func (v *XadesVerifier) describeSigningTime(signature *etree.Element, report *domain.SignerReport) {
-	walk(signature, func(element *etree.Element) {
+	walkOwn(signature, func(element *etree.Element) {
 		if report.SignedAt.IsZero() && element.Tag == "SigningTime" && element.NamespaceURI() == xadesNamespace {
 			if parsed, err := time.Parse(time.RFC3339, element.Text()); err == nil {
 				report.SignedAt = parsed
@@ -558,9 +573,12 @@ func (v *XadesVerifier) describeSigningTime(signature *etree.Element, report *do
 // and proves nothing, which is why the imprint is recomputed here rather than
 // trusted from the report of whoever produced the document.
 func (v *XadesVerifier) describeSignatureTimeStamp(signature *etree.Element, report *domain.SignerReport) {
+	// The signature's own SignatureTimeStamp: an archive timestamp's token
+	// is another, and a counter-signature's another signature's.
 	var tokenText string
-	walk(signature, func(element *etree.Element) {
-		if tokenText == "" && element.Tag == "EncapsulatedTimeStamp" && element.NamespaceURI() == xadesNamespace {
+	walkOwn(signature, func(element *etree.Element) {
+		if tokenText == "" && element.Tag == "EncapsulatedTimeStamp" && element.NamespaceURI() == xadesNamespace &&
+			element.Parent().Tag == "SignatureTimeStamp" {
 			tokenText = element.Text()
 		}
 	})
@@ -674,23 +692,35 @@ func (v *XadesVerifier) describeSignatureTimeStamp(signature *etree.Element, rep
 // EN 319 132-1 §5.5.2.2 octet stream, rebuilt with the signer's own
 // xmldsig.ArchiveTimeStampInput: what it sealed changed or is gone, and the
 // report says timestamp.archive_unbound.
-func (v *XadesVerifier) describeArchiveTimeStamp(document *etree.Document, signature *etree.Element, resolve xmldsig.Resolver, report *domain.SignerReport) {
-	var archive *etree.Element
-	var tokenText string
-	algorithm := xmldsig.C14N10
-	walk(signature, func(element *etree.Element) {
-		if archive == nil && element.Tag == "ArchiveTimeStamp" && element.NamespaceURI() == archiveNamespace {
-			archive = element
-			for _, child := range element.ChildElements() {
-				switch child.Tag {
-				case "EncapsulatedTimeStamp":
-					tokenText = child.Text()
-				case "CanonicalizationMethod":
-					algorithm = child.SelectAttrValue("Algorithm", algorithm)
-				}
-			}
+// describeArchiveTimeStamps checks each of the signature's own archive
+// timestamps (XAdES-A): a renewed one carries several, each over everything
+// before it, and one left unread would vouch for nothing unseen.
+func (v *XadesVerifier) describeArchiveTimeStamps(document *etree.Document, signature *etree.Element, resolve xmldsig.Resolver, report *domain.SignerReport) {
+	var archives []*etree.Element
+	walkOwn(signature, func(element *etree.Element) {
+		if element.Tag == "ArchiveTimeStamp" && element.NamespaceURI() == archiveNamespace {
+			archives = append(archives, element)
 		}
 	})
+	for _, archive := range archives {
+		v.describeArchiveTimeStamp(document, signature, archive, resolve, report)
+	}
+}
+
+// describeArchiveTimeStamp checks one archive timestamp: its token, and that
+// it seals what EN 319 132-1 says it seals.
+func (v *XadesVerifier) describeArchiveTimeStamp(document *etree.Document, signature, archive *etree.Element, resolve xmldsig.Resolver,
+	report *domain.SignerReport) {
+	var tokenText string
+	algorithm := xmldsig.C14N10
+	for _, child := range archive.ChildElements() {
+		switch child.Tag {
+		case "EncapsulatedTimeStamp":
+			tokenText = child.Text()
+		case "CanonicalizationMethod":
+			algorithm = child.SelectAttrValue("Algorithm", algorithm)
+		}
+	}
 	if tokenText == "" {
 		return
 	}
@@ -744,7 +774,7 @@ func (v *XadesVerifier) describeArchiveTimeStamp(document *etree.Document, signa
 // declares, inclusive C14N 1.0 when it names none.
 func signatureTimeStampCanonicalization(signature *etree.Element) string {
 	algorithm := xmldsig.C14N10
-	walk(signature, func(element *etree.Element) {
+	walkOwn(signature, func(element *etree.Element) {
 		if element.Tag != "SignatureTimeStamp" || element.NamespaceURI() != xadesNamespace {
 			return
 		}

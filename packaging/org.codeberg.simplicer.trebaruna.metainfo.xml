@@ -55,6 +55,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.84.1-unstable" date="2026-11-10">
+      <description>
+        <p>Every archive timestamp of an XML signature is checked, and each signature by its own timestamps.</p>
+      </description>
+    </release>
     <release version="0.84.0-unstable" date="2026-11-10">
       <description>
         <p>ASiC containers can be counter-signed, from the command line, the window and web pages.</p>

@@ -63,6 +63,31 @@ func verifyXML(t *testing.T, content []byte) []string {
 	return fields
 }
 
+// timestampJudgements says, for each signature, what its timestamp was
+// found to be: timestamp.bound, timestamp.invalid, or none.
+func timestampJudgements(t *testing.T, content []byte) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "signed.xml")
+	if err := os.WriteFile(path, content, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	reports, err := verificationinfra.NewXadesVerifier().Extract(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var judged []string
+	for _, report := range reports {
+		judgement := "none"
+		for _, finding := range report.Findings {
+			if finding.Code == "timestamp.bound" || finding.Code == "timestamp.invalid" {
+				judgement = finding.Code
+			}
+		}
+		judged = append(judged, report.FieldName+": "+judgement)
+	}
+	return strings.Join(judged, "|")
+}
+
 func countersignXML(t *testing.T, signer domain.Signer, authority *localTSA, content []byte, scope string, level domain.Level) ([]byte, error) {
 	t.Helper()
 	request := buildXadesRequest(signer, content, false)
@@ -85,6 +110,11 @@ func TestXadesSignaturesAreCounterSignedInside(t *testing.T) {
 	}
 	if strings.Count(string(once), "<xades:SignatureTimeStamp") != 1 || !strings.Contains(string(once), "01903#CountersignedSignature") {
 		t.Error("the counter-signature is XAdES-T and names what it signs")
+	}
+	// The counter-signature's timestamp is its own: the signature it signs,
+	// which has none, is not judged by it.
+	if judged := timestampJudgements(t, once); judged != "XMLSignature: none|XMLSignature › countersignature 1: timestamp.bound" {
+		t.Errorf("timestamps: %q", judged)
 	}
 
 	nested, err := countersignXML(t, signer, authority, once, "leaves", domain.BES)

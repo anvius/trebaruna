@@ -50,7 +50,7 @@ func signedProperties(signature *etree.Element) *etree.Element {
 		}
 	}
 	var found *etree.Element
-	walk(signature, func(element *etree.Element) {
+	walkOwn(signature, func(element *etree.Element) {
 		if found == nil && element.Tag == "SignedProperties" && strings.HasPrefix(element.NamespaceURI(), "http://uri.etsi.org/01903/") &&
 			referenced[element.SelectAttrValue("Id", "")] {
 			found = element
