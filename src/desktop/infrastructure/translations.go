@@ -123,6 +123,7 @@ func fyneTranslationsFor(language messaging.Language) map[string]string {
 			"Information":   "Informazioni",
 			"Are you sure?": "Sei sicuro?",
 			"File":          "File",
+			"Quit":          "Esci",
 			"file.name":     "Nome",
 			"file.parent":   "Su",
 		}
@@ -145,6 +146,7 @@ func fyneTranslationsFor(language messaging.Language) map[string]string {
 			"Information":   "Informació",
 			"Are you sure?": "N'estàs segur?",
 			"File":          "Fitxer",
+			"Quit":          "Surt",
 			"file.name":     "Nom",
 			"file.parent":   "Amunt",
 		}
@@ -167,6 +169,7 @@ func fyneTranslationsFor(language messaging.Language) map[string]string {
 			"Information":   "Información",
 			"Are you sure?": "Estás seguro?",
 			"File":          "Ficheiro",
+			"Quit":          "Saír",
 			"file.name":     "Nome",
 			"file.parent":   "Arriba",
 		}
@@ -189,6 +192,7 @@ func fyneTranslationsFor(language messaging.Language) map[string]string {
 			"Information":   "Informazioa",
 			"Are you sure?": "Ziur zaude?",
 			"File":          "Fitxategia",
+			"Quit":          "Irten",
 			"file.name":     "Izena",
 			"file.parent":   "Gora",
 		}
@@ -213,6 +217,7 @@ func fyneTranslationsFor(language messaging.Language) map[string]string {
 			"Information":   "Información",
 			"Are you sure?": "¿Estás seguro?",
 			"File":          "Archivo",
+			"Quit":          "Salir",
 			"file.name":     "Nombre",
 			"file.parent":   "Padre",
 		}
@@ -239,6 +244,7 @@ func englishFallback() map[string]string {
 		"Information":   "Information",
 		"Are you sure?": "Are you sure?",
 		"File":          "File",
+		"Quit":          "Quit",
 		"file.name":     "Name",
 		"file.parent":   "Parent",
 	}

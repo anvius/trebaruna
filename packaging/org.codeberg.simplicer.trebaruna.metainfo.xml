@@ -55,6 +55,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.107.2-unstable" date="2026-11-10">
+      <description>
+        <p>The File menu's Quit item is translated in every language.</p>
+      </description>
+    </release>
     <release version="0.107.1-unstable" date="2026-11-10">
       <description>
         <p>Seals and reports print Polish, Czech, Hungarian and other Central European names whole.</p>

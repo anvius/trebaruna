@@ -996,6 +996,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The Quit item Fyne adds at the end of the File menu is in the window's
+  language: it read "Quit" in Italian, Catalan, Galician and Basque.
+
 - The visible seal and the PDF report print the letters of Central and
   Eastern European names (Polish ł ż ś, Czech ř ě ů, Hungarian ő ű, Romanian
   ș ț, Baltic ā ė ū…), which came out as "?": WinAnsi lacks them, and

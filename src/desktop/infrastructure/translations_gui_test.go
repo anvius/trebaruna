@@ -56,6 +56,11 @@ func TestItalianSystemGetsItalianWidgets(t *testing.T) {
 	if got := lang.LocalizeKey("file.parent", "Parent"); got != "Su" {
 		t.Errorf("file.parent = %q, want Su", got)
 	}
+	// Fyne adds a Quit item to the first menu with this word; without it an
+	// Italian window ended its File menu in English.
+	if got := lang.LocalizeKey("Quit", "Quit"); got != "Esci" {
+		t.Errorf("Quit = %q, want Esci", got)
+	}
 }
 
 // TestItalianSystemEnglishAppStaysReadable covers the remaining combination.
