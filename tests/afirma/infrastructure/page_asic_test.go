@@ -101,8 +101,8 @@ func TestAnOOXMLPageGetsItsDocumentSigned(t *testing.T) {
 
 // TestASiCSPagesCosignTheContainer: a cosign page that sends a container
 // gets it back with one more signature of the kind it holds, both of which
-// verify; a counter-signature is refused, and so is data that is no
-// container.
+// verify; a countersign page gets the signature counter-signed inside it;
+// data that is no container is refused.
 func TestASiCSPagesCosignTheContainer(t *testing.T) {
 	juan, _ := identity(t, "JUAN PEREZ", 22)
 	for _, name := range []string{"CAdES-ASiC-S", "XAdES-ASiC-S"} {
@@ -134,9 +134,23 @@ func TestASiCSPagesCosignTheContainer(t *testing.T) {
 			t.Errorf("%s: signers %v", name, signers)
 		}
 
-		_, err = infrastructure.NewNativePageSigner().Sign(context.Background(), application.PageSignature{
+		countersigned, err := infrastructure.NewNativePageSigner().Sign(context.Background(), application.PageSignature{
 			Crypto: domain.Countersign, Format: format(t, name), Algorithm: "SHA256", Data: first.Signature, Key: juan})
-		wantFailure(t, err, domain.UnsupportedOperation, name+" counter-signature")
+		if err != nil {
+			t.Fatalf("%s countersign: %v", name, err)
+		}
+		if err := os.WriteFile(path, countersigned.Signature, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		reports, err = verification.NewAsicVerifier(verification.NewCadesVerifier(), verification.NewXadesVerifier()).Extract(path)
+		if err != nil || len(reports) != 2 || reports[1].SignerName != "JUAN PEREZ" || reports[1].Countersigns == "" {
+			t.Fatalf("%s counter-signed: %+v, %v", name, reports, err)
+		}
+		for _, report := range reports {
+			if report.Integrity != verificationdomain.StatusGood {
+				t.Errorf("%s counter-signed: %s %s %+v", name, report.SignerName, report.Integrity, report.Findings)
+			}
+		}
 		_, err = infrastructure.NewNativePageSigner().Sign(context.Background(), application.PageSignature{
 			Crypto: domain.Cosign, Format: format(t, name), Algorithm: "SHA256", Data: []byte("<solicitud/>"), Key: juan})
 		wantFailure(t, err, domain.NoSignData, name+" without a container")

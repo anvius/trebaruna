@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -146,6 +147,39 @@ func TestTheManifestListsEveryDocumentWithItsDigest(t *testing.T) {
 	} {
 		if !bytes.Contains(manifest, []byte(expected)) {
 			t.Errorf("the manifest lacks %s:\n%s", expected, text)
+		}
+	}
+}
+
+// TestTheManifestOfASignatureIsTheOneThatNamesIt: by its SigReference,
+// escaped or not, among other manifests and files.
+func TestTheManifestOfASignatureIsTheOneThatNamesIt(t *testing.T) {
+	documents := []asic.Entry{{Name: "acta.txt", Content: []byte("acta\n")}}
+	first, _ := asic.Manifest("META-INF/signature001.p7s", documents)
+	spaced, _ := asic.Manifest("META-INF/signature de juan.p7s", documents)
+	entries := []asic.Entry{
+		{Name: "acta.txt", Content: []byte("acta\n")},
+		{Name: "ASiCManifest.xml", Content: first},
+		{Name: "META-INF/ASiCManifest001.xml", Content: []byte("<x/>")},
+		{Name: "META-INF/ASiCManifest002.xml", Content: spaced},
+		{Name: "META-INF/ASiCManifest003.xml", Content: first},
+	}
+	if manifest, found := asic.ManifestOf("META-INF/signature001.p7s", entries); !found || manifest.Name != "META-INF/ASiCManifest003.xml" {
+		t.Errorf("signature001: %q %v", manifest.Name, found)
+	}
+	if manifest, found := asic.ManifestOf("META-INF/signature de juan.p7s", entries); !found || manifest.Name != "META-INF/ASiCManifest002.xml" {
+		t.Errorf("an escaped name: %q %v", manifest.Name, found)
+	}
+	if manifest, found := asic.ManifestOf("META-INF/signature004.p7s", entries); found {
+		t.Errorf("no manifest names signature004: %q", manifest.Name)
+	}
+	for _, other := range []string{
+		strings.Replace(string(first), "http://uri.etsi.org/02918/v1.2.1#", "urn:other", 1),
+		`<asic:Other xmlns:asic="http://uri.etsi.org/02918/v1.2.1#"><asic:SigReference URI="META-INF/signature001.p7s"/></asic:Other>`,
+		`<asic:ASiCManifest xmlns:asic="http://uri.etsi.org/02918/v1.2.1#"><o:SigReference xmlns:o="urn:other" URI="META-INF/signature001.p7s"/></asic:ASiCManifest>`,
+	} {
+		if _, found := asic.ManifestOf("META-INF/signature001.p7s", []asic.Entry{{Name: "META-INF/ASiCManifest.xml", Content: []byte(other)}}); found {
+			t.Errorf("not a manifest, taken: %s", other)
 		}
 	}
 }

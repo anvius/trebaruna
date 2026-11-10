@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- ASiC containers are counter-signed: `sign expediente.asice --countersign
+  leaves` (or `all`) adds CMS counter-signatures to each CAdES signature
+  file and XAdES ones inside each signatures file, where they are, and
+  writes `expediente_countersigned.asice`; at LTA a CAdES counter-signature's
+  archive timestamp covers what its signature signs (the ASiC-S's document,
+  or the `ASiCManifest` naming it in an ASiC-E). afirma:// `countersign`
+  with `CAdES-ASiC-S` and `XAdES-ASiC-S` does the same (`target=tree` for
+  all) instead of answering "not yet", and the window offers a
+  counter-signature for a container and for a detached `.xsig`.
+
 - Trusted lists read the authorities they publish with brainpool keys (the
   German list's health professionals' authorities) and use them as
   anchors; Go's parser dropped them. The lists' and the list of lists'

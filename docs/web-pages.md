@@ -322,7 +322,9 @@ left out as AutoFirma does), `ODF` (the document signed inside itself, as LibreO
 Microsoft Office does),
 `CAdES-ASiC-S` and `XAdES-ASiC-S` (the
 container, the data named `asicsFilename` or `dataobject.<extension>` as
-AutoFirma names it), and FacturaE (named, or recognised by `auto`: the invoice signed
+AutoFirma names it; a container the page sends is co-signed, or its
+signatures counter-signed inside it, leaves or the whole tree as `target`
+says), and FacturaE (named, or recognised by `auto`: the invoice signed
 enveloped with FacturaE 3.1, or the 3.0/3.1 policy the page gives exactly, and
 the role in `signerClaimedRoles`, `emisor` by default; an invoice already
 signed is refused with `SAF_38`, never signed again as plain XAdES). Signature policies are
@@ -334,9 +336,9 @@ with `policyIdentifierHash`, `policyIdentifierHashAlgorithm` and
 `policyQualifier` declares any other. AutoFirma downloads the policy when the
 page gives no digest; trebaruna answers `SAF_23` instead, because it does not
 fetch what a page points at. XAdES signatures claim the roles in
-`signerClaimedRoles` (several separated by `|`). Asked for something not done
-yet — co-signing an ASiC container, a digest the page computed — trebaruna answers with an
-AutoFirma error naming it, never with a different signature.
+`signerClaimedRoles` (several separated by `|`). Asked for something it does not do —
+a counter-signature of a PDF, a format it does not know — trebaruna answers
+with an AutoFirma error naming it, never with a different signature.
 
 ## What is missing
 

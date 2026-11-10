@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -173,6 +174,16 @@ func (f *fakeContainers) AddXMLSignatures(signatures, added []byte, _ []applicat
 func (f *fakeContainers) WriteContainer(container domain.Container, entries []application.ContainerEntry) ([]byte, error) {
 	f.container, f.entries = container, entries
 	return []byte("zip"), nil
+}
+
+// ManifestOf finds the fake manifest naming the signature.
+func (f *fakeContainers) ManifestOf(signatureEntry string, entries []application.ContainerEntry) (application.ContainerEntry, bool) {
+	for _, entry := range entries {
+		if strings.Contains(entry.Name, "ASiCManifest") && strings.HasPrefix(string(entry.Content), "manifest "+signatureEntry) {
+			return entry, true
+		}
+	}
+	return application.ContainerEntry{}, false
 }
 
 func (f *fakeContainers) Manifest(signatureEntry string, documents []application.ContainerEntry) ([]byte, error) {

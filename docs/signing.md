@@ -415,6 +415,14 @@ refused); an ASiC-E takes a new signature file over all its documents, a CAdES
 `signaturesNNN.xml`. The result is `expediente_cosigned.asice`, and the
 report (`--json`'s `format`) names the kind added, whatever `--format` said.
 
+Its signatures are counter-signed where they are: `sign expediente.asice
+--countersign leaves` (or `all`) adds CMS counter-signatures to each
+`signature*.p7s` and XAdES ones inside each `*signatures*.xml`, as for an
+envelope or a signed XML document, and writes `expediente_countersigned.asice`.
+At LTA the archive timestamp that seals a CAdES counter-signature covers
+what that signature signs: the ASiC-S's document, or the `ASiCManifest` that
+names it in an ASiC-E. XAdES counter-signatures take levels B and T.
+
 A signed XML document is counter-signed in place too: `sign acta_signed.xml
 --countersign leaves` (or `all`; a detached `.xsig` the same way, its
 document beside it) adds a XAdES signature over each chosen

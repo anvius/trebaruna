@@ -416,11 +416,8 @@ func (s NativePageSigner) signOffice(ctx context.Context, request application.Pa
 // the page's asicsFilename, or dataobject.<extension> from its content.
 func (s NativePageSigner) signASiCS(ctx context.Context, request application.PageSignature, family string, level signing.Level, tsa string,
 	policy signing.SignaturePolicy) ([]byte, error) {
-	switch request.Crypto {
-	case domain.Cosign:
-		return s.cosignASiC(ctx, request, level, tsa, policy)
-	case domain.Countersign:
-		return nil, domain.Failure{Code: domain.UnsupportedOperation, Cause: "counter-signatures are not added to ASiC containers yet"}
+	if request.Crypto == domain.Cosign || request.Crypto == domain.Countersign {
+		return s.addToASiC(ctx, request, level, tsa, policy)
 	}
 	name := request.Properties["asicsFilename"]
 	if name == "" {
@@ -458,23 +455,31 @@ func (s NativePageSigner) signASiCS(ctx context.Context, request application.Pag
 	return container, nil
 }
 
-// cosignASiC adds a parallel signature to the container the page sends, of
-// the kind it holds, as AutoFirma's cosign of CAdES-ASiC-S and
-// XAdES-ASiC-S does: the CAdES signature co-signed in place, or one more
-// XAdES signature in its signatures file (refused when it would break
-// another).
-func (s NativePageSigner) cosignASiC(ctx context.Context, request application.PageSignature, level signing.Level, tsa string,
+// addToASiC adds signatures to the container the page sends, as
+// AutoFirma's cosign and countersign of CAdES-ASiC-S and XAdES-ASiC-S do: a
+// parallel signature of the kind it holds (the CAdES signature co-signed in
+// place, or one more XAdES signature in its signatures file, refused when
+// it would break another), or counter-signatures of its signatures where
+// they are, leaves or the whole tree as the page's target says.
+func (s NativePageSigner) addToASiC(ctx context.Context, request application.PageSignature, level signing.Level, tsa string,
 	policy signing.SignaturePolicy) ([]byte, error) {
 	if !bytes.HasPrefix(request.Data, []byte("PK\x03\x04")) {
-		return nil, domain.Failure{Code: domain.NoSignData, Cause: "a co-signature of an ASiC container needs the container"}
+		return nil, domain.Failure{Code: domain.NoSignData, Cause: "a signature added to an ASiC container needs the container"}
 	}
-	cosigned, err := signapp.NewCosignContainer(signinfra.AsicContainers{}, s.cades, s.xades).Execute(ctx, signapp.Request{
-		Signer: request.Key, Level: level, TimestampURL: tsa, Policy: policy, ClaimedRoles: domain.ClaimedRoles(request.Properties),
-	}, request.Data)
+	adding := signapp.Request{Signer: request.Key, Level: level, TimestampURL: tsa, Policy: policy,
+		ClaimedRoles: domain.ClaimedRoles(request.Properties)}
+	var signed signapp.SignedContainer
+	var err error
+	if request.Crypto == domain.Countersign {
+		adding.Countersign = domain.CounterTarget(request.Properties)
+		signed, err = signapp.NewCountersignContainer(signinfra.AsicContainers{}, s.cades, s.xades).Execute(ctx, adding, request.Data)
+	} else {
+		signed, err = signapp.NewCosignContainer(signinfra.AsicContainers{}, s.cades, s.xades).Execute(ctx, adding, request.Data)
+	}
 	if err != nil {
 		return nil, domain.Failure{Code: domain.SignatureFailed, Cause: err.Error()}
 	}
-	return cosigned.Content, nil
+	return signed.Content, nil
 }
 
 // dataExtension names the data's kind from its content, as AutoFirma's

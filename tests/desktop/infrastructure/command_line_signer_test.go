@@ -280,9 +280,12 @@ func TestAddedSignaturesBecomeTheCommandsOptions(t *testing.T) {
 		format   domain.SignatureFormat
 		want     []string
 	}{
-		{"/tmp/atto.pdf.p7m", domain.FormatCosign, []string{"--cosign"}},
-		{"/tmp/offerta.txt.p7s", domain.FormatCosign, []string{"--cosign", "--content", "/tmp/offerta.txt"}},
-		{"/tmp/atto.pdf.p7m", domain.FormatCountersign, []string{"--countersign", "leaves"}},
+		{"/tmp/atto.pdf.p7m", domain.FormatCosign, []string{"--format cades", "--cosign"}},
+		{"/tmp/offerta.txt.p7s", domain.FormatCosign, []string{"--format cades", "--cosign", "--content /tmp/offerta.txt"}},
+		{"/tmp/atto.pdf.p7m", domain.FormatCountersign, []string{"--format cades", "--countersign leaves"}},
+		{"/tmp/expediente.asice", domain.FormatCountersign, []string{"--format cades", "--countersign leaves"}},
+		// A detached XML signature takes XAdES counter-signatures.
+		{"/tmp/acta.txt.XSIG", domain.FormatCountersign, []string{"--format xades", "--countersign leaves"}},
 	}
 	for _, testCase := range cases {
 		binary, recorded := fakeCommand(t, "echo '"+receiptJSON+"'")
@@ -292,8 +295,10 @@ func TestAddedSignaturesBecomeTheCommandsOptions(t *testing.T) {
 			t.Fatalf("Sign: %v", err)
 		}
 		arguments := strings.Join(recordedArguments(t, recorded), " ")
-		if !strings.Contains(arguments, "--format cades") || !strings.Contains(arguments, strings.Join(testCase.want, " ")) {
-			t.Errorf("%s %s: arguments %q, want %v", testCase.document, testCase.format, arguments, testCase.want)
+		for _, wanted := range testCase.want {
+			if !strings.Contains(arguments, wanted) {
+				t.Errorf("%s %s: arguments %q, want %q", testCase.document, testCase.format, arguments, wanted)
+			}
 		}
 	}
 }

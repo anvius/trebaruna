@@ -24,6 +24,12 @@ func (AsicContainers) Manifest(signatureEntry string, documents []application.Co
 	return asic.Manifest(signatureEntry, asicEntries(documents))
 }
 
+// ManifestOf is the ASiCManifest whose SigReference names the signature.
+func (AsicContainers) ManifestOf(signatureEntry string, entries []application.ContainerEntry) (application.ContainerEntry, bool) {
+	manifest, found := asic.ManifestOf(signatureEntry, asicEntries(entries))
+	return application.ContainerEntry{Name: manifest.Name, Content: manifest.Content}, found
+}
+
 // maxContainerEntry bounds a file read from a container.
 const maxContainerEntry = 512 << 20
 

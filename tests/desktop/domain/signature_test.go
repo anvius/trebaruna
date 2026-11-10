@@ -15,8 +15,9 @@ func TestTheDocumentDecidesWhichFormatsMakeSense(t *testing.T) {
 		"/tmp/senza-estensio":   {domain.FormatCAdES, domain.FormatCAdESDetached, domain.FormatASiCS},
 		"/tmp/atto.pdf.p7m":     {domain.FormatCosign, domain.FormatCountersign, domain.FormatCAdES},
 		"/tmp/offerta.txt.p7s":  {domain.FormatCosign, domain.FormatCountersign},
-		"/tmp/expediente.ASICE": {domain.FormatCosign},
-		"/tmp/plano.pdf.asics":  {domain.FormatCosign},
+		"/tmp/expediente.ASICE": {domain.FormatCosign, domain.FormatCountersign},
+		"/tmp/plano.pdf.asics":  {domain.FormatCosign, domain.FormatCountersign},
+		"/tmp/acta.txt.xsig":    {domain.FormatCountersign},
 	}
 	for path, want := range cases {
 		got := domain.FormatsFor(path)

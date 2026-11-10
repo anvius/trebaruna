@@ -48,7 +48,7 @@ Nothing the document or the certificate already says is asked for.
 |---|---|---|
 | **1 Document** | Choose any file, or drop it on the window | The formats that fit it, and the name the signed file will get |
 | **2 Certificate** | **File**: choose a `.p12`, `.pfx` or `.pem` and type its passphrase. **Card**: pick a certificate of the card in the reader and type its PIN. **Firefox**: pick a certificate of the Firefox store | Holder, identifier, issuer, expiry, and whether a trusted list vouches for it; for a card, which certificate signs and how many PIN attempts are at stake |
-| **3 Signature** | Pick signed PDF, `.p7m` envelope, detached `.p7s` or an ASiC-S container (`.asics`, the document and its signature together); for a `.p7m`/`.p7s`, add a parallel signature, counter-sign, or wrap it again; for a FacturaE invoice, your role in it | The seal position, from where it sits on the page; for an invoice, that it is one |
+| **3 Signature** | Pick signed PDF, `.p7m` envelope, detached `.p7s` or an ASiC-S container (`.asics`, the document and its signature together); for a `.p7m`/`.p7s` or a container, add a parallel signature or counter-sign (a `.p7m` may also be wrapped again); for a detached `.xsig`, counter-sign; for a FacturaE invoice, your role in it | The seal position, from where it sits on the page; for an invoice, that it is one |
 
 A **PDF protected with a password** asks for it under the document; it
 travels to the signer in its environment and is never stored. Such a page

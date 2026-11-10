@@ -195,6 +195,9 @@ type OoxmlSigner interface {
 type ContainerWriter interface {
 	WriteContainer(container domain.Container, entries []ContainerEntry) ([]byte, error)
 	Manifest(signatureEntry string, documents []ContainerEntry) ([]byte, error)
+	// ManifestOf is the ASiCManifest among entries that names the signature
+	// entry as its signature: what an ASiC-E's CAdES signature signs.
+	ManifestOf(signatureEntry string, entries []ContainerEntry) (ContainerEntry, bool)
 	// ReadContainer opens a container: its kind and its files but the
 	// mimetype.
 	ReadContainer(content []byte) (domain.Container, []ContainerEntry, error)

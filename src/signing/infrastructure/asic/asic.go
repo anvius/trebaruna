@@ -93,7 +93,7 @@ func msDosTime(instant time.Time) (date, clock uint16) {
 func Manifest(signatureEntry string, documents []Entry) ([]byte, error) {
 	var manifest strings.Builder
 	manifest.WriteString(`<?xml version="1.0" encoding="UTF-8" standalone="no"?>` + "\n")
-	manifest.WriteString(`<asic:ASiCManifest xmlns:asic="http://uri.etsi.org/02918/v1.2.1#" xmlns:ds="http://www.w3.org/2000/09/xmldsig#">`)
+	manifest.WriteString(`<asic:ASiCManifest xmlns:asic="` + manifestNamespace + `" xmlns:ds="http://www.w3.org/2000/09/xmldsig#">`)
 	manifest.WriteString(`<asic:SigReference URI="` + attribute(escapePath(signatureEntry)) + `" MimeType="application/pkcs7-signature"/>`)
 	for _, document := range documents {
 		if document.Name == "" {
@@ -108,6 +108,35 @@ func Manifest(signatureEntry string, documents []Entry) ([]byte, error) {
 	}
 	manifest.WriteString(`</asic:ASiCManifest>`)
 	return []byte(manifest.String()), nil
+}
+
+// manifestNamespace is the ASiCManifest's namespace (EN 319 162-1, A.4).
+const manifestNamespace = "http://uri.etsi.org/02918/v1.2.1#"
+
+// ManifestOf is the ASiCManifest among entries whose SigReference names the
+// signature entry: what an ASiC-E's CAdES signature signs.
+func ManifestOf(signatureEntry string, entries []Entry) (Entry, bool) {
+	for _, entry := range entries {
+		base := strings.ToLower(path.Base(entry.Name))
+		if !strings.HasPrefix(entry.Name, "META-INF/") || !strings.HasPrefix(base, "asicmanifest") || !strings.HasSuffix(base, ".xml") {
+			continue
+		}
+		// The tags require the root and its SigReference in the manifest's
+		// namespace.
+		var manifest struct {
+			XMLName      xml.Name `xml:"http://uri.etsi.org/02918/v1.2.1# ASiCManifest"`
+			SigReference struct {
+				URI string `xml:"URI,attr"`
+			} `xml:"http://uri.etsi.org/02918/v1.2.1# SigReference"`
+		}
+		if xml.Unmarshal(entry.Content, &manifest) != nil {
+			continue
+		}
+		if named, err := url.PathUnescape(manifest.SigReference.URI); err == nil && named == signatureEntry {
+			return entry, true
+		}
+	}
+	return Entry{}, false
 }
 
 // escapePath escapes each segment of a path in the container, keeping the

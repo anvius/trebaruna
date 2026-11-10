@@ -114,8 +114,12 @@ func FormatsFor(documentPath string) []SignatureFormat {
 	case ".p7s":
 		return []SignatureFormat{FormatCosign, FormatCountersign}
 	case ".asics", ".asice", ".scs", ".sce":
-		// A container takes a parallel signature of the kind it holds.
-		return []SignatureFormat{FormatCosign}
+		// A container takes a parallel signature of the kind it holds, or
+		// counter-signatures over the ones inside it.
+		return []SignatureFormat{FormatCosign, FormatCountersign}
+	case ".xsig":
+		// A detached XML signature is counter-signed in place.
+		return []SignatureFormat{FormatCountersign}
 	case ".pdf":
 		return []SignatureFormat{FormatPAdES, FormatCAdES, FormatCAdESDetached, FormatASiCS}
 	case ".xml":

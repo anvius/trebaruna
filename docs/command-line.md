@@ -121,7 +121,7 @@ trebaruna sign <document> [flags]
 | `--field` | — | sign in the PDF's empty signature field of this fully qualified name, the seal in its box (with `--invisible`, none); excludes `--box` |
 | `--detached` | off | The signature beside the untouched document: `<document>.p7s` (CAdES) or `<document>.xsig` (XAdES) |
 | `--cosign` | off | Add a parallel signature to the `.p7m`/`.p7s` given as document |
-| `--countersign` | — | Counter-sign the envelope's signatures: `leaves` or `all` |
+| `--countersign` | — | Counter-sign the signatures of an envelope, a signed XML file (`.xsig` too) or an ASiC container: `leaves` or `all` |
 | `--content` | — | The document a detached `.p7s` signs, to co-sign it |
 | `--asic` | — | `s`: the document and its detached signature in an ASiC-S container, `<document>.asics`; `e`: every document given under one signature, an ASiC-E container, `<first document>.asice` or `--out` |
 | `--policy` | — | Signature policy (EPES) by name: `age` (AGE 1.9), `age18`, `facturae` (3.1), `facturae30` |

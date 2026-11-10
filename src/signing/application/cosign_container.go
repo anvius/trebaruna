@@ -10,17 +10,16 @@ import (
 )
 
 // cosignContainer co-signs a container through CosignContainer.
-func (u *SignDocument) cosignContainer(ctx context.Context, request Request, content []byte) (CosignedContainer, error) {
+func (u *SignDocument) cosignContainer(ctx context.Context, request Request, content []byte) (SignedContainer, error) {
 	if u.containers == nil {
-		return CosignedContainer{}, fmt.Errorf("no container adapter configured")
+		return SignedContainer{}, fmt.Errorf("no container adapter configured")
 	}
 	return NewCosignContainer(u.containers, u.cades, u.xades).Execute(ctx, request, content)
 }
 
-// CosignedContainer is the container with its signature added, and the
-// format of that signature: the kind the container held, whatever the
-// request asked.
-type CosignedContainer struct {
+// SignedContainer is the container with signatures added, and their
+// format: the kind the container held, whatever the request asked.
+type SignedContainer struct {
 	Content []byte
 	Format  domain.Format
 }
@@ -45,10 +44,10 @@ func NewCosignContainer(containers ContainerWriter, cades CadesSigner, xades Xad
 
 // Execute returns the container with the request's signature added; the
 // request's document is not read, the container is.
-func (u *CosignContainer) Execute(ctx context.Context, request Request, content []byte) (CosignedContainer, error) {
+func (u *CosignContainer) Execute(ctx context.Context, request Request, content []byte) (SignedContainer, error) {
 	container, entries, err := u.containers.ReadContainer(content)
 	if err != nil {
-		return CosignedContainer{}, err
+		return SignedContainer{}, err
 	}
 	var documents []ContainerEntry
 	cades, xades := -1, -1
@@ -64,17 +63,17 @@ func (u *CosignContainer) Execute(ctx context.Context, request Request, content 
 		}
 	}
 	if len(documents) == 0 {
-		return CosignedContainer{}, fmt.Errorf("the container holds no document to co-sign")
+		return SignedContainer{}, fmt.Errorf("the container holds no document to co-sign")
 	}
 	entries, format, err := u.addSignature(ctx, request, container, entries, documents, cades, xades)
 	if err != nil {
-		return CosignedContainer{}, err
+		return SignedContainer{}, err
 	}
 	written, err := u.containers.WriteContainer(container, entries)
 	if err != nil {
-		return CosignedContainer{}, err
+		return SignedContainer{}, err
 	}
-	return CosignedContainer{Content: written, Format: format}, nil
+	return SignedContainer{Content: written, Format: format}, nil
 }
 
 // addSignature adds the parallel signature to the entries, of the kind the

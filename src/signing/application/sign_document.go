@@ -186,9 +186,13 @@ func (u *SignDocument) Execute(ctx context.Context, request Request) (Artefact, 
 	switch {
 	case request.Cosign && request.Document.IsContainer():
 		// The container decides the kind of the signature added.
-		var cosigned CosignedContainer
+		var cosigned SignedContainer
 		cosigned, err = u.cosignContainer(ctx, request.WithSignedAt(signedAt), content)
 		signed, request.Format = cosigned.Content, cosigned.Format
+	case request.Countersign != "" && request.Document.IsContainer():
+		var countersigned SignedContainer
+		countersigned, err = u.countersignContainer(ctx, request.WithSignedAt(signedAt), content)
+		signed, request.Format = countersigned.Content, countersigned.Format
 	case request.Container == domain.ASiCE:
 		signed, err = u.signExtended(ctx, request.WithSignedAt(signedAt), content)
 	default:

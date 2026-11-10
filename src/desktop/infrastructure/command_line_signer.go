@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -74,10 +75,14 @@ func (s CommandLineSigner) Sign(ctx context.Context, intent domain.SigningIntent
 // signArguments translates the intent into the command's flags.
 func signArguments(intent domain.SigningIntent) []string {
 	format := string(intent.Format)
-	switch intent.Format {
-	case domain.FormatCAdESDetached, domain.FormatCosign, domain.FormatCountersign, domain.FormatASiCS:
+	switch {
+	case intent.Format == domain.FormatCountersign && strings.EqualFold(filepath.Ext(intent.DocumentPath), ".xsig"):
+		// A detached XML signature takes XAdES counter-signatures.
+		format = string(domain.FormatXAdES)
+	case intent.Format == domain.FormatCAdESDetached, intent.Format == domain.FormatCosign, intent.Format == domain.FormatCountersign,
+		intent.Format == domain.FormatASiCS:
 		format = string(domain.FormatCAdES)
-	case domain.FormatASiCE, domain.FormatFacturaE:
+	case intent.Format == domain.FormatASiCE, intent.Format == domain.FormatFacturaE:
 		format = string(domain.FormatXAdES)
 	}
 	arguments := append([]string{"sign", intent.DocumentPath}, intent.MoreDocuments...)

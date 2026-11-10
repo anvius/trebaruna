@@ -174,6 +174,16 @@ func TestSignSeveralDocumentsIntoAnASiCE(t *testing.T) {
 		if code != 0 || !strings.Contains(stdout, `"format": "`+format+`"`) {
 			t.Errorf("%s co-signed: exit %d %s %s", format, code, stdout, stderr)
 		}
+		// Its signature is counter-signed inside it, where it is.
+		stdout, stderr, code = run("sign", output, "--p12", key, "--countersign", "leaves", "--json")
+		if code != 0 || !strings.Contains(stdout, `"format": "`+format+`"`) {
+			t.Errorf("%s counter-signed: exit %d %s %s", format, code, stdout, stderr)
+		}
+		countersigned := verifyEveryJSON(t, strings.TrimSuffix(output, ".asice")+"_countersigned.asice")
+		if len(countersigned.Signers) != 2 || countersigned.Signers[1].Countersigns != countersigned.Signers[0].Field ||
+			countersigned.Signers[0].Integrity != "good" || countersigned.Signers[1].Integrity != "good" {
+			t.Errorf("%s counter-signed: %+v", format, countersigned.Signers)
+		}
 		changed := rewriteEntry(t, output, "plano.pdf", []byte("%PDF-1.4\n%otro plano\n"))
 		if result := verifyJSON(t, changed); result.Verdict != "broken" {
 			t.Errorf("%s with a changed document: %s", format, result.Verdict)
