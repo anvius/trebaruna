@@ -76,7 +76,8 @@ func integrityOf(t *testing.T, document string) string {
 // signatureValue returns the decoded value and a function that replaces it.
 func signatureValue(t *testing.T, document string) ([]byte, func([]byte) string) {
 	t.Helper()
-	start := strings.Index(document, "<ds:SignatureValue>") + len("<ds:SignatureValue>")
+	opening := strings.Index(document, "<ds:SignatureValue")
+	start := opening + strings.Index(document[opening:], ">") + 1
 	end := strings.Index(document, "</ds:SignatureValue>")
 	value, err := base64.StdEncoding.DecodeString(document[start:end])
 	if err != nil {

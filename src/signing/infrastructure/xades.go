@@ -82,6 +82,11 @@ func (ids signatureIDs) signature() string        { return "trebaruna-signature-
 func (ids signatureIDs) signedProperties() string { return "trebaruna-signed-properties-" + ids.suffix }
 func (ids signatureIDs) reference() string        { return "trebaruna-reference-" + ids.suffix }
 
+// value names the SignatureValue, from the start: a counter-signature
+// names it by that Id, and one given later would change the value's
+// canonical form under the timestamps that seal it.
+func (ids signatureIDs) value() string { return "trebaruna-signature-value-" + ids.suffix }
+
 // referenceAt names the reference to the index-th document of a detached
 // signature that signs several.
 func (ids signatureIDs) referenceAt(index int) string {
@@ -518,7 +523,7 @@ func buildSignature(ids signatureIDs, signedInfo, signatureValue, certificate, s
 			signedProperties + `</xades:QualifyingProperties></ds:Object>`
 	}
 	return `<ds:Signature ` + namespaces + ` Id="` + ids.signature() + `">` + signedInfo +
-		`<ds:SignatureValue>` + signatureValue + `</ds:SignatureValue>` +
+		`<ds:SignatureValue Id="` + ids.value() + `">` + signatureValue + `</ds:SignatureValue>` +
 		`<ds:KeyInfo><ds:X509Data><ds:X509Certificate>` + certificate +
 		`</ds:X509Certificate></ds:X509Data></ds:KeyInfo>` +
 		payload + qualifying +

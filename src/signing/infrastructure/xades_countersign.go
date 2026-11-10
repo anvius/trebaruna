@@ -52,6 +52,13 @@ func (s *XadesSigner) countersignXades(ctx context.Context, request application.
 		}
 		valueID := value.SelectAttrValue("Id", "")
 		if valueID == "" {
+			// The counter-signature names the value by its Id. One given now
+			// changes the value's canonical form, which the signature's own
+			// timestamps sealed: it would lose them.
+			if sealsItsValue(target) {
+				return nil, fmt.Errorf("signature %q is timestamped over a value with no Id for a counter-signature to name; "+
+					"giving it one would break that timestamp, so nothing was written", target.SelectAttrValue("Id", ""))
+			}
 			valueID = idBeside(target, "signature-value")
 			value.CreateAttr("Id", valueID)
 		}
@@ -159,6 +166,23 @@ func buildCounterSignedInfo(ids signatureIDs, valueID string, ecdsa bool) string
 		reference(`Id="`+ids.reference()+`" Type="`+typeCountersignedSignature+`" URI="#`+xmlEscape(valueID)+`"`) +
 		reference(`Type="`+typeSignedProperties+`" URI="#`+ids.signedProperties()+`"`) +
 		`</ds:SignedInfo>`
+}
+
+// sealsItsValue reports a signature whose own unsigned properties hold a
+// timestamp over its value: a SignatureTimeStamp or an archive timestamp.
+func sealsItsValue(signature *etree.Element) bool {
+	qualifying := findQualifyingProperties(signature)
+	if qualifying == nil {
+		return false
+	}
+	for _, unsigned := range qualifying.FindElements("./UnsignedProperties/UnsignedSignatureProperties") {
+		for _, property := range unsigned.ChildElements() {
+			if property.Tag == "SignatureTimeStamp" || property.Tag == "ArchiveTimeStamp" {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // countersignTargets are the XAdES signatures to counter-sign: those with

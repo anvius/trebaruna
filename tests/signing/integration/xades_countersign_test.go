@@ -15,6 +15,7 @@ import (
 	"encoding/pem"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -48,6 +49,11 @@ func verifyXML(t *testing.T, content []byte) []string {
 			if finding.Code == "content.partly_signed" {
 				t.Errorf("%s is read as a partial signature, not a counter-signature", report.FieldName)
 			}
+			// Counter-signing keeps every timestamp: a timestamped
+			// signature's value already has the Id that names it.
+			if finding.Status == verificationdomain.StatusBad {
+				t.Errorf("%s: %s %s", report.FieldName, finding.Code, finding.Detail)
+			}
 		}
 		// A counter-signature is named after the one it signs, as CMS's are,
 		// and says which one that is.
@@ -61,6 +67,54 @@ func verifyXML(t *testing.T, content []byte) []string {
 		fields = append(fields, report.FieldName)
 	}
 	return fields
+}
+
+// TestATimestampedValueWithoutAnIdIsNotCounterSigned: a counter-signature
+// names the value it signs by its Id. trebaruna gives every value one; a
+// signature from elsewhere without it takes one when nothing seals the
+// value, and is refused when a timestamp does, which the Id would break.
+func TestATimestampedValueWithoutAnIdIsNotCounterSigned(t *testing.T) {
+	fixture := newFixture(t)
+	signer := buildPemSigner(t, readFile(t, fixture.keyPath), readFile(t, fixture.certPath))
+	authority := newLocalTSA(t)
+	withoutID := regexp.MustCompile(`<ds:SignatureValue Id="[^"]+">`)
+
+	plain := []byte(signXades(t, `<solicitud><asunto>Licencia</asunto></solicitud>`, false))
+	if !withoutID.Match(plain) {
+		t.Fatal("a trebaruna signature value has its Id from the start")
+	}
+	plain = withoutID.ReplaceAll(plain, []byte("<ds:SignatureValue>"))
+	if _, err := countersignXML(t, signer, authority, plain, "leaves", domain.BES); err != nil {
+		t.Errorf("a value nothing seals takes an Id: %v", err)
+	}
+
+	request := buildXadesRequest(signer, []byte(`<solicitud><asunto>Licencia</asunto></solicitud>`), false)
+	request.Level, request.TimestampURL = domain.T, "http://tsa.example.invalid"
+	stamped, err := infrastructure.NewXadesSigner(authority).SignXades(t.Context(), request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stamped = withoutID.ReplaceAll(stamped, []byte("<ds:SignatureValue>"))
+	if _, err := countersignXML(t, signer, authority, stamped, "leaves", domain.BES); err == nil || !strings.Contains(err.Error(), "break that timestamp") {
+		t.Errorf("a timestamped value without an Id: %v", err)
+	}
+
+	// An archive timestamp seals the value too, signature timestamp or not.
+	_, archiving := ltaFixture(t)
+	request = buildXadesRequest(archiving, []byte(`<solicitud><asunto>Licencia</asunto></solicitud>`), false)
+	request.Level, request.TimestampURL, request.EmbedRevocation = domain.LTA, "http://tsa.example.invalid", true
+	archived, err := infrastructure.NewXadesSigner(authority).SignXades(t.Context(), request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	archived = regexp.MustCompile(`(?s)<xades:SignatureTimeStamp.*?</xades:SignatureTimeStamp>`).ReplaceAll(archived, nil)
+	archived = withoutID.ReplaceAll(archived, []byte("<ds:SignatureValue>"))
+	if !strings.Contains(string(archived), "ArchiveTimeStamp") || strings.Contains(string(archived), "SignatureTimeStamp") {
+		t.Fatal("the fixture is an archive timestamp without a signature timestamp")
+	}
+	if _, err := countersignXML(t, signer, authority, archived, "leaves", domain.BES); err == nil || !strings.Contains(err.Error(), "break that timestamp") {
+		t.Errorf("an archived value without an Id: %v", err)
+	}
 }
 
 // timestampJudgements says, for each signature, what its timestamp was

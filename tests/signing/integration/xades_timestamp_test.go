@@ -265,7 +265,7 @@ func TestXadesTimestampImprintCoversSignatureValue(t *testing.T) {
 		t.Errorf("the token imprint does not cover the canonical ds:SignatureValue\n  file: %x\n  token: %x",
 			digest, tsa.imprint)
 	}
-	raw := sha256.Sum256(regexp.MustCompile(`(?s)<ds:SignatureValue>.*?</ds:SignatureValue>`).Find(output))
+	raw := sha256.Sum256(regexp.MustCompile(`(?s)<ds:SignatureValue[^>]*>.*?</ds:SignatureValue>`).Find(output))
 	if bytes.Equal(raw[:], tsa.imprint) {
 		t.Error("the token must not cover the element as written (trebaruna before 0.38.2)")
 	}
@@ -620,7 +620,7 @@ func TestATimestampOverTheOldFormIsAcceptedAndTold(t *testing.T) {
 		t.Fatalf("sign: %v", err)
 	}
 
-	raw := sha256.Sum256(regexp.MustCompile(`(?s)<ds:SignatureValue>.*?</ds:SignatureValue>`).Find(signed))
+	raw := sha256.Sum256(regexp.MustCompile(`(?s)<ds:SignatureValue[^>]*>.*?</ds:SignatureValue>`).Find(signed))
 	response, err := tsa.Token(context.Background(), raw[:], "", "", "")
 	if err != nil {
 		t.Fatal(err)

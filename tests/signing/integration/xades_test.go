@@ -261,7 +261,8 @@ func TestXadesWritesECDSAAsXMLDSigExpects(t *testing.T) {
 		t.Fatalf("SignXades: %v", err)
 	}
 
-	start := strings.Index(string(output), "<ds:SignatureValue>") + len("<ds:SignatureValue>")
+	opening := strings.Index(string(output), "<ds:SignatureValue")
+	start := opening + strings.Index(string(output[opening:]), ">") + 1
 	end := strings.Index(string(output), "</ds:SignatureValue>")
 	value, err := base64.StdEncoding.DecodeString(string(output[start:end]))
 	if err != nil {

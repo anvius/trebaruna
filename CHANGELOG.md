@@ -930,6 +930,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Counter-signing a timestamped XAdES signature broke its timestamp: the
+  counter-signature names the signature's value by its `Id`, which
+  trebaruna did not write, so one was added after the timestamp had sealed
+  the value. Every XML signature trebaruna makes now carries
+  `SignatureValue Id` from the start; a timestamped signature from
+  elsewhere without one is refused instead of broken. xmlsec1 verifies the
+  signatures, LibreOffice the ODF ones.
+
 - `verify` read only the first archive timestamp of a XAdES signature: a
   renewed XAdES-A's later ones went unchecked, a false one included. Each
   is now checked. A XAdES signature was also searched into the

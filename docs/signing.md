@@ -428,8 +428,11 @@ A signed XML document is counter-signed in place too: `sign acta_signed.xml
 document beside it) adds a XAdES signature over each chosen
 signature's `SignatureValue` (a reference of type
 `http://uri.etsi.org/01903#CountersignedSignature`), inside that signature's
-`UnsignedSignatureProperties` as `xades:CounterSignature`; the countersigned
-`SignatureValue` gets an `Id` if it had none. Levels B and T; plain XMLDSig
+`UnsignedSignatureProperties` as `xades:CounterSignature`. trebaruna gives
+every `SignatureValue` an `Id` when it signs, so the counter-signature names
+it without touching it; a signature from elsewhere without one gets one when
+nothing seals its value, and is refused when a timestamp does (the `Id` would
+change what the timestamp sealed). Levels B and T; plain XMLDSig
 signatures, which have no properties to hold one, are left alone. Every
 signature that verified before must verify after, or nothing is written: a
 signature whose enveloped transform removes only itself covers the others and
