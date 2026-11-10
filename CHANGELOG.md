@@ -852,7 +852,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ADRs and the `timestamp.legacy_form` finding mention moved by the same 17
   (0.38.2 is 0.55.2, 0.50.1 is 0.67.1). A packaging test derives the
   version from the history and fails when `VERSION` says otherwise. The
-  0.1.0 to 0.3.1 releases below keep the numbers they were published with.
+  releases below are renumbered the same way: 0.3.1 is 0.20.5 and 0.3.0 is
+  0.20.3, their tags renamed to match; 0.1.0 and 0.2.0, both in the first
+  commit, are its 0.0.0.
 
 - The seal is laid out as marks (the rubric, the accent rule, the lines of
   text) apart from the PDF library that draws them, so trebaruna can draw
@@ -1469,7 +1471,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   matching flag is absent (`sign`, `certificate`, `timestamp`, `token`,
   `handler`); an explicit flag still wins.
 
-## [0.3.1-unstable] - 2026-11-08
+## [0.20.5-unstable] - 2026-11-08
+
+Published as 0.3.1-unstable, tagged `v0.20.5-unstable` since.
 
 ### Fixed
 
@@ -1481,7 +1485,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The mirror workflow carried the branch but not the tags, so a mirror user
   asking for a version was told it did not exist.
 
-## [0.3.0-unstable] - 2026-11-08
+## [0.20.3-unstable] - 2026-11-08
+
+Published as 0.3.0-unstable, tagged `v0.20.3-unstable` since.
 
 ### Changed
 
@@ -1539,8 +1545,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `trebaruna://` handler with mandatory human approval, signing and delivery.
 - Full English manual in `docs/`, twelve documents.
 
-## [0.2.0-unstable] - 2026-11-02
+## [0.0.0-unstable] - 2026-11-02
 
+The first commit, which gathers the work numbered 0.1.0 (CLI signing
+CAdES, PAdES and XAdES) and 0.2.0 before this repository kept its history.
 First working slice. Not a stable release: major version 0 by policy.
 
 ### Added
@@ -1581,7 +1589,3 @@ First working slice. Not a stable release: major version 0 by policy.
 - XAdES output not yet validated against `xmlsec1`.
 - PKCS#11 requires cgo, so the token build is a separate binary.
 - Messages are English only; localisation pending.
-
-## [0.1.0-unstable] - 2026-11-02
-
-First slice: CLI signing CAdES, PAdES and XAdES.

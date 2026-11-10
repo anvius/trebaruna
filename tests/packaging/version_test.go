@@ -7,7 +7,8 @@ package packaging_test
 // X.0.0" opens the RC line of X.0.0 and "feat: release" makes it stable.
 // Major 0 is always -unstable. A change being prepared may already carry
 // its own step, so with uncommitted work VERSION may be one feat or one fix
-// ahead; a clean checkout must match exactly.
+// ahead; a clean checkout must match exactly. Release tags name the version
+// of the commit they mark.
 
 import (
 	"fmt"
@@ -113,6 +114,21 @@ func TestTheVersionIsTheOneTheHistoryGives(t *testing.T) {
 		}
 	}
 	t.Errorf("VERSION says %s; the history gives %s", version, derived)
+}
+
+// TestEveryTagIsTheVersionItsCommitGives: a release tag names the version
+// the history gives at the commit it marks.
+func TestEveryTagIsTheVersionItsCommitGives(t *testing.T) {
+	if git(t, "rev-parse", "--is-shallow-repository") == "true" {
+		t.Skip("a shallow clone does not hold the whole history")
+	}
+	roots := strings.Fields(git(t, "rev-list", "--max-parents=0", "HEAD"))
+	for _, tag := range strings.Fields(git(t, "tag", "--list", "v*", "--merged", "HEAD")) {
+		subjects := strings.Split(git(t, "log", "--reverse", "--format=%s", roots[len(roots)-1]+".."+tag+"^{commit}"), "\n")
+		if derived := derivedVersion(subjects); "v"+derived.String() != tag {
+			t.Errorf("the tag %s marks a commit whose version is %s", tag, derived)
+		}
+	}
 }
 
 // TestTheVersionPolicyCountsAsWritten pins the counting itself.
