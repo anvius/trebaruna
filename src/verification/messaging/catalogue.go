@@ -483,7 +483,7 @@ func init() {
 
 // languages are the report's catalogues by language tag.
 var languages = map[string]Catalogue{
-	"es": Spanish, "ca": Catalan, "gl": Galician, "eu": Basque, "it": Italian, "en": English,
+	"es": Spanish, "ca": Catalan, "gl": Galician, "eu": Basque, "it": Italian, "pl": Polish, "en": English,
 }
 
 // Tag is the language a locale string names ("it", "ca_ES.UTF-8"), among

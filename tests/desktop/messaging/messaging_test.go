@@ -21,6 +21,8 @@ func TestParseLanguageAcceptsLocaleStrings(t *testing.T) {
 		"ca_ES.UTF-8": messaging.Catalan,
 		"gl_ES":       messaging.Galician,
 		"eu_ES.UTF-8": messaging.Basque,
+		"pl_PL.UTF-8": messaging.Polish,
+		"pl":          messaging.Polish,
 		"":            messaging.Spanish,
 		"fr_FR":       messaging.Spanish,
 	}

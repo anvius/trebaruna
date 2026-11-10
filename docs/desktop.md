@@ -365,8 +365,8 @@ Check tab any file is checked; anywhere else it becomes the document to sign.
 
 ## Languages
 
-Spanish, Catalan, Galician, Basque, Italian and English (`es`, `ca`, `gl`,
-`eu`, `it`, `en`), chosen from `TREBARUNA_LANG` or `$LANG`:
+Spanish, Catalan, Galician, Basque, Italian, Polish and English (`es`, `ca`,
+`gl`, `eu`, `it`, `pl`, `en`), chosen from `TREBARUNA_LANG` or `$LANG`:
 
 ```bash
 TREBARUNA_LANG=ca trebaruna-desktop
@@ -375,7 +375,9 @@ TREBARUNA_LANG=ca trebaruna-desktop
 The catalogue is checked by the tests: a missing translation, a string left
 in Spanish, or a lost `%s` fails them instead of showing an empty or broken
 label at runtime. Fyne's own widget strings are supplied by hand for Italian,
-Catalan, Galician and Basque, because Fyne does not ship them.
+Catalan, Galician and Basque, because Fyne does not ship them, and for
+Polish, where four of Fyne's words are wrong. The Polish translation has not
+yet been read by a native speaker; corrections are welcome.
 
 ## Light and dark
 

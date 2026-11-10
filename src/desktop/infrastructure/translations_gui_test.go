@@ -63,6 +63,26 @@ func TestItalianSystemGetsItalianWidgets(t *testing.T) {
 	}
 }
 
+// TestPolishSystemGetsPolishWidgets covers a language Fyne ships that is not
+// Spanish.
+//
+// A language without its own case in fyneTranslationsFor fell through to the
+// Spanish stand-in, which was then registered under "pl" on top of Fyne's own
+// bundle: a Polish user read "Cancelar" and "Archivo" in the file dialog.
+func TestPolishSystemGetsPolishWidgets(t *testing.T) {
+	t.Setenv("LANG", "pl_PL.UTF-8")
+	t.Setenv("LC_ALL", "pl_PL.UTF-8")
+
+	InstallTranslations(messaging.Polish)
+
+	for key, want := range map[string]string{"Cancel": "Anuluj", "File": "Plik", "Delete": "Usuń", "Quit": "Zakończ",
+		"file.name": "Nazwa", "file.parent": "W górę"} {
+		if got := lang.LocalizeKey(key, key); got != want {
+			t.Errorf("%s = %q, want %q", key, got, want)
+		}
+	}
+}
+
 // TestItalianSystemEnglishAppStaysReadable covers the remaining combination.
 //
 // The system is Italian and the application is English: our English base

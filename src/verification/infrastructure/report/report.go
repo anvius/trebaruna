@@ -20,7 +20,7 @@ import (
 type Input struct {
 	Report    domain.DocumentReport
 	Catalogue messaging.Catalogue
-	// Language is the report's language tag (es, ca, gl, eu, it, en), for
+	// Language is the report's language tag (es, ca, gl, eu, it, pl, en), for
 	// HTML.
 	Language string
 	// Digest is the SHA-256 of the verified file, hexadecimal: it ties the

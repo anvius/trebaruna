@@ -160,7 +160,7 @@ MARIA LOPEZ GARCIA
 ```
 
 The output is in the language of `--lang` (`es`, `ca`, `gl`, `eu`, `it`,
-`en`) or of `LANG`, as `verify`'s; the example is `--lang en`.
+`pl`, `en`) or of `LANG`, as `verify`'s; the example is `--lang en`.
 
 Machine-readable:
 

@@ -146,12 +146,14 @@ func TestTheFormatComesFromTheName(t *testing.T) {
 	}
 }
 
-// TestCentralEuropeanLettersPrintInThePDFReport: a signer whose name needs
-// letters WinAnsi lacks (Polish, Czech, Hungarian) prints whole: poppler
-// reads it back through the glyph names the fonts' encoding gives, and
-// qpdf accepts the file.
+// TestCentralEuropeanLettersPrintInThePDFReport: a Polish report for a
+// signer whose name needs letters WinAnsi lacks (Polish, Czech, Hungarian)
+// prints whole, its labels and its title too: poppler reads them back
+// through the glyph names the fonts' encoding gives, and qpdf accepts the
+// file.
 func TestCentralEuropeanLettersPrintInThePDFReport(t *testing.T) {
 	in := input(3)
+	in.Catalogue, in.Language = messaging.Polish, "pl"
 	in.Report.Signers[0].SignerName = "Łukasz Żółć, Jiří Dvořák, Árpád Kővári"
 	pdf := render(t, report.PDF, in)
 	if !bytes.Contains(pdf, []byte("/Differences [")) || !bytes.Contains(pdf, []byte("/lslash")) {
@@ -173,9 +175,16 @@ func TestCentralEuropeanLettersPrintInThePDFReport(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, expected := range []string{"Łukasz Żółć", "Jiří Dvořák", "Árpád Kővári"} {
+	for _, expected := range []string{"Łukasz Żółć", "Jiří Dvořák", "Árpád Kővári", messaging.Polish.LabelConnections} {
 		if !strings.Contains(string(text), expected) {
 			t.Errorf("pdftotext lacks %q in:\n%s", expected, text)
 		}
+	}
+	information, err := exec.Command("pdfinfo", path).Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(information), messaging.Polish.ReportTitle) {
+		t.Errorf("the document title is not %q:\n%s", messaging.Polish.ReportTitle, information)
 	}
 }

@@ -39,7 +39,7 @@ func runCertificate(args []string, stdout, stderr io.Writer) int {
 	var (
 		passphrase = flags.String("pass", "", "passphrase for a P12 or PEM bundle (or $TREBARUNA_PASSPHRASE)")
 		territory  = flags.String("territory", defaultTerritory(), "trust list for the issuer verdict")
-		lang       = flags.String("lang", "", "language for messages: es | ca | gl | eu | it | en")
+		lang       = flags.String("lang", "", "language for messages: es | ca | gl | eu | it | pl | en")
 		asJSON     = flags.Bool("json", false, "machine-readable output")
 	)
 

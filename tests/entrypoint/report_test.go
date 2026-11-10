@@ -30,7 +30,7 @@ func TestVerifyWritesAReport(t *testing.T) {
 }
 
 // TestTheReportNamesTheLanguageItIsIn: its lang attribute and its text
-// agree, for the co-official languages and for a locale none matches.
+// agree, for the co-official languages, Polish and a locale none matches.
 func TestTheReportNamesTheLanguageItIsIn(t *testing.T) {
 	key := writeProtectedP12(t, "segreto")
 	t.Setenv("TREBARUNA_PASSPHRASE", "segreto")
@@ -40,7 +40,7 @@ func TestTheReportNamesTheLanguageItIsIn(t *testing.T) {
 	}
 	t.Setenv("LANG", "")
 	directory := t.TempDir()
-	for _, language := range []string{"ca", "gl", "eu", "fr"} {
+	for _, language := range []string{"ca", "gl", "eu", "pl", "fr"} {
 		destination := filepath.Join(directory, language+".html")
 		run("verify", document+".p7m", "--report", destination, "--lang", language)
 		content, _ := os.ReadFile(destination)

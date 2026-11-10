@@ -12,6 +12,7 @@
   <summary xml:lang="gl">Asina e comproba documentos cos formatos de sinatura europeos</summary>
   <summary xml:lang="eu">Sinatu eta egiaztatu dokumentuak Europako sinadura-formatuekin</summary>
   <summary xml:lang="it">Firma e verifica documenti con i formati di firma europei</summary>
+  <summary xml:lang="pl">Podpisuj i weryfikuj dokumenty w europejskich formatach podpisu</summary>
   <developer id="org.codeberg.simplicer">
     <name>Simplicer</name>
   </developer>
@@ -55,6 +56,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.108.0-unstable" date="2026-11-10">
+      <description>
+        <p>The interface and the verification report are available in Polish.</p>
+      </description>
+    </release>
     <release version="0.107.2-unstable" date="2026-11-10">
       <description>
         <p>The File menu's Quit item is translated in every language.</p>

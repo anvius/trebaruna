@@ -40,7 +40,7 @@ func runVerify(args []string, stdout, stderr io.Writer) int {
 		territory = flags.String("territory", defaultTerritory(), "trust list to use, e.g. IT or ES")
 		asJSON    = flags.Bool("json", false, "machine-readable output")
 		offline   = flags.Bool("offline", true, "do not contact OCSP/CRL responders")
-		lang      = flags.String("lang", "", "language for messages: es | ca | gl | eu | it | en")
+		lang      = flags.String("lang", "", "language for messages: es | ca | gl | eu | it | pl | en")
 		reportTo  = flags.String("report", "", "also write the verification as a report: <file>.md, .html or .pdf")
 		content   = flags.String("content", "", "the document a detached signature signs (default: beside it, the same name without .p7s, or the name a .xsig gives)")
 	)

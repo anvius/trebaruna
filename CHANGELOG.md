@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The window, the approval windows, `certificate`, `verify` and the
+  verification report speak Polish (`pl`, from `TREBARUNA_LANG`, `$LANG`
+  or `--lang`), with its letters printed whole in the PDF report. On a
+  Polish system Fyne's own dialogs no longer fall back to the Spanish
+  stand-in. The translation has not yet been read by a native speaker;
+  corrections are welcome.
+
 - `trebaruna recipients find <who> --ldap ldap://host/<base>` looks a
   person's certificate up in an LDAP directory, by e-mail address or name,
   says of each whether it can receive envelopes, and keeps the fit ones in

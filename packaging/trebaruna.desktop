@@ -8,12 +8,14 @@ GenericName[it]=Firma elettronica
 GenericName[ca]=Signatura electrònica
 GenericName[gl]=Sinatura electrónica
 GenericName[eu]=Sinadura elektronikoa
+GenericName[pl]=Podpis elektroniczny
 Comment=Sign PDF, XML and any file with CAdES, PAdES or XAdES
 Comment[es]=Firma PDF, XML y cualquier fichero con CAdES, PAdES o XAdES
 Comment[it]=Firma PDF, XML e qualsiasi file con CAdES, PAdES o XAdES
 Comment[ca]=Signa PDF, XML i qualsevol fitxer amb CAdES, PAdES o XAdES
 Comment[gl]=Asina PDF, XML e calquera ficheiro con CAdES, PAdES ou XAdES
 Comment[eu]=Sinatu PDF, XML eta edozein fitxategi CAdES, PAdES edo XAdES bidez
+Comment[pl]=Podpisuj pliki PDF, XML i dowolne inne w formatach CAdES, PAdES lub XAdES
 # %U passes file arguments, trebaruna:// URIs and AutoFirma's afirma:// URIs;
 # the app decides which it received. afirma:// opens the approval window.
 Exec=trebaruna-desktop %U
@@ -21,5 +23,5 @@ Icon=trebaruna
 Terminal=false
 Categories=Office;Graphics;
 MimeType=application/pdf;text/xml;application/xml;application/pkcs7-mime;x-scheme-handler/trebaruna;x-scheme-handler/afirma;
-Keywords=sign;signature;firma;firma digitale;signatura;sinatura;sinadura;pades;cades;xades;pdf;
+Keywords=sign;signature;firma;firma digitale;signatura;sinatura;sinadura;podpis;pades;cades;xades;pdf;
 StartupNotify=true

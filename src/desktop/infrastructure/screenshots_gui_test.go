@@ -49,7 +49,7 @@ func TestScreenshots(t *testing.T) {
 	document := writeSampleContract(t)
 	InstallTranslations(messaging.Spanish)
 
-	for _, language := range []messaging.Language{messaging.Spanish, messaging.Italian, messaging.Catalan, messaging.Galician, messaging.Basque} {
+	for _, language := range []messaging.Language{messaging.Spanish, messaging.Italian, messaging.Catalan, messaging.Galician, messaging.Basque, messaging.Polish} {
 		window := test.NewTempWindow(t, nil)
 		desktop := newDesktop(window, messaging.For(language), "trebaruna")
 		desktop.inspect = application.NewInspectCertificate(portraitReader{})

@@ -176,7 +176,7 @@ user seeing what is signed and where anything goes.
 
 | Capability | Status |
 |---|---|
-| Window, approval windows and verification report in Spanish, Catalan, Galician, Basque, Italian and English (`TREBARUNA_LANG`, `$LANG`, `verify --lang`); tests fail on a missing string, a string left in Spanish or a lost formatting verb | built |
+| Window, approval windows and verification report in Spanish, Catalan, Galician, Basque, Italian, Polish and English (`TREBARUNA_LANG`, `$LANG`, `verify --lang`); tests fail on a missing string, a string left in Spanish or a lost formatting verb | built |
 
 ## Use cases (application layer)
 

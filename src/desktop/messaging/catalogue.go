@@ -17,6 +17,10 @@ const (
 	// Italian is required because the documents are Italian.
 	Italian Language = "it"
 
+	// Polish is for users in Poland, another eIDAS country; Fyne ships its
+	// widget strings, a few of which the desktop corrects.
+	Polish Language = "pl"
+
 	// English is the fallback for bug reports and foreign colleagues.
 	English Language = "en"
 
@@ -29,7 +33,7 @@ const (
 
 // Languages lists every interface language, the default first.
 func Languages() []Language {
-	return []Language{Spanish, Catalan, Galician, Basque, Italian, English}
+	return []Language{Spanish, Catalan, Galician, Basque, Italian, Polish, English}
 }
 
 // ParseLanguage maps a locale name onto a supported language.
@@ -423,6 +427,8 @@ func For(language Language) Catalogue {
 	switch language {
 	case Italian:
 		return italian
+	case Polish:
+		return polish
 	case English:
 		return english
 	case Catalan:

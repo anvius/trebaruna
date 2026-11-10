@@ -13,7 +13,7 @@ import (
 func TestTheCertificateIsDescribedInOneLanguage(t *testing.T) {
 	path := writeProtectedP12(t, "segreto")
 	t.Setenv("TREBARUNA_PASSPHRASE", "segreto")
-	for _, lang := range []string{"es", "it", "en", "ca", "gl", "eu"} {
+	for _, lang := range []string{"es", "it", "pl", "en", "ca", "gl", "eu"} {
 		stdout, stderr, code := run("certificate", path, "--lang", lang, "--territory", "EU")
 		if code != 0 {
 			t.Fatalf("%s: exit %d, %s", lang, code, stderr)

@@ -253,7 +253,7 @@ condition kept a signature from being qualified:
 }
 ```
 
-Languages: `--lang es|ca|gl|eu|it|en`, or `$LANG`.
+Languages: `--lang es|ca|gl|eu|it|pl|en`, or `$LANG`.
 
 ---
 
@@ -320,7 +320,7 @@ trebaruna asic --extended document.pdf sig1.p7m sig2.p7m   # ASiC-E
 ## The desktop app
 
 A native window (Fyne, ~33 MB) with a sign tab and a verify tab, in Spanish,
-Catalan, Galician, Basque, Italian and English. It drives the same CLI binary rather than reimplementing
+Catalan, Galician, Basque, Italian, Polish and English. It drives the same CLI binary rather than reimplementing
 anything: one validation path, one behaviour.
 
 Without poppler the preview degrades to manual box entry with an explicit

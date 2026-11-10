@@ -262,7 +262,7 @@ trebaruna verify <document> [flags]
 | `--format` | from the suffix | `pdf`, `cades`, `xades` or `asic` |
 | `--territory` | from `$LANG` | Trust list to use, e.g. `IT`, `ES`, `EU` |
 | `--offline` | `true` | Set `--offline=false` to query OCSP and CRL responders |
-| `--lang` | from `$LANG` | `es`, `ca`, `gl`, `eu`, `it` or `en` for human output and the report |
+| `--lang` | from `$LANG` | `es`, `ca`, `gl`, `eu`, `it`, `pl` or `en` for human output and the report |
 | `--json` | off | Machine-readable report |
 | `--report` | — | Also write the verification as a document to keep or send: `<file>.md`, `.html` or `.pdf` |
 | `--content` | beside it | The document a detached signature signs |
@@ -433,7 +433,7 @@ trebaruna certificate certificate.cer --territory IT
 |---|---|
 | `--pass` | Passphrase for the P12/PEM |
 | `--territory` | Check the issuer against a trust list |
-| `--lang` | Language of the output: `es`, `ca`, `gl`, `eu`, `it`, `en` (default: `LANG`) |
+| `--lang` | Language of the output: `es`, `ca`, `gl`, `eu`, `it`, `pl`, `en` (default: `LANG`) |
 | `--json` | Machine-readable output, with the verdict's `verdict_code` |
 
 Accepts `.p12`, `.pfx`, `.pem`, `.crt`, `.cer`. See

@@ -15,7 +15,7 @@ import (
 
 var catalogues = map[string]messaging.Catalogue{
 	"ca": messaging.Catalan, "gl": messaging.Galician, "eu": messaging.Basque,
-	"it": messaging.Italian, "en": messaging.English,
+	"it": messaging.Italian, "pl": messaging.Polish, "en": messaging.English,
 }
 
 var verbs = regexp.MustCompile(`%[-+# 0-9.]*[a-zA-Z%]`)
@@ -56,7 +56,7 @@ func TestEveryReportLanguageIsWhole(t *testing.T) {
 func TestALocalePicksItsLanguage(t *testing.T) {
 	for locale, want := range map[string]messaging.Catalogue{
 		"ca_ES.UTF-8": messaging.Catalan, "GL": messaging.Galician, "eu": messaging.Basque,
-		"it_IT": messaging.Italian, "en": messaging.English, "fr": messaging.Spanish, "": messaging.Spanish,
+		"it_IT": messaging.Italian, "pl_PL.UTF-8": messaging.Polish, "en": messaging.English, "fr": messaging.Spanish, "": messaging.Spanish,
 	} {
 		if got := messaging.For(locale); got.ReportTitle != want.ReportTitle {
 			t.Errorf("%q picks %q", locale, got.ReportTitle)
@@ -67,7 +67,7 @@ func TestALocalePicksItsLanguage(t *testing.T) {
 // TestTheIssuerNoteNamesTheListsTerritory: the qualified note says whose
 // list; a code no language knows falls back to the verdict's own words.
 func TestTheIssuerNoteNamesTheListsTerritory(t *testing.T) {
-	for _, lang := range []string{"es", "it", "en", "ca", "gl", "eu"} {
+	for _, lang := range []string{"es", "it", "pl", "en", "ca", "gl", "eu"} {
 		catalogue := messaging.For(lang)
 		if note := catalogue.IssuerNote("issuer.qualified", "IT", "fallback"); !strings.Contains(note, "IT") || strings.Contains(note, "%") {
 			t.Errorf("%s: %q", lang, note)

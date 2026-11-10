@@ -196,6 +196,33 @@ func fyneTranslationsFor(language messaging.Language) map[string]string {
 			"file.name":     "Izena",
 			"file.parent":   "Gora",
 		}
+	case messaging.Polish:
+		// Fyne ships Polish, but without its own case Polish fell through to
+		// the Spanish below, registered under "pl" over Fyne's bundle. These
+		// are Fyne's words where they are right ("Nawza", "Potwierdz",
+		// "Wyjdz" and "Rodzic" are not) plus the keys its bundle lacks.
+		return map[string]string{
+			"(Select one)":  "(wybierz)",
+			"OK":            "OK",
+			"Cancel":        "Anuluj",
+			"Open":          "Otwórz",
+			"Save":          "Zapisz",
+			"Create Folder": "Utwórz folder",
+			"New Folder":    "Nowy folder",
+			"Name":          "Nazwa",
+			"Delete":        "Usuń",
+			"Rename":        "Zmień nazwę",
+			"Confirm":       "Potwierdź",
+			"Yes":           "Tak",
+			"No":            "Nie",
+			"Error":         "Błąd",
+			"Information":   "Informacja",
+			"Are you sure?": "Czy na pewno?",
+			"File":          "Plik",
+			"Quit":          "Zakończ",
+			"file.name":     "Nazwa",
+			"file.parent":   "W górę",
+		}
 	case messaging.English:
 		return map[string]string{}
 	default: // Spanish. Fyne ships it; this stands in only if that ever changes.

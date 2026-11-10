@@ -20,7 +20,7 @@ use trebaruna today (see the end).
 | 2.4.3 Focus order | met | Tab follows the steps from top to bottom, then the page. |
 | 2.4.7 Focus visible | met | Fyne's focus outline in the accent colour (3:1 or more), and a ring around the page when it has the keyboard. |
 | 2.5.7 Dragging movements | met | Moving the seal: a click, the arrows, or Find free space. Resizing it: + and −, besides the corner handle. |
-| 3.1.1 / 3.1.2 Language | met | Six interface languages; the HTML report names its language in `lang`. |
+| 3.1.1 / 3.1.2 Language | met | Seven interface languages; the HTML report names its language in `lang`. |
 | 3.3.1 Error identification | met | Errors are sentences next to the action, in the person's language, and come before signing (a certificate that does not open, an image that cannot be a rubric). |
 | 4.1.2 Name, role, value | partly | Fyne 2.8 exposes buttons, labels and links to Windows' UI Automation and macOS's VoiceOver behind its `accessibility` build tag, which the Windows and macOS builds enable; the page reports its description. Linux has no screen-reader support in Fyne yet (no AT-SPI). Not tried with NVDA, Narrator or VoiceOver here: it needs those systems. |
 
