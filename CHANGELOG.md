@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `trebaruna recipients find <who> --ldap ldap://host/<base>` looks a
+  person's certificate up in an LDAP directory, by e-mail address or name,
+  says of each whether it can receive envelopes, and keeps the fit ones in
+  the address book with `--save`, to encrypt for them with `--to saved:`.
+  `ldaps://` checks the server against the system's roots. trebaruna's own
+  LDAPv3 client binds anonymously and asks only for the certificate
+  attributes; the connection is listed with the purpose `directory`, which
+  connections other than HTTP can now be recorded under.
+
 - `trebaruna update` and Help → Check for updates say whether a newer
   release is published, comparing this build with the release tags of the
   repository trebaruna is published in by Semantic Versioning's

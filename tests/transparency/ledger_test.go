@@ -1,7 +1,9 @@
 package transparency_test
 
 import (
+	"context"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -162,5 +164,52 @@ func TestTheProgramNamesItself(t *testing.T) {
 	}
 	if strings.Join(seen, ",") != "trebaruna,trebaruna,caller/1" {
 		t.Errorf("User-Agent headers %q", seen)
+	}
+}
+
+// TestAConnectionThatIsNotHTTPIsRecordedToo: Dial records the destination,
+// the bytes each way when the connection closes, and a connection that
+// could not be opened with its error.
+func TestAConnectionThatIsNotHTTPIsRecordedToo(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	go func() {
+		connection, err := listener.Accept()
+		if err != nil {
+			return
+		}
+		buffer := make([]byte, 5)
+		io.ReadFull(connection, buffer)
+		connection.Write([]byte("hola"))
+		connection.Close()
+	}()
+	transparency.Reset()
+	connection, err := transparency.Dial(context.Background(), domain.PurposeDirectory, "ldap", listener.Addr().String(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	connection.Write([]byte("hello"))
+	answer := make([]byte, 4)
+	io.ReadFull(connection, answer)
+	if recorded := transparency.Connections(); len(recorded) != 0 {
+		t.Errorf("recorded before closing: %+v", recorded)
+	}
+	connection.Close()
+	connection.Close()
+	recorded := transparency.Connections()
+	if len(recorded) != 1 || recorded[0].Purpose != domain.PurposeDirectory || recorded[0].Method != "ldap" ||
+		recorded[0].URL != "ldap://"+listener.Addr().String()+"/" || recorded[0].SentBytes != 5 || recorded[0].Received != 4 {
+		t.Errorf("recorded %+v", recorded)
+	}
+	listener.Close()
+
+	transparency.Reset()
+	if _, err := transparency.Dial(context.Background(), domain.PurposeDirectory, "ldap", listener.Addr().String(), nil); err == nil {
+		t.Fatal("dialled a closed port")
+	}
+	if recorded := transparency.Connections(); len(recorded) != 1 || recorded[0].Error == "" {
+		t.Errorf("a failed connection: %+v", recorded)
 	}
 }

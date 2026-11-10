@@ -627,6 +627,7 @@ trebaruna-token decrypt offerta.pdf.p7e --card                  # the key stays 
 trebaruna recipients add luca.pem                               # keep Luca's certificate
 trebaruna encrypt offerta.pdf --to saved:bianchi                # by name, or by the fingerprint's start
 trebaruna recipients list | remove <fingerprint start | holder>
+trebaruna recipients find maria@example.org --ldap ldap://ldap.example.org/o=Example,c=ES --save
 ```
 
 An encrypted envelope (`.p7e`, CMS EnvelopedData) only the recipients'
@@ -649,6 +650,17 @@ Many cards decrypt OAEP only with SHA-1; the error says so.
 `add` keeps only a certificate that can receive envelopes now; `--to
 saved:<who>` takes a saved one by the start of its fingerprint or words of its
 holder's name, and refuses a name two certificates share. `--json` on each.
+
+`recipients find` looks a person up in an LDAP directory that publishes
+certificates, by e-mail address or common name: `--ldap ldap://host/<base>`
+(or `ldaps://` for TLS, the server checked against the system's roots), the
+search base in the URL's path or in `--base`. The bind is anonymous, the
+search reads the subtree for `mail` or `cn` equal to what was given and asks
+only for the certificate attributes (`userCertificate;binary`,
+`userCertificate`), at most twenty entries; a referral to another server is
+not followed. Each certificate found is listed with whether it can receive
+envelopes, and `--save` keeps the ones that can in the address book. The
+connection is listed with the purpose `directory`; nothing else is sent.
 
 ## `afirma`
 

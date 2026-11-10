@@ -19,6 +19,7 @@ func runRecipients(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "usage: trebaruna recipients list [--json]")
 		fmt.Fprintln(stderr, "       trebaruna recipients add <certificate> [--json]")
 		fmt.Fprintln(stderr, "       trebaruna recipients remove <fingerprint start | holder> [--json]")
+		fmt.Fprintln(stderr, "       trebaruna recipients find <e-mail address | name> --ldap ldap://host/<base> [--save] [--json]")
 		fmt.Fprintln(stderr, "  encrypt for a saved recipient with: trebaruna encrypt <file> --to saved:<fingerprint start | holder>")
 		return exitUsage
 	}
@@ -26,6 +27,9 @@ func runRecipients(args []string, stdout, stderr io.Writer) int {
 		return usage()
 	}
 	action, rest := args[0], args[1:]
+	if action == "find" {
+		return runFindRecipient(rest, stdout, stderr)
+	}
 	asJSON := false
 	var positional []string
 	for _, argument := range rest {

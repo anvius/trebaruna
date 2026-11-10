@@ -631,6 +631,7 @@ usage:
   trebaruna convert <document> [--out file.pdf]  (a text, spreadsheet or presentation printed to PDF)
   trebaruna encrypt <file> --to <cert> [--to …]   (a .p7e only the recipients open)
   trebaruna recipients list|add <cert>|remove <who>   (the address book: --to saved:<who>)
+  trebaruna recipients find <who> --ldap <url> [--save]   (a recipient's certificate from an LDAP directory)
   trebaruna decrypt <file.p7e> --p12|--card|…     (open a .p7e with your key)
   trebaruna afirma '<afirma://…>' [--approve]    (answer an AutoFirma request; shown first)
   trebaruna about [--json]                      (build, revision, dependencies and licences)

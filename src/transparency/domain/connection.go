@@ -38,6 +38,10 @@ const (
 	// release, when the person asks.
 	PurposeUpdateCheck Purpose = "update-check"
 
+	// PurposeDirectory looks a recipient's certificate up in an LDAP
+	// directory, to encrypt for them.
+	PurposeDirectory Purpose = "directory"
+
 	// PurposeUnattributed is a connection a library opened that the program
 	// could not classify. It is still recorded; a test keeps our own flows from
 	// producing one.
