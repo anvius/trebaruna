@@ -60,7 +60,7 @@ func (s *PadesSigner) SignPades(ctx context.Context, request application.PadesRe
 		)
 	}
 
-	if encrypted, err := encryptedForSigning(request); err != nil {
+	if encrypted, err := signable(request); err != nil {
 		return nil, err
 	} else if encrypted && request.Level.EmbedsRevocation() {
 		// The validation material's update would have to be encrypted too,
@@ -126,10 +126,11 @@ func (s *PadesSigner) SignPades(ctx context.Context, request application.PadesRe
 // ErrEncryptedPDF marks what an encrypted PDF does not allow.
 var ErrEncryptedPDF = errors.New("encrypted PDF")
 
-// encryptedForSigning opens the document as both writers will: an
-// encrypted one with its password, and only when its author's permissions
-// allow a signature.
-func encryptedForSigning(request application.PadesRequest) (bool, error) {
+// signable opens the document as both writers will, an encrypted one with
+// its password, and reports it encrypted; it refuses one whose author
+// allows no signature: its permissions, or a certification against any
+// change, which a signature would break.
+func signable(request application.PadesRequest) (bool, error) {
 	given := false
 	reader, err := pdf.NewReaderEncrypted(bytes.NewReader(request.Content), int64(len(request.Content)), func() string {
 		if given {
@@ -147,6 +148,8 @@ func encryptedForSigning(request application.PadesRequest) (bool, error) {
 		return false, fmt.Errorf("open PDF: %w", err)
 	case reader.IsEncrypted() && !pdffield.SigningPermitted(reader):
 		return true, fmt.Errorf("%w: its author's permissions allow neither filling in forms nor signing", ErrEncryptedPDF)
+	case pdffield.CertifiedAgainstChanges(reader):
+		return reader.IsEncrypted(), fmt.Errorf("%w: its author certified it against any change", pdffield.ErrUnsupported)
 	}
 	return reader.IsEncrypted(), nil
 }

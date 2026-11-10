@@ -930,6 +930,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A PDF whose author certified it against any change (DocMDP permissions
+  1) was refused only when signed in a field: an invisible signature, which
+  the PDF library writes, went ahead and broke the certification. Every
+  PAdES signature now refuses it, the encrypted documents' permissions
+  checked at the same place.
+
 - Counter-signing a timestamped XAdES signature broke its timestamp: the
   counter-signature names the signature's value by its `Id`, which
   trebaruna did not write, so one was added after the timestamp had sealed

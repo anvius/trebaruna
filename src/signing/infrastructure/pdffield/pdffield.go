@@ -275,7 +275,7 @@ func openForSigning(content []byte, password string) (*pdf.Reader, error) {
 	if reader.IsEncrypted() && !SigningPermitted(reader) {
 		return nil, fmt.Errorf("%w: its author's permissions allow neither filling in forms nor signing", ErrUnsupported)
 	}
-	if certifiedAgainstChanges(reader) {
+	if CertifiedAgainstChanges(reader) {
 		return nil, fmt.Errorf("%w: its author certified it against any change", ErrUnsupported)
 	}
 	return reader, nil
@@ -289,9 +289,9 @@ func SigningPermitted(reader *pdf.Reader) bool {
 	return permissions&(1<<8) != 0 || permissions&(1<<5) != 0
 }
 
-// certifiedAgainstChanges reports a certification signature whose DocMDP
+// CertifiedAgainstChanges reports a certification signature whose DocMDP
 // permissions (P 1) forbid any change, a signature included.
-func certifiedAgainstChanges(reader *pdf.Reader) bool {
+func CertifiedAgainstChanges(reader *pdf.Reader) bool {
 	docMDP := reader.Trailer().Key("Root").Key("Perms").Key("DocMDP")
 	references := docMDP.Key("Reference")
 	for index := 0; index < references.Len(); index++ {

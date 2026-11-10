@@ -188,8 +188,10 @@ lacked them; its cross-references are a table or a stream, as the file's are.
 The CMS envelope is trebaruna's own (signing-certificate-v2, no signing-time
 attribute), timestamped for level T; levels LT and LTA are added after it as
 for any PDF signature. A field too small for a legible seal (type under 3 pt) is
-refused, with `--invisible` offered; documents their author certified against
-any change are refused. `--field` excludes `--box`.
+refused, with `--invisible` offered. `--field` excludes `--box`. A document
+its author certified against any change (DocMDP permissions 1) is refused
+however it would be signed, in a field, with a seal or invisibly: any
+signature would break the certification.
 
 ### PDF/A documents
 
