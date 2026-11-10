@@ -8,8 +8,9 @@ package infrastructure_test
 // token also holds, and trebaruna signs CAdES, XAdES and PAdES with it.
 // openssl checks the CMS envelope; lxml and Python's cryptography (libxml2
 // and OpenSSL, nothing of trebaruna's) check the XML signature value, as
-// this system's xmlsec1 cannot load such a key; trebaruna's verifier, which
-// reads Brainpool since 0.97.0, checks each signature whole.
+// this system's xmlsec1 cannot load such a key; EU DSS, when DSS_LIB names
+// its jars, judges the CAdES, XAdES and PAdES signatures; trebaruna's
+// verifier, which reads Brainpool since 0.97.0, checks each one whole.
 
 import (
 	"archive/zip"
@@ -41,6 +42,7 @@ import (
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/xmldsig"
 	verificationdomain "codeberg.org/simplicer/trebaruna/src/verification/domain"
 	verification "codeberg.org/simplicer/trebaruna/src/verification/infrastructure"
+	"codeberg.org/simplicer/trebaruna/tests/support/dss"
 )
 
 // brainpoolCard is a token holding a Brainpool key it generated, its
@@ -260,6 +262,9 @@ func TestACardWithABrainpoolKeySigns(t *testing.T) {
 			if err := verifyWithOpenSSL(t, envelope, readFileOrFail(t, card.authority)); err != nil {
 				t.Errorf("openssl refuses the CAdES envelope: %v", err)
 			}
+			if dss.Available() {
+				dss.Judged(t, dss.Judge(t, "rezept.txt.p7m", envelope, nil, card.anchor(t)), 1, "CAdES-BASELINE-B", true)
+			}
 			cadesPath := filepath.Join(t.TempDir(), "rezept.txt.p7m")
 			os.WriteFile(cadesPath, envelope, 0o600)
 			cades := verification.NewCadesVerifier().WithAnchorCertificates(x509.NewCertPool(), nil, []*x509.Certificate{card.anchor(t)})
@@ -277,6 +282,9 @@ func TestACardWithABrainpoolKeySigns(t *testing.T) {
 			}
 			if got := judgeXMLSignature(t, signedXML, card.holder); got != "" && got != curve+" "+width+"\n" {
 				t.Errorf("the judge read %q", got)
+			}
+			if dss.Available() {
+				dss.Judged(t, dss.Judge(t, "rezept.xml", signedXML, nil, card.anchor(t)), 1, "XAdES-BASELINE-B", true)
 			}
 			xadesPath := filepath.Join(t.TempDir(), "rezept.xml")
 			os.WriteFile(xadesPath, signedXML, 0o600)
@@ -328,6 +336,9 @@ func TestACardWithABrainpoolKeySigns(t *testing.T) {
 				Content: onePagePDF(), Signer: signer, Level: domain.BES, Invisible: true, SignedAt: time.Now()})
 			if err != nil {
 				t.Fatalf("PAdES: %v", err)
+			}
+			if dss.Available() {
+				dss.Judged(t, dss.Judge(t, "rezept.pdf", signedPDF, nil, card.anchor(t)), 1, "PAdES-BASELINE-B", true)
 			}
 			pdfPath := filepath.Join(t.TempDir(), "rezept.pdf")
 			os.WriteFile(pdfPath, signedPDF, 0o600)

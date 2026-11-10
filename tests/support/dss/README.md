@@ -2,9 +2,12 @@
 
 `DssJudge.java` validates a signed file with the European Commission's
 [DSS](https://github.com/esig/dss) library, an implementation independent
-of trebaruna, and prints one line per signature and per timestamp.
+of trebaruna, and prints one line per signature and per timestamp;
+`judge.go` runs it and reads the verdict for the Go tests.
 `tests/signing/integration/dss_judge_test.go` signs CAdES, XAdES, PAdES and
-an ASiC-E container at their highest levels and checks what DSS says.
+an ASiC-E container at their highest levels and checks what DSS says, and
+`tests/signing/token/brainpool_cgo_test.go` has it judge what a card with a
+Brainpool key signs (SoftHSM, cgo).
 
 The test skips unless `DSS_LIB` names a directory holding DSS's jars and
 their dependencies. `pom.xml` lists them; with Maven and Java 17 or later:

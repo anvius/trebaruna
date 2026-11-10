@@ -101,6 +101,7 @@ test-race:
 check-dss:
 	@test -n "$(DSS_LIB)" || (echo "DSS_LIB must name EU DSS's jars: see tests/support/dss/README.md"; exit 1)
 	DSS_LIB=$(DSS_LIB) $(GO) test ./tests/signing/integration/ -run TestDSS -count=1 -v
+	DSS_LIB=$(DSS_LIB) CGO_ENABLED=1 $(GO) test ./tests/signing/token/ -run Brainpool -count=1 -v
 
 check-gui:
 	@if ! pkg-config --exists gl 2>/dev/null; then \
