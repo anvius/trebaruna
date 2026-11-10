@@ -16,9 +16,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"slices"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -58,15 +56,20 @@ func TestCadesLtNeedsARevocationSource(t *testing.T) {
 	}
 }
 
-// TestCadesLtCarriesRevocationValues checks the attribute OpenSSL calls
-// id-smime-aa-ets-revocationValues, which is the one and only correct name.
-func TestCadesLtCarriesRevocationValues(t *testing.T) {
+// TestCadesLtCarriesItsValidationDataInSignedData: the CAdES baseline
+// profile (EN 319 122-1, B-LT) keeps the validation data in SignedData,
+// not in the certificate-values and revocation-values attributes, which EU
+// DSS takes for the extended X-L form: the certificates of the signer's
+// chain and of the timestamp authority's in SignedData.certificates, and
+// an OCSP answer for each in SignedData.crls as an OtherRevocationInfoFormat
+// (RFC 5940), which makes SignedData version 5. openssl reads it so.
+func TestCadesLtCarriesItsValidationDataInSignedData(t *testing.T) {
 	if _, err := exec.LookPath("openssl"); err != nil {
 		t.Skip("openssl is not available")
 	}
 
 	content, signer := cadesFixture(t)
-	tsa := newLocalTSA(t)
+	tsa := newLocalTSAWithStatus(t)
 
 	signed, err := infrastructure.NewCadesSigner(tsa).SignCades(context.Background(),
 		application.CadesRequest{
@@ -84,61 +87,61 @@ func TestCadesLtCarriesRevocationValues(t *testing.T) {
 	if err := os.WriteFile(path, signed, 0o644); err != nil {
 		t.Fatalf("write: %v", err)
 	}
+	if output := runAsn1Parse(t, path); strings.Contains(output, "revocationValues") || strings.Contains(output, "certValues") {
+		t.Error("a baseline CAdES-LT carries neither revocation-values nor certificate-values")
+	}
+	printed, err := exec.Command("openssl", "cms", "-cmsout", "-print", "-inform", "DER", "-in", path).CombinedOutput()
+	if err != nil {
+		t.Fatalf("openssl cms -print: %v\n%s", err, printed)
+	}
+	if !strings.Contains(string(printed), "\n    version: 5\n") || !strings.Contains(string(printed), "\n    crls:\n") ||
+		strings.Count(string(printed), "otherRevInfoFormat: undefined (1.3.6.1.5.5.7.16.2)") != 2 {
+		t.Errorf("openssl reads no version 5 SignedData with two OCSP answers among its crls:\n%s", printed)
+	}
 
-	output := runAsn1Parse(t, path)
-	if !strings.Contains(output, "revocationValues") {
-		t.Errorf("the container carries no revocationValues attribute:\n%s", output)
-	}
-	// The neighbouring OID means "certificateValues"; carrying OCSP responses
-	// under that name is worse than failing, because it looks correct.
-	if strings.Contains(output, "certValues") {
-		t.Error("the container mislabels its revocation material as certValues")
-	}
-
-	// RFC 5126's layout, as openssl reads it: the attribute's SET holds
-	// RevocationValues, whose ocspVals [1] is a SEQUENCE OF BasicOCSPResponse
-	// (each a SEQUENCE starting with its tbsResponseData). Up to 0.104.1 each
-	// answer sat in an OCTET STRING, which EU DSS could not read.
-	lines := strings.Split(output, "\n")
-	at := slices.IndexFunc(lines, func(line string) bool { return strings.Contains(line, ":id-smime-aa-ets-revocationValues") })
-	if at < 0 || at+6 >= len(lines) {
-		t.Fatalf("no revocationValues in:\n%s", output)
-	}
-	want := []string{"SET", "SEQUENCE", "cont [ 1 ]", "SEQUENCE", "SEQUENCE", "SEQUENCE"}
-	var basic []byte
-	for position, kind := range want {
-		line := lines[at+1+position]
-		if got := strings.TrimSpace(line[strings.Index(line, "cons:")+len("cons:"):]); !strings.Contains(line, "cons:") || got != kind {
-			t.Fatalf("revocationValues element %d is %q, want %q:\n%s", position, strings.TrimSpace(line), kind, strings.Join(lines[at:at+8], "\n"))
-		}
-		if position == 4 {
-			fields := regexp.MustCompile(`^\s*(\d+):d=\d+\s+hl=(\d+)\s+l=\s*(\d+)`).FindStringSubmatch(line)
-			if fields == nil {
-				t.Fatalf("unreadable asn1parse line %q", line)
-			}
-			offset, _ := strconv.Atoi(fields[1])
-			header, _ := strconv.Atoi(fields[2])
-			length, _ := strconv.Atoi(fields[3])
-			basic = signed[offset : offset+header+length]
-		}
-	}
-	// Each entry is the responder's BasicOCSPResponse: put back in an
-	// OCSPResponse, x/crypto/ocsp reads it as the good answer it was.
-	wrapped, err := asn1.Marshal(struct {
-		Status asn1.Enumerated
-		Bytes  struct {
-			Type     asn1.ObjectIdentifier
-			Response []byte
+	// The two answers, the signer's and the authority's, are the
+	// responders' OCSPResponses, which x/crypto/ocsp reads as good.
+	var contentInfo struct {
+		Type       asn1.ObjectIdentifier
+		SignedData struct {
+			Version          int
+			DigestAlgorithms asn1.RawValue
+			Content          asn1.RawValue
+			Certificates     asn1.RawValue `asn1:"optional,tag:0"`
+			Revocations      asn1.RawValue `asn1:"optional,tag:1"`
+			SignerInfos      asn1.RawValue
 		} `asn1:"explicit,tag:0"`
-	}{Bytes: struct {
-		Type     asn1.ObjectIdentifier
-		Response []byte
-	}{asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 48, 1, 1}, basic}})
+	}
+	if _, err := asn1.Unmarshal(signed, &contentInfo); err != nil {
+		t.Fatal(err)
+	}
+	for rest := contentInfo.SignedData.Revocations.Bytes; len(rest) > 0; {
+		var other struct {
+			Format asn1.ObjectIdentifier
+			Answer asn1.RawValue
+		}
+		var choice asn1.RawValue
+		rest, _ = asn1.Unmarshal(rest, &choice)
+		if _, err := asn1.UnmarshalWithParams(choice.FullBytes, &other, "tag:1"); err != nil {
+			t.Fatalf("a revocation choice: %v", err)
+		}
+		if answer, err := ocsp.ParseResponse(other.Answer.FullBytes, nil); err != nil || answer.Status != ocsp.Good {
+			t.Errorf("an embedded OCSP answer: %v", err)
+		}
+	}
+	certificates, err := cms.Certificates(signed)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if answer, err := ocsp.ParseResponse(wrapped, nil); err != nil || answer.Status != ocsp.Good {
-		t.Errorf("the embedded BasicOCSPResponse: %v", err)
+	for _, wanted := range [][]byte{tsa.certificate.Raw, tsa.ca.Raw} {
+		if !slices.ContainsFunc(certificates, func(have []byte) bool { return bytes.Equal(have, wanted) }) {
+			t.Error("SignedData.certificates lacks the timestamp authority's chain")
+		}
+	}
+	for index, certificate := range certificates {
+		if slices.ContainsFunc(certificates[index+1:], func(other []byte) bool { return bytes.Equal(other, certificate) }) {
+			t.Error("SignedData.certificates holds a certificate twice")
+		}
 	}
 }
 
@@ -233,7 +236,7 @@ func TestCadesLtaAddsTheArchiveTimeStamp(t *testing.T) {
 	}
 
 	// The archive timestamp must come after the revocation material: it covers it.
-	revocationAt := strings.Index(output, "revocationValues")
+	revocationAt := strings.Index(output, ":1.3.6.1.5.5.7.16.2")
 	archiveAt := strings.Index(output, "id-aa-ets-archiveTimestampV3")
 	if revocationAt < 0 || archiveAt < revocationAt {
 		t.Error("the archive timestamp must be written after the revocation material it covers")
@@ -365,7 +368,8 @@ func TestAddedSignaturesTakeLevelsLTAndLTA(t *testing.T) {
 		return signed
 	}
 	original := sign(application.CadesRequest{Content: content, Level: signingdomain.BES})
-	revocationValues := []byte{0x06, 0x0b, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x09, 0x10, 0x02, 0x18}
+	// id-ri-ocsp-response, the OCSP answers among SignedData.crls.
+	ocspAnswer := []byte{0x06, 0x08, 0x2b, 0x06, 0x01, 0x05, 0x05, 0x07, 0x10, 0x02}
 
 	for name, request := range map[string]application.CadesRequest{
 		"a parallel signature": {Content: original, Cosign: true},
@@ -374,8 +378,8 @@ func TestAddedSignaturesTakeLevelsLTAndLTA(t *testing.T) {
 		lt := request
 		lt.Level = signingdomain.LT
 		withRevocation := sign(lt)
-		if bytes.Count(withRevocation, revocationValues) != 1 {
-			t.Errorf("%s at LT: %d revocationValues, want the added signature's one", name, bytes.Count(withRevocation, revocationValues))
+		if bytes.Count(withRevocation, ocspAnswer) != 1 {
+			t.Errorf("%s at LT: %d OCSP answers, want the added signature's one", name, bytes.Count(withRevocation, ocspAnswer))
 		}
 
 		lta := request

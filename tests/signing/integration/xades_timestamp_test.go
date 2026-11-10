@@ -21,7 +21,10 @@ import (
 	"encoding/asn1"
 	"encoding/base64"
 	"encoding/pem"
+	"io"
 	"math/big"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -30,12 +33,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/beevik/etree"
+	"golang.org/x/crypto/ocsp"
+
 	"codeberg.org/simplicer/trebaruna/src/signing/domain"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/cms"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/xmldsig"
 	verificationinfra "codeberg.org/simplicer/trebaruna/src/verification/infrastructure"
-	"github.com/beevik/etree"
 )
 
 // oidTSTInfoXades is the content type a timestamp token declares.
@@ -54,9 +59,12 @@ func xadesTestSigner(t *testing.T) domain.Signer {
 type localTSA struct {
 	certificate *x509.Certificate
 	ca          *x509.Certificate
-	key         *rsa.PrivateKey
-	requests    int
-	imprint     []byte
+	// decoys are certificates the token carries before the authority's
+	// issuer: one may bear its name with another key.
+	decoys   []*x509.Certificate
+	key      *rsa.PrivateKey
+	requests int
+	imprint  []byte
 	// nonce is echoed when set, which the PDF signer requires.
 	nonce []byte
 }
@@ -103,7 +111,7 @@ func (t *localTSA) Token(_ context.Context, digest []byte, _, _, _ string) ([]by
 	signature, err := cms.Sign(cms.Request{
 		Content:         encoded,
 		Certificate:     t.certificate,
-		Chain:           []*x509.Certificate{t.ca},
+		Chain:           append(append([]*x509.Certificate{}, t.decoys...), t.ca),
 		Signer:          t.key,
 		EmbeddedContent: true,
 		ContentType:     oidTSTInfoXades,
@@ -132,6 +140,26 @@ func derSequence(body []byte) []byte {
 
 // newLocalTSA builds the CA and the timestamp certificate.
 func newLocalTSA(t *testing.T) *localTSA {
+	t.Helper()
+	return newTimestampAuthority(t, false, false)
+}
+
+// newLocalTSAWithStatus is newLocalTSA whose certificate names an OCSP
+// responder, local, that answers for it with the CA's key, as a qualified
+// authority's certificate does.
+func newLocalTSAWithStatus(t *testing.T) *localTSA {
+	t.Helper()
+	return newTimestampAuthority(t, true, false)
+}
+
+// newRevokedLocalTSA is newLocalTSAWithStatus whose responder says its
+// certificate is revoked.
+func newRevokedLocalTSA(t *testing.T) *localTSA {
+	t.Helper()
+	return newTimestampAuthority(t, true, true)
+}
+
+func newTimestampAuthority(t *testing.T, withStatus, revoked bool) *localTSA {
 	t.Helper()
 
 	caKey, err := rsa.GenerateKey(rand.Reader, 2048)
@@ -164,8 +192,34 @@ func newLocalTSA(t *testing.T) *localTSA {
 	if err != nil {
 		t.Fatalf("marshal extended key usage: %v", err)
 	}
+	var responder []string
+	if withStatus {
+		server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+			body, _ := io.ReadAll(request.Body)
+			parsed, err := ocsp.ParseRequest(body)
+			if err != nil {
+				writer.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			state := ocsp.Response{Status: ocsp.Good, SerialNumber: parsed.SerialNumber,
+				ThisUpdate: time.Now().Add(-time.Minute), NextUpdate: time.Now().Add(time.Hour)}
+			if revoked {
+				state.Status, state.RevokedAt, state.RevocationReason = ocsp.Revoked, time.Now().Add(-time.Hour), ocsp.KeyCompromise
+			}
+			answer, err := ocsp.CreateResponse(ca, ca, state, caKey)
+			if err != nil {
+				writer.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			writer.Header().Set("Content-Type", "application/ocsp-response")
+			writer.Write(answer)
+		}))
+		t.Cleanup(server.Close)
+		responder = []string{server.URL}
+	}
 	template := &x509.Certificate{
 		SerialNumber: big.NewInt(701),
+		OCSPServer:   responder,
 		Subject:      pkix.Name{CommonName: "XAdES Test TSA"},
 		NotBefore:    time.Now().Add(-24 * time.Hour),
 		NotAfter:     time.Now().Add(5 * 365 * 24 * time.Hour),

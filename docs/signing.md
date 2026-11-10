@@ -427,8 +427,9 @@ A `.p7m` or `.p7s` can receive more signatures without opening it:
 
 A counter-signature signs another signature's value, not the document (RFC
 5652 §11.4), so it carries no contentType. Added signatures take every level:
-at T each carries its timestamp; at LT its chain's revocation values, in its own
-SignerInfo (a counter-signature's nested inside the signature it signs); at LTA
+at T each carries its timestamp; at LT its chain's certificates and OCSP
+answers go in the envelope's SignedData, where the baseline profile keeps them
+(the timestamp authority of an added signature is not covered yet); at LTA
 an archive-time-stamp-v3 seals the parallel signature added, or each signature
 that took counter-signatures, which seals them with it. A detached `.p7s` needs
 its document to be co-signed, or counter-signed at LTA: `--content atto.pdf`.
@@ -564,9 +565,10 @@ bytes are preserved exactly, which is what keeps earlier signatures valid.
 ### PAdES-B-LT
 
 The same, plus a `/DSS` dictionary reachable from the document catalog: the
-certificates and OCSP responses needed to check the signature later. It is written
-as a **second incremental update**, after the signature, so the signature bytes are
-never rewritten.
+certificates and OCSP responses needed to check the signature later, the
+signer's chain's and the chain of the authority behind its timestamp alike. It
+is written as a **second incremental update**, after the signature, so the
+signature bytes are never rewritten.
 
 ### PAdES-B-LTA
 
@@ -586,9 +588,18 @@ AutoFirma) read it that way. signxml, a Python library, canonicalises only
 the root element and reports a document with such an instruction as
 modified; that is signxml's reading, not a broken signature.
 
+### XAdES-LT
+
+The signature timestamp, then `xades:CertificateValues` with the
+certificates `ds:KeyInfo` leaves out (the signer's issuers and the chain of
+the timestamp authority) and `xades:RevocationValues` with an OCSP answer
+for each certificate but the roots. Without the issuers a validator that is
+not given them cannot build the chain: EU DSS reported "no certificate chain
+found" for trebaruna's XAdES-LT up to 0.104.2.
+
 ### XAdES-A
 
-The signature element plus `xades:SignatureTimeStamp` and
+The signature element plus `xades:SignatureTimeStamp`, the LT values and
 `xades141:ArchiveTimeStamp`, in that order. The archive token covers the
 signed document and every object of the signature (EN 319 132-1, 5.5.2.2),
 which is why it must be written last.
@@ -599,11 +610,15 @@ A CMS `SignedData` with the content embedded and the CAdES-required signed
 attributes. `.p7m` is the conventional name.
 
 - **CAdES-T** adds a `signature-time-stamp` unsigned attribute.
-- **CAdES-LT** adds `revocationValues` (`1.2.840.113549.1.9.16.2.24`) carrying the
-  OCSP responses, so the signature stays checkable after the responder is gone:
-  `ocspVals [1]`, a sequence of the responders' `BasicOCSPResponse`s as RFC 5126
-  lays it out. Up to 0.104.1 each answer went inside an OCTET STRING, which EU
-  DSS could not read, so it saw no revocation in the signature.
+- **CAdES-LT** keeps the validation data where the baseline profile (EN 319
+  122-1, B-LT) wants it, so the signature stays checkable after the responders
+  are gone: the certificates of the signer's chain and of the timestamp
+  authority's in `SignedData.certificates`, and an OCSP answer for each in
+  `SignedData.crls`, as an `OtherRevocationInfoFormat` holding the responder's
+  `OCSPResponse` (`id-ri-ocsp-response`, RFC 5940), which makes the SignedData
+  version 5. Up to 0.104.2 the answers rode in a `revocation-values` attribute
+  and the authority's material was missing: EU DSS reads that attribute as the
+  extended X-L form and rated the signature at T.
 - **CAdES-LTA** adds an `archive-time-stamp-v3` (`0.4.0.1733.2.4`, EN 319 122-1
   5.5.3): a token over the signed content's type and digest, the SignerInfo
   (version to signature value) and an `ats-hash-index-v3` (`0.4.0.19122.1.5`,
@@ -618,11 +633,10 @@ attributes. `.p7m` is the conventional name.
   imprint wrong. Those files still pass `verify`, which hashes the index as
   the token carries it.
 
-The revocation attribute's OID is worth stating: `.24` is `revocationValues`, and
-the neighbouring `.23` is `certificateValues`. Using the wrong one produces a
-container that parses and labels OCSP responses as certificates — it looks
-correct, which is why the tests assert the OID through OpenSSL rather than
-trusting our own encoder.
+Every level above is checked by EU DSS, the European Commission's validator,
+when the tests are given its jars (`tests/support/dss`): each LTA reads
+BASELINE-LTA and TOTAL_PASSED, every timestamp's imprint intact. The tests
+also read the structures with OpenSSL rather than trusting our own encoder.
 
 ---
 

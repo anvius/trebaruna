@@ -11,15 +11,13 @@ import (
 	"fmt"
 	"math"
 	"strings"
-	"time"
 
 	"codeberg.org/simplicer/trebaruna/src/signing/application"
 	"codeberg.org/simplicer/trebaruna/src/signing/domain"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/brainpool"
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/cms"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/dss"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/pdffield"
-	verificationdomain "codeberg.org/simplicer/trebaruna/src/verification/domain"
-	verificationinfra "codeberg.org/simplicer/trebaruna/src/verification/infrastructure"
 	"github.com/digitorus/pdf"
 	"github.com/digitorus/pdfsign"
 )
@@ -231,49 +229,25 @@ func (s *PadesSigner) embedRevocation(
 	signed []byte,
 	keyPair KeyPair,
 ) ([]byte, error) {
-	checker := verificationinfra.NewOCSPChecker()
-
-	var (
-		certificates []*x509.Certificate
-		responses    [][]byte
-		warnings     []string
-	)
-
-	chain := keyPair.Certificates()
-	if len(chain) == 0 {
-		return nil, fmt.Errorf("the signer carries no certificate chain to embed")
+	// The authority behind the signature's timestamp is part of what the
+	// /DSS must hold: its chain and its answers, beside the signer's.
+	reader, err := pdf.NewReader(bytes.NewReader(signed), int64(len(signed)))
+	if err != nil {
+		return nil, fmt.Errorf("reopen the signed PDF: %w", err)
 	}
-	certificates = append(certificates, chain...)
-
-	for index, certificate := range chain {
-		issuer := chain[0]
-		if index+1 < len(chain) {
-			issuer = chain[index+1]
-		}
-		if index == len(chain)-1 {
-			// The root revokes itself by definition; nothing to ask.
-			break
-		}
-
-		status := checker.Check(ctx, certificate, issuer)
-		switch {
-		case status.IsRevoked():
-			return nil, fmt.Errorf(
-				"refusing to sign: the certificate for %q is revoked since %s",
-				certificate.Subject.CommonName, status.RevokedAt.Format(time.RFC3339))
-		case status.Status == verificationdomain.RevocationGood && len(status.RawResponse) > 0:
-			responses = append(responses, status.RawResponse)
-		default:
-			warnings = append(warnings, fmt.Sprintf("%s: %s",
-				certificate.Subject.CommonName, status.Reason))
-		}
+	contents, err := latestSignatureContents(reader)
+	if err != nil {
+		return nil, err
 	}
-
-	if len(responses) == 0 {
-		return nil, fmt.Errorf(
-			"no revocation answer could be obtained, so %s cannot embed a complete /DSS:\n  %s",
-			"PAdES B-LT", strings.Join(warnings, "\n  "))
+	tokens, err := cms.SignatureTimeStampTokens(contents)
+	if err != nil {
+		return nil, err
 	}
+	material, err := gatherValidationMaterial(ctx, keyPair, tokens, "PAdES B-LT cannot embed a complete /DSS")
+	if err != nil {
+		return nil, err
+	}
+	certificates, responses := material.certificates(), material.responses
 
 	// The VRI key is the uppercase hex SHA-1 of the signature value, which is how
 	// a validator matches this material to this signature.

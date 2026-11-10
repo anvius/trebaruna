@@ -3,15 +3,12 @@ package infrastructure
 import (
 	"context"
 	"crypto"
+	"crypto/x509"
 	"fmt"
 
 	"codeberg.org/simplicer/trebaruna/src/signing/application"
 	"codeberg.org/simplicer/trebaruna/src/signing/domain"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/cms"
-	verificationdomain "codeberg.org/simplicer/trebaruna/src/verification/domain"
-	verificationinfra "codeberg.org/simplicer/trebaruna/src/verification/infrastructure"
-	"strings"
-	"time"
 )
 
 // CadesSigner produces .p7m files: CMS SignedData with embedded content.
@@ -107,11 +104,20 @@ func (s *CadesSigner) SignCades(ctx context.Context, request application.CadesRe
 		return nil, needsRevocationSource(request.Level)
 	}
 
-	responses, err := s.revocationResponses(ctx, keyPair)
+	// The validation material covers the authority behind the signature
+	// timestamp too, and goes where the baseline profile wants it: in
+	// SignedData.certificates and SignedData.crls, not in the
+	// certificate-values and revocation-values attributes, which make a
+	// CAdES-LT the extended X-L form in EU DSS's eyes.
+	tokens, err := cms.SignatureTimeStampTokens(signed)
 	if err != nil {
 		return nil, err
 	}
-	withRevocation, err := cms.WithRevocationValuesFrom(signed, responses, nil)
+	material, err := gatherValidationMaterial(ctx, keyPair, tokens, cadesIncomplete)
+	if err != nil {
+		return nil, err
+	}
+	withRevocation, err := cms.WithValidationData(signed, rawCertificates(material.certificates()), nil, material.responses)
 	if err != nil {
 		return nil, err
 	}
@@ -169,50 +175,18 @@ func needsRevocationSource(level domain.Level) error {
 		"    --level lt --online-revocation   query OCSP and attach the answers", level)
 }
 
-// revocationResponses asks the signer's chain's OCSP responders, for the
-// CAdES-LT revocation material.
-//
-// The attribute is unsigned, which is the point: the signature covers the document
-// and the signed attributes, and the validation data rides beside them. Refusing to
-// sign a revoked certificate is the same rule as in PAdES — producing a signature
-// nobody can rely on wastes everyone's time.
-func (s *CadesSigner) revocationResponses(ctx context.Context, keyPair KeyPair) ([][]byte, error) {
-	checker := verificationinfra.NewOCSPChecker()
-
-	chain := keyPair.Certificates()
-	if len(chain) == 0 {
-		return nil, fmt.Errorf("the signer carries no certificate chain to embed")
+// rawCertificates are the certificates as encoded.
+func rawCertificates(certificates []*x509.Certificate) [][]byte {
+	raw := make([][]byte, len(certificates))
+	for index, certificate := range certificates {
+		raw[index] = certificate.Raw
 	}
-
-	var responses [][]byte
-	var warnings []string
-	for index, certificate := range chain {
-		if index+1 >= len(chain) {
-			// The root revokes itself by definition.
-			break
-		}
-		status := checker.Check(ctx, certificate, chain[index+1])
-		switch {
-		case status.IsRevoked():
-			return nil, fmt.Errorf(
-				"refusing to sign: the certificate for %q is revoked since %s",
-				certificate.Subject.CommonName, status.RevokedAt.Format(time.RFC3339))
-		case status.Status == verificationdomain.RevocationGood && len(status.RawResponse) > 0:
-			responses = append(responses, status.RawResponse)
-		default:
-			warnings = append(warnings, fmt.Sprintf("%s: %s",
-				certificate.Subject.CommonName, status.Reason))
-		}
-	}
-
-	if len(responses) == 0 {
-		return nil, fmt.Errorf(
-			"no revocation answer could be obtained, so CAdES-LT cannot carry a complete "+
-				"RevocationValues attribute:\n  %s", strings.Join(warnings, "\n  "))
-	}
-
-	return responses, nil
+	return raw
 }
+
+// cadesIncomplete is what a CAdES-LT without any revocation answer would
+// leave incomplete.
+const cadesIncomplete = "CAdES-LT cannot carry complete revocation information"
 
 // compile-time proof that the adapter satisfies the port.
 var _ application.CadesSigner = (*CadesSigner)(nil)
@@ -262,15 +236,16 @@ func (s *CadesSigner) addSignature(ctx context.Context, request application.Cade
 		}
 	}
 
+	var responses [][]byte
 	if request.Level.EmbedsRevocation() {
 		if !request.EmbedRevocation {
 			return nil, needsRevocationSource(request.Level)
 		}
-		responses, err := s.revocationResponses(ctx, keyPair)
+		material, err := gatherValidationMaterial(ctx, keyPair, nil, cadesIncomplete)
 		if err != nil {
 			return nil, err
 		}
-		cmsRequest.Unsigned = []cms.Attribute{{Type: cms.OIDRevocationValues, Value: cms.RevocationValues(responses, nil)}}
+		responses = material.responses
 	}
 
 	var signed []byte
@@ -279,8 +254,18 @@ func (s *CadesSigner) addSignature(ctx context.Context, request application.Cade
 	} else {
 		signed, _, err = cms.Countersign(request.Content, cmsRequest, cms.CountersignScope(request.Countersign), stamp)
 	}
-	if err != nil || !request.Level.Archival() {
-		return signed, err
+	if err != nil {
+		return nil, err
+	}
+	if request.Level.EmbedsRevocation() {
+		// The added signature's validation material, in SignedData as the
+		// baseline profile asks.
+		if signed, err = cms.WithValidationData(signed, rawCertificates(keyPair.Certificates()), nil, responses); err != nil {
+			return nil, err
+		}
+	}
+	if !request.Level.Archival() {
+		return signed, nil
 	}
 	return s.archiveAdded(ctx, signed, request)
 }

@@ -969,6 +969,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The long-term levels carry what EU DSS needs to rate them LT and LTA,
+  which it did not before (it rated trebaruna's LT and LTA signatures at T):
+  - the timestamp authority behind the signature timestamp now has its
+    chain and an OCSP answer for each of its certificates carried with the
+    signer's, in all three formats; a revoked authority certificate refuses
+    the signature, one without a responder adds what it can;
+  - XAdES-LT carries xades:CertificateValues with the certificates
+    ds:KeyInfo leaves out, without which a validator not given the signer's
+    authority found no chain;
+  - CAdES-LT keeps its validation data where the baseline profile wants
+    it: certificates in SignedData.certificates, OCSP answers in
+    SignedData.crls as RFC 5940 OtherRevocationInfoFormat (SignedData
+    version 5), instead of the revocation-values attribute, which DSS reads
+    as the extended X-L form. Co-signatures and counter-signatures at LT put
+    their signer's material there too; their timestamp authority's is not
+    covered yet.
+
 - CAdES-LT revocation values follow RFC 5126: `ocspVals [1]` is a sequence
   of the responders' BasicOCSPResponses, each as the responder signed it.
   trebaruna wrapped every OCSP answer, whole, in an OCTET STRING; EU DSS

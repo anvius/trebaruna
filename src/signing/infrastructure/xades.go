@@ -26,8 +26,6 @@ import (
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/brainpool"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/cms"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/xmldsig"
-	verificationdomain "codeberg.org/simplicer/trebaruna/src/verification/domain"
-	verificationinfra "codeberg.org/simplicer/trebaruna/src/verification/infrastructure"
 )
 
 // XadesSigner produces XAdES-BES (ETSI EN 319 132-1).
@@ -745,61 +743,65 @@ func buildArchiveTimeStamp(signature *etree.Element, token string) string {
 		`</xades141:ArchiveTimeStamp>`
 }
 
-// attachRevocationValues adds xades:RevocationValues (ETSI EN 319 132-1 §5.4.2).
+// attachRevocationValues adds the validation material XAdES-LT carries
+// (ETSI EN 319 132-1, 5.5.1 and 5.5.2): xades:CertificateValues with the
+// certificates ds:KeyInfo leaves out, the signer's issuers and the chain of
+// the authority behind the signature timestamp, and xades:RevocationValues
+// with an OCSP answer for each of them. Without the issuers a validator
+// that is not given them cannot build the chain (EU DSS reported "no
+// certificate chain found"); without the authority's material it rates the
+// signature at T.
 //
-// The element carries the OCSP responses and CRLs a validator needs to check the
-// signature after the responders disappear. It lives in
-// UnsignedSignatureProperties, so it is not covered by the signature value — which
-// is exactly why XAdES-LTA then covers it with an archive timestamp.
+// Both live in UnsignedSignatureProperties, so they are not covered by the
+// signature value — which is exactly why XAdES-LTA then covers them with an
+// archive timestamp.
 func (s *XadesSigner) attachRevocationValues(
 	ctx context.Context,
 	signature *etree.Element,
 	keyPair KeyPair,
 ) error {
-	checker := verificationinfra.NewOCSPChecker()
-
-	chain := keyPair.Certificates()
-	if len(chain) == 0 {
-		return fmt.Errorf("the signer carries no certificate chain to embed")
-	}
-
-	var responses [][]byte
-	var warnings []string
-	for index, certificate := range chain {
-		if index+1 >= len(chain) {
-			break
-		}
-		status := checker.Check(ctx, certificate, chain[index+1])
-		switch {
-		case status.IsRevoked():
-			return fmt.Errorf(
-				"refusing to sign: the certificate for %q is revoked since %s",
-				certificate.Subject.CommonName, status.RevokedAt.Format(time.RFC3339))
-		case status.Status == verificationdomain.RevocationGood && len(status.RawResponse) > 0:
-			responses = append(responses, status.RawResponse)
-		default:
-			warnings = append(warnings, fmt.Sprintf("%s: %s",
-				certificate.Subject.CommonName, status.Reason))
+	var tokens [][]byte
+	for _, stamp := range signature.FindElements(".//SignatureTimeStamp/EncapsulatedTimeStamp") {
+		if token, err := base64.StdEncoding.DecodeString(strings.Join(strings.Fields(stamp.Text()), "")); err == nil {
+			tokens = append(tokens, token)
 		}
 	}
-
-	if len(responses) == 0 {
-		return fmt.Errorf(
-			"no revocation answer could be obtained, so XAdES-LT cannot carry a complete "+
-				"RevocationValues element:\n  %s", strings.Join(warnings, "\n  "))
+	material, err := gatherValidationMaterial(ctx, keyPair, tokens, "XAdES-LT cannot carry a complete RevocationValues element")
+	if err != nil {
+		return err
 	}
 
 	unsigned := findUnsignedSignatureProperties(signature)
 	if unsigned == nil {
 		return fmt.Errorf("the signature has no xades:UnsignedSignatureProperties to extend")
 	}
-
-	fragment, err := parseFragment(buildRevocationValues(responses))
+	if beyondKeyInfo := material.certificates()[1:]; len(beyondKeyInfo) > 0 {
+		fragment, err := parseFragment(buildCertificateValues(beyondKeyInfo))
+		if err != nil {
+			return fmt.Errorf("build xades:CertificateValues: %w", err)
+		}
+		unsigned.AddChild(fragment)
+	}
+	fragment, err := parseFragment(buildRevocationValues(material.responses))
 	if err != nil {
 		return fmt.Errorf("build xades:RevocationValues: %w", err)
 	}
 	unsigned.AddChild(fragment)
 	return nil
+}
+
+// buildCertificateValues emits the xades:CertificateValues element, each
+// certificate base64-encoded in an xades:EncapsulatedX509Certificate.
+func buildCertificateValues(certificates []*x509.Certificate) string {
+	var builder strings.Builder
+	builder.WriteString(`<xades:CertificateValues xmlns:xades="` + namespaceXades + `">`)
+	for _, certificate := range certificates {
+		builder.WriteString(`<xades:EncapsulatedX509Certificate>`)
+		builder.WriteString(base64.StdEncoding.EncodeToString(certificate.Raw))
+		builder.WriteString(`</xades:EncapsulatedX509Certificate>`)
+	}
+	builder.WriteString(`</xades:CertificateValues>`)
+	return builder.String()
 }
 
 // buildRevocationValues emits the xades:RevocationValues element.

@@ -34,7 +34,7 @@ user seeing what is signed and where anything goes.
 | Rule | Status |
 |---|---|
 | Formats: CAdES `.p7m` (content embedded), PAdES, XAdES enveloped, enveloping (any file: XML as XML, other files in Base64) and detached | built |
-| Levels B, T, LT, LTA for every format; T and above need a timestamp authority; LT and LTA fetch revocation evidence only when allowed (`--online-revocation`) | built |
+| Levels B, T, LT, LTA for every format; T and above need a timestamp authority; LT and LTA fetch revocation evidence only when allowed (`--online-revocation`), for the signer's chain and the timestamp authority's (a revoked one refuses the signature), and carry it where each baseline profile wants it (CAdES in SignedData, XAdES in CertificateValues and RevocationValues, PAdES in the /DSS) | built (EU DSS reads every LTA as BASELINE-LTA, TOTAL_PASSED) |
 | Output next to the document: `<name>.<ext>.p7m`, `<name>_signed.pdf`, `<name>_signed.xml` | built |
 | Signer name: the certificate holder unless one is given | built |
 | PAdES visible seal: certificate data only (ADR-0007), placed by the user, repeatable across pages; chained signatures by incremental update | built |
@@ -45,7 +45,7 @@ user seeing what is signed and where anything goes.
 | Field seed values (`/SV`): the field's encoding among the two written; required reasons, timestamp authority, digest and certificate constraints (subject, issuer, policy, holder's name, key usage) met or refused with what the form asks; certification, other handlers, legal attestations and embedded revocation refused | built (pdfsig accepts `adbe.pkcs7.detached`) |
 | Field locks (`/Lock`): recorded as a FieldMDP reference when the field is signed, and the fields it covers (a name and the fields under it) marked read-only with their own or inherited flags kept; earlier signatures' locks respected (a locked field refused, nothing after `/P 1`); documents certified against any change refused on every path; a field written inside another object never rewritten | built (pdfsig and qpdf accept the locked signature) |
 | CAdES detached (`.p7s`), verified with the document beside it | built |
-| Parallel signatures (co-signing) and counter-signatures on CAdES, levels B, T, LT (revocation values in the added SignerInfo) and LTA (archive-time-stamp-v3 on the signature added, or on each that took counter-signatures) | built |
+| Parallel signatures (co-signing) and counter-signatures on CAdES, levels B, T, LT (the added signer's chain and answers in SignedData; its timestamp authority's not yet) and LTA (archive-time-stamp-v3 on the signature added, or on each that took counter-signatures) | built |
 | Parallel signatures on XAdES enveloped: signing a signed XML adds a signature beside the others; each excludes every signature (AutoFirma's XPath filter), so none breaks another | built |
 | Counter-signatures on XAdES, inside the document (xades:CounterSignature over the SignatureValue; leaves or all; B and T; nothing written if a signature would break), from the command line and afirma:// (`target`); `verify` names what each counter-signs | built |
 | Several documents in one run, same settings, one result per document | built |
