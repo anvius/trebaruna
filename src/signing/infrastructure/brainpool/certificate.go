@@ -26,6 +26,21 @@ func ParseCertificate(der []byte) (*x509.Certificate, error) {
 	return parsed, nil
 }
 
+// ErrKeyInFile means a certificate whose key is on a Brainpool curve came
+// with its private key in a file: Go has no arithmetic to sign with such a
+// key, which trebaruna uses on a card only.
+var ErrKeyInFile = errors.New("trebaruna signs with a Brainpool key on a card only, not from a file")
+
+// KeyInFile is ErrKeyInFile, naming the curve, when the certificate's key
+// is on a Brainpool curve; nil for any other certificate.
+func KeyInFile(der []byte) error {
+	certificate, err := parseSwapped(der)
+	if err != nil {
+		return nil
+	}
+	return fmt.Errorf("%w: the certificate's key is on %s", ErrKeyInFile, certificate.PublicKey.(*PublicKey).Curve.Name)
+}
+
 // placeholderKey is P-256's base point as a SubjectPublicKeyInfo: a key Go
 // reads, standing in while it parses the rest.
 var placeholderKey = func() []byte {

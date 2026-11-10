@@ -13,6 +13,7 @@ import (
 
 	"codeberg.org/simplicer/trebaruna/src/signing/domain"
 	"codeberg.org/simplicer/trebaruna/src/signing/domain/identity"
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/brainpool"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/keybundle"
 )
 
@@ -118,6 +119,9 @@ func loadPEM(signer domain.Signer) (KeyPair, error) {
 		switch {
 		case strings.Contains(block.Type, "CERTIFICATE"):
 			parsed, err := x509.ParseCertificate(block.Bytes)
+			if refusal := brainpool.KeyInFile(block.Bytes); err != nil && refusal != nil {
+				err = refusal
+			}
 			if err != nil {
 				return KeyPair{}, fmt.Errorf("parse certificate in %q: %w", signer.Name(), err)
 			}
@@ -162,6 +166,9 @@ func loadPEM(signer domain.Signer) (KeyPair, error) {
 func isSelfSigned(cert *x509.Certificate) bool {
 	if cert.Issuer.String() != cert.Subject.String() {
 		return false
+	}
+	if key, ok := cert.PublicKey.(*brainpool.PublicKey); ok {
+		return key.CheckSignature(cert.SignatureAlgorithm, cert.RawTBSCertificate, cert.Signature) == nil
 	}
 	return cert.CheckSignature(cert.SignatureAlgorithm, cert.RawTBSCertificate, cert.Signature) == nil
 }

@@ -3,7 +3,6 @@ package infrastructure
 import (
 	"context"
 	"crypto"
-	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
@@ -110,10 +109,8 @@ func (s *OoxmlSigner) signature(ctx context.Context, request application.XadesRe
 	if err != nil {
 		return nil, fmt.Errorf("sign the package signature: %w", err)
 	}
-	if key, ok := keyPair.Certificate.PublicKey.(*ecdsa.PublicKey); ok {
-		if value, err = xmldsigECDSA(key, value); err != nil {
-			return nil, err
-		}
+	if value, err = xmldsigValue(keyPair.Certificate.PublicKey, value); err != nil {
+		return nil, err
 	}
 	signatureElement.SelectElement("SignatureValue").SetText(base64.StdEncoding.EncodeToString(value))
 

@@ -305,7 +305,15 @@ Against **SoftHSM2**, which is a real PKCS#11 driver in software:
 - XAdES reporting `integrity: good`;
 - PAdES reporting `Signature is Valid` in `pdfsig`;
 - the reader, the token, the serial number and the certificates on the card
-  listed by `trebaruna token`.
+  listed by `trebaruna token`;
+- keys on the Brainpool curves German health professionals' cards (HBA)
+  use, brainpoolP256r1, P384r1 and P512r1: generated inside the token, with
+  a certificate from a Brainpool authority the token also holds, or signed
+  by the key itself. CAdES, XAdES, a counter-signature, an Office document,
+  an OpenDocument text and a PDF are signed with each; `openssl cms -verify` checks the CAdES
+  envelope, lxml and Python's cryptography check the XML signature value
+  (this system's xmlsec1 cannot load such a key, and NSS, behind `pdfsig`,
+  does not know the curves), and trebaruna's verifier checks every one.
 
 The test suite runs this in CI with `-tags token`.
 

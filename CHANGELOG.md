@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Signing with a Brainpool key on a card (brainpoolP256r1, P384r1 and
+  P512r1, the curves of German health professionals' cards): the card's
+  certificates are read with trebaruna's own parser, the chain the card
+  holds is walked with each issuer's signature checked, a self-signed card
+  is recognised, and the card signs ECDSA through PKCS#11. CAdES, PAdES
+  (through trebaruna's own CMS, as the PDF library's does not know the
+  curves), XAdES and its counter-signatures, and the Office and
+  OpenDocument signatures write the value as each format asks; the
+  safeguard that refuses a counter-signature which would break another
+  signature now sees Brainpool signatures too. `trebaruna token` lists such
+  certificates. Checked against SoftHSM with openssl, lxml and Python's
+  cryptography, and trebaruna's verifier. A Brainpool key in a PKCS#12
+  file or a PEM bundle is refused saying that such keys sign on a card,
+  rather than with Go's "unsupported elliptic curve".
+
 - A PDF signature field's seed values (`/SV`, ISO 32000-1 tables 234 and
   235) are honoured: the encoding is the first of the field's that
   trebaruna writes (`adbe.pkcs7.detached` when the form asks for it), and

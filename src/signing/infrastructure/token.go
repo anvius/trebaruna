@@ -9,6 +9,7 @@ import (
 
 	"codeberg.org/simplicer/trebaruna/src/signing/domain"
 	"codeberg.org/simplicer/trebaruna/src/signing/domain/identity"
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/brainpool"
 )
 
 // tokenPair is a certificate together with its signing key, as the token
@@ -58,7 +59,7 @@ func loadToken(signer domain.Signer) (KeyPair, error) {
 	for index, pair := range pairs {
 		// An unreadable certificate stays nil: it cannot be chosen, and it must
 		// not shift the position of the others.
-		leaves[index], _ = x509.ParseCertificate(pair.Certificate)
+		leaves[index], _ = brainpool.ParseCertificate(pair.Certificate)
 	}
 	index, err := signer.CertificateChoice().Pick(leaves)
 	if err != nil {
@@ -73,7 +74,7 @@ func loadToken(signer domain.Signer) (KeyPair, error) {
 
 	var chain []*x509.Certificate
 	for _, raw := range pair.Chain {
-		parsed, err := x509.ParseCertificate(raw)
+		parsed, err := brainpool.ParseCertificate(raw)
 		if err != nil {
 			continue
 		}

@@ -20,6 +20,8 @@ import (
 	"unsafe"
 
 	"github.com/miekg/pkcs11"
+
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/brainpool"
 )
 
 // The PKCS#11 session the signatures go through, written over the plain
@@ -180,7 +182,7 @@ func (s *session) Pairs() ([]tokenPair, error) {
 		if err != nil {
 			continue
 		}
-		parsed, err := x509.ParseCertificate(values[1])
+		parsed, err := brainpool.ParseCertificate(values[1])
 		if err != nil {
 			continue
 		}
@@ -226,7 +228,7 @@ func issuersOf(leaf *x509.Certificate, held []*x509.Certificate) []*x509.Certifi
 		var next *x509.Certificate
 		for _, candidate := range held {
 			if bytes.Equal(candidate.RawSubject, current.RawIssuer) && !candidate.Equal(current) &&
-				current.CheckSignatureFrom(candidate) == nil {
+				brainpool.CheckSignatureFrom(current, candidate) == nil {
 				next = candidate
 				break
 			}
@@ -316,7 +318,7 @@ func (k tokenKey) Sign(_ io.Reader, digest []byte, options crypto.SignerOpts) ([
 		}
 		mechanism = pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS, nil)
 		input = append(append([]byte{}, prefix...), digest...)
-	case *ecdsa.PublicKey:
+	case *ecdsa.PublicKey, *brainpool.PublicKey:
 		mechanism = pkcs11.NewMechanism(pkcs11.CKM_ECDSA, nil)
 	default:
 		return nil, fmt.Errorf("the token's key type %T cannot sign", k.public)
@@ -332,7 +334,7 @@ func (k tokenKey) Sign(_ io.Reader, digest []byte, options crypto.SignerOpts) ([
 	if err != nil {
 		return nil, err
 	}
-	if _, isECDSA := k.public.(*ecdsa.PublicKey); isECDSA {
+	if mechanism.Mechanism == pkcs11.CKM_ECDSA {
 		return asn1ECDSA(signature)
 	}
 	return signature, nil

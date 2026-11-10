@@ -15,6 +15,7 @@ import (
 
 	"codeberg.org/simplicer/trebaruna/src/signing/application"
 	"codeberg.org/simplicer/trebaruna/src/signing/domain"
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/brainpool"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/dss"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/pdffield"
 	verificationdomain "codeberg.org/simplicer/trebaruna/src/verification/domain"
@@ -76,10 +77,12 @@ func (s *PadesSigner) SignPades(ctx context.Context, request application.PadesRe
 
 	// trebaruna writes the signature itself when it goes in an existing
 	// field, declares a policy (signed attributes the PDF library's builder
-	// cannot add) or shows a seal: the library draws the standard fonts
-	// with every glyph 500 units wide and writes UTF-8 into WinAnsi
-	// strings, so its seals came out spaced apart, "·" as "Â·".
-	if request.Field != "" || !request.Policy.IsZero() || len(sealPlacementsOf(request)) > 0 {
+	// cannot add), shows a seal (the library draws the standard fonts with
+	// every glyph 500 units wide and writes UTF-8 into WinAnsi strings, so
+	// its seals came out spaced apart, "·" as "Â·") or the key is on a
+	// Brainpool curve, which the library's CMS does not know.
+	_, brainpoolKey := keyPair.Certificate.PublicKey.(*brainpool.PublicKey)
+	if request.Field != "" || !request.Policy.IsZero() || len(sealPlacementsOf(request)) > 0 || brainpoolKey {
 		signed, err := s.signOwn(ctx, request, keyPair)
 		if err != nil {
 			return nil, err

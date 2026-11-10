@@ -3,12 +3,13 @@
 package infrastructure
 
 import (
-	"crypto/x509"
 	"fmt"
 	"strings"
 
-	"codeberg.org/simplicer/trebaruna/src/signing/domain"
 	"github.com/miekg/pkcs11"
+
+	"codeberg.org/simplicer/trebaruna/src/signing/domain"
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/brainpool"
 )
 
 // inspectToken lists the slots and certificates a PKCS#11 module exposes.
@@ -166,7 +167,7 @@ func readCertificates(context *pkcs11.Ctx, slot uint, pin string) []TokenCertifi
 			if len(value) == 0 {
 				continue
 			}
-			parsed, err := x509.ParseCertificate(value)
+			parsed, err := brainpool.ParseCertificate(value)
 			if err != nil {
 				continue
 			}

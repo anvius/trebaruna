@@ -174,6 +174,16 @@ A PEM whose key this build cannot parse. Convert it:
 openssl pkcs8 -topk8 -nocrypt -in old.key -out key.pem
 ```
 
+### "trebaruna signs with a Brainpool key on a card only, not from a file"
+
+The certificate's key is on a Brainpool curve (brainpoolP256r1, P384r1 or
+P512r1), as on German health professionals' cards. trebaruna signs with
+such a key through the card, which does the arithmetic; Go has none for
+these curves, so a PKCS#12 file or a PEM bundle holding one is refused.
+Sign with the card (`--token`); see [Smartcards](smartcards.md). A
+PKCS#12 file encrypted the old way (RC2, `openssl pkcs12 -legacy`) still
+gives Go's "x509: unsupported elliptic curve" for the same reason.
+
 ### "cannot decrypt private key"
 
 The passphrase was given and is wrong, or the encryption algorithm is not

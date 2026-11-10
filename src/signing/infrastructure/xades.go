@@ -19,13 +19,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/beevik/etree"
+
 	"codeberg.org/simplicer/trebaruna/src/signing/application"
 	"codeberg.org/simplicer/trebaruna/src/signing/domain"
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/brainpool"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/cms"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/xmldsig"
 	verificationdomain "codeberg.org/simplicer/trebaruna/src/verification/domain"
 	verificationinfra "codeberg.org/simplicer/trebaruna/src/verification/infrastructure"
-	"github.com/beevik/etree"
 )
 
 // XadesSigner produces XAdES-BES (ETSI EN 319 132-1).
@@ -228,10 +230,8 @@ func (s *XadesSigner) SignXades(ctx context.Context, request application.XadesRe
 	if err != nil {
 		return nil, fmt.Errorf("sign XAdES SignedInfo: %w", err)
 	}
-	if key, ok := keyPair.Certificate.PublicKey.(*ecdsa.PublicKey); ok {
-		if signatureValue, err = xmldsigECDSA(key, signatureValue); err != nil {
-			return nil, err
-		}
+	if signatureValue, err = xmldsigValue(keyPair.Certificate.PublicKey, signatureValue); err != nil {
+		return nil, err
 	}
 
 	signatureValueElement := signatureElement.SelectElement("SignatureValue")
@@ -369,15 +369,25 @@ func canonicalDigest(element *etree.Element) ([]byte, error) {
 	return digest[:], nil
 }
 
-// xmldsigECDSA rewrites an ECDSA signature from the ASN.1 SEQUENCE Go returns
-// into the fixed-width r||s that XML-DSig requires (RFC 6931 §2.3.6). The ASN.1
-// form verified with our own reader and failed with every other one.
-func xmldsigECDSA(key *ecdsa.PublicKey, der []byte) ([]byte, error) {
+// xmldsigValue is the signature value XML-DSig writes for the key: an ECDSA
+// signature rewritten from the ASN.1 SEQUENCE a signer returns into the
+// fixed-width r||s XML-DSig requires (RFC 6931 §2.3.6), on a NIST or a
+// Brainpool curve; any other signature as it is. The ASN.1 form verified
+// with our own reader and failed with every other one.
+func xmldsigValue(public crypto.PublicKey, der []byte) ([]byte, error) {
+	var size int
+	switch key := public.(type) {
+	case *ecdsa.PublicKey:
+		size = (key.Curve.Params().BitSize + 7) / 8
+	case *brainpool.PublicKey:
+		size = (key.Curve.N.BitLen() + 7) / 8
+	default:
+		return der, nil
+	}
 	var parts struct{ R, S *big.Int }
 	if rest, err := asn1.Unmarshal(der, &parts); err != nil || len(rest) != 0 {
 		return nil, fmt.Errorf("unreadable ECDSA signature: %v", err)
 	}
-	size := (key.Curve.Params().BitSize + 7) / 8
 	raw := make([]byte, 2*size)
 	parts.R.FillBytes(raw[:size])
 	parts.S.FillBytes(raw[size:])

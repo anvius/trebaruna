@@ -3,7 +3,6 @@ package infrastructure
 import (
 	"context"
 	"crypto"
-	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
@@ -15,6 +14,7 @@ import (
 	"github.com/beevik/etree"
 
 	"codeberg.org/simplicer/trebaruna/src/signing/application"
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/brainpool"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/publickey"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/xmldsig"
 )
@@ -137,10 +137,8 @@ func (s *XadesSigner) completeCounterSignature(ctx context.Context, tree *etree.
 	if err != nil {
 		return fmt.Errorf("sign the counter-signature: %w", err)
 	}
-	if key, ok := keyPair.Certificate.PublicKey.(*ecdsa.PublicKey); ok {
-		if value, err = xmldsigECDSA(key, value); err != nil {
-			return err
-		}
+	if value, err = xmldsigValue(keyPair.Certificate.PublicKey, value); err != nil {
+		return err
 	}
 	counter.SelectElement("SignatureValue").SetText(base64.StdEncoding.EncodeToString(value))
 	if request.Level.NeedsTimestamp() {
@@ -252,7 +250,7 @@ func holdingSignaturesResolved(tree *etree.Document, resolve xmldsig.Resolver) m
 		if err != nil {
 			continue
 		}
-		certificate, err := x509.ParseCertificate(der)
+		certificate, err := brainpool.ParseCertificate(der)
 		if err != nil {
 			continue
 		}

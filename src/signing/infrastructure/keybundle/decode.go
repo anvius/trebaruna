@@ -25,6 +25,7 @@ import (
 	pkcs12 "software.sslmate.com/src/go-pkcs12"
 
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/ber"
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/brainpool"
 )
 
 // Decode returns the private key, the certificate that belongs to it and the
@@ -32,10 +33,18 @@ import (
 // pkcs12.ErrIncorrectPassword whatever the encoding.
 func Decode(data []byte, password string) (crypto.PrivateKey, *x509.Certificate, []*x509.Certificate, error) {
 	key, certificate, chain, err := pkcs12.DecodeChain(data, password)
-	if err == nil || errors.Is(err, pkcs12.ErrIncorrectPassword) || !notDER(err) {
+	if err == nil || errors.Is(err, pkcs12.ErrIncorrectPassword) {
 		return key, certificate, chain, err
 	}
-	return decodeBER(data, password)
+	if notDER(err) {
+		return decodeBER(data, password)
+	}
+	// go-pkcs12 refuses a certificate whose key Go cannot read; the own
+	// reader says why when that key is a Brainpool one.
+	if _, _, _, own := decodeBER(data, password); errors.Is(own, brainpool.ErrKeyInFile) {
+		return nil, nil, nil, own
+	}
+	return nil, nil, nil, err
 }
 
 // notDER recognises go-pkcs12 giving up on the encoding rather than the content.
@@ -262,6 +271,9 @@ func certificateFrom(encoded []byte) (*x509.Certificate, error) {
 	}
 	certificate, err := x509.ParseCertificate(bag.Data)
 	if err != nil {
+		if refusal := brainpool.KeyInFile(bag.Data); refusal != nil {
+			return nil, fmt.Errorf("keybundle: %w", refusal)
+		}
 		return nil, fmt.Errorf("keybundle: unreadable certificate: %w", err)
 	}
 	return certificate, nil
