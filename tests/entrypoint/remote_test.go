@@ -100,6 +100,7 @@ func TestSignWithASignatureAuthorisedInTheBrowser(t *testing.T) {
 	}
 	t.Setenv("BROWSER", browser)
 	server := csc.Start(t)
+	server.ClientSecret = "client-secret-value"
 	t.Setenv("TREBARUNA_CSC_TOKEN", csc.Token)
 	t.Setenv("TREBARUNA_CSC_CLIENT_SECRET", "client-secret-value")
 	document := writeDocument(t, "delibera.txt", "delibera\n")

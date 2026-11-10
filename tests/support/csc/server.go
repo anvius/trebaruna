@@ -57,12 +57,18 @@ type Server struct {
 
 	// Refuse makes the OAuth2 server answer as if the person refused.
 	Refuse bool
+	// ClientSecret, when set, is required of the token request, as a
+	// provider that registers confidential clients does.
+	ClientSecret string
 
 	mu          sync.Mutex
 	sads        map[string]authorised
 	credentials map[string]*credential
 	calls       []string
 	codes       map[string]grant
+	// secrets are the client_secret values the token requests carried,
+	// NoSecret for a request without one.
+	secrets []string
 	// scoped are credential-scoped access tokens, each for one signature.
 	scoped map[string]authorised
 	root   string
@@ -353,7 +359,17 @@ func (s *Server) oauthToken(writer http.ResponseWriter, request *http.Request) {
 	s.mu.Lock()
 	given, known := s.codes[request.PostForm.Get("code")]
 	delete(s.codes, request.PostForm.Get("code"))
+	secret := NoSecret
+	if values, sent := request.PostForm["client_secret"]; sent {
+		secret = values[0]
+	}
+	s.secrets = append(s.secrets, secret)
 	s.mu.Unlock()
+	// A public client sends no secret; a confidential one, its own.
+	if (s.ClientSecret == "" && secret != NoSecret) || (s.ClientSecret != "" && secret != s.ClientSecret) {
+		refuse(writer, http.StatusUnauthorized, "invalid_client", "the client secret does not match")
+		return
+	}
 	verifier := sha256.Sum256([]byte(request.PostForm.Get("code_verifier")))
 	switch {
 	case !known, request.PostForm.Get("grant_type") != "authorization_code",
@@ -373,6 +389,16 @@ func (s *Server) oauthToken(writer http.ResponseWriter, request *http.Request) {
 	s.scoped[token] = given.authorised
 	s.mu.Unlock()
 	answer(writer, map[string]any{"access_token": token, "token_type": "Bearer", "expires_in": 300})
+}
+
+// NoSecret stands for a token request that carried no client_secret.
+const NoSecret = "(none)"
+
+// Secrets are the client_secret values the token requests carried.
+func (s *Server) Secrets() []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return append([]string{}, s.secrets...)
 }
 
 func answer(writer http.ResponseWriter, value any) {

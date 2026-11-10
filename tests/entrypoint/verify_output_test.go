@@ -70,3 +70,30 @@ func TestVerifyNamesFieldsAndSpeaksInOneZone(t *testing.T) {
 		t.Errorf("CAdES human time is not local:\n%s", human)
 	}
 }
+
+// TestVerifyShowsWhatASignatureDeclares: the policy (named when known),
+// the role claimed and the place, from a XAdES signature, in the reader's
+// language.
+func TestVerifyShowsWhatASignatureDeclares(t *testing.T) {
+	key := writeIdentityP12(t, "segreto", "MARIA GARCIA", 38)
+	t.Setenv("TREBARUNA_PASSPHRASE", "segreto")
+	document := writeDocument(t, "solicitud.xml", "<solicitud><asunto>Licencia</asunto></solicitud>")
+	if _, stderr, code := run("sign", document, "--p12", key, "--policy", "age", "--role", "Alcaldesa", "--location", "Sevilla"); code != 0 {
+		t.Fatalf("sign: exit %d: %s", code, stderr)
+	}
+	signed := strings.TrimSuffix(document, ".xml") + "_signed.xml"
+	for lang, labels := range map[string][]string{"es": {"Política", "Rol", "Lugar"}, "en": {"Policy", "Role", "Place"}} {
+		human, _, _ := run("verify", signed, "--lang", lang)
+		rows := map[string]string{}
+		for _, line := range strings.Split(human, "\n") {
+			for _, label := range labels {
+				if fields := strings.Fields(line); len(fields) > 1 && fields[0] == label {
+					rows[label] = strings.Join(fields[1:], " ")
+				}
+			}
+		}
+		if !strings.Contains(rows[labels[0]], "2.16.724.1.3.1.1.2.1.9") || rows[labels[1]] != "Alcaldesa" || rows[labels[2]] != "Sevilla" {
+			t.Errorf("%s: %v\n%s", lang, rows, human)
+		}
+	}
+}

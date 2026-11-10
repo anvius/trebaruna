@@ -77,6 +77,31 @@ func TestSigningInThroughTheBrowser(t *testing.T) {
 		}
 	}
 	verifyInOpenSSL(t, server, signed)
+	if secrets := server.Secrets(); len(secrets) != 1 || secrets[0] != csc.NoSecret {
+		t.Errorf("a public client sends no secret: %q", secrets)
+	}
+}
+
+// TestAConfidentialClientSendsItsSecret: a provider that registered
+// trebaruna with a client secret gets it with the code; one that did not
+// refuses the request without it.
+func TestAConfidentialClientSendsItsSecret(t *testing.T) {
+	curlBrowser(t)
+	server := csc.Start(t)
+	server.ClientSecret = "secreto-del-cliente"
+	service := domain.RemoteService{Address: server.URL, Credential: "rsa-explicit", PIN: csc.PIN, OAuthClient: csc.OAuthClient}
+	if _, err := signCades(t, service); err == nil || !strings.Contains(err.Error(), "invalid_client") {
+		t.Errorf("without the secret: %v", err)
+	}
+	service.OAuthSecret = "secreto-del-cliente"
+	signed, err := signCades(t, service)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if secrets := server.Secrets(); len(secrets) != 2 || secrets[1] != "secreto-del-cliente" {
+		t.Errorf("the secrets sent: %q", secrets)
+	}
+	verifyInOpenSSL(t, server, signed)
 }
 
 // TestASignatureAuthorisedInTheBrowser: an oauth2code credential has each
