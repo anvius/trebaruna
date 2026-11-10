@@ -129,6 +129,8 @@ func dispatch(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return runFields(args[1:], stdout, stderr)
 	case "convert":
 		return runConvert(args[1:], stdout, stderr)
+	case "update":
+		return runUpdate(args[1:], stdout, stderr)
 	case "version", "--version", "-v":
 		fmt.Fprintln(stdout, version)
 		return exitOK
@@ -632,6 +634,7 @@ usage:
   trebaruna decrypt <file.p7e> --p12|--card|…     (open a .p7e with your key)
   trebaruna afirma '<afirma://…>' [--approve]    (answer an AutoFirma request; shown first)
   trebaruna about [--json]                      (build, revision, dependencies and licences)
+  trebaruna update [--json]                     (is a newer release published? downloads nothing)
 
 flags:
   --format   cades | pades | xades | xmldsig | odf | ooxml       default: from the suffix

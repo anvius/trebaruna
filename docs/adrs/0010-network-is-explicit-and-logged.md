@@ -9,7 +9,7 @@ A signing tool must not talk to anyone the user did not ask it to, and must be a
 
 ## Decision
 
-All outbound HTTP goes through the `transparency` slice, which records destination, purpose, method, status and bytes. Machine output carries the record under `network`; the window shows it. Nothing runs without a user action: no telemetry, no update checks, no background downloads. A test fails if any code builds its own HTTP client.
+All outbound HTTP goes through the `transparency` slice, which records destination, purpose, method, status and bytes. Machine output carries the record under `network`; the window shows it. Nothing runs without a user action: no telemetry, no automatic update checks, no background downloads. (Since 0.106.0 an update check runs when the person asks for one, `trebaruna update` or Help → Check for updates, listed as `update-check`, downloading nothing.) A test fails if any code builds its own HTTP client.
 
 ## Consequences
 

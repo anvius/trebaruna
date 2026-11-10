@@ -336,6 +336,12 @@ type Catalogue struct {
 	MenuHelp                 string
 	MenuManual               string
 	MenuAbout                string
+	MenuCheckUpdates         string
+	UpdateNewer              string
+	UpdateCurrent            string
+	UpdateAhead              string
+	UpdateFailed             string
+	UpdateNote               string
 	AboutText                string
 	UnknownVersion           string
 	CloseButton              string
@@ -366,6 +372,7 @@ type Catalogue struct {
 	PurposeSigningServer   string
 	PurposeRemoteSigning   string
 	PurposeUnattributed    string
+	PurposeUpdateCheck     string
 	DocumentFingerprint    string
 	DocumentChanged        string
 	AboutCardsYes          string
@@ -701,6 +708,12 @@ var spanish = Catalogue{
 	MenuHelp:                   "Ayuda",
 	MenuManual:                 "Manual",
 	MenuAbout:                  "Acerca de trebaruna",
+	MenuCheckUpdates:           "Buscar actualizaciones",
+	UpdateNewer:                "Hay una versión más nueva publicada: %s (esta es %s).",
+	UpdateCurrent:              "trebaruna %s es la última versión publicada.",
+	UpdateAhead:                "trebaruna %s es más reciente que la última versión publicada (%s).",
+	UpdateFailed:               "No se ha podido comprobar si hay actualizaciones: %s",
+	UpdateNote:                 "Solo se consulta dónde se publica trebaruna; no se descarga nada.",
 	AboutText:                  "Firma electrónica CAdES, PAdES y XAdES sin código propietario.\nVersión %s\nLicencia AGPL-3.0-or-later.",
 	UnknownVersion:             "desconocida (no se encontró el programa trebaruna)",
 	CloseButton:                "Cerrar",
@@ -727,6 +740,7 @@ var spanish = Catalogue{
 	PurposeSigningServer:       "servidor de la sede",
 	PurposeRemoteSigning:       "firma remota",
 	PurposeUnattributed:        "sin motivo identificado",
+	PurposeUpdateCheck:         "búsqueda de actualizaciones",
 	DocumentFingerprint:        "Huella SHA-256: %s",
 	DocumentChanged:            "Atención: el documento cambió después de elegirlo. Se ha firmado la versión con huella %s.",
 	AboutCardsYes:              "Admite tarjetas y tokens (PKCS#11).",
@@ -1047,6 +1061,12 @@ var italian = Catalogue{
 	MenuHelp:                   "Aiuto",
 	MenuManual:                 "Manuale",
 	MenuAbout:                  "Informazioni su trebaruna",
+	MenuCheckUpdates:           "Cerca aggiornamenti",
+	UpdateNewer:                "È disponibile una versione più recente: %s (questa è la %s).",
+	UpdateCurrent:              "trebaruna %s è l'ultima versione pubblicata.",
+	UpdateAhead:                "trebaruna %s è più recente dell'ultima versione pubblicata (%s).",
+	UpdateFailed:               "Impossibile verificare gli aggiornamenti: %s",
+	UpdateNote:                 "Si consulta solo dove viene pubblicato trebaruna; non si scarica nulla.",
 	AboutText:                  "Firma elettronica CAdES, PAdES e XAdES senza codice proprietario.\nVersione %s\nLicenza AGPL-3.0-or-later.",
 	UnknownVersion:             "sconosciuta (programma trebaruna non trovato)",
 	CloseButton:                "Chiudi",
@@ -1073,6 +1093,7 @@ var italian = Catalogue{
 	PurposeSigningServer:       "server del portale",
 	PurposeRemoteSigning:       "firma remota",
 	PurposeUnattributed:        "motivo non identificato",
+	PurposeUpdateCheck:         "controllo aggiornamenti",
 	DocumentFingerprint:        "Impronta SHA-256: %s",
 	DocumentChanged:            "Attenzione: il documento è cambiato dopo la scelta. È stata firmata la versione con impronta %s.",
 	AboutCardsYes:              "Supporta smart card e token (PKCS#11).",
@@ -1393,6 +1414,12 @@ var english = Catalogue{
 	MenuHelp:                   "Help",
 	MenuManual:                 "Manual",
 	MenuAbout:                  "About trebaruna",
+	MenuCheckUpdates:           "Check for updates",
+	UpdateNewer:                "A newer release is published: %s (this is %s).",
+	UpdateCurrent:              "trebaruna %s is the newest published release.",
+	UpdateAhead:                "trebaruna %s is newer than the newest published release (%s).",
+	UpdateFailed:               "Could not check for updates: %s",
+	UpdateNote:                 "Only where trebaruna is published is asked; nothing is downloaded.",
 	AboutText:                  "CAdES, PAdES and XAdES electronic signatures without proprietary code.\nVersion %s\nLicensed AGPL-3.0-or-later.",
 	UnknownVersion:             "unknown (the trebaruna program was not found)",
 	CloseButton:                "Close",
@@ -1419,6 +1446,7 @@ var english = Catalogue{
 	PurposeSigningServer:       "site's signing server",
 	PurposeRemoteSigning:       "remote signing",
 	PurposeUnattributed:        "no identified purpose",
+	PurposeUpdateCheck:         "update check",
 	DocumentFingerprint:        "SHA-256 fingerprint: %s",
 	DocumentChanged:            "Warning: the document changed after it was chosen. The version with fingerprint %s was signed.",
 	AboutCardsYes:              "Supports smartcards and tokens (PKCS#11).",

@@ -71,6 +71,8 @@ func purposeName(purpose transparency.Purpose, m messaging.Catalogue) string {
 		return m.PurposeSigningServer
 	case transparency.PurposeRemoteSigning:
 		return m.PurposeRemoteSigning
+	case transparency.PurposeUpdateCheck:
+		return m.PurposeUpdateCheck
 	}
 	return m.PurposeUnattributed
 }

@@ -36,7 +36,7 @@ func TestUsageListsEveryCommand(t *testing.T) {
 	for _, command := range []string{
 		"trebaruna sign", "trebaruna verify", "trebaruna trust",
 		"trebaruna timestamp", "trebaruna verify-tsr",
-		"trebaruna certificate", "trebaruna asic",
+		"trebaruna certificate", "trebaruna asic", "trebaruna convert", "trebaruna update",
 	} {
 		if !strings.Contains(stdout, command) {
 			t.Errorf("the help does not mention %q", command)

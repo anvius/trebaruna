@@ -55,6 +55,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.106.0-unstable" date="2026-11-10">
+      <description>
+        <p>trebaruna can say, when asked, whether a newer release is published.</p>
+      </description>
+    </release>
     <release version="0.105.0-unstable" date="2026-11-10">
       <description>
         <p>Office documents can be signed as the PDF LibreOffice prints of them.</p>

@@ -359,3 +359,21 @@ func TestAFolderOffersWhatIsWorthSigning(t *testing.T) {
 		t.Errorf("documentsIn = %v", got)
 	}
 }
+
+// TestAnUpdateCheckIsShownAndItsConnectionListed: the window says what the
+// check found, whether it failed, and adds its connection to the session's.
+func TestAnUpdateCheckIsShownAndItsConnectionListed(t *testing.T) {
+	test.NewTempApp(t)
+	desktop := newDesktop(test.NewTempWindow(t, nil), messaging.For(messaging.Spanish), "/nonexistent/trebaruna")
+	connection := transparency.Connection{Purpose: transparency.PurposeUpdateCheck, Method: "GET",
+		URL: "https://codeberg.org/api/v1/repos/simplicer/trebaruna/tags", Status: 200}
+	desktop.showUpdate(updateReport{Running: "0.105.0-unstable", Latest: "0.106.0-unstable", Newer: true,
+		Page: "https://codeberg.org/simplicer/trebaruna/releases/tag/v0.106.0-unstable", Connections: []transparency.Connection{connection}}, nil)
+	if listed := desktop.activity.list(); len(listed) != 1 || listed[0].Purpose != transparency.PurposeUpdateCheck {
+		t.Errorf("the activity lists %+v", listed)
+	}
+	if name := purposeName(transparency.PurposeUpdateCheck, desktop.messages); name != "búsqueda de actualizaciones" {
+		t.Errorf("the purpose reads %q", name)
+	}
+	desktop.showUpdate(updateReport{}, errors.New("sin red")) // a failure is said, not hidden
+}

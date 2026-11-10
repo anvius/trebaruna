@@ -34,6 +34,10 @@ const (
 	// PurposeRemoteSigning asks a remote signing provider to sign a hash.
 	PurposeRemoteSigning Purpose = "remote-signing"
 
+	// PurposeUpdateCheck asks where trebaruna is published for its newest
+	// release, when the person asks.
+	PurposeUpdateCheck Purpose = "update-check"
+
 	// PurposeUnattributed is a connection a library opened that the program
 	// could not classify. It is still recorded; a test keeps our own flows from
 	// producing one.

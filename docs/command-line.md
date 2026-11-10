@@ -701,6 +701,20 @@ A detached `.p7s` has no document inside and is refused with that reason.
 
 ---
 
+## `update`
+
+```bash
+trebaruna update [--json]
+```
+
+Asks where trebaruna is published (its Codeberg repository; `--from` names
+another Forgejo or Gitea repository that publishes it) for its release tags,
+and says whether one newer than this build exists, and where to get it. It
+runs only when asked, its one connection is listed with the purpose
+`update-check`, and nothing is downloaded or installed: updating stays the
+package manager's, or the person's. A build that does not know its version
+(built without the Makefile) asks nothing and says why.
+
 ## `about`
 
 ```

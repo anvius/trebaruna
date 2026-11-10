@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `trebaruna update` and Help → Check for updates say whether a newer
+  release is published, comparing this build with the release tags of the
+  repository trebaruna is published in by Semantic Versioning's
+  precedence, and where to get it. It runs only when asked, its connection
+  is listed as `update-check`, and it downloads nothing; a build that does
+  not know its version asks nothing.
+
 - A text, spreadsheet or presentation (OpenDocument, Office Open XML, the
   older Office formats, RTF, plain text, CSV) can be signed as the PDF
   LibreOffice prints of it: `sign x.docx --to-pdf` writes

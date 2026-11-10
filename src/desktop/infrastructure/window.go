@@ -27,6 +27,7 @@ import (
 	"codeberg.org/simplicer/trebaruna/src/desktop/domain"
 	"codeberg.org/simplicer/trebaruna/src/desktop/messaging"
 	signing "codeberg.org/simplicer/trebaruna/src/signing/domain"
+	transparency "codeberg.org/simplicer/trebaruna/src/transparency/domain"
 	transparencyinfra "codeberg.org/simplicer/trebaruna/src/transparency/infrastructure"
 	reportmessaging "codeberg.org/simplicer/trebaruna/src/verification/messaging"
 )
@@ -320,6 +321,7 @@ func (w *Window) mainMenu(tabs *container.AppTabs, checkFile func(string)) *fyne
 		),
 		fyne.NewMenu(m.MenuHelp,
 			fyne.NewMenuItem(m.MenuManual, func() { _ = fyne.CurrentApp().OpenURL(manualURL()) }),
+			fyne.NewMenuItem(m.MenuCheckUpdates, w.checkForUpdates),
 			fyne.NewMenuItem(m.MenuAbout, w.showAbout),
 		),
 	)
@@ -432,6 +434,66 @@ func (w *Window) showAbout() {
 	about := dialog.NewCustom(m.MenuAbout, m.CloseButton, content, w.window)
 	about.Resize(fyne.NewSize(560, 520))
 	about.Show()
+}
+
+// updateReport is `trebaruna update --json`.
+type updateReport struct {
+	Running     string                    `json:"running"`
+	Latest      string                    `json:"latest"`
+	Page        string                    `json:"page"`
+	Newer       bool                      `json:"newer"`
+	Connections []transparency.Connection `json:"connections"`
+}
+
+// checkForUpdates asks the command whether a newer release is published
+// (`trebaruna update --json`): only because the person asked, the
+// connection listed with the others, nothing downloaded.
+func (w *Window) checkForUpdates() {
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
+		defer cancel()
+		output, err := runCommand(ctx, w.binaryPath, []string{"update", "--json"})
+		var report updateReport
+		if err == nil {
+			err = json.Unmarshal([]byte(output), &report)
+		} else if text := strings.TrimSpace(output); text != "" {
+			err = fmt.Errorf("%s", firstLine(text))
+		}
+		fyne.Do(func() { w.showUpdate(report, err) })
+	}()
+}
+
+// showUpdate says what the check found.
+func (w *Window) showUpdate(report updateReport, err error) {
+	m := w.messages
+	w.activity.add(report.Connections)
+	var message string
+	switch {
+	case err != nil:
+		message = fmt.Sprintf(m.UpdateFailed, err)
+	case report.Newer:
+		message = fmt.Sprintf(m.UpdateNewer, report.Latest, report.Running)
+	case report.Latest == report.Running:
+		message = fmt.Sprintf(m.UpdateCurrent, report.Running)
+	default:
+		message = fmt.Sprintf(m.UpdateAhead, report.Running, report.Latest)
+	}
+	text := widget.NewLabel(message)
+	text.Wrapping = fyne.TextWrapWord
+	content := container.NewVBox(text)
+	if page, parseErr := url.Parse(report.Page); err == nil && report.Newer && parseErr == nil {
+		content.Add(widget.NewHyperlink(report.Page, page))
+	}
+	content.Add(caption(m.UpdateNote))
+	shown := dialog.NewCustom(m.MenuCheckUpdates, m.CloseButton, content, w.window)
+	shown.Resize(fyne.NewSize(480, 220))
+	shown.Show()
+}
+
+// firstLine is a text's first line.
+func firstLine(text string) string {
+	line, _, _ := strings.Cut(text, "\n")
+	return line
 }
 
 // describeBuild asks the command what it is.

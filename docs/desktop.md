@@ -347,7 +347,7 @@ Linux and Windows, `Cmd` on macOS):
 | Signature | Find free space | `Ctrl+F` |
 | Card | Change the PIN…, Unlock with the PUK…, Change the PUK… | — |
 | Tools | Requests from web pages… | — |
-| Help | Manual, About trebaruna | — |
+| Help | Manual, Check for updates (says whether a newer release is published and where; downloads nothing; the connection is listed under Tools → Network activity), About trebaruna | — |
 
 Dropping several files on the signing tab, or **File → Sign a folder…**, starts
 a batch: every document with the same settings, each in its own format unless
