@@ -267,7 +267,7 @@ func TestXadesTimestampImprintCoversSignatureValue(t *testing.T) {
 	}
 	raw := sha256.Sum256(regexp.MustCompile(`(?s)<ds:SignatureValue[^>]*>.*?</ds:SignatureValue>`).Find(output))
 	if bytes.Equal(raw[:], tsa.imprint) {
-		t.Error("the token must not cover the element as written (trebaruna before 0.38.2)")
+		t.Error("the token must not cover the element as written (trebaruna before 0.55.2)")
 	}
 }
 
@@ -606,7 +606,7 @@ func TestVerifierReadsArchiveTimeStamp(t *testing.T) {
 }
 
 // TestATimestampOverTheOldFormIsAcceptedAndTold: files trebaruna wrote
-// before 0.38.2 sealed ds:SignatureValue as written. They still read as
+// before 0.55.2 sealed ds:SignatureValue as written. They still read as
 // timestamped, with a warning that other validators will refuse them; a
 // new file carries no such warning.
 func TestATimestampOverTheOldFormIsAcceptedAndTold(t *testing.T) {

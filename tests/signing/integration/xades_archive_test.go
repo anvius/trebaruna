@@ -2,7 +2,7 @@ package integration_test
 
 // EN 319 132-1, 5.5.2.2: the archive timestamp's input starts with the
 // result of processing every ds:Reference of SignedInfo, the document
-// included. Up to 0.30.4 the enveloped document reference (URI="") was
+// included. Up to 0.47.4 the enveloped document reference (URI="") was
 // skipped, so the token covered everything but the document and no other
 // validator could reproduce its imprint. The input is rebuilt here from the
 // file, step by step, with canonical forms only.

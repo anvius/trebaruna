@@ -184,7 +184,7 @@ anyone can verify it again.
 | `timestamp.invalid` | bad | The token does not parse, verify, or cover this signature |
 | `timestamp.archival` | good | An archive timestamp covers the signature (XAdES-A, or CAdES-A's archive-time-stamp-v3); one finding for each, a renewed signature carrying several |
 | `timestamp.archive_unbound` | warn | The archive timestamp does not seal this signature as EN 319 132-1 5.5.2 (XAdES: its references, value, KeyInfo and the properties before it) or EN 319 122-1 5.5.3 (CAdES: the content, the SignerInfo and the hash index of its certificates, revocation values and unsigned attributes, all still present) read: it proves nothing about it |
-| `timestamp.legacy_form` | warn | A trebaruna XAdES-T made before 0.38.2: the token seals the signature value as written, not its canonical form, and other validators refuse it |
+| `timestamp.legacy_form` | warn | A trebaruna XAdES-T made before 0.55.2: the token seals the signature value as written, not its canonical form, and other validators refuse it |
 
 ### Environment
 

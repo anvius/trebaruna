@@ -548,6 +548,10 @@ later, so what the person saw is what gets signed.
 Issues and patches are welcome on Codeberg. Conventions used here:
 
 - **Conventional Commits**, one commit per change, in English.
+- **Semantic Versioning, derived from those commits**: after the first, a
+  `feat` raises the minor and a `fix`, `refactor` or `perf` the patch; major
+  0 is always `-unstable`. `VERSION` and the newest AppStream release say
+  what the history gives, and `make check` fails when they do not.
 - `make check` must pass before a commit.
 - New behaviour needs a test, and a claim needs a measurement.
 - A capability that is not tested is documented as a limit, not as a feature.

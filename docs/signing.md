@@ -530,7 +530,7 @@ An XML works the same way: signing `acta_signed.xml` adds a second
 of what it signs (the XPath filter `not(ancestor-or-self::ds:Signature)`,
 as AutoFirma writes it), so adding one never breaks another; `verify`
 reports each. FacturaE invoices take a single signature. XML signed by
-trebaruna before 0.30.4 lacks the filter, and a second signature breaks it.
+trebaruna before 0.47.4 lacks the filter, and a second signature breaks it.
 
 ---
 
@@ -602,7 +602,7 @@ attributes. `.p7m` is the conventional name.
   5.5.2) listing the digest of every certificate, revocation value and unsigned
   attribute value the envelope holds, revocation material included. The index
   travels in the token's own unsigned attributes, and `verify` recomputes all of
-  it. Before 0.50.1 the token covered the container's DER under the v2 OID
+  it. Before 0.67.1 the token covered the container's DER under the v2 OID
   (`1.2.840.113549.1.9.16.2.48`): no validator could check it.
 
 The revocation attribute's OID is worth stating: `.24` is `revocationValues`, and

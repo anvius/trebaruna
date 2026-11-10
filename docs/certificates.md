@@ -52,7 +52,7 @@ Both extension names work; the tool reads the container, not the name.
 - PKCS#12 in BER, as Firefox and Thunderbird (NSS) export a certificate from
   their certificate manager: PBES2 with AES and PBKDF2-HMAC-SHA256, or the older
   3DES with an HMAC-SHA1 integrity check. Go's PKCS#12 library reads DER only;
-  before 0.6.1 such a file was refused as "not a certificate" even with the right
+  before 0.23.1 such a file was refused as "not a certificate" even with the right
   passphrase.
 - Self-signed certificates.
 - Keys encrypted with a passphrase. An empty passphrase is allowed if the

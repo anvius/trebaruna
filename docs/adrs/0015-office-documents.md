@@ -15,7 +15,7 @@ ODF (`META-INF/documentsignatures.xml`) and OOXML (`_xmlsignatures`) signatures 
 
 PDF remains the recommended format for documents meant to be read by other people.
 
-## ODF, as implemented (0.39.0)
+## ODF, as implemented (0.56.0)
 
 - `META-INF/documentsignatures.xml` holds one XAdES signature per signer,
   under `<document-signatures xmlns="urn:oasis:names:tc:opendocument:xmlns:digitalsignature:1.0" version="1.2">`.
@@ -35,7 +35,7 @@ PDF remains the recommended format for documents meant to be read by other peopl
   signature, two, and a trebaruna signature added to one LibreOffice made
   all valid; a changed `content.xml` invalid. Also xmlsec1 and Java 25.
 
-## OOXML, as implemented (0.40.0)
+## OOXML, as implemented (0.57.0)
 
 - One signature part per signer, `_xmlsignatures/sigN.xml`, linked from the
   origin (`_xmlsignatures/origin.sigs`, created with its relationship from

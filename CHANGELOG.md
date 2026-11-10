@@ -831,6 +831,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Versions are numbered as the commit history gives them: 0.103.0-unstable
+  instead of the hand-kept 0.86.0-unstable, 17 minor versions apart since
+  the first weeks. The AppStream releases and the versions the documents,
+  ADRs and the `timestamp.legacy_form` finding mention moved by the same 17
+  (0.38.2 is 0.55.2, 0.50.1 is 0.67.1). A packaging test derives the
+  version from the history and fails when `VERSION` says otherwise. The
+  0.1.0 to 0.3.1 releases below keep the numbers they were published with.
+
 - The seal is laid out as marks (the rubric, the accent rule, the lines of
   text) apart from the PDF library that draws them, so trebaruna can draw
   the same seal in a signature field the library does not create. The
@@ -1159,7 +1167,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     a timestamp over "a different signature value".
   - Both now canonicalise in place, with the C14N the SignatureTimeStamp
     declares; the verifier finds SignatureValue under any prefix.
-  - Files written before 0.38.2 still read as timestamped, with
+  - Files written before 0.55.2 still read as timestamped, with
     `timestamp.legacy_form` (warn) saying others will refuse them.
   - `openssl ts -verify` checks the token against the canonical bytes.
 

@@ -15,7 +15,7 @@ An image may be added to the seal, always next to the certificate data, never al
 
 ADR-0007 still holds for the text.
 
-## As implemented (0.41.0)
+## As implemented (0.58.0)
 
 - The rubric is a PNG or a JPEG of at most 4 MiB and 4096 pixels a side
   (`domain.Rubric`); anything else is refused when it is given, not when the

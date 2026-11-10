@@ -10,7 +10,7 @@ import (
 
 // oidArchiveTimeStampV3 is archive-time-stamp-v3 (ETSI EN 319 122-1,
 // id-aa-ets-archiveTimestampV3). 1.2.840.113549.1.9.16.2.48, which
-// trebaruna wrote before 0.50.1, is the v2 of TS 101 733.
+// trebaruna wrote before 0.67.1, is the v2 of TS 101 733.
 var oidArchiveTimeStampV3 = cms.OIDArchiveTimeStampV3
 
 // describeArchiveTimeStamps checks each archive-time-stamp-v3 of the

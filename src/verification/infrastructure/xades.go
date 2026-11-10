@@ -633,7 +633,7 @@ func (v *XadesVerifier) describeSignatureTimeStamp(signature *etree.Element, rep
 	}
 	// The token covers ds:SignatureValue in its canonical form where it
 	// stands, with the C14N the SignatureTimeStamp declares (EN 319 132-1,
-	// 5.4.1.3). trebaruna before 0.38.2 timestamped the element as written,
+	// 5.4.1.3). trebaruna before 0.55.2 timestamped the element as written,
 	// which only it accepts: that is told, not hidden.
 	canonical, canonicalErr := xmldsig.Canonicalize(signatureValue, signatureTimeStampCanonicalization(signature), "")
 	legacy := false
@@ -673,7 +673,7 @@ func (v *XadesVerifier) describeSignatureTimeStamp(signature *etree.Element, rep
 		report.Findings = append(report.Findings, domain.Finding{
 			Code:    "timestamp.legacy_form",
 			Status:  domain.StatusWarn,
-			Message: "the timestamp covers the signature value as trebaruna wrote it before 0.38.2, not its canonical form: other validators will not accept it",
+			Message: "the timestamp covers the signature value as trebaruna wrote it before 0.55.2, not its canonical form: other validators will not accept it",
 		})
 	}
 	if !facts.CanTimestamp {

@@ -15,7 +15,7 @@ Only the open Cloud Signature Consortium API v2 is implemented, with no vendor S
 
 Providers without a CSC endpoint are not supported.
 
-## Implementation (0.38.0)
+## Implementation (0.55.0)
 
 - `sign --csc <base> [--credential <id>]`; the access token, or the user and
   password for `auth/login`, and the PIN and OTP come from the environment
@@ -29,11 +29,11 @@ Providers without a CSC endpoint are not supported.
 - The remote key is a `crypto.Signer`, so every format and level signs
   through it unchanged.
 - A credential read is remembered for a minute, per service, credential
-  and secrets (0.60.1): reading the signer's identity and signing ask the
+  and secrets (0.77.1): reading the signer's identity and signing ask the
   provider once.
 - The receipt carries `key_source: csc` and the provider's host, in text
   and JSON.
-- OAuth2 authorization-code flow (0.61.0), with `--csc-client`: `info`
+- OAuth2 authorization-code flow (0.78.0), with `--csc-client`: `info`
   names the server; the browser opens the authorisation page and comes
   back to a loopback address (RFC 8252); PKCE S256 and the state bind the
   code to the request. Scope `service` signs in when there is no token or

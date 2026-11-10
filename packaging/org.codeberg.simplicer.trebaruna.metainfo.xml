@@ -55,382 +55,382 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
-    <release version="0.86.0-unstable" date="2026-11-10">
+    <release version="0.103.0-unstable" date="2026-11-10">
       <description>
         <p>PDF form fields that set requirements for their signature are honoured.</p>
       </description>
     </release>
-    <release version="0.85.0-unstable" date="2026-11-10">
+    <release version="0.102.0-unstable" date="2026-11-10">
       <description>
         <p>PDF form fields that lock others when signed are honoured.</p>
       </description>
     </release>
-    <release version="0.84.3-unstable" date="2026-11-10">
+    <release version="0.101.3-unstable" date="2026-11-10">
       <description>
         <p>A PDF certified against any change is never signed.</p>
       </description>
     </release>
-    <release version="0.84.2-unstable" date="2026-11-10">
+    <release version="0.101.2-unstable" date="2026-11-10">
       <description>
         <p>Counter-signing a timestamped XML signature keeps its timestamp.</p>
       </description>
     </release>
-    <release version="0.84.1-unstable" date="2026-11-10">
+    <release version="0.101.1-unstable" date="2026-11-10">
       <description>
         <p>Every archive timestamp of an XML signature is checked, and each signature by its own timestamps.</p>
       </description>
     </release>
-    <release version="0.84.0-unstable" date="2026-11-10">
+    <release version="0.101.0-unstable" date="2026-11-10">
       <description>
         <p>ASiC containers can be counter-signed, from the command line, the window and web pages.</p>
       </description>
     </release>
-    <release version="0.83.9-unstable" date="2026-11-10">
+    <release version="0.100.9-unstable" date="2026-11-10">
       <description>
         <p>Detached XML signatures can be counter-signed.</p>
       </description>
     </release>
-    <release version="0.83.8-unstable" date="2026-11-10">
+    <release version="0.100.8-unstable" date="2026-11-10">
       <description>
         <p>The certificate command speaks one language, the reader's.</p>
       </description>
     </release>
-    <release version="0.83.7-unstable" date="2026-11-10">
+    <release version="0.100.7-unstable" date="2026-11-10">
       <description>
         <p>ASiC containers open in Java's ZIP reader; added entries are dated.</p>
       </description>
     </release>
-    <release version="0.83.6-unstable" date="2026-11-10">
+    <release version="0.100.6-unstable" date="2026-11-10">
       <description>
         <p>Co-signed containers report the kind of signature added; documents declare their real media type.</p>
       </description>
     </release>
-    <release version="0.83.5-unstable" date="2026-11-10">
+    <release version="0.100.5-unstable" date="2026-11-10">
       <description>
         <p>Counter-signatures and co-signatures inside containers keep names of their own.</p>
       </description>
     </release>
-    <release version="0.83.4-unstable" date="2026-11-10">
+    <release version="0.100.4-unstable" date="2026-11-10">
       <description>
         <p>A detached signature checked without its document is reported as unknown.</p>
       </description>
     </release>
-    <release version="0.83.3-unstable" date="2026-11-10">
+    <release version="0.100.3-unstable" date="2026-11-10">
       <description>
         <p>Clearer verification output: field names, the reason, one time zone.</p>
       </description>
     </release>
-    <release version="0.83.2-unstable" date="2026-11-10">
+    <release version="0.100.2-unstable" date="2026-11-10">
       <description>
         <p>Signing no longer replaces an earlier signed file without saying so.</p>
       </description>
     </release>
-    <release version="0.83.1-unstable" date="2026-11-10">
+    <release version="0.100.1-unstable" date="2026-11-10">
       <description>
         <p>Failures are JSON too when JSON is asked for.</p>
       </description>
     </release>
-    <release version="0.83.0-unstable" date="2026-11-10">
+    <release version="0.100.0-unstable" date="2026-11-10">
       <description>
         <p>Trusted lists' brainpool authorities anchor signatures like any other.</p>
       </description>
     </release>
-    <release version="0.82.0-unstable" date="2026-11-10">
+    <release version="0.99.0-unstable" date="2026-11-10">
       <description>
         <p>XML signatures made with brainpool keys are read and checked.</p>
       </description>
     </release>
-    <release version="0.81.1-unstable" date="2026-11-10">
+    <release version="0.98.1-unstable" date="2026-11-10">
       <description>
         <p>Names, reasons and places with accents read correctly in signatures with a seal.</p>
       </description>
     </release>
-    <release version="0.81.0-unstable" date="2026-11-10">
+    <release version="0.98.0-unstable" date="2026-11-10">
       <description>
         <p>PDF signatures made with brainpool keys are checked, no longer reported as changed.</p>
       </description>
     </release>
-    <release version="0.80.0-unstable" date="2026-11-10">
+    <release version="0.97.0-unstable" date="2026-11-10">
       <description>
         <p>CAdES signatures made with brainpool keys, as German health professionals' cards make them, are read and checked.</p>
       </description>
     </release>
-    <release version="0.79.0-unstable" date="2026-11-10">
+    <release version="0.96.0-unstable" date="2026-11-10">
       <description>
         <p>PDF/A documents stay PDF/A when you sign them with a seal.</p>
       </description>
     </release>
-    <release version="0.78.0-unstable" date="2026-11-09">
+    <release version="0.95.0-unstable" date="2026-11-09">
       <description>
         <p>The window asks for the password of a protected PDF.</p>
       </description>
     </release>
-    <release version="0.77.0-unstable" date="2026-11-09">
+    <release version="0.94.0-unstable" date="2026-11-09">
       <description>
         <p>Sign PDFs protected with a password, keeping them encrypted.</p>
       </description>
     </release>
-    <release version="0.76.0-unstable" date="2026-11-09">
+    <release version="0.93.0-unstable" date="2026-11-09">
       <description>
         <p>An address book of the people you encrypt for, in the command line and the envelopes window.</p>
       </description>
     </release>
-    <release version="0.75.0-unstable" date="2026-11-09">
+    <release version="0.92.0-unstable" date="2026-11-09">
       <description>
         <p>Change a card's PUK, from the command line or the Card menu.</p>
       </description>
     </release>
-    <release version="0.74.0-unstable" date="2026-11-09">
+    <release version="0.91.0-unstable" date="2026-11-09">
       <description>
         <p>The window makes ASiC containers, signs FacturaE invoices as such and declares signature policies.</p>
       </description>
     </release>
-    <release version="0.73.0-unstable" date="2026-11-09">
+    <release version="0.90.0-unstable" date="2026-11-09">
       <description>
         <p>When a page asks for a visible signature, you place the seal on its PDF in the approval window.</p>
       </description>
     </release>
-    <release version="0.72.0-unstable" date="2026-11-09">
+    <release version="0.89.0-unstable" date="2026-11-09">
       <description>
         <p>XML signatures over documents a page names by address and digest (Externally Detached, manifests), every one listed before you approve.</p>
       </description>
     </release>
-    <release version="0.71.0-unstable" date="2026-11-09">
+    <release version="0.88.0-unstable" date="2026-11-09">
       <description>
         <p>In a session with a page, the certificate it asked to keep is offered again, ticked; you still approve every request.</p>
       </description>
     </release>
-    <release version="0.70.0-unstable" date="2026-11-09">
+    <release version="0.87.0-unstable" date="2026-11-09">
       <description>
         <p>ASiC-S containers made through the site's server (CAdES-ASiC-S-tri, XAdES-ASiC-S-tri).</p>
       </description>
     </release>
-    <release version="0.69.1-unstable" date="2026-11-09">
+    <release version="0.86.1-unstable" date="2026-11-09">
       <description>
         <p>Pages that name FacturaEtri, Adobe PDF TriPhase or PKCS1 are understood.</p>
       </description>
     </release>
-    <release version="0.69.0-unstable" date="2026-11-09">
+    <release version="0.86.0-unstable" date="2026-11-09">
       <description>
         <p>Pages that send a document's digest instead of the document get a CAdES signature over it, with the digest shown before you approve.</p>
       </description>
     </release>
-    <release version="0.68.0-unstable" date="2026-11-09">
+    <release version="0.85.0-unstable" date="2026-11-09">
       <description>
         <p>Pages that ask for a bare signature of a few bytes (NONE) get it, with the approval saying what such a signature does and does not record.</p>
       </description>
     </release>
-    <release version="0.67.0-unstable" date="2026-11-09">
+    <release version="0.84.0-unstable" date="2026-11-09">
       <description>
         <p>Pages that ask for the signing certificate of the identity card you logged in with find it.</p>
       </description>
     </release>
-    <release version="0.66.0-unstable" date="2026-11-09">
+    <release version="0.83.0-unstable" date="2026-11-09">
       <description>
         <p>Administration pages that talk to AutoFirma over its local WebSocket channel work, once the local certificate is installed.</p>
       </description>
     </release>
-    <release version="0.65.0-unstable" date="2026-11-09">
+    <release version="0.82.0-unstable" date="2026-11-09">
       <description>
         <p>The certificate for the local channel AutoFirma pages use, opt-in.</p>
       </description>
     </release>
-    <release version="0.64.1-unstable" date="2026-11-09">
+    <release version="0.81.1-unstable" date="2026-11-09">
       <description>
         <p>Clearer messages for a missing document or passphrase.</p>
       </description>
     </release>
-    <release version="0.64.0-unstable" date="2026-11-09">
+    <release version="0.81.0-unstable" date="2026-11-09">
       <description>
         <p>Approving a signature prepared by a site's server names that server.</p>
       </description>
     </release>
-    <release version="0.63.5-unstable" date="2026-11-09">
+    <release version="0.80.5-unstable" date="2026-11-09">
       <description>
         <p>Content hidden in an element that only looks like an XML signature is reported as unsigned.</p>
       </description>
     </release>
-    <release version="0.63.4-unstable" date="2026-11-09">
+    <release version="0.80.4-unstable" date="2026-11-09">
       <description>
         <p>Only a token that declares itself a timestamp is read as one.</p>
       </description>
     </release>
-    <release version="0.63.3-unstable" date="2026-11-09">
+    <release version="0.80.3-unstable" date="2026-11-09">
       <description>
         <p>The EU list of the lists is authenticated against the keys the Official Journal announced.</p>
       </description>
     </release>
-    <release version="0.63.2-unstable" date="2026-11-09">
+    <release version="0.80.2-unstable" date="2026-11-09">
       <description>
         <p>PDF timestamps are judged against the trust lists, and one from an unknown authority still counts as a timestamp.</p>
       </description>
     </release>
-    <release version="0.63.1-unstable" date="2026-11-09">
+    <release version="0.80.1-unstable" date="2026-11-09">
       <description>
         <p>The visible seal's text is drawn with the right letter spacing and characters.</p>
       </description>
     </release>
-    <release version="0.63.0-unstable" date="2026-11-09">
+    <release version="0.80.0-unstable" date="2026-11-09">
       <description>
         <p>Web pages that speak AutoFirma's protocol can have an ASiC container co-signed.</p>
       </description>
     </release>
-    <release version="0.62.2-unstable" date="2026-11-09">
+    <release version="0.79.2-unstable" date="2026-11-09">
       <description>
         <p>A PDF whose signature envelope carries other content is left to the PDF library's verdict.</p>
       </description>
     </release>
-    <release version="0.62.1-unstable" date="2026-11-09">
+    <release version="0.79.1-unstable" date="2026-11-09">
       <description>
         <p>PDF timestamps from authorities that sign with RSA-PSS are checked against the document.</p>
       </description>
     </release>
-    <release version="0.62.0-unstable" date="2026-11-09">
+    <release version="0.79.0-unstable" date="2026-11-09">
       <description>
         <p>The window signs with a key kept by a remote signing service.</p>
       </description>
     </release>
-    <release version="0.61.0-unstable" date="2026-11-09">
+    <release version="0.78.0-unstable" date="2026-11-09">
       <description>
         <p>Remote signatures can be authorised in the browser, through the provider's OAuth2 server.</p>
       </description>
     </release>
-    <release version="0.60.1-unstable" date="2026-11-09">
+    <release version="0.77.1-unstable" date="2026-11-09">
       <description>
         <p>A remote signature asks the provider for the credential once.</p>
       </description>
     </release>
-    <release version="0.60.0-unstable" date="2026-11-09">
+    <release version="0.77.0-unstable" date="2026-11-09">
       <description>
         <p>The window encrypts documents for others and opens encrypted envelopes.</p>
       </description>
     </release>
-    <release version="0.59.0-unstable" date="2026-11-09">
+    <release version="0.76.0-unstable" date="2026-11-09">
       <description>
         <p>The Flatpak signs with smart cards.</p>
       </description>
     </release>
-    <release version="0.58.0-unstable" date="2026-11-09">
+    <release version="0.75.0-unstable" date="2026-11-09">
       <description>
         <p>The window follows the desktop's light or dark preference.</p>
       </description>
     </release>
-    <release version="0.57.1-unstable" date="2026-11-09">
+    <release version="0.74.1-unstable" date="2026-11-09">
       <description>
         <p>Timestamps an authority signed with RSA-PSS are read as valid.</p>
       </description>
     </release>
-    <release version="0.57.0-unstable" date="2026-11-09">
+    <release version="0.74.0-unstable" date="2026-11-09">
       <description>
         <p>ASiC containers are co-signed.</p>
       </description>
     </release>
-    <release version="0.56.0-unstable" date="2026-11-09">
+    <release version="0.73.0-unstable" date="2026-11-09">
       <description>
         <p>ASiC time-stamped containers are made and verified.</p>
       </description>
     </release>
-    <release version="0.55.0-unstable" date="2026-11-09">
+    <release version="0.72.0-unstable" date="2026-11-09">
       <description>
         <p>XML signatures declare where they were made, and web page approvals show the policy, roles and place a signature will declare.</p>
       </description>
     </release>
-    <release version="0.54.0-unstable" date="2026-11-09">
+    <release version="0.71.0-unstable" date="2026-11-09">
       <description>
         <p>Verification shows the policy, the roles and the place a signature declares.</p>
       </description>
     </release>
-    <release version="0.53.0-unstable" date="2026-11-09">
+    <release version="0.70.0-unstable" date="2026-11-09">
       <description>
         <p>Web pages sign single documents through the site's server (the …tri formats).</p>
       </description>
     </release>
-    <release version="0.52.0-unstable" date="2026-11-09">
+    <release version="0.69.0-unstable" date="2026-11-09">
       <description>
         <p>XAdES signatures are counter-signed inside the document, from the command line and from web pages.</p>
       </description>
     </release>
-    <release version="0.51.0-unstable" date="2026-11-09">
+    <release version="0.68.0-unstable" date="2026-11-09">
       <description>
         <p>Signatures added to a CAdES envelope take levels LT and LTA.</p>
       </description>
     </release>
-    <release version="0.50.1-unstable" date="2026-11-09">
+    <release version="0.67.1-unstable" date="2026-11-09">
       <description>
         <p>CAdES-LTA archive timestamps follow EN 319 122-1 and are checked by verification.</p>
       </description>
     </release>
-    <release version="0.50.0-unstable" date="2026-11-09">
+    <release version="0.67.0-unstable" date="2026-11-09">
       <description>
         <p>The window and web pages sign a PDF form in its signature field; trebaruna fields lists a form's empty fields.</p>
       </description>
     </release>
-    <release version="0.49.0-unstable" date="2026-11-09">
+    <release version="0.66.0-unstable" date="2026-11-09">
       <description>
         <p>PDF signatures declare a signature policy, such as the AGE's, from the command line and from web pages.</p>
       </description>
     </release>
-    <release version="0.48.1-unstable" date="2026-11-09">
+    <release version="0.65.1-unstable" date="2026-11-09">
       <description>
         <p>A PAdES B-LT signature added to a signed PDF keys its revocation entry to itself.</p>
       </description>
     </release>
-    <release version="0.48.0-unstable" date="2026-11-09">
+    <release version="0.65.0-unstable" date="2026-11-09">
       <description>
         <p>A PDF form is signed in its empty signature field, the seal drawn in the field's box.</p>
       </description>
     </release>
-    <release version="0.47.1-unstable" date="2026-11-09">
+    <release version="0.64.1-unstable" date="2026-11-09">
       <description>
         <p>The seal is laid out apart from the PDF library that draws it.</p>
       </description>
     </release>
-    <release version="0.47.0-unstable" date="2026-11-09">
+    <release version="0.64.0-unstable" date="2026-11-09">
       <description>
         <p>CMS and PDF signatures made with RSA-PSS are verified, and chains reach German authorities with RSA-PSS keys.</p>
       </description>
     </release>
-    <release version="0.46.1-unstable" date="2026-11-09">
+    <release version="0.63.1-unstable" date="2026-11-09">
       <description>
         <p>Trusted lists download from servers that refuse unnamed clients, and the EU list is read once per sync.</p>
       </description>
     </release>
-    <release version="0.46.0-unstable" date="2026-11-09">
+    <release version="0.63.0-unstable" date="2026-11-09">
       <description>
         <p>XML signatures made with RSA-PSS or SHA-3 are verified; the German trusted list authenticates.</p>
       </description>
     </release>
-    <release version="0.45.4-unstable" date="2026-11-09">
+    <release version="0.62.4-unstable" date="2026-11-09">
       <description>
         <p>A trusted list is used only when its own signature signs the whole list.</p>
       </description>
     </release>
-    <release version="0.45.3-unstable" date="2026-11-09">
+    <release version="0.62.3-unstable" date="2026-11-09">
       <description>
         <p>Verification names the parts of an XML document a signature leaves out.</p>
       </description>
     </release>
-    <release version="0.45.2-unstable" date="2026-11-09">
+    <release version="0.62.2-unstable" date="2026-11-09">
       <description>
         <p>Verification checks the XAdES archive timestamp imprint.</p>
       </description>
     </release>
-    <release version="0.45.1-unstable" date="2026-11-09">
+    <release version="0.62.1-unstable" date="2026-11-09">
       <description>
         <p>Verification checks the signing-certificate binding.</p>
       </description>
     </release>
-    <release version="0.45.0-unstable" date="2026-11-09">
+    <release version="0.62.0-unstable" date="2026-11-09">
       <description>
         <p>Accessibility: contrast, keyboard resizing of the seal, names for screen readers.</p>
       </description>
     </release>
-    <release version="0.44.0-unstable" date="2026-11-09">
+    <release version="0.61.0-unstable" date="2026-11-09">
       <description>
         <p>The page preview works without poppler.</p>
       </description>
     </release>
-    <release version="0.43.0-unstable" date="2026-11-09">
+    <release version="0.60.0-unstable" date="2026-11-09">
       <description>
         <p>Packages: .deb, Flatpak, AppImage and a Windows installer.</p>
       </description>

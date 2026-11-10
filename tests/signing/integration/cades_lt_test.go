@@ -222,7 +222,7 @@ func runAsn1Parse(t *testing.T, path string) string {
 // covers the content, the SignerInfo and the hash index of the
 // certificates, revocation values and unsigned attributes (EN 319 122-1,
 // 5.5.2 and 5.5.3), and the verifier recomputes it. A token over the
-// container's DER, how trebaruna sealed it before 0.50.1, proves nothing;
+// container's DER, how trebaruna sealed it before 0.67.1, proves nothing;
 // a hash index listing an element the signature lost does not hold.
 func TestACadesArchiveTimestampSealsWhatEN319122Says(t *testing.T) {
 	content, signer := cadesFixture(t)
