@@ -34,16 +34,23 @@ type Catalogue struct {
 	NoSignatures     string
 
 	// The exported report (verify --report).
-	ReportTitle      string
-	LabelDocument    string
-	LabelVerifiedAt  string
-	LabelTool        string
-	LabelValidity    string
-	LabelTrust       string
-	LabelFindings    string
-	LabelConnections string
-	NoConnections    string
-	ReportNote       string
+	ReportTitle     string
+	LabelDocument   string
+	LabelVerifiedAt string
+	LabelTool       string
+	LabelValidity   string
+	LabelTrust      string
+
+	// The certificate command: its validity period and state.
+	LabelValidPeriod    string
+	LabelState          string
+	CertificateExpired  string // %d days ago
+	CertificateExpiring string // in %d days
+	CertificateValid    string // %d days left
+	LabelFindings       string
+	LabelConnections    string
+	NoConnections       string
+	ReportNote          string
 
 	// Verdicts.
 	VerdictQualified string
@@ -62,6 +69,11 @@ type Catalogue struct {
 	// Findings, keyed by code. The English message from the report is the
 	// fallback when a code is missing here.
 	Findings map[string]string
+
+	// Issuers says why a certificate's issuer is trusted or not, keyed by
+	// the trust verdict's code; the qualified one names the list's
+	// territory (%s).
+	Issuers map[string]string
 }
 
 var Spanish = Catalogue{
@@ -80,16 +92,21 @@ var Spanish = Catalogue{
 	LabelReason:      "Motivo",
 	NoSignatures:     "El documento no tiene firmas.",
 
-	ReportTitle:      "Informe de verificación",
-	LabelDocument:    "Documento",
-	LabelVerifiedAt:  "Comprobado el",
-	LabelTool:        "Herramienta",
-	LabelValidity:    "Certificado válido",
-	LabelTrust:       "Confianza",
-	LabelFindings:    "Hallazgos",
-	LabelConnections: "Conexiones",
-	NoConnections:    "ninguna: comprobado sin red",
-	ReportNote:       "Este informe describe lo que trebaruna comprobó y cuándo. La prueba es el documento firmado: cualquiera puede volver a comprobarlo.",
+	ReportTitle:         "Informe de verificación",
+	LabelDocument:       "Documento",
+	LabelVerifiedAt:     "Comprobado el",
+	LabelTool:           "Herramienta",
+	LabelValidity:       "Certificado válido",
+	LabelTrust:          "Confianza",
+	LabelValidPeriod:    "Validez",
+	LabelState:          "Estado",
+	CertificateExpired:  "CADUCADO hace %d días",
+	CertificateExpiring: "caduca en %d días",
+	CertificateValid:    "válido, quedan %d días",
+	LabelFindings:       "Hallazgos",
+	LabelConnections:    "Conexiones",
+	NoConnections:       "ninguna: comprobado sin red",
+	ReportNote:          "Este informe describe lo que trebaruna comprobó y cuándo. La prueba es el documento firmado: cualquiera puede volver a comprobarlo.",
 
 	VerdictQualified: "cualificada",
 	VerdictAdvanced:  "avanzada",
@@ -144,6 +161,14 @@ var Spanish = Catalogue{
 		"signature.qualified":                    "firma cualificada: certificado cualificado, dispositivo cualificado y emisor cualificado vigente",
 		"signature.not_qualified":                "la firma es avanzada pero no cualificada",
 	},
+	Issuers: map[string]string{
+		"issuer.none":        "no hay certificado",
+		"issuer.self_signed": "autofirmado: el certificado es su propio emisor",
+		"issuer.qualified":   "prestador cualificado de la lista de confianza de %s",
+		"issuer.no_roots":    "no hay raíces de confianza para validar la cadena",
+		"issuer.recognised":  "el emisor es una autoridad reconocida, no cualificada",
+		"issuer.unlisted":    "el emisor no está en ninguna lista de confianza",
+	},
 }
 
 var Italian = Catalogue{
@@ -162,16 +187,21 @@ var Italian = Catalogue{
 	LabelReason:      "Motivo",
 	NoSignatures:     "Il documento non contiene firme.",
 
-	ReportTitle:      "Rapporto di verifica",
-	LabelDocument:    "Documento",
-	LabelVerifiedAt:  "Verificato il",
-	LabelTool:        "Strumento",
-	LabelValidity:    "Certificato valido",
-	LabelTrust:       "Affidabilità",
-	LabelFindings:    "Esiti",
-	LabelConnections: "Connessioni",
-	NoConnections:    "nessuna: verificato senza rete",
-	ReportNote:       "Questo rapporto descrive ciò che trebaruna ha verificato e quando. La prova è il documento firmato: chiunque può verificarlo di nuovo.",
+	ReportTitle:         "Rapporto di verifica",
+	LabelDocument:       "Documento",
+	LabelVerifiedAt:     "Verificato il",
+	LabelTool:           "Strumento",
+	LabelValidity:       "Certificato valido",
+	LabelTrust:          "Affidabilità",
+	LabelValidPeriod:    "Validità",
+	LabelState:          "Stato",
+	CertificateExpired:  "SCADUTO da %d giorni",
+	CertificateExpiring: "scade tra %d giorni",
+	CertificateValid:    "valido, restano %d giorni",
+	LabelFindings:       "Esiti",
+	LabelConnections:    "Connessioni",
+	NoConnections:       "nessuna: verificato senza rete",
+	ReportNote:          "Questo rapporto descrive ciò che trebaruna ha verificato e quando. La prova è il documento firmato: chiunque può verificarlo di nuovo.",
 
 	VerdictQualified: "qualificata",
 	VerdictAdvanced:  "avanzata",
@@ -226,6 +256,14 @@ var Italian = Catalogue{
 		"signature.qualified":                    "firma qualificata: certificato qualificato, dispositivo qualificato ed emittente qualificato vigente",
 		"signature.not_qualified":                "la firma è avanzata ma non qualificata",
 	},
+	Issuers: map[string]string{
+		"issuer.none":        "nessun certificato",
+		"issuer.self_signed": "autofirmato: il certificato è l'emittente di sé stesso",
+		"issuer.qualified":   "prestatore qualificato dell'elenco di fiducia di %s",
+		"issuer.no_roots":    "nessuna radice di fiducia per convalidare la catena",
+		"issuer.recognised":  "l'emittente è un'autorità riconosciuta, non qualificata",
+		"issuer.unlisted":    "l'emittente non è in alcun elenco di fiducia",
+	},
 }
 
 var English = Catalogue{
@@ -244,16 +282,21 @@ var English = Catalogue{
 	LabelReason:      "Reason",
 	NoSignatures:     "The document has no signatures.",
 
-	ReportTitle:      "Verification report",
-	LabelDocument:    "Document",
-	LabelVerifiedAt:  "Verified on",
-	LabelTool:        "Tool",
-	LabelValidity:    "Certificate valid",
-	LabelTrust:       "Trust",
-	LabelFindings:    "Findings",
-	LabelConnections: "Connections",
-	NoConnections:    "none: checked offline",
-	ReportNote:       "This report describes what trebaruna checked and when. The evidence is the signed document: anyone can check it again.",
+	ReportTitle:         "Verification report",
+	LabelDocument:       "Document",
+	LabelVerifiedAt:     "Verified on",
+	LabelTool:           "Tool",
+	LabelValidity:       "Certificate valid",
+	LabelTrust:          "Trust",
+	LabelValidPeriod:    "Validity",
+	LabelState:          "State",
+	CertificateExpired:  "EXPIRED %d days ago",
+	CertificateExpiring: "expires in %d days",
+	CertificateValid:    "valid, %d days left",
+	LabelFindings:       "Findings",
+	LabelConnections:    "Connections",
+	NoConnections:       "none: checked offline",
+	ReportNote:          "This report describes what trebaruna checked and when. The evidence is the signed document: anyone can check it again.",
 
 	VerdictQualified: "qualified",
 	VerdictAdvanced:  "advanced",
@@ -307,6 +350,14 @@ var English = Catalogue{
 		"verification.warning":                   "verifier warning",
 		"signature.qualified":                    "qualified signature: qualified certificate, qualified device and a currently granted qualified issuer",
 		"signature.not_qualified":                "the signature is advanced but not qualified",
+	},
+	Issuers: map[string]string{
+		"issuer.none":        "no certificate",
+		"issuer.self_signed": "self-signed: the certificate is its own issuer",
+		"issuer.qualified":   "qualified provider in the %s trusted list",
+		"issuer.no_roots":    "no trusted roots to validate the chain",
+		"issuer.recognised":  "the issuer is a recognised authority, not a qualified one",
+		"issuer.unlisted":    "the issuer is not in any trust list",
 	},
 }
 
@@ -380,6 +431,23 @@ func (c Catalogue) FindingName(code, fallback string) string {
 	return fallback
 }
 
+// IssuerNote says why a certificate's issuer is trusted or not, from the
+// trust verdict's code; the qualified one names the list's territory. The
+// verdict's English reason is the fallback for a code not here.
+func (c Catalogue) IssuerNote(code, territory, fallback string) string {
+	note, ok := c.Issuers[code]
+	if !ok {
+		return fallback
+	}
+	if strings.Contains(note, "%s") {
+		return fmt.Sprintf(note, territory)
+	}
+	return note
+}
+
+// issuerCodes are the trust verdict's codes every language explains.
+var issuerCodes = []string{"issuer.none", "issuer.self_signed", "issuer.qualified", "issuer.no_roots", "issuer.recognised", "issuer.unlisted"}
+
 // compile-time guard: every language must define every finding code.
 func init() {
 	required := []string{
@@ -403,6 +471,11 @@ func init() {
 		for _, code := range required {
 			if _, ok := catalogue.Findings[code]; !ok {
 				panic(fmt.Sprintf("catalogue %s is missing the finding %q", name, code))
+			}
+		}
+		for _, code := range issuerCodes {
+			if _, ok := catalogue.Issuers[code]; !ok {
+				panic(fmt.Sprintf("catalogue %s is missing the issuer note %q", name, code))
 			}
 		}
 	}

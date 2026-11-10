@@ -19,13 +19,16 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"unicode/utf8"
+
+	pkcs12 "software.sslmate.com/src/go-pkcs12"
 
 	"codeberg.org/simplicer/trebaruna/src/signing/domain"
 	"codeberg.org/simplicer/trebaruna/src/signing/domain/identity"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure"
 	trustdomain "codeberg.org/simplicer/trebaruna/src/trust/domain"
 	verificationinfra "codeberg.org/simplicer/trebaruna/src/verification/infrastructure"
-	pkcs12 "software.sslmate.com/src/go-pkcs12"
+	"codeberg.org/simplicer/trebaruna/src/verification/messaging"
 )
 
 // runCertificate implements `trebaruna certificate <file>`.
@@ -36,6 +39,7 @@ func runCertificate(args []string, stdout, stderr io.Writer) int {
 	var (
 		passphrase = flags.String("pass", "", "passphrase for a P12 or PEM bundle (or $TREBARUNA_PASSPHRASE)")
 		territory  = flags.String("territory", defaultTerritory(), "trust list for the issuer verdict")
+		lang       = flags.String("lang", "", "language for messages: es | ca | gl | eu | it | en")
 		asJSON     = flags.Bool("json", false, "machine-readable output")
 	)
 
@@ -77,8 +81,9 @@ func runCertificate(args []string, stdout, stderr io.Writer) int {
 		return exitOK
 	}
 
+	catalogue := messaging.For(firstNonEmptyString(*lang, os.Getenv("LANG")))
 	for _, certificate := range certificates {
-		printCertificate(stdout, certificate, roots, list, now)
+		printCertificate(stdout, certificate, roots, list, now, catalogue)
 	}
 	return exitOK
 }
@@ -107,41 +112,52 @@ func describeCertificateForJSON(
 		"days_left":    int(remaining.Hours() / 24),
 		"self_signed":  certificate.Issuer.String() == certificate.Subject.String(),
 		"provider":     string(verdict.Provider),
+		"verdict_code": string(verdict.Code),
 		"trusted":      verdict.Trusted,
 		"qualified":    verdict.Qualified,
 		"verdict_note": verdict.Reason,
 	}
 }
 
-// printCertificate writes the human-readable form.
+// printCertificate writes the human-readable form, in the catalogue's
+// language throughout.
 func printCertificate(
 	writer io.Writer,
 	certificate *x509.Certificate,
 	roots *x509.CertPool,
 	list trustdomain.TrustList,
 	now time.Time,
+	catalogue messaging.Catalogue,
 ) {
 	verdict := trustdomain.EvaluateIssuer(certificate, roots, list)
 	remaining := certificate.NotAfter.Sub(now)
 
-	fmt.Fprintf(writer, "%s\n", identity.FromCertificate(certificate).Name)
-	if identifier := identity.FromCertificate(certificate).Identifier; identifier != "" {
-		fmt.Fprintf(writer, "  identificador  %s\n", identifier)
+	// The labels line up on the longest of the language's, 13 at least.
+	width := 13
+	for _, label := range []string{catalogue.LabelIdentifier, catalogue.LabelIssuer, catalogue.LabelValidPeriod,
+		catalogue.LabelState, catalogue.LabelTrust} {
+		width = max(width, utf8.RuneCountInString(label))
 	}
-	fmt.Fprintf(writer, "  emisor         %s\n", firstOf(append(certificate.Issuer.Organization, certificate.Issuer.CommonName)...))
-	fmt.Fprintf(writer, "  validez        %s → %s\n",
-		certificate.NotBefore.Format("2006-01-02"), certificate.NotAfter.Format("2006-01-02"))
+	row := func(label, value string) { fmt.Fprintf(writer, "  %-*s %s\n", width, label, value) }
 
+	holder := identity.FromCertificate(certificate)
+	fmt.Fprintf(writer, "%s\n", holder.Name)
+	if holder.Identifier != "" {
+		row(catalogue.LabelIdentifier, holder.Identifier)
+	}
+	row(catalogue.LabelIssuer, firstOf(append(certificate.Issuer.Organization, certificate.Issuer.CommonName)...))
+	row(catalogue.LabelValidPeriod, certificate.NotBefore.Format("2006-01-02")+" → "+certificate.NotAfter.Format("2006-01-02"))
+
+	days := int(remaining.Hours() / 24)
 	switch {
 	case now.After(certificate.NotAfter):
-		fmt.Fprintf(writer, "  estado         CADUCADO hace %d días\n", int(-remaining.Hours()/24))
+		row(catalogue.LabelState, fmt.Sprintf(catalogue.CertificateExpired, -days))
 	case remaining.Hours() < 24*30:
-		fmt.Fprintf(writer, "  estado         caduca en %d días\n", int(remaining.Hours()/24))
+		row(catalogue.LabelState, fmt.Sprintf(catalogue.CertificateExpiring, days))
 	default:
-		fmt.Fprintf(writer, "  estado         válido, %d días restantes\n", int(remaining.Hours()/24))
+		row(catalogue.LabelState, fmt.Sprintf(catalogue.CertificateValid, days))
 	}
-
-	fmt.Fprintf(writer, "  confianza      %s — %s\n", verdict.Provider, verdict.Reason)
+	row(catalogue.LabelTrust, catalogue.IssuerNote(string(verdict.Code), list.Territory, verdict.Reason))
 }
 
 // loadCertificates reads certificates from a P12, a PEM bundle or a bare DER file.

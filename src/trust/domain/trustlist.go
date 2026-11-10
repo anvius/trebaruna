@@ -161,8 +161,29 @@ const (
 
 // LRU of verdicts is unnecessary; the pool lookup is already cheap.
 
+// IssuerCode names a verdict's reason, stable for the surfaces that put it
+// in the reader's language.
+type IssuerCode string
+
+const (
+	// IssuerNone: there was no certificate to judge.
+	IssuerNone IssuerCode = "issuer.none"
+	// IssuerSelfSigned: the certificate is its own issuer.
+	IssuerSelfSigned IssuerCode = "issuer.self_signed"
+	// IssuerQualified: the issuer is a qualified provider in the trusted list.
+	IssuerQualified IssuerCode = "issuer.qualified"
+	// IssuerNoRoots: no trusted roots to validate the chain against.
+	IssuerNoRoots IssuerCode = "issuer.no_roots"
+	// IssuerRecognised: the chain reaches a trusted root, not a qualified one.
+	IssuerRecognised IssuerCode = "issuer.recognised"
+	// IssuerUnlisted: no trusted root or list knows the issuer.
+	IssuerUnlisted IssuerCode = "issuer.unlisted"
+)
+
 // IssuerVerdict describes what we know about a certificate's provenance.
 type IssuerVerdict struct {
+	// Code is the reason, for a translated report; Reason says it in English.
+	Code     IssuerCode
 	Provider Provider
 	// Trusted reports whether the chain validates against a trusted root.
 	Trusted bool
@@ -181,11 +202,12 @@ type IssuerVerdict struct {
 // outranks a plain public one.
 func EvaluateIssuer(certificate *x509.Certificate, roots *x509.CertPool, list TrustList) IssuerVerdict {
 	if certificate == nil {
-		return IssuerVerdict{Provider: ProviderUnknown, Reason: "no certificate"}
+		return IssuerVerdict{Code: IssuerNone, Provider: ProviderUnknown, Reason: "no certificate"}
 	}
 
 	if isSelfSigned(certificate) {
 		return IssuerVerdict{
+			Code:     IssuerSelfSigned,
 			Provider: ProviderSelfSigned,
 			Reason:   "the certificate is its own issuer",
 		}
@@ -193,6 +215,7 @@ func EvaluateIssuer(certificate *x509.Certificate, roots *x509.CertPool, list Tr
 
 	if list.Qualified(certificate) {
 		return IssuerVerdict{
+			Code:      IssuerQualified,
 			Provider:  ProviderQualified,
 			Trusted:   true,
 			Qualified: true,
@@ -202,6 +225,7 @@ func EvaluateIssuer(certificate *x509.Certificate, roots *x509.CertPool, list Tr
 
 	if roots == nil {
 		return IssuerVerdict{
+			Code:     IssuerNoRoots,
 			Provider: ProviderUnknown,
 			Reason:   "no trusted roots available to validate the chain",
 		}
@@ -222,12 +246,14 @@ func EvaluateIssuer(certificate *x509.Certificate, roots *x509.CertPool, list Tr
 
 	if _, err := certificate.Verify(options); err == nil {
 		return IssuerVerdict{
+			Code:     IssuerRecognised,
 			Provider: ProviderPublic,
 			Trusted:  true,
 			Reason:   "the issuer is a recognised public authority",
 		}
 	} else {
 		return IssuerVerdict{
+			Code:        IssuerUnlisted,
 			Provider:    ProviderUnknown,
 			Reason:      "the issuer is not in any trusted list",
 			VerifyError: err,

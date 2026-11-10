@@ -42,6 +42,11 @@ func TestEveryReportLanguageIsWhole(t *testing.T) {
 				t.Errorf("%s: finding %s = %q", tag, code, translated)
 			}
 		}
+		for code, text := range messaging.Spanish.Issuers {
+			if translated := catalogue.Issuers[code]; translated == "" || !sameVerbs(translated, text) {
+				t.Errorf("%s: issuer note %s = %q", tag, code, translated)
+			}
+		}
 		if catalogue.ReportTitle == messaging.Spanish.ReportTitle || catalogue.ReportNote == messaging.Spanish.ReportNote {
 			t.Errorf("%s is the Spanish catalogue", tag)
 		}
@@ -56,5 +61,22 @@ func TestALocalePicksItsLanguage(t *testing.T) {
 		if got := messaging.For(locale); got.ReportTitle != want.ReportTitle {
 			t.Errorf("%q picks %q", locale, got.ReportTitle)
 		}
+	}
+}
+
+// TestTheIssuerNoteNamesTheListsTerritory: the qualified note says whose
+// list; a code no language knows falls back to the verdict's own words.
+func TestTheIssuerNoteNamesTheListsTerritory(t *testing.T) {
+	for _, lang := range []string{"es", "it", "en", "ca", "gl", "eu"} {
+		catalogue := messaging.For(lang)
+		if note := catalogue.IssuerNote("issuer.qualified", "IT", "fallback"); !strings.Contains(note, "IT") || strings.Contains(note, "%") {
+			t.Errorf("%s: %q", lang, note)
+		}
+		if note := catalogue.IssuerNote("issuer.unlisted", "IT", "fallback"); note == "fallback" || strings.Contains(note, "IT") {
+			t.Errorf("%s: %q", lang, note)
+		}
+	}
+	if note := messaging.For("es").IssuerNote("issuer.future", "IT", "the verdict's words"); note != "the verdict's words" {
+		t.Errorf("an unknown code: %q", note)
 	}
 }

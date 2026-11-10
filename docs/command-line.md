@@ -411,7 +411,8 @@ trebaruna certificate certificate.cer --territory IT
 |---|---|
 | `--pass` | Passphrase for the P12/PEM |
 | `--territory` | Check the issuer against a trust list |
-| `--json` | Machine-readable output |
+| `--lang` | Language of the output: `es`, `ca`, `gl`, `eu`, `it`, `en` (default: `LANG`) |
+| `--json` | Machine-readable output, with the verdict's `verdict_code` |
 
 Accepts `.p12`, `.pfx`, `.pem`, `.crt`, `.cer`. See
 [Certificates](certificates.md).

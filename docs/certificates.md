@@ -151,20 +151,27 @@ trebaruna certificate mia-chiave.p12
 ```
 
 ```
-  Subject     MARIA LOPEZ GARCIA
-  Identifier  IDCES-00000000X
-  Issuer      Example TSP
-  Valid       2025-01-01 → 2028-01-01
-  Key         RSA 2048
-  Qualified   yes (QcCompliance, QcRetention)
-  Self-signed no
+MARIA LOPEZ GARCIA
+  Identifier    IDCES-00000000X
+  Issuer        Example TSP
+  Validity      2025-01-01 → 2028-01-01
+  State         valid, 412 days left
+  Trust         qualified provider in the ES trusted list
 ```
+
+The output is in the language of `--lang` (`es`, `ca`, `gl`, `eu`, `it`,
+`en`) or of `LANG`, as `verify`'s; the example is `--lang en`.
 
 Machine-readable:
 
 ```bash
 trebaruna certificate k.p12 --json
 ```
+
+The JSON keeps the trust verdict's English `verdict_note` and adds its
+stable `verdict_code`: `issuer.qualified`, `issuer.recognised` (a trusted
+root, not a qualified provider), `issuer.unlisted`, `issuer.self_signed`,
+`issuer.no_roots` (no roots to check the chain against) or `issuer.none`.
 
 To see where the issuer sits in the trust lists:
 

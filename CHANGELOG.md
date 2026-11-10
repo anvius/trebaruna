@@ -920,6 +920,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `certificate` printed Spanish labels and an English trust note ("confianza
+  self-signed — the certificate is its own issuer"). Its output now comes
+  whole from the report's catalogue, in the language of `--lang` (new) or
+  `LANG`, as `verify`'s; the trust verdict carries a stable code
+  (`verdict_code` in the JSON, beside the English `verdict_note`) that the
+  six languages translate. The guide's example of the output is the real one.
+
 - ASiC containers wrote their `mimetype` entry with a data descriptor, its
   header's CRC and sizes zero: Java's `ZipInputStream`, as Java signing
   tools read a container, refused it ("only DEFLATED entries can have EXT
