@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode/utf16"
 
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/helvetica"
 )
@@ -21,10 +22,13 @@ const (
 )
 
 // pdfLayout lays text out in pages of Helvetica, written with WinAnsi
-// encoding so Spanish and Italian letters print as themselves.
+// encoding so Western European letters print as themselves, and the
+// Central and Eastern European ones it lacks (Polish ą ę ł ś ż…) named in
+// the fonts' encoding.
 type pdfLayout struct {
-	pages []*bytes.Buffer
-	y     float64
+	pages    []*bytes.Buffer
+	y        float64
+	encoding *helvetica.Encoding
 }
 
 // page is the page being written.
@@ -53,7 +57,7 @@ func (l *pdfLayout) show(x float64, bold bool, size float64, gray float64, text 
 	if bold {
 		font = "F2"
 	}
-	fmt.Fprintf(l.page(), "BT %.3g g /%s %.2f Tf %.2f %.2f Td (%s) Tj ET\n", gray, font, size, x, l.y, pdfString(text))
+	fmt.Fprintf(l.page(), "BT %.3g g /%s %.2f Tf %.2f %.2f Td <%X> Tj ET\n", gray, font, size, x, l.y, l.encoding.Encode(text))
 }
 
 // lines wraps text to width.
@@ -77,7 +81,7 @@ func (l *pdfLayout) paragraph(x, width float64, bold bool, size, leading, gray f
 // renderPDF writes the report as a PDF of its own: no library, the
 // structure a reader needs and nothing else.
 func renderPDF(content document, at time.Time) ([]byte, error) {
-	layout := &pdfLayout{}
+	layout := &pdfLayout{encoding: helvetica.NewEncoding()}
 	layout.paragraph(margin, pageWidth-2*margin, true, 16, 22, 0, content.title)
 	layout.y -= 6
 
@@ -128,14 +132,15 @@ func renderPDF(content document, at time.Time) ([]byte, error) {
 	layout.paragraph(margin, pageWidth-2*margin, false, 8, 11, 0.3, content.note)
 
 	for index, page := range layout.pages {
-		fmt.Fprintf(page, "BT 0.4 g /F1 8 Tf %.2f %.2f Td (%s) Tj ET\n", margin, margin-6,
-			pdfString(fmt.Sprintf("%s — %d/%d", content.title, index+1, len(layout.pages))))
+		fmt.Fprintf(page, "BT 0.4 g /F1 8 Tf %.2f %.2f Td <%X> Tj ET\n", margin, margin-6,
+			layout.encoding.Encode(fmt.Sprintf("%s — %d/%d", content.title, index+1, len(layout.pages))))
 	}
-	return assemble(layout.pages, content.title, verifiedAt(at)), nil
+	return assemble(layout.pages, content.title, verifiedAt(at), layout.encoding.Dictionary()), nil
 }
 
-// assemble writes the PDF objects and their cross-reference table.
-func assemble(pages []*bytes.Buffer, title string, created time.Time) []byte {
+// assemble writes the PDF objects and their cross-reference table; the
+// fonts take the encoding the pages' text was written in.
+func assemble(pages []*bytes.Buffer, title string, created time.Time, encoding string) []byte {
 	var out bytes.Buffer
 	var offsets []int
 	object := func(body string) {
@@ -151,10 +156,10 @@ func assemble(pages []*bytes.Buffer, title string, created time.Time) []byte {
 	}
 	object("<< /Type /Catalog /Pages 2 0 R >>")
 	object(fmt.Sprintf("<< /Type /Pages /Kids [%s] /Count %d >>", strings.Join(kids, " "), len(pages)))
-	object("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>")
-	object("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>")
-	object(fmt.Sprintf("<< /Title (%s) /Producer (trebaruna) /CreationDate (D:%s) >>",
-		pdfString(title), created.UTC().Format("20060102150405Z")))
+	object("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding " + encoding + " >>")
+	object("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding " + encoding + " >>")
+	object(fmt.Sprintf("<< /Title %s /Producer (trebaruna) /CreationDate (D:%s) >>",
+		textString(title), created.UTC().Format("20060102150405Z")))
 	for index, page := range pages {
 		object(fmt.Sprintf("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 %.2f %.2f] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents %d 0 R >>",
 			pageWidth, pageHeight, 7+2*index))
@@ -170,40 +175,15 @@ func assemble(pages []*bytes.Buffer, title string, created time.Time) []byte {
 	return out.Bytes()
 }
 
-// winAnsi maps the characters of Windows-1252 that differ from Latin-1.
-var winAnsi = map[rune]byte{
-	'€': 0x80, '‚': 0x82, 'ƒ': 0x83, '„': 0x84, '…': 0x85, '†': 0x86, '‡': 0x87, 'ˆ': 0x88,
-	'‰': 0x89, 'Š': 0x8a, '‹': 0x8b, 'Œ': 0x8c, 'Ž': 0x8e, '‘': 0x91, '’': 0x92, '“': 0x93,
-	'”': 0x94, '•': 0x95, '–': 0x96, '—': 0x97, '˜': 0x98, '™': 0x99, 'š': 0x9a, '›': 0x9b,
-	'œ': 0x9c, 'ž': 0x9e, 'Ÿ': 0x9f,
-}
-
-// pdfString encodes text as a WinAnsi literal string: parentheses and
-// backslashes escaped, characters WinAnsi lacks as "?".
-func pdfString(text string) string {
+// textString is a PDF text string (ISO 32000-1, 7.9.2.2) for the
+// document's metadata: UTF-16BE with its byte order mark, which every
+// language fits.
+func textString(text string) string {
 	var out strings.Builder
-	for _, character := range text {
-		var code byte
-		switch mapped, special := winAnsi[character]; {
-		case special:
-			code = mapped
-		case character < 0x80 || (character >= 0xa0 && character <= 0xff):
-			code = byte(character)
-		default:
-			code = '?'
-		}
-		switch code {
-		case '(', ')', '\\':
-			out.WriteByte('\\')
-			out.WriteByte(code)
-		case '\n', '\r', '\t':
-			out.WriteByte(' ')
-		default:
-			if code < 0x20 {
-				code = '?'
-			}
-			out.WriteByte(code)
-		}
+	out.WriteString("<FEFF")
+	for _, unit := range utf16.Encode([]rune(text)) {
+		fmt.Fprintf(&out, "%04X", unit)
 	}
+	out.WriteString(">")
 	return out.String()
 }

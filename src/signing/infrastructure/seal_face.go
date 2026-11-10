@@ -38,9 +38,14 @@ func (standardFace) Wrap(text string, maxWidth, size float64, bold bool) []strin
 	return helvetica.Wrap(text, maxWidth, size, bold)
 }
 
-func (standardFace) fonts(int) (string, []pdffield.Object) {
-	return "/Helv << /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>" +
-		" /HeBo << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>", nil
+func (face standardFace) fonts(int) (string, []pdffield.Object) {
+	return face.fontsEncoded("/WinAnsiEncoding"), nil
+}
+
+// fontsEncoded are the two faces' entries with the encoding given.
+func (standardFace) fontsEncoded(encoding string) string {
+	return "/Helv << /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding " + encoding + " >>" +
+		" /HeBo << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding " + encoding + " >>"
 }
 
 // embeddedFace is the Go fonts (BSD licence), embedded whole, as PDF/A

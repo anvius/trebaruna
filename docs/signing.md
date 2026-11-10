@@ -232,6 +232,13 @@ a little wider than Helvetica, so a long identifier may take one more line;
 nothing is cut. Checked with Ghostscript's PDF/A-1b and PDF/A-2b files and
 veraPDF 1.30: seal and rubric pass, and pdfsig verifies the signatures.
 
+The seal in Helvetica prints the letters of Central and Eastern European
+names too (Polish ł ż ś, Czech ř ě ů, Hungarian ő ű, Romanian ș ț, Baltic
+ā ė ū…): what WinAnsi lacks goes in codes it leaves free, which the fonts'
+encoding names in a `/Differences` array, up to 36 such letters per seal.
+The PDF/A seal, in its embedded Go fonts, keeps plain WinAnsi, and those
+letters print as "?" there.
+
 ### Encrypted PDFs
 
 ```bash

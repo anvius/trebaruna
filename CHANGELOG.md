@@ -996,6 +996,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The visible seal and the PDF report print the letters of Central and
+  Eastern European names (Polish ł ż ś, Czech ř ě ů, Hungarian ő ű, Romanian
+  ș ț, Baltic ā ė ū…), which came out as "?": WinAnsi lacks them, and
+  trebaruna now puts them in the codes WinAnsi leaves free, named by their
+  Adobe glyph names in the fonts' /Differences array (up to 36 per seal or
+  report). The report's title travels as UTF-16 text. The PDF/A seal, in its
+  embedded fonts, still prints "?" for them.
+
 - A CAdES co-signature or counter-signature at LT carries the validation
   material of the authority behind the timestamp it brought (its chain and
   OCSP answers, in SignedData), as a new signature does since 0.104.3. Only

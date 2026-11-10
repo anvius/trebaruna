@@ -145,3 +145,37 @@ func TestTheFormatComesFromTheName(t *testing.T) {
 		t.Error("a Word file is not a report format")
 	}
 }
+
+// TestCentralEuropeanLettersPrintInThePDFReport: a signer whose name needs
+// letters WinAnsi lacks (Polish, Czech, Hungarian) prints whole: poppler
+// reads it back through the glyph names the fonts' encoding gives, and
+// qpdf accepts the file.
+func TestCentralEuropeanLettersPrintInThePDFReport(t *testing.T) {
+	in := input(3)
+	in.Report.Signers[0].SignerName = "Łukasz Żółć, Jiří Dvořák, Árpád Kővári"
+	pdf := render(t, report.PDF, in)
+	if !bytes.Contains(pdf, []byte("/Differences [")) || !bytes.Contains(pdf, []byte("/lslash")) {
+		t.Error("the fonts' encoding names no extra glyph")
+	}
+	path := filepath.Join(t.TempDir(), "raport.pdf")
+	if err := os.WriteFile(path, pdf, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := exec.LookPath("qpdf"); err == nil {
+		if output, err := exec.Command("qpdf", "--check", path).CombinedOutput(); err != nil {
+			t.Errorf("qpdf: %v\n%s", err, output)
+		}
+	}
+	if _, err := exec.LookPath("pdftotext"); err != nil {
+		t.Skip("poppler is not installed")
+	}
+	text, err := exec.Command("pdftotext", "-layout", path, "-").Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, expected := range []string{"Łukasz Żółć", "Jiří Dvořák", "Árpád Kővári"} {
+		if !strings.Contains(string(text), expected) {
+			t.Errorf("pdftotext lacks %q in:\n%s", expected, text)
+		}
+	}
+}

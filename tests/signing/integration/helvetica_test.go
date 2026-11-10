@@ -41,3 +41,34 @@ func TestWordsWrapWithinTheWidth(t *testing.T) {
 		t.Errorf("lines %q", lines)
 	}
 }
+
+// TestTheEncodingNamesTheLettersWinAnsiLacks: WinAnsi letters stay as they
+// are, each other Central or Eastern European letter takes a free code the
+// encoding then names, once; a line break is a space; a character with no
+// glyph, or one more than the free codes hold, is "?".
+func TestTheEncodingNamesTheLettersWinAnsiLacks(t *testing.T) {
+	plain := helvetica.NewEncoding()
+	if encoded := string(plain.Encode("Pérez\nÑandú")); encoded != "P\xe9rez \xd1and\xfa" || plain.Dictionary() != "/WinAnsiEncoding" {
+		t.Errorf("WinAnsi text: %q, %s", encoded, plain.Dictionary())
+	}
+
+	encoding := helvetica.NewEncoding()
+	encoded := encoding.Encode("Zażółć gęślą jaźń Ω")
+	again := encoding.Encode("łąka")
+	if encoded[2] != 0x81 || encoded[3] != 0xf3 || encoded[4] != 0x8d || encoded[len(encoded)-1] != '?' || again[0] != 0x8d {
+		t.Errorf("encoded % x and % x", encoded, again)
+	}
+	if dictionary := encoding.Dictionary(); !strings.HasPrefix(dictionary, "<< /Type /Encoding /BaseEncoding /WinAnsiEncoding /Differences [ 1 /") ||
+		!strings.Contains(dictionary, " 129 /zdotaccent 141 /lslash") || strings.Count(dictionary, "/lslash") != 1 {
+		t.Errorf("dictionary %s", dictionary)
+	}
+
+	// Thirty-six free codes (Windows-1252's five holes and the 31 control
+	// codes): the thirty-seventh new letter has no room.
+	crowded := helvetica.NewEncoding()
+	letters := []rune("ĄąĆćĘęŁłŃńŚśŹźŻżČčĎďĚěŇňŘřŤťŮůĹĺĽľŔŕŐőŰűĂă")
+	out := crowded.Encode(string(letters))
+	if out[35] == '?' || out[36] != '?' || out[len(out)-1] != '?' {
+		t.Errorf("the free codes overflow at % x", out[34:])
+	}
+}

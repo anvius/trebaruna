@@ -13,12 +13,16 @@ import (
 
 	"golang.org/x/text/encoding/charmap"
 
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/helvetica"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/pdffield"
 )
 
 // fieldAppearance draws the marks as a PDF form XObject of their box: the
 // seal trebaruna puts in an existing signature field. Text is set in the
-// standard Helvetica faces, which every reader has, in WinAnsi encoding.
+// standard Helvetica faces, which every reader has, in WinAnsi encoding
+// with the Central and Eastern European letters it lacks named in the
+// font's encoding (a Polish or Czech holder's name prints whole); the
+// embedded faces of a PDF/A seal keep plain WinAnsi.
 func (m sealMarks) fieldAppearance() (*pdffield.Appearance, error) {
 	var content bytes.Buffer
 	appearance := &pdffield.Appearance{}
@@ -38,26 +42,39 @@ func (m sealMarks) fieldAppearance() (*pdffield.Appearance, error) {
 		fmt.Fprintf(&content, "q %s 0 0 %s %s %s cm /Rubric Do Q\n",
 			pdfNumber(m.rubric.width), pdfNumber(m.rubric.height), pdfNumber(m.rubric.x), pdfNumber(m.rubric.y))
 	}
+	standard, isStandard := face.(standardFace)
+	encoding := helvetica.NewEncoding()
+	encoder := charmap.Windows1252.NewEncoder()
+	encodedTexts := make([][]byte, len(m.texts))
+	for index, text := range m.texts {
+		if isStandard {
+			encodedTexts[index] = encoding.Encode(text.content)
+			continue
+		}
+		encoded, err := encoder.String(text.content)
+		if err != nil {
+			// A character the embedded faces' WinAnsi encoding lacks: each
+			// is replaced, as the PDF library does.
+			encoded = winAnsiOrQuestionMark(text.content)
+		}
+		encodedTexts[index] = []byte(encoded)
+	}
 	fonts, objects := face.fonts(len(appearance.Objects))
+	if isStandard {
+		fonts = standard.fontsEncoded(encoding.Dictionary())
+	}
 	appearance.Objects = append(appearance.Objects, objects...)
 	appearance.Resources = "<< /Font << " + fonts + " >>" + resources.String() + " >>"
 
 	fmt.Fprintf(&content, "q %s RG %s w %s %s m %s %s l S Q\n", rgb(m.rule.colour), pdfNumber(m.rule.width),
 		pdfNumber(m.rule.x), pdfNumber(m.rule.bottom), pdfNumber(m.rule.x), pdfNumber(m.rule.top))
-	encoder := charmap.Windows1252.NewEncoder()
-	for _, text := range m.texts {
+	for index, text := range m.texts {
 		font := "/Helv"
 		if text.bold {
 			font = "/HeBo"
 		}
-		encoded, err := encoder.String(text.content)
-		if err != nil {
-			// A character Helvetica's WinAnsi encoding lacks: each is
-			// replaced, as the PDF library does.
-			encoded = winAnsiOrQuestionMark(text.content)
-		}
 		fmt.Fprintf(&content, "BT %s %s Tf %s rg %s %s Td <%X> Tj ET\n", font, pdfNumber(text.size), rgb(text.colour),
-			pdfNumber(text.x), pdfNumber(text.y), []byte(encoded))
+			pdfNumber(text.x), pdfNumber(text.y), encodedTexts[index])
 	}
 	appearance.Content = content.Bytes()
 	return appearance, nil

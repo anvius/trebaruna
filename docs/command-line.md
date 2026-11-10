@@ -271,7 +271,8 @@ The report states what was checked and when: the file and its SHA-256, the
 verdict, every signature (signer, certificate validity, signing time,
 integrity, trust, each finding in the chosen language), the connections
 the check made, and the trebaruna version. The three formats say the same.
-The PDF is written by trebaruna itself in Helvetica; the HTML is one page
+The PDF is written by trebaruna itself in Helvetica, Central and Eastern
+European letters included (they are named in the fonts' encoding); the HTML is one page
 with no scripts and no external resources. The home directory reads as `~`
 in any path, because a report is made to be sent.
 
