@@ -608,7 +608,12 @@ attributes. `.p7m` is the conventional name.
   attribute value the envelope holds, revocation material included. The index
   travels in the token's own unsigned attributes, and `verify` recomputes all of
   it. Before 0.67.1 the token covered the container's DER under the v2 OID
-  (`1.2.840.113549.1.9.16.2.48`): no validator could check it.
+  (`1.2.840.113549.1.9.16.2.48`): no validator could check it. The index
+  names its hash algorithm even when it is SHA-256: EU DSS takes the field
+  as required and hashes the index with it, so up to 0.104.0, when trebaruna
+  left SHA-256 out as the DEFAULT, DSS found every archive timestamp's
+  imprint wrong. Those files still pass `verify`, which hashes the index as
+  the token carries it.
 
 The revocation attribute's OID is worth stating: `.24` is `revocationValues`, and
 the neighbouring `.23` is `certificateValues`. Using the wrong one produces a

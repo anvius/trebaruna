@@ -10,6 +10,8 @@ import (
 	"context"
 	"crypto"
 	"crypto/sha256"
+	"crypto/x509/pkix"
+	"encoding/asn1"
 	"errors"
 	"os"
 	"os/exec"
@@ -356,5 +358,57 @@ func TestAddedSignaturesTakeLevelsLTAndLTA(t *testing.T) {
 		if output, err := exec.Command("openssl", "cms", "-verify", "-inform", "DER", "-in", path, "-noverify", "-out", os.DevNull).CombinedOutput(); err != nil {
 			t.Errorf("%s: openssl: %v\n%s", name, err, output)
 		}
+	}
+}
+
+// TestTheArchiveHashIndexNamesItsAlgorithm: ats-hash-index-v3 names its
+// hash algorithm, SHA-256 included. EU DSS takes it as required and
+// rebuilds the index with it before hashing, so an index that left
+// SHA-256 out as the DEFAULT never matched what DSS hashed. An archive
+// timestamp written that way, as trebaruna did up to 0.104.0, still
+// verifies: the verifier hashes the index as the token carries it.
+func TestTheArchiveHashIndexNamesItsAlgorithm(t *testing.T) {
+	content, signer := cadesFixture(t)
+	authority := newLocalTSA(t)
+	lt, err := infrastructure.NewCadesSigner(authority).SignCades(context.Background(), application.CadesRequest{
+		Content: content, Signer: signer, Level: signingdomain.LT,
+		TimestampURL: "http://tsa.example.invalid", EmbedRevocation: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	prefix, index, err := cms.ArchiveTimeStampV3Input(lt, 0, content, crypto.SHA256)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var parsed struct {
+		Algorithm                           pkix.AlgorithmIdentifier
+		Certificates, Revocations, Unsigned [][]byte
+	}
+	if rest, err := asn1.Unmarshal(index, &parsed); err != nil || len(rest) > 0 ||
+		!parsed.Algorithm.Algorithm.Equal(asn1.ObjectIdentifier{2, 16, 840, 1, 101, 3, 4, 2, 1}) || len(parsed.Unsigned) == 0 {
+		t.Fatalf("the hash index %x: %v", index, err)
+	}
+
+	var outer asn1.RawValue
+	asn1.Unmarshal(index, &outer)
+	var algorithm asn1.RawValue
+	afterAlgorithm, _ := asn1.Unmarshal(outer.Bytes, &algorithm)
+	legacy, _ := asn1.Marshal(asn1.RawValue{Class: asn1.ClassUniversal, Tag: asn1.TagSequence, IsCompound: true, Bytes: afterAlgorithm})
+	digest := sha256.Sum256(append(prefix, legacy...))
+	response, err := authority.Token(context.Background(), digest[:], "", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	token, err := cms.ExtractToken(response)
+	if err != nil {
+		t.Fatal(err)
+	}
+	old, err := cms.WithArchiveTimeStampV3(lt, 0, token, legacy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if finding := archiveFinding(t, old); finding != "timestamp.archival" {
+		t.Errorf("an archive timestamp whose index leaves SHA-256 out: %q", finding)
 	}
 }

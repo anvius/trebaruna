@@ -55,6 +55,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.104.1-unstable" date="2026-11-10">
+      <description>
+        <p>CAdES archive timestamps are accepted by the European Commission's validator.</p>
+      </description>
+    </release>
     <release version="0.104.0-unstable" date="2026-11-10">
       <description>
         <p>Cards with Brainpool keys, such as German health professionals' cards, sign.</p>

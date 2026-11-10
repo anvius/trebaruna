@@ -323,12 +323,12 @@ func (h hashIndex) encode(hash crypto.Hash) []byte {
 		}
 		return encoder.seq(elements...)
 	}
-	var fields [][]byte
-	if hash != crypto.SHA256 {
-		fields = append(fields, encoder.seq(encoder.oid(digestOID(hash))))
-	}
-	fields = append(fields, octets(h.certificates), octets(h.crls), octets(h.unsigned))
-	return encoder.seq(fields...)
+	// hashIndAlgorithm is written even for SHA-256: EU DSS, the reference
+	// validator, takes it as required in the v2 and v3 indexes and adds it
+	// when it rebuilds the index, so an index that left it out as the
+	// DEFAULT never matched what DSS hashed. The verifier hashes the index
+	// as the token carries it, so indexes written without it still verify.
+	return encoder.seq(encoder.seq(encoder.oid(digestOID(hash))), octets(h.certificates), octets(h.crls), octets(h.unsigned))
 }
 
 // decodeHashIndex reads an ATSHashIndexV3.

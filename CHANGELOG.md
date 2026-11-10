@@ -969,6 +969,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- CAdES-LTA archive timestamps are accepted by EU DSS: the
+  ats-hash-index-v3 now names its hash algorithm even when it is SHA-256.
+  DSS takes that field as required in the v2 and v3 indexes and rebuilds the
+  index with it before hashing, so every archive timestamp trebaruna wrote,
+  which left SHA-256 out as the ASN.1 DEFAULT, read to DSS as sealing
+  something else. Archive timestamps written that way still pass `verify`.
+
 - Signing a PDF field whose lock covers other fields (`/Lock`) marks
   those fields read-only in the update, keeping the flags each had or
   inherited, so a reader no longer lets anyone fill them in after the
