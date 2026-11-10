@@ -9,6 +9,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"math/big"
+	"regexp"
 	"testing"
 	"time"
 
@@ -16,6 +17,9 @@ import (
 	"codeberg.org/simplicer/trebaruna/src/signing/domain"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure"
 )
+
+// signatureContents is a signature dictionary's /Contents hex string.
+var signatureContents = regexp.MustCompile(`/Contents\s*<[0-9A-Fa-f]*>`)
 
 // TestTheSealIsSetInWinAnsiWithItsOwnMetrics: the visible seal's text is
 // written by trebaruna in the standard Helvetica faces, WinAnsi encoded,
@@ -46,7 +50,13 @@ func TestTheSealIsSetInWinAnsiWithItsOwnMetrics(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Contains(signed, []byte("20B720")) || bytes.Contains(signed, []byte("C2B7")) {
+	// The signature value is hex too, and holds any four digits by chance:
+	// the text is looked for outside it.
+	text := signatureContents.ReplaceAll(signed, nil)
+	if len(text) == len(signed) {
+		t.Fatal("no signature value found to leave out")
+	}
+	if !bytes.Contains(text, []byte("20B720")) || bytes.Contains(text, []byte("C2B7")) {
 		t.Error(`"·" between the identifier and the date is not one WinAnsi byte`)
 	}
 	if !bytes.Contains(signed, []byte("/BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding")) || bytes.Contains(signed, []byte("/Widths")) {
