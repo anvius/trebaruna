@@ -185,6 +185,9 @@ func Sign(content []byte, name string, appearance *Appearance, signature Signatu
 		return nil, missingField(name, fields)
 	}
 	field := fields[index]
+	if err := lockedAgainst(reader, name); err != nil {
+		return nil, err
+	}
 
 	update, err := newUpdate(content, reader)
 	if err != nil {
@@ -213,7 +216,7 @@ func Sign(content []byte, name string, appearance *Appearance, signature Signatu
 		return nil, err
 	}
 
-	update.signaturePlaceholder(signatureID, signature)
+	update.signaturePlaceholder(signatureID, signature, fieldMDP(reader, field.field))
 	return update.finish(signatureID, signature)
 }
 
@@ -277,6 +280,9 @@ func openForSigning(content []byte, password string) (*pdf.Reader, error) {
 	}
 	if CertifiedAgainstChanges(reader) {
 		return nil, fmt.Errorf("%w: its author certified it against any change", ErrUnsupported)
+	}
+	if err := lockedAgainst(reader, ""); err != nil {
+		return nil, err
 	}
 	return reader, nil
 }
@@ -427,8 +433,9 @@ func (u *update) markSigned(reader *pdf.Reader) error {
 const byteRangeMarker = "/ByteRange [0 0000000000 0000000000 0000000000]"
 
 // signaturePlaceholder writes the signature dictionary, its /Contents a
-// run of zeros as long as the room reserved for the envelope.
-func (u *update) signaturePlaceholder(id uint32, signature Signature) {
+// run of zeros as long as the room reserved for the envelope; lock is the
+// field's FieldMDP reference, or empty.
+func (u *update) signaturePlaceholder(id uint32, signature Signature, lock string) {
 	var dictionary strings.Builder
 	dictionary.WriteString("<< /Type /Sig /Filter /Adobe.PPKLite /SubFilter /ETSI.CAdES.detached ")
 	dictionary.WriteString(byteRangeMarker)
@@ -438,6 +445,9 @@ func (u *update) signaturePlaceholder(id uint32, signature Signature) {
 		if entry[1] != "" {
 			fmt.Fprintf(&dictionary, " /%s %s", entry[0], pdfText(entry[1]))
 		}
+	}
+	if lock != "" {
+		dictionary.WriteString(" " + lock)
 	}
 	dictionary.WriteString(" >>")
 	u.signatureID = id

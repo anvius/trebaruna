@@ -76,7 +76,7 @@ func SignNew(content []byte, widgets []Widget, signature Signature) ([]byte, err
 	if err := update.addField(reader, fmt.Sprintf("%d 0 R", fieldID)); err != nil {
 		return nil, err
 	}
-	update.signaturePlaceholder(signatureID, signature)
+	update.signaturePlaceholder(signatureID, signature, "")
 	return update.finish(signatureID, signature)
 }
 

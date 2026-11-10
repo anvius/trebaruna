@@ -150,6 +150,8 @@ func signable(request application.PadesRequest) (bool, error) {
 		return true, fmt.Errorf("%w: its author's permissions allow neither filling in forms nor signing", ErrEncryptedPDF)
 	case pdffield.CertifiedAgainstChanges(reader):
 		return reader.IsEncrypted(), fmt.Errorf("%w: its author certified it against any change", pdffield.ErrUnsupported)
+	case pdffield.LockedAgainstChanges(reader):
+		return reader.IsEncrypted(), fmt.Errorf("%w: an earlier signer locked it against any change", pdffield.ErrUnsupported)
 	}
 	return reader.IsEncrypted(), nil
 }

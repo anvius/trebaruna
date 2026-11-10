@@ -193,6 +193,15 @@ its author certified against any change (DocMDP permissions 1) is refused
 however it would be signed, in a field, with a seal or invisibly: any
 signature would break the certification.
 
+A field whose form locks other fields when it is signed (its `/Lock`: all
+of them, the ones named, or all but them, and in PDF 2.0 the changes still
+allowed) is signed with that lock recorded, a FieldMDP reference in the
+signature (ISO 32000-1, 12.8.2.4), so a reader can tell when a locked field
+changed afterwards. Earlier signatures' locks are respected: a field one of
+them locked is not signed, and after one that allows no change (`/P 1`) no
+signature is added at all. The locked fields are not marked read-only in the
+update.
+
 ### PDF/A documents
 
 A PDF/A document stays PDF/A when it is signed. trebaruna reads the part its

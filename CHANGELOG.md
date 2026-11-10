@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A PDF signature field's lock (`/Lock`, ISO 32000-1 12.7.4.5) is recorded
+  when the field is signed, as a FieldMDP reference over the catalogue
+  with the lock's action, fields and PDF 2.0 permissions; earlier
+  signatures' locks are respected: a field one of them locked is refused,
+  and nothing is signed after one that allows no change (`/P 1`), in a
+  field, with a seal or invisibly.
+
 - ASiC containers are counter-signed: `sign expediente.asice --countersign
   leaves` (or `all`) adds CMS counter-signatures to each CAdES signature
   file and XAdES ones inside each signatures file, where they are, and

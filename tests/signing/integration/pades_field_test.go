@@ -36,12 +36,17 @@ const formPage = "BT /F1 18 Tf 72 760 Td (Solicitud) Tj ET 300 100 200 60 re S 3
 // dictionary is an object of its own, or inside the catalogue (Firma1
 // alone); the cross-reference section a table or a stream.
 func formPDF(formInCatalogue, crossReferenceStream bool) []byte {
+	return formPDFWith("", formInCatalogue, crossReferenceStream)
+}
+
+// formPDFWith is formPDF with entries added to Firma1's dictionary.
+func formPDFWith(firma1 string, formInCatalogue, crossReferenceStream bool) []byte {
 	objects := []string{
 		"<< /Type /Catalog /Pages 2 0 R /AcroForm 7 0 R >>",
 		"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
 		"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 6 0 R >> >> /Annots [5 0 R 10 0 R] >>",
 		fmt.Sprintf("<< /Length %d >>\nstream\n%s\nendstream", len(formPage), formPage),
-		"<< /FT /Sig /T (Firma1) /Type /Annot /Subtype /Widget /Rect [300 100 500 160] /P 3 0 R /F 4 >>",
+		"<< /FT /Sig /T (Firma1) " + firma1 + " /Type /Annot /Subtype /Widget /Rect [300 100 500 160] /P 3 0 R /F 4 >>",
 		"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
 		"<< /Fields [5 0 R 8 0 R] >>",
 		"<< /T (form) /Kids [9 0 R] >>",
