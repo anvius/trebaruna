@@ -40,6 +40,20 @@ func TestADetachedXadesTravelsBesideItsDocument(t *testing.T) {
 	if result := verifyJSON(t, signature); result.Verdict != "broken" {
 		t.Errorf("with a changed document: verdict %s, want broken", result.Verdict)
 	}
+	if err := os.WriteFile(document, []byte(original), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	// The .xsig is XML: counter-signed in place, nothing to say about the
+	// format.
+	if _, stderr, code := run("sign", signature, "--p12", key, "--countersign", "leaves"); code != 0 {
+		t.Fatalf("countersign: exit %d: %s", code, stderr)
+	}
+	countersigned := verifyEveryJSON(t, strings.TrimSuffix(document, ".pdf")+".pdf_countersigned.xsig")
+	if len(countersigned.Signers) != 2 || countersigned.Signers[1].Countersigns != "XMLSignature" ||
+		countersigned.Signers[0].Integrity != "good" || countersigned.Signers[1].Integrity != "good" {
+		t.Errorf("the counter-signed .xsig: %+v", countersigned.Signers)
+	}
+
 	if err := os.Remove(document); err != nil {
 		t.Fatal(err)
 	}

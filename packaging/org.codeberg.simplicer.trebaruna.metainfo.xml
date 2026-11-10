@@ -55,6 +55,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.83.9-unstable" date="2026-11-10">
+      <description>
+        <p>Detached XML signatures can be counter-signed.</p>
+      </description>
+    </release>
     <release version="0.83.8-unstable" date="2026-11-10">
       <description>
         <p>The certificate command speaks one language, the reader's.</p>

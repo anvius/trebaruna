@@ -416,7 +416,8 @@ refused); an ASiC-E takes a new signature file over all its documents, a CAdES
 report (`--json`'s `format`) names the kind added, whatever `--format` said.
 
 A signed XML document is counter-signed in place too: `sign acta_signed.xml
---countersign leaves` (or `all`) adds a XAdES signature over each chosen
+--countersign leaves` (or `all`; a detached `.xsig` the same way, its
+document beside it) adds a XAdES signature over each chosen
 signature's `SignatureValue` (a reference of type
 `http://uri.etsi.org/01903#CountersignedSignature`), inside that signature's
 `UnsignedSignatureProperties` as `xades:CounterSignature`; the countersigned

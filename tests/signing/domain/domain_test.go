@@ -226,3 +226,21 @@ func TestAnExplicitSealIsNotMovedByThePage(t *testing.T) {
 		t.Error("only the default seal is placed against the page")
 	}
 }
+
+// TestTheFormatFollowsTheSuffix when no --format is given: a detached XML
+// signature (.xsig) is XML, counter-signed or signed again as such.
+func TestTheFormatFollowsTheSuffix(t *testing.T) {
+	for path, want := range map[string]domain.Format{
+		"/tmp/acta.pdf": domain.Pades, "/tmp/fattura.xml": domain.Xades, "/tmp/acta.txt.xsig": domain.Xades,
+		"/tmp/esquema.XSD": domain.Xades, "/tmp/memoria.odt": domain.Odf, "/tmp/informe.docx": domain.Ooxml,
+		"/tmp/acta.txt": domain.Cades, "/tmp/acta.txt.p7s": domain.Cades,
+	} {
+		document, err := domain.OpenDocument(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := document.InferFormat(); got != want || !document.Supports(want) {
+			t.Errorf("%s: %s (supported %v), want %s", path, got, document.Supports(want), want)
+		}
+	}
+}

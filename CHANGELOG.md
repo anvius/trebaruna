@@ -920,6 +920,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A detached XML signature (`.xsig`) could not be counter-signed: without
+  `--format` it was read as a CMS envelope ("ber: truncated encoding"),
+  with `--format xades` refused (".xsig cannot hold a xades signature").
+  `.xsig` is XML: XAdES is inferred and accepted, and `sign acta.xsig
+  --countersign leaves` writes `acta_countersigned.xsig`.
+
 - `certificate` printed Spanish labels and an English trust note ("confianza
   self-signed — the certificate is its own issuer"). Its output now comes
   whole from the report's catalogue, in the language of `--lang` (new) or

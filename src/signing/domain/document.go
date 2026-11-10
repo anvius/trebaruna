@@ -101,7 +101,7 @@ func (d Document) Supports(format Format) bool {
 	case Pades:
 		return d.Extension() == ".pdf"
 	case Xades, Xmldsig:
-		return d.Extension() == ".xml" || d.Extension() == ".xsd" || d.Extension() == ".svg"
+		return isXMLDocument(d.Extension())
 	case Odf:
 		return isOpenDocument(d.Extension())
 	case Ooxml:
@@ -123,10 +123,10 @@ func (d Document) Supports(format Format) bool {
 // chose when naming the file, and reading the bytes to guess would be a surprise
 // on a large or unusual document.
 func (d Document) InferFormat() Format {
-	switch d.Extension() {
-	case ".pdf":
+	if d.Extension() == ".pdf" {
 		return Pades
-	case ".xml", ".xsd", ".svg":
+	}
+	if isXMLDocument(d.Extension()) {
 		return Xades
 	}
 	if isOpenDocument(d.Extension()) {
@@ -137,6 +137,17 @@ func (d Document) InferFormat() Format {
 	}
 	// Anything else is signed as a CMS container, which works for any bytes.
 	return Cades
+}
+
+// isXMLDocument reports an XML suffix: documents, schemas, drawings, and
+// the detached XML signatures trebaruna and AutoFirma write (.xsig), which
+// are counter-signed or signed again in place.
+func isXMLDocument(extension string) bool {
+	switch extension {
+	case ".xml", ".xsd", ".svg", ".xsig":
+		return true
+	}
+	return false
 }
 
 // isOfficeOpenXML reports an Office Open XML suffix: Word, Excel and
