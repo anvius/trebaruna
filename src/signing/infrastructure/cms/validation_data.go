@@ -43,6 +43,16 @@ func Certificates(contentInfoDER []byte) ([][]byte, error) {
 // SignatureTimeStampTokens returns the signature timestamp tokens of every
 // SignerInfo of a SignedData, in order.
 func SignatureTimeStampTokens(contentInfoDER []byte) ([][]byte, error) {
+	return timeStampTokens(contentInfoDER, false)
+}
+
+// AllSignatureTimeStampTokens is SignatureTimeStampTokens with those of
+// the counter-signatures, at any depth.
+func AllSignatureTimeStampTokens(contentInfoDER []byte) ([][]byte, error) {
+	return timeStampTokens(contentInfoDER, true)
+}
+
+func timeStampTokens(contentInfoDER []byte, nested bool) ([][]byte, error) {
 	parts, err := splitSignedData(contentInfoDER)
 	if err != nil {
 		return nil, err
@@ -53,31 +63,57 @@ func SignatureTimeStampTokens(contentInfoDER []byte) ([][]byte, error) {
 	}
 	var tokens [][]byte
 	for _, signer := range signers {
-		fields, err := splitSequence(signer)
-		if err != nil || len(fields) < 6 {
+		found, err := signerTimeStampTokens(signer, nested, 0)
+		if err != nil {
+			return nil, err
+		}
+		tokens = append(tokens, found...)
+	}
+	return tokens, nil
+}
+
+// signerTimeStampTokens are a SignerInfo's signature timestamp tokens, and
+// with nested those of the counter-signatures it holds.
+func signerTimeStampTokens(signer []byte, nested bool, depth int) ([][]byte, error) {
+	fields, err := splitSequence(signer)
+	if err != nil || len(fields) < 6 || depth > 16 {
+		return nil, nil
+	}
+	var tokens [][]byte
+	for _, field := range fields[6:] {
+		if field[0] != 0xa1 {
 			continue
 		}
-		for _, field := range fields[6:] {
-			if field[0] != 0xa1 {
-				continue
-			}
-			_, _, body, err := parseTLV(field)
-			if err != nil {
-				return nil, err
-			}
-			attributes, err := splitElements(body)
-			if err != nil {
-				return nil, err
-			}
-			for _, attribute := range attributes {
-				if attributeType, values, err := splitAttribute(attribute); err == nil && bytes.Equal(attributeType, signatureTimeStampType) {
-					tokens = append(tokens, values...)
+		_, _, body, err := parseTLV(field)
+		if err != nil {
+			return nil, err
+		}
+		attributes, err := splitElements(body)
+		if err != nil {
+			return nil, err
+		}
+		for _, attribute := range attributes {
+			attributeType, values, err := splitAttribute(attribute)
+			switch {
+			case err != nil:
+			case bytes.Equal(attributeType, signatureTimeStampType):
+				tokens = append(tokens, values...)
+			case nested && bytes.Equal(attributeType, countersignatureType):
+				for _, counter := range values {
+					found, err := signerTimeStampTokens(counter, true, depth+1)
+					if err != nil {
+						return nil, err
+					}
+					tokens = append(tokens, found...)
 				}
 			}
 		}
 	}
 	return tokens, nil
 }
+
+// countersignatureType is the countersignature attribute's OID as encoded.
+var countersignatureType, _ = asn1.Marshal(OIDCountersignature)
 
 // oidOCSPResponseRevocation is id-ri-ocsp-response (RFC 5940, 4.1): an
 // OCSPResponse carried among a SignedData's revocation information.

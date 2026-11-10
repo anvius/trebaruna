@@ -969,6 +969,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A CAdES co-signature or counter-signature at LT carries the validation
+  material of the authority behind the timestamp it brought (its chain and
+  OCSP answers, in SignedData), as a new signature does since 0.104.3. Only
+  the timestamps the added signature brings are looked into: the earlier
+  signatures' authorities are not asked about, so one revoked since does
+  not refuse the new signature.
+
 - The long-term levels carry what EU DSS needs to rate them LT and LTA,
   which it did not before (it rated trebaruna's LT and LTA signatures at T):
   - the timestamp authority behind the signature timestamp now has its
@@ -983,8 +990,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     SignedData.crls as RFC 5940 OtherRevocationInfoFormat (SignedData
     version 5), instead of the revocation-values attribute, which DSS reads
     as the extended X-L form. Co-signatures and counter-signatures at LT put
-    their signer's material there too; their timestamp authority's is not
-    covered yet.
+    their signer's material there too.
 
 - CAdES-LT revocation values follow RFC 5126: `ocspVals [1]` is a sequence
   of the responders' BasicOCSPResponses, each as the responder signed it.

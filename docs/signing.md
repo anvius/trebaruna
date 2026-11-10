@@ -428,8 +428,9 @@ A `.p7m` or `.p7s` can receive more signatures without opening it:
 A counter-signature signs another signature's value, not the document (RFC
 5652 §11.4), so it carries no contentType. Added signatures take every level:
 at T each carries its timestamp; at LT its chain's certificates and OCSP
-answers go in the envelope's SignedData, where the baseline profile keeps them
-(the timestamp authority of an added signature is not covered yet); at LTA
+answers, and those of the authority behind the timestamp it brought, go in the
+envelope's SignedData, where the baseline profile keeps them (the timestamps
+already there are not asked about); at LTA
 an archive-time-stamp-v3 seals the parallel signature added, or each signature
 that took counter-signatures, which seals them with it. A detached `.p7s` needs
 its document to be co-signed, or counter-signed at LTA: `--content atto.pdf`.

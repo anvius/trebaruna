@@ -45,7 +45,12 @@ func TestDSSAcceptsWhatTrebarunaSigns(t *testing.T) {
 	t.Run("CAdES-LTA counter-signed", func(t *testing.T) {
 		original := cades(application.CadesRequest{Content: content, Level: signingdomain.BES})
 		countersigned := cades(application.CadesRequest{Content: original, Level: signingdomain.LTA, Countersign: "leaves"})
-		dss.Judged(t, dss.Judge(t, "acta.pdf.p7m", countersigned, nil, authority.ca), 2, "CAdES-BASELINE-B", false, "SIGNATURE_TIMESTAMP", "ARCHIVE_TIMESTAMP")
+		signatures := dss.Judge(t, "acta.pdf.p7m", countersigned, nil, authority.ca)
+		dss.Judged(t, signatures, 2, "CAdES-BASELINE-B", false, "SIGNATURE_TIMESTAMP", "ARCHIVE_TIMESTAMP")
+		// The counter-signature carries its authority's material: LT.
+		if len(signatures) == 2 && signatures[1].Format != "CAdES-BASELINE-LT" {
+			t.Errorf("DSS reads the counter-signature as %s, want CAdES-BASELINE-LT", signatures[1].Format)
+		}
 	})
 
 	t.Run("CAdES-T detached", func(t *testing.T) {
@@ -92,6 +97,10 @@ func TestDSSAcceptsWhatTrebarunaSigns(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		dss.Judged(t, dss.Judge(t, "expediente.asice", countersigned.Content, nil, authority.ca), 2, "CAdES-BASELINE-B", false, "SIGNATURE_TIMESTAMP", "ARCHIVE_TIMESTAMP")
+		signatures := dss.Judge(t, "expediente.asice", countersigned.Content, nil, authority.ca)
+		dss.Judged(t, signatures, 2, "CAdES-BASELINE-B", false, "SIGNATURE_TIMESTAMP", "ARCHIVE_TIMESTAMP")
+		if len(signatures) == 2 && signatures[1].Format != "CAdES-BASELINE-LT" {
+			t.Errorf("DSS reads the counter-signature as %s, want CAdES-BASELINE-LT", signatures[1].Format)
+		}
 	})
 }

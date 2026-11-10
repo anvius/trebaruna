@@ -6,7 +6,8 @@ package integration_test
 // signer's. Without them EU DSS rates the signature at T. XAdES carries the
 // certificates ds:KeyInfo leaves out in xades:CertificateValues, without
 // which a validator not given the signer's authority cannot build the
-// chain. A revoked authority certificate refuses the signature.
+// chain. A revoked authority certificate refuses the signature. A CAdES
+// signature added to an envelope carries its own authority's material.
 
 import (
 	"bytes"
@@ -32,6 +33,7 @@ import (
 	"codeberg.org/simplicer/trebaruna/src/signing/application"
 	"codeberg.org/simplicer/trebaruna/src/signing/domain"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure"
+	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/cms"
 )
 
 func TestAnXadesLtCarriesTheAuthorityAndTheIssuers(t *testing.T) {
@@ -240,5 +242,43 @@ func TestAnAuthorityUnderTheSignersIssuersIsCarriedOnce(t *testing.T) {
 	// The signer's, the intermediate's and the authority's.
 	if answers := document.FindElements("//RevocationValues/OCSPValues/EncapsulatedOCSPValue"); len(answers) != 3 {
 		t.Errorf("%d OCSP answers, want 3", len(answers))
+	}
+}
+
+// TestAnAddedCadesSignatureCarriesItsOwnAuthority: a co-signature or a
+// counter-signature at LT carries, in SignedData, the material of the
+// authority behind the timestamp it brought, and asks nothing about the
+// timestamps already in the envelope: here the earlier signature's
+// authority is revoked, which would refuse the signature if it were asked.
+func TestAnAddedCadesSignatureCarriesItsOwnAuthority(t *testing.T) {
+	content, signer := cadesFixture(t)
+	original, err := infrastructure.NewCadesSigner(newRevokedLocalTSA(t)).SignCades(context.Background(), application.CadesRequest{
+		Content: content, Signer: signer, Level: domain.T, TimestampURL: "http://tsa.example.invalid"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ocspAnswer := []byte{0x06, 0x08, 0x2b, 0x06, 0x01, 0x05, 0x05, 0x07, 0x10, 0x02}
+	for name, request := range map[string]application.CadesRequest{
+		"a co-signature":      {Cosign: true},
+		"a counter-signature": {Countersign: "leaves"},
+	} {
+		authority := newLocalTSAWithStatus(t)
+		request.Content, request.Signer, request.Level = original, signer, domain.LT
+		request.TimestampURL, request.EmbedRevocation = "http://tsa.example.invalid", true
+		added, err := infrastructure.NewCadesSigner(authority).SignCades(context.Background(), request)
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		// The signer's answer and its new authority's.
+		if answers := bytes.Count(added, ocspAnswer); answers != 2 {
+			t.Errorf("%s: %d OCSP answers, want 2", name, answers)
+		}
+		certificates, err := cms.Certificates(added)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !containsBytes(certificates, authority.certificate.Raw) || !containsBytes(certificates, authority.ca.Raw) {
+			t.Errorf("%s: SignedData.certificates lacks its authority's chain", name)
+		}
 	}
 }

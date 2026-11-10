@@ -1,10 +1,12 @@
 package infrastructure
 
 import (
+	"bytes"
 	"context"
 	"crypto"
 	"crypto/x509"
 	"fmt"
+	"slices"
 
 	"codeberg.org/simplicer/trebaruna/src/signing/application"
 	"codeberg.org/simplicer/trebaruna/src/signing/domain"
@@ -236,16 +238,14 @@ func (s *CadesSigner) addSignature(ctx context.Context, request application.Cade
 		}
 	}
 
-	var responses [][]byte
-	if request.Level.EmbedsRevocation() {
-		if !request.EmbedRevocation {
-			return nil, needsRevocationSource(request.Level)
-		}
-		material, err := gatherValidationMaterial(ctx, keyPair, nil, cadesIncomplete)
-		if err != nil {
-			return nil, err
-		}
-		responses = material.responses
+	if request.Level.EmbedsRevocation() && !request.EmbedRevocation {
+		return nil, needsRevocationSource(request.Level)
+	}
+	// The timestamps already there are someone else's: only the ones the
+	// added signature brings call for their authority's material.
+	earlier, err := cms.AllSignatureTimeStampTokens(request.Content)
+	if err != nil {
+		return nil, err
 	}
 
 	var signed []byte
@@ -258,9 +258,21 @@ func (s *CadesSigner) addSignature(ctx context.Context, request application.Cade
 		return nil, err
 	}
 	if request.Level.EmbedsRevocation() {
-		// The added signature's validation material, in SignedData as the
-		// baseline profile asks.
-		if signed, err = cms.WithValidationData(signed, rawCertificates(keyPair.Certificates()), nil, responses); err != nil {
+		// The added signature's validation material, its chain's and the
+		// authority's behind each timestamp it brought, in SignedData as
+		// the baseline profile asks.
+		tokens, err := cms.AllSignatureTimeStampTokens(signed)
+		if err != nil {
+			return nil, err
+		}
+		added := slices.DeleteFunc(tokens, func(token []byte) bool {
+			return slices.ContainsFunc(earlier, func(old []byte) bool { return bytes.Equal(old, token) })
+		})
+		material, err := gatherValidationMaterial(ctx, keyPair, added, cadesIncomplete)
+		if err != nil {
+			return nil, err
+		}
+		if signed, err = cms.WithValidationData(signed, rawCertificates(material.certificates()), nil, material.responses); err != nil {
 			return nil, err
 		}
 	}
