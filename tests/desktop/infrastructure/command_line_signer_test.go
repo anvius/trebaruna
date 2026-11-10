@@ -395,3 +395,22 @@ func TestThePDFPasswordTravelsInTheEnvironment(t *testing.T) {
 		t.Error("the password reached the command line")
 	}
 }
+
+// TestADocumentSignedAsItsPDFTakesToPDF: the window's "as a PDF" choice
+// asks the command for --to-pdf and no format, and names the signed PDF
+// beside the document.
+func TestADocumentSignedAsItsPDFTakesToPDF(t *testing.T) {
+	binary, recorded := fakeCommand(t, "echo '"+receiptJSON+"'")
+	intent := domain.SigningIntent{DocumentPath: "/tmp/contrato.docx", Key: domain.CertificateFile{Path: "/tmp/k.p12"},
+		Format: domain.FormatAsPDF, Level: domain.LevelBasic, Seal: domain.SealChoice{Page: 1}}
+	if _, err := (infrastructure.CommandLineSigner{BinaryPath: binary}).Sign(context.Background(), intent); err != nil {
+		t.Fatalf("Sign: %v", err)
+	}
+	arguments := recordedArguments(t, recorded)
+	if !contains(arguments, "--to-pdf") || contains(arguments, "--format") {
+		t.Errorf("as a PDF: %v", arguments)
+	}
+	if output := intent.OutputName(); output != "/tmp/contrato_signed.pdf" {
+		t.Errorf("the window names %s", output)
+	}
+}

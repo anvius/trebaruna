@@ -112,6 +112,7 @@ var galician = Catalogue{
 	FormatXAdESLabel:           "XML asinado (XAdES)",
 	FormatODFLabel:             "Documento de LibreOffice asinado por dentro (ODF)",
 	FormatOOXMLLabel:           "Documento de Office asinado por dentro (OOXML)",
+	FormatAsPDFLabel:           "Como PDF, convertido con LibreOffice (PAdES)",
 	RubricLabel:                "Rúbrica (opcional)",
 	ChooseRubric:               "Escoller imaxe da sinatura…",
 	RubricHint:                 "Unha imaxe PNG ou JPEG da túa sinatura manuscrita. Vai no selo xunto aos datos do certificado, nunca soa.",

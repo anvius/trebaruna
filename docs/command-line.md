@@ -118,6 +118,7 @@ trebaruna sign <document> [flags]
 | `--force` | off | replace an existing file at the output; without it an existing file is not touched, and the document itself is never replaced |
 | `--enveloping` | off | XAdES enveloping rather than enveloped: the document inside the signature; any file |
 | `--invisible` | off | PAdES without a visible seal; excludes `--box` |
+| `--to-pdf` | off | sign a text, spreadsheet or presentation as the PDF LibreOffice prints of it: `<document>_signed.pdf`, PAdES, nothing else written; excludes `--format`, `--detached`, `--cosign`, `--countersign`, `--asic` and `--enveloping` |
 | `--field` | — | sign in the PDF's empty signature field of this fully qualified name, the seal in its box (with `--invisible`, none); excludes `--box` |
 | `--detached` | off | The signature beside the untouched document: `<document>.p7s` (CAdES) or `<document>.xsig` (XAdES) |
 | `--cosign` | off | Add a parallel signature to the `.p7m`/`.p7s` given as document |
@@ -346,6 +347,26 @@ trebaruna timestamp --hash 3a7bd3e2... --tsa https://freetsa.org/tsr --out proof
 See [Timestamps](timestamps.md).
 
 ---
+
+## `convert`
+
+```bash
+trebaruna convert contrato.docx [--out contrato.pdf] [--force] [--json]
+```
+
+Prints a text, spreadsheet or presentation (OpenDocument, Office Open XML,
+the older `.doc`, `.xls` and `.ppt`, RTF, plain text and CSV) to PDF with
+LibreOffice, beside the document unless `--out` says otherwise; an existing
+file is replaced only with `--force`. The PDF is the one to read before
+signing it, or to sign with `sign`; `sign --to-pdf` does both in one step
+and keeps only the signed PDF.
+
+LibreOffice runs headless with a profile of its own, created for the
+conversion and thrown away after: the person's settings, recent files and
+extensions are neither read nor touched, and it fetches nothing. A
+conversion that takes more than three minutes is stopped. Without
+LibreOffice the command says so: install it, or export the PDF from the
+program that made the document.
 
 ## `fields`
 

@@ -562,6 +562,8 @@ func (f *signForm) formatLabel(format domain.SignatureFormat) string {
 		return f.m.FormatASiCELabel
 	case domain.FormatFacturaE:
 		return f.m.FormatFacturaELabel
+	case domain.FormatAsPDF:
+		return f.m.FormatAsPDFLabel
 	}
 	return f.m.FormatPAdESLabel
 }

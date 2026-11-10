@@ -87,9 +87,14 @@ func signArguments(intent domain.SigningIntent) []string {
 	}
 	arguments := append([]string{"sign", intent.DocumentPath}, intent.MoreDocuments...)
 	// The window names the output before signing and says when it replaces
-	// a file, so the command may replace it.
+	// a file, so the command may replace it. A document signed as its PDF
+	// takes --to-pdf, which signs that PDF in PAdES.
+	if intent.Format == domain.FormatAsPDF {
+		arguments = append(arguments, "--to-pdf")
+	} else {
+		arguments = append(arguments, "--format", format)
+	}
 	arguments = append(arguments,
-		"--format", format,
 		"--level", string(intent.Level),
 		"--json",
 		"--force",

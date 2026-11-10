@@ -116,6 +116,7 @@ var basque = Catalogue{
 	FormatXAdESLabel:           "XML sinatua (XAdES)",
 	FormatODFLabel:             "Barrutik sinatutako LibreOffice dokumentua (ODF)",
 	FormatOOXMLLabel:           "Barrutik sinatutako Office dokumentua (OOXML)",
+	FormatAsPDFLabel:           "PDF gisa, LibreOfficekin bihurtuta (PAdES)",
 	RubricLabel:                "Eskuzko sinadura (aukerakoa)",
 	ChooseRubric:               "Aukeratu sinaduraren irudia…",
 	RubricHint:                 "Zure eskuzko sinaduraren PNG edo JPEG irudi bat. Zigiluan doa, ziurtagiriaren datuen ondoan, inoiz ez bakarrik.",

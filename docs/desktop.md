@@ -56,6 +56,13 @@ cannot be previewed without passing the password on a command line, which
 trebaruna does not do: the seal goes in its default place, or sign
 invisibly. A PDF that only restricts permissions asks nothing.
 
+A **text, spreadsheet or presentation** (Word, Excel, PowerPoint,
+OpenDocument, RTF) may also be signed **as a PDF, converted with
+LibreOffice**: LibreOffice prints it to PDF and that PDF is signed, the seal
+in its default place, as `<name>_signed.pdf` beside the document. It needs
+LibreOffice installed; `trebaruna convert` writes the PDF alone, to read it
+first.
+
 A **FacturaE invoice** is recognised by its content, not its name: it is
 offered as *FacturaE invoice* first, signed inside with FacturaE's policy
 (3.1, or 3.0 if asked), and step 3 asks whether you sign it as issuer,

@@ -127,6 +127,8 @@ func dispatch(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return runExtract(args[1:], stdout, stderr)
 	case "fields":
 		return runFields(args[1:], stdout, stderr)
+	case "convert":
+		return runConvert(args[1:], stdout, stderr)
 	case "version", "--version", "-v":
 		fmt.Fprintln(stdout, version)
 		return exitOK
@@ -176,6 +178,7 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 		policyAlg  = flags.String("policy-hash-alg", "SHA1", "the digest algorithm of --policy-hash")
 		policyURI  = flags.String("policy-qualifier", "", "the policy document's URL")
 		role       = flags.String("role", "", "role the signer claims in XAdES (FacturaE: emisor, receptor, tercero)")
+		toPDF      = flags.Bool("to-pdf", false, "sign a text, spreadsheet or presentation as the PDF LibreOffice prints of it: <document>_signed.pdf")
 		asJSON     = flags.Bool("json", false, "machine-readable output")
 	)
 
@@ -246,7 +249,17 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 		}
 	}
 
+	if *toPDF && (*detached || *cosign || *counter != "" || container != domain.NoContainer || *enveloping) {
+		fmt.Fprintln(stderr, "--to-pdf signs the PDF in PAdES: it excludes --detached, --cosign, --countersign, --asic and --enveloping")
+		return exitUsage
+	}
+	if *toPDF && *format != "" && *format != "pades" {
+		fmt.Fprintln(stderr, "--to-pdf signs the PDF in PAdES: leave --format out")
+		return exitUsage
+	}
+
 	useCase := Signing(infrastructure.NewRfc3161Timestamper())
+	asPDF := SigningAsPDF(infrastructure.NewRfc3161Timestamper())
 
 	// Every document gets the same settings; each format is still inferred from
 	// its own suffix unless --format names one. One failure does not stop the
@@ -265,7 +278,9 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 			more = append(more, other)
 		}
 		signatureFormat := document.InferFormat()
-		if *format != "" {
+		if *toPDF {
+			signatureFormat = domain.Pades
+		} else if *format != "" {
 			if signatureFormat, err = domain.ParseFormat(*format); err != nil {
 				return application.Artefact{}, err
 			}
@@ -278,7 +293,11 @@ func runSign(args []string, stdout, stderr io.Writer) int {
 		if *role != "" {
 			claimedRoles = []string{*role}
 		}
-		artefact, err := useCase.Execute(context.Background(), application.Request{
+		execute := useCase.Execute
+		if *toPDF {
+			execute = asPDF.Execute
+		}
+		artefact, err := execute(context.Background(), application.Request{
 			Policy:          policy,
 			ClaimedRoles:    claimedRoles,
 			Document:        document,
@@ -607,6 +626,7 @@ usage:
   trebaruna serve --root <dir> --listen 127.0.0.1:0   (local HTTP API)
   trebaruna extract <document.p7m> [--out path]  (the document inside one or more envelopes)
   trebaruna fields <document.pdf> [--json]      (a form's empty signature fields, for sign --field)
+  trebaruna convert <document> [--out file.pdf]  (a text, spreadsheet or presentation printed to PDF)
   trebaruna encrypt <file> --to <cert> [--to …]   (a .p7e only the recipients open)
   trebaruna recipients list|add <cert>|remove <who>   (the address book: --to saved:<who>)
   trebaruna decrypt <file.p7e> --p12|--card|…     (open a .p7e with your key)
@@ -634,6 +654,7 @@ flags:
   --page     page for the visible seal                           default: 1
   --box      seal box x1,y1,x2,y2 in PDF points
   --rubric   PNG or JPEG of a handwritten signature, beside the data in the seal
+  --to-pdf   sign a text, spreadsheet or presentation as its PDF (LibreOffice)
   --json     machine-readable output
   --out      output path
 

@@ -25,6 +25,17 @@ func Signing(timestamper infrastructure.Timestamper) *application.SignDocument {
 		WithOoxml(infrastructure.NewOoxmlSigner(xadesSigner))
 }
 
+// SigningAsPDF wires signing a text, spreadsheet or presentation as the PDF
+// LibreOffice prints of it.
+func SigningAsPDF(timestamper infrastructure.Timestamper) *application.SignAsPDF {
+	return application.NewSignAsPDF(infrastructure.LibreOffice{}, Signing(timestamper))
+}
+
+// Conversion wires turning such a document into a PDF beside it.
+func Conversion() *application.ConvertDocument {
+	return application.NewConvertDocument(infrastructure.LibreOffice{}, infrastructure.DiskStore{})
+}
+
 // Verification wires the verification use case with every format trebaruna
 // reads, over the PDF verifier given (whose revocation checks the caller
 // decides).

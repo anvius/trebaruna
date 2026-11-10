@@ -11,7 +11,9 @@ func TestTheDocumentDecidesWhichFormatsMakeSense(t *testing.T) {
 	cases := map[string][]domain.SignatureFormat{
 		"/tmp/contratto.PDF":    {domain.FormatPAdES, domain.FormatCAdES, domain.FormatCAdESDetached, domain.FormatASiCS},
 		"/tmp/fattura.xml":      {domain.FormatXAdES, domain.FormatCAdES, domain.FormatCAdESDetached, domain.FormatASiCS},
-		"/tmp/offerta.docx":     {domain.FormatOOXML, domain.FormatCAdES, domain.FormatCAdESDetached, domain.FormatASiCS},
+		"/tmp/offerta.docx":     {domain.FormatOOXML, domain.FormatAsPDF, domain.FormatCAdES, domain.FormatCAdESDetached, domain.FormatASiCS},
+		"/tmp/acta.odt":         {domain.FormatODF, domain.FormatAsPDF, domain.FormatCAdES, domain.FormatCAdESDetached, domain.FormatASiCS},
+		"/tmp/viejo.doc":        {domain.FormatCAdES, domain.FormatAsPDF, domain.FormatCAdESDetached, domain.FormatASiCS},
 		"/tmp/senza-estensio":   {domain.FormatCAdES, domain.FormatCAdESDetached, domain.FormatASiCS},
 		"/tmp/atto.pdf.p7m":     {domain.FormatCosign, domain.FormatCountersign, domain.FormatCAdES},
 		"/tmp/offerta.txt.p7s":  {domain.FormatCosign, domain.FormatCountersign},
@@ -138,6 +140,7 @@ func TestEachFormatDeclaresThePoliciesItCanCarry(t *testing.T) {
 		domain.FormatFacturaE: {domain.PolicyFacturaE, domain.PolicyFacturaE30},
 		domain.FormatASiCS:    nil,
 		domain.FormatOOXML:    nil,
+		domain.FormatAsPDF:    {domain.PolicyNone, domain.PolicyAGE},
 	}
 	for format, want := range cases {
 		if got := format.Policies(); len(got) != len(want) || (len(want) > 0 && got[len(got)-1] != want[len(want)-1]) {

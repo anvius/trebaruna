@@ -171,6 +171,7 @@ type Catalogue struct {
 	FormatXAdESLabel           string
 	FormatODFLabel             string
 	FormatOOXMLLabel           string
+	FormatAsPDFLabel           string
 	RubricLabel                string
 	ChooseRubric               string
 	RubricHint                 string
@@ -540,6 +541,7 @@ var spanish = Catalogue{
 	FormatXAdESLabel:           "XML firmado (XAdES)",
 	FormatODFLabel:             "Documento de LibreOffice firmado por dentro (ODF)",
 	FormatOOXMLLabel:           "Documento de Office firmado por dentro (OOXML)",
+	FormatAsPDFLabel:           "Como PDF, convertido con LibreOffice (PAdES)",
 	RubricLabel:                "Rúbrica (opcional)",
 	ChooseRubric:               "Elegir imagen de la firma…",
 	RubricHint:                 "Una imagen PNG o JPEG de tu firma manuscrita. Va en el sello junto a los datos del certificado, nunca sola.",
@@ -885,6 +887,7 @@ var italian = Catalogue{
 	FormatXAdESLabel:           "XML firmato (XAdES)",
 	FormatODFLabel:             "Documento LibreOffice firmato al suo interno (ODF)",
 	FormatOOXMLLabel:           "Documento Office firmato al suo interno (OOXML)",
+	FormatAsPDFLabel:           "Come PDF, convertito con LibreOffice (PAdES)",
 	RubricLabel:                "Firma autografa (facoltativa)",
 	ChooseRubric:               "Scegli l'immagine della firma…",
 	RubricHint:                 "Un'immagine PNG o JPEG della tua firma autografa. Va nel sigillo accanto ai dati del certificato, mai da sola.",
@@ -1230,6 +1233,7 @@ var english = Catalogue{
 	FormatXAdESLabel:           "Signed XML (XAdES)",
 	FormatODFLabel:             "LibreOffice document signed inside (ODF)",
 	FormatOOXMLLabel:           "Office document signed inside (OOXML)",
+	FormatAsPDFLabel:           "As a PDF, converted with LibreOffice (PAdES)",
 	RubricLabel:                "Handwritten signature (optional)",
 	ChooseRubric:               "Choose the signature image…",
 	RubricHint:                 "A PNG or JPEG of your handwritten signature. It goes in the seal next to the certificate data, never alone.",

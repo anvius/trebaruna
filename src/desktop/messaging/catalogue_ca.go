@@ -113,6 +113,7 @@ var catalan = Catalogue{
 	FormatXAdESLabel:           "XML signat (XAdES)",
 	FormatODFLabel:             "Document del LibreOffice signat per dins (ODF)",
 	FormatOOXMLLabel:           "Document de l'Office signat per dins (OOXML)",
+	FormatAsPDFLabel:           "Com a PDF, convertit amb LibreOffice (PAdES)",
 	RubricLabel:                "Rúbrica (opcional)",
 	ChooseRubric:               "Tria la imatge de la signatura…",
 	RubricHint:                 "Una imatge PNG o JPEG de la teva signatura manuscrita. Va al segell al costat de les dades del certificat, mai sola.",

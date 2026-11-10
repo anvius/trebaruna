@@ -323,6 +323,18 @@ that Office and LibreOffice agree on the digest (ADR-0015 tells why).
 signature, and says when a signature digests the package's relationships
 the way LibreOffice does rather than as the standard says.
 
+### An Office document signed as a PDF
+
+Some offices want a PDF whatever the document was written in. `sign
+contrato.docx --to-pdf` has LibreOffice print the document to PDF, kept
+aside, and signs that PDF in PAdES, with the seal in its default place:
+`contrato_signed.pdf` lands beside the document, which is not touched, and
+nothing else is written. What is signed is the PDF, which anyone can open
+and read; check it before signing when the layout matters, with `trebaruna
+convert contrato.docx`, which writes `contrato.pdf` to look at (and sign
+with a seal placed by hand, if the default place does not suit). In the
+window the choice is "As a PDF, converted with LibreOffice".
+
 ---
 
 ## Remote signing (CSC)

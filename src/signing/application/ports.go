@@ -31,6 +31,12 @@ type Artefact struct {
 	RemoteService string
 }
 
+// PDFConverter turns a document an office suite opens into a PDF, kept
+// aside: the converted document is the PDF's, which release removes.
+type PDFConverter interface {
+	ConvertToPDF(ctx context.Context, document domain.Document) (converted domain.Document, release func(), err error)
+}
+
 // KeyMaterial is what the infrastructure resolved from a Signer.
 //
 // It is deliberately opaque: the application does not know whether the key

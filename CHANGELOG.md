@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A text, spreadsheet or presentation (OpenDocument, Office Open XML, the
+  older Office formats, RTF, plain text, CSV) can be signed as the PDF
+  LibreOffice prints of it: `sign x.docx --to-pdf` writes
+  `x_signed.pdf` in PAdES beside the document and nothing else, and the
+  window offers "As a PDF, converted with LibreOffice". `trebaruna convert`
+  writes the PDF alone, to read it before signing. LibreOffice runs headless
+  with a profile created for the conversion and thrown away after, and is
+  stopped after three minutes; without it the command says so.
+
 - Signing with a Brainpool key on a card (brainpoolP256r1, P384r1 and
   P512r1, the curves of German health professionals' cards): the card's
   certificates are read with trebaruna's own parser, the chain the card

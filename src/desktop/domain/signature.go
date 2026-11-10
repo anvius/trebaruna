@@ -50,6 +50,11 @@ const (
 	// FormatFacturaE signs a FacturaE invoice inside it, declaring
 	// FacturaE's policy and the role the signer has in it.
 	FormatFacturaE SignatureFormat = "facturae"
+
+	// FormatAsPDF prints a text, spreadsheet or presentation to PDF with
+	// LibreOffice and signs the PDF in PAdES (<name>_signed.pdf), the seal
+	// in its default place: what is signed is the PDF anyone can open.
+	FormatAsPDF SignatureFormat = "as-pdf"
 )
 
 // BatchFormats lists what a batch can be signed as.
@@ -80,7 +85,7 @@ const (
 // FacturaE versions for an invoice, none elsewhere.
 func (f SignatureFormat) Policies() []PolicyName {
 	switch f {
-	case FormatPAdES:
+	case FormatPAdES, FormatAsPDF:
 		return []PolicyName{PolicyNone, PolicyAGE}
 	case FormatCAdES, FormatCAdESDetached, FormatXAdES:
 		return []PolicyName{PolicyNone, PolicyAGE, PolicyAGE18}
@@ -125,10 +130,13 @@ func FormatsFor(documentPath string) []SignatureFormat {
 	case ".xml":
 		return []SignatureFormat{FormatXAdES, FormatCAdES, FormatCAdESDetached, FormatASiCS}
 	case ".odt", ".ods", ".odp", ".odg", ".odf", ".odm", ".ott", ".ots", ".otp", ".otg":
-		return []SignatureFormat{FormatODF, FormatCAdES, FormatCAdESDetached, FormatASiCS}
+		return []SignatureFormat{FormatODF, FormatAsPDF, FormatCAdES, FormatCAdESDetached, FormatASiCS}
 	case ".docx", ".docm", ".dotx", ".dotm", ".xlsx", ".xlsm", ".xltx", ".xltm",
 		".pptx", ".pptm", ".potx", ".potm", ".ppsx", ".ppsm":
-		return []SignatureFormat{FormatOOXML, FormatCAdES, FormatCAdESDetached, FormatASiCS}
+		return []SignatureFormat{FormatOOXML, FormatAsPDF, FormatCAdES, FormatCAdESDetached, FormatASiCS}
+	case ".doc", ".dot", ".xls", ".xlt", ".ppt", ".pot", ".pps", ".rtf", ".txt", ".csv":
+		// Older Office files and plain text: an envelope, or the PDF they print.
+		return []SignatureFormat{FormatCAdES, FormatAsPDF, FormatCAdESDetached, FormatASiCS}
 	}
 	return []SignatureFormat{FormatCAdES, FormatCAdESDetached, FormatASiCS}
 }

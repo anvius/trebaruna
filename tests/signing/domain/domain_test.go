@@ -244,3 +244,19 @@ func TestTheFormatFollowsTheSuffix(t *testing.T) {
 		}
 	}
 }
+
+func TestAnOfficeDocumentTurnsIntoItsPDF(t *testing.T) {
+	for path, convertible := range map[string]bool{
+		"contrato.docx": true, "hoja.xlsx": true, "acta.odt": true, "viejo.doc": true, "nota.rtf": true, "lista.csv": true,
+		"acta.pdf": false, "foto.png": false, "acta.pdf.p7m": false, "factura.xml": false, "expediente.asice": false,
+	} {
+		document, _ := domain.OpenDocument("/docs/" + path)
+		if document.Convertible() != convertible {
+			t.Errorf("%s convertible %v, want %v", path, document.Convertible(), convertible)
+		}
+	}
+	document, _ := domain.OpenDocument("/docs/contrato.docx")
+	if pdf := document.AsPDF(); pdf.Path() != "/docs/contrato.pdf" || pdf.SignedName(domain.Pades) != "/docs/contrato_signed.pdf" {
+		t.Errorf("as a PDF: %s, signed %s", pdf.Path(), pdf.SignedName(domain.Pades))
+	}
+}

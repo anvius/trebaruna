@@ -147,13 +147,13 @@ func TestAnyOtherFileGoesInAnEnvelopeOrBesideIt(t *testing.T) {
 	fixture := newFormFixture(t, scriptedCertificate{summary: qualifiedRossi()})
 	form := fixture.desktop.form
 
-	form.setDocument("/tmp/offerta.txt")
+	form.setDocument("/tmp/plano.dwg")
 
 	if form.format != domain.FormatCAdES || len(form.formatChoice.Options) != 3 {
-		t.Fatalf("format %s, options %v: a .txt goes in an envelope or gets a .p7s beside it", form.format, form.formatChoice.Options)
+		t.Fatalf("format %s, options %v: a drawing goes in an envelope or gets a .p7s beside it", form.format, form.formatChoice.Options)
 	}
 	form.formatChoice.SetSelected(form.m.FormatDetachedLabel)
-	if form.format != domain.FormatCAdESDetached || form.documentRow.note.Text != "Se guardará como offerta.txt.p7s" {
+	if form.format != domain.FormatCAdESDetached || form.documentRow.note.Text != "Se guardará como plano.dwg.p7s" {
 		t.Errorf("format %s, note %q", form.format, form.documentRow.note.Text)
 	}
 }
@@ -166,11 +166,17 @@ func TestAWordFileIsSignedInsideFirst(t *testing.T) {
 
 	form.setDocument("/tmp/offerta.docx")
 
-	if form.format != domain.FormatOOXML || len(form.formatChoice.Options) != 4 || form.formatChoice.Options[0] != form.m.FormatOOXMLLabel {
+	if form.format != domain.FormatOOXML || len(form.formatChoice.Options) != 5 || form.formatChoice.Options[0] != form.m.FormatOOXMLLabel ||
+		form.formatChoice.Options[1] != form.m.FormatAsPDFLabel {
 		t.Fatalf("format %s, options %v", form.format, form.formatChoice.Options)
 	}
 	if form.documentRow.note.Text != "Se guardará como offerta_signed.docx" {
 		t.Errorf("note = %q", form.documentRow.note.Text)
+	}
+	// As a PDF, the signed PDF lands beside it.
+	form.formatChoice.SetSelected(form.m.FormatAsPDFLabel)
+	if form.format != domain.FormatAsPDF || form.documentRow.note.Text != "Se guardará como offerta_signed.pdf" {
+		t.Errorf("as a PDF: format %s, note %q", form.format, form.documentRow.note.Text)
 	}
 }
 
