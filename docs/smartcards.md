@@ -245,10 +245,11 @@ trebaruna-token sign atto.pdf --firefox         # the store of the profile Firef
 trebaruna-token sign atto.pdf --nss-db ~/.pki/nssdb --certificate 3f2a91c0
 ```
 
-- `--firefox` uses the profile Firefox starts with (`profiles.ini`: the
-  installation's default, else the profile marked default), looking in
-  `~/.mozilla/firefox`, the Snap and Flatpak locations, `~/Library/Application
-  Support/Firefox` and `%APPDATA%\Mozilla\Firefox`.
+- `--firefox` uses the profile the browser starts with (`installs.ini` and
+  `profiles.ini`: the installation's default, else the profile marked default).
+  It looks in the Firefox family (Firefox, LibreWolf, Waterfox, Floorp, Zen),
+  native, Snap and Flatpak, and in `~/Library/Application Support` and
+  `%APPDATA%` on macOS and Windows; ADR-0020 lists the folders.
 - `--nss-db <dir>` opens any NSS store directory (one holding `cert9.db`).
 - The PIN is Firefox's **primary password**, read from `TREBARUNA_PIN` like a
   card PIN; a store without one signs without asking. The same rules apply:
