@@ -5,6 +5,7 @@ package infrastructure
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/miekg/pkcs11"
 
@@ -112,7 +113,10 @@ func describeLoginState(token pkcs11.TokenInfo) string {
 	}
 }
 
-// readCertificates lists the certificates the token holds.
+// readCertificates lists the certificates the token holds that can sign: each
+// has its private key on the token, and it is usable for signing (see
+// domain.UsableForSigning). A certificate authority's root, or a certificate
+// whose key is gone, is not offered.
 //
 // The certificate objects are public: reading them needs no PIN on any card
 // that follows the profile. When a PIN is given, the session is opened for
@@ -144,6 +148,9 @@ func readCertificates(context *pkcs11.Ctx, slot uint, pin string) []TokenCertifi
 		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_CERTIFICATE),
 	}
 
+	keys, keysKnown := privateKeyIdentifiers(context, slot, session, pin != "")
+	now := time.Now()
+
 	if err := context.FindObjectsInit(session, template); err != nil {
 		return nil
 	}
@@ -159,16 +166,16 @@ func readCertificates(context *pkcs11.Ctx, slot uint, pin string) []TokenCertifi
 		}
 		for _, handle := range handles {
 			attributes, err := context.GetAttributeValue(session, handle,
-				[]*pkcs11.Attribute{pkcs11.NewAttribute(pkcs11.CKA_VALUE, nil)})
-			if err != nil || len(attributes) == 0 {
+				[]*pkcs11.Attribute{pkcs11.NewAttribute(pkcs11.CKA_ID, nil), pkcs11.NewAttribute(pkcs11.CKA_VALUE, nil)})
+			if err != nil || len(attributes) < 2 {
 				continue
 			}
-			value := attributes[0].Value
-			if len(value) == 0 {
+			identifier, value := attributes[0].Value, attributes[1].Value
+			if len(value) == 0 || (keysKnown && !keys[string(identifier)]) {
 				continue
 			}
 			parsed, err := brainpool.ParseCertificate(value)
-			if err != nil {
+			if err != nil || !domain.UsableForSigning(parsed, now) {
 				continue
 			}
 			certificates = append(certificates, describeCertificate(parsed))
@@ -176,4 +183,44 @@ func readCertificates(context *pkcs11.Ctx, slot uint, pin string) []TokenCertifi
 	}
 
 	return certificates
+}
+
+// privateKeyIdentifiers lists the identifiers (CKA_ID) of the private keys
+// the session can see. A certificate pairs with a key by its identifier, as
+// signing pairs them (Pairs).
+//
+// The second result says whether the list means anything. A token that needs
+// a login hides its private keys from a session that has not logged in (a
+// Firefox store with a primary password, or a card that keeps its keys behind
+// the PIN), so an empty list there says nothing: the keys are not known to be
+// absent, and the certificates are judged by their own rules alone.
+func privateKeyIdentifiers(context *pkcs11.Ctx, slot uint, session pkcs11.SessionHandle, loggedIn bool) (map[string]bool, bool) {
+	identifiers := map[string]bool{}
+	template := []*pkcs11.Attribute{pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PRIVATE_KEY)}
+	if err := context.FindObjectsInit(session, template); err != nil {
+		return identifiers, false
+	}
+	defer context.FindObjectsFinal(session)
+
+	for {
+		handles, _, err := context.FindObjects(session, 10)
+		if err != nil || len(handles) == 0 {
+			break
+		}
+		for _, handle := range handles {
+			attributes, err := context.GetAttributeValue(session, handle,
+				[]*pkcs11.Attribute{pkcs11.NewAttribute(pkcs11.CKA_ID, nil)})
+			if err != nil || len(attributes) == 0 || len(attributes[0].Value) == 0 {
+				continue
+			}
+			identifiers[string(attributes[0].Value)] = true
+		}
+	}
+
+	loginRequired := true
+	if info, err := context.GetTokenInfo(slot); err == nil {
+		loginRequired = info.Flags&pkcs11.CKF_LOGIN_REQUIRED != 0
+	}
+	known := len(identifiers) > 0 || !loginRequired || loggedIn
+	return identifiers, known
 }

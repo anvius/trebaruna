@@ -51,7 +51,7 @@ func nssStore(t *testing.T, password string) (directory, ca string) {
 	key, certificate, bundle := filepath.Join(work, "key.pem"), filepath.Join(work, "certificate.pem"), filepath.Join(work, "bundle.p12")
 	run(t, "openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", key, "-out", certificate,
 		"-days", "2", "-subj", "/CN=ROSSI MARIO/serialNumber=TINIT-RSSMRA80A01H501U",
-		"-addext", "keyUsage=critical,nonRepudiation")
+		"-addext", "keyUsage=critical,nonRepudiation", "-addext", "basicConstraints=critical,CA:FALSE")
 	run(t, "openssl", "pkcs12", "-export", "-inkey", key, "-in", certificate, "-out", bundle, "-passout", "pass:bundle")
 	run(t, "pk12util", "-i", bundle, "-d", "sql:"+directory, "-W", "bundle", "-k", passwordFile)
 	return directory, certificate

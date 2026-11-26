@@ -1018,6 +1018,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The certificates the approval window and `trebaruna token` offer are only
+  those that can sign: the certificate has its private key on the card or in
+  the store, it is valid today, it is not a certificate authority's, and its key
+  usage declares digitalSignature or nonRepudiation (`UsableForSigning`). A
+  browser's store no longer lists its authorities' roots, the local channel's
+  root whose key was destroyed, or expired certificates. A token that hides its
+  private keys until its PIN is typed (a store with a primary password) is
+  judged by the certificate alone, since its keys cannot be read, and signing
+  checks the key.
+
 - The local channel's root is written into the browsers' NSS stores through
   softokn3's PKCS#11 interface, as certutil writes it, instead of running
   `certutil`, which the Flatpak runtime does not have: the install failed in the

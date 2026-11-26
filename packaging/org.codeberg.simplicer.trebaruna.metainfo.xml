@@ -56,6 +56,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.109.3-unstable" date="2026-11-26">
+      <description>
+        <p>The approval window and the token listing offer only certificates that can sign: with their private key, valid, not an authority's, and with a signature usage.</p>
+      </description>
+    </release>
     <release version="0.109.2-unstable" date="2026-11-26">
       <description>
         <p>The local channel's root is installed in the browsers' certificate stores without certutil, so it works inside the Flatpak, and the status says when a store cannot be checked.</p>
