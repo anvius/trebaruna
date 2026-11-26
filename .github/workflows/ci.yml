@@ -142,6 +142,16 @@ jobs:
         with:
           go-version: '1.27'
           cache: true
+      # The PDF tests read reports with poppler's pdftotext and pdfinfo, as the
+      # Linux job does with poppler-utils. The package's folder goes on the PATH
+      # of the later steps, which the runner's own PATH does not reflect.
+      - name: Poppler
+        shell: pwsh
+        run: |
+          choco install poppler --no-progress -y
+          $tool = Get-ChildItem -Path C:\ProgramData\chocolatey\lib -Recurse -Filter pdfinfo.exe | Select-Object -First 1
+          if (-not $tool) { throw 'pdfinfo.exe was not installed' }
+          Add-Content -Path $env:GITHUB_PATH -Value $tool.DirectoryName
       # The suite without cgo, as make check runs it; a test that needs a
       # tool the runner lacks skips itself.
       - name: Tests
