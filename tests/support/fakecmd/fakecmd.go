@@ -31,6 +31,9 @@ func init() {
 	if _, err := os.Stat(script); err != nil {
 		return // the test binary itself, not a stand-in
 	}
+	if err := confine(); err != nil {
+		fmt.Fprintln(os.Stderr, "fakecmd:", err)
+	}
 	os.Exit(runScript(filepath.ToSlash(script), os.Args[1:]))
 }
 
