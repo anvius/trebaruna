@@ -57,20 +57,20 @@ func TestTheLibreWolfProfileOfTheXDGFolderIsFound(t *testing.T) {
 	root := filepath.Join(home, ".config", "librewolf", "librewolf")
 	writeFile(t, filepath.Join(root, "profiles.ini"),
 		"[Profile1]\nName=default\nIsRelative=1\nPath=6toeo0ct.default\n\n"+
-			"[Profile0]\nName=Firefox migrado\nIsRelative=1\nPath=ox4l12s8.default-default\nStoreID=56ad7a42\nDefault=1\n\n"+
+			"[Profile0]\nName=default-default\nIsRelative=1\nPath=a1b2c3d4.default-default\nStoreID=0f0f0f0f\nDefault=1\n\n"+
 			"[General]\nStartWithLastProfile=1\nVersion=2\n")
-	writeFile(t, filepath.Join(root, "installs.ini"), "[6C4726F70D182CF7]\nDefault=ox4l12s8.default-default\nLocked=1\n")
-	makeStore(t, filepath.Join(root, "ox4l12s8.default-default"))
+	writeFile(t, filepath.Join(root, "installs.ini"), "[0123456789ABCDEF]\nDefault=a1b2c3d4.default-default\nLocked=1\n")
+	makeStore(t, filepath.Join(root, "a1b2c3d4.default-default"))
 	makeStore(t, filepath.Join(root, "6toeo0ct.default"))
 	makeStore(t, filepath.Join(home, ".pki", "nssdb"))
 
 	found := browserstores.Discover(browserstores.NewEnvironment(home, "linux"))
 	expectStores(t, home, found.Stores,
-		"LibreWolf||/.config/librewolf/librewolf/ox4l12s8.default-default|true",
+		"LibreWolf||/.config/librewolf/librewolf/a1b2c3d4.default-default|true",
 		"LibreWolf||/.config/librewolf/librewolf/6toeo0ct.default|false",
 		"Chromium||/.pki/nssdb|false",
 	)
-	if name := found.Stores[0].Name(); name != "LibreWolf (ox4l12s8.default-default)" {
+	if name := found.Stores[0].Name(); name != "LibreWolf (a1b2c3d4.default-default)" {
 		t.Errorf("name %q", name)
 	}
 	if found.Stores[2].Name() != "Chromium (shared NSS store)" {
