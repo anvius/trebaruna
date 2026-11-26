@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -13,13 +12,33 @@ import (
 	browserstores "codeberg.org/simplicer/trebaruna/src/browserstores/infrastructure"
 )
 
-// ErrNoCertutil means NSS's certutil is not installed.
-var ErrNoCertutil = errors.New("certutil (NSS tools, package libnss3-tools or nss-tools) is needed to change the browsers' certificate stores")
+// ErrNoNSS means the NSS library that reads and writes the browsers' stores is
+// not available: softokn3 is not installed, or this build has no cgo. Nothing is
+// then known about a store, so the status says it cannot check it.
+var ErrNoNSS = errors.New("the NSS library (softokn3: package libnss3, or nss on Fedora) is needed to read the browsers' certificate stores, and trebaruna must be built with cgo")
+
+// ErrNoStore means the folder holds no NSS store (cert9.db).
+var ErrNoStore = errors.New("no NSS store (cert9.db) in this folder")
+
+// Presence is whether a store holds the local channel's root.
+type Presence int
+
+const (
+	// Absent: the store is readable and holds no root of trebaruna's.
+	Absent Presence = iota
+	// Present: the store trusts the root as an authority for servers.
+	Present
+)
 
 // recordedStores is the file beside the certificate that lists the databases
 // the root was installed in. Removal takes the root out of each of them, even
 // one the browser has since dropped from its profiles.
 const recordedStores = "stores"
+
+// Available reports whether the NSS library is there to read and change stores.
+func Available() bool {
+	return available()
+}
 
 // UserStores finds the NSS stores of the user's browsers and mail clients, and
 // the folders that were skipped (browserstores, ADR-0020). Nothing is found
@@ -61,55 +80,59 @@ func Recorded(directory string) []string {
 	return databases
 }
 
-// Install trusts the root, as an authority for servers, in each database.
+// CreateStore makes an empty NSS store in a folder, as certutil -N does, or
+// opens the one there. Installing needs a store already made.
+func CreateStore(directory string) error {
+	if err := os.MkdirAll(directory, 0o700); err != nil {
+		return err
+	}
+	return makeStore(directory)
+}
+
+// Check reports whether a store holds the root. The error says why the store
+// cannot be checked: it has no NSS store in it, or the NSS library is missing.
+func Check(database string) (Presence, error) {
+	if err := requireStore(database); err != nil {
+		return Absent, err
+	}
+	return hasRoot(database)
+}
+
+// Install trusts the root, as an authority for servers, in each database. A
+// root of an earlier install is replaced.
 func Install(material Material, databases []string) error {
-	certutil, err := exec.LookPath("certutil")
-	if err != nil {
-		return ErrNoCertutil
-	}
-	file, err := os.CreateTemp("", "trebaruna-root-*.pem")
-	if err != nil {
-		return err
-	}
-	defer os.Remove(file.Name())
-	if _, err := file.Write(material.RootPEM()); err != nil {
-		file.Close()
-		return err
-	}
-	file.Close()
 	for _, database := range databases {
-		// A root of an earlier install goes first: the nickname names one.
-		_ = exec.Command(certutil, "-D", "-n", Nickname, "-d", "sql:"+database).Run()
-		if output, err := exec.Command(certutil, "-A", "-n", Nickname, "-t", "C,,", "-i", file.Name(),
-			"-d", "sql:"+database).CombinedOutput(); err != nil {
-			return fmt.Errorf("install in %s: %v: %s", database, err, strings.TrimSpace(string(output)))
+		if err := requireStore(database); err != nil {
+			return fmt.Errorf("install in %s: %w", database, err)
+		}
+		if err := writeRoot(database, material.Root); err != nil {
+			return fmt.Errorf("install in %s: %w", database, err)
 		}
 	}
 	return nil
 }
 
-// Remove takes the root out of each database where it is.
+// Remove takes the root out of each database where it is. A database that
+// holds no store is passed over: there is nothing to take out of it.
 func Remove(databases []string) error {
-	certutil, err := exec.LookPath("certutil")
-	if err != nil {
-		return ErrNoCertutil
-	}
 	for _, database := range databases {
-		if !Installed(database) {
-			continue
+		if err := requireStore(database); err != nil {
+			if errors.Is(err, ErrNoStore) {
+				continue
+			}
+			return fmt.Errorf("remove from %s: %w", database, err)
 		}
-		if output, err := exec.Command(certutil, "-D", "-n", Nickname, "-d", "sql:"+database).CombinedOutput(); err != nil {
-			return fmt.Errorf("remove from %s: %v: %s", database, err, strings.TrimSpace(string(output)))
+		if err := removeRoot(database); err != nil {
+			return fmt.Errorf("remove from %s: %w", database, err)
 		}
 	}
 	return nil
 }
 
-// Installed reports whether a database holds the root.
-func Installed(database string) bool {
-	certutil, err := exec.LookPath("certutil")
-	if err != nil {
-		return false
+// requireStore is ErrNoStore unless the folder holds an NSS store.
+func requireStore(database string) error {
+	if _, err := os.Stat(filepath.Join(database, "cert9.db")); err != nil {
+		return fmt.Errorf("%w: %s", ErrNoStore, database)
 	}
-	return exec.Command(certutil, "-L", "-n", Nickname, "-d", "sql:"+database).Run() == nil
+	return nil
 }

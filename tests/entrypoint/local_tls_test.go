@@ -2,7 +2,6 @@ package cli_test
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -10,14 +9,27 @@ import (
 	"codeberg.org/simplicer/trebaruna/src/afirma/infrastructure/localtls"
 )
 
+// requireNSS skips a test that changes a store where softokn3 is not there to
+// do it (or the build has no cgo).
+func requireNSS(t *testing.T) {
+	t.Helper()
+	if !localtls.Available() {
+		t.Skip("softokn3 is not installed, or the build has no cgo")
+	}
+}
+
+// installed reports whether a store trusts the root.
+func installed(database string) bool {
+	presence, err := localtls.Check(database)
+	return err == nil && presence == localtls.Present
+}
+
 // TestTheLocalChannelCertificateIsInstalledAndRemovedOnRequest.
 func TestTheLocalChannelCertificateIsInstalledAndRemovedOnRequest(t *testing.T) {
-	if _, err := exec.LookPath("certutil"); err != nil {
-		t.Skip("certutil is not installed")
-	}
+	requireNSS(t)
 	database, directory := t.TempDir(), filepath.Join(t.TempDir(), "localtls")
-	if output, err := exec.Command("certutil", "-N", "-d", "sql:"+database, "--empty-password").CombinedOutput(); err != nil {
-		t.Fatalf("%v %s", err, output)
+	if err := localtls.CreateStore(database); err != nil {
+		t.Fatal(err)
 	}
 	if stdout, _, _ := run("afirma", "local-tls", "status", "--dir", directory, "--nss-db", database); !strings.Contains(stdout, "no certificate made yet") ||
 		!strings.Contains(stdout, "not installed") {
@@ -44,11 +56,8 @@ func TestTheLocalChannelCertificateIsInstalledAndRemovedOnRequest(t *testing.T) 
 // makeNSSStore creates an NSS store in a folder, as Firefox or Chromium do.
 func makeNSSStore(t *testing.T, directory string) {
 	t.Helper()
-	if err := os.MkdirAll(directory, 0o700); err != nil {
+	if err := localtls.CreateStore(directory); err != nil {
 		t.Fatal(err)
-	}
-	if output, err := exec.Command("certutil", "-N", "-d", "sql:"+directory, "--empty-password").CombinedOutput(); err != nil {
-		t.Fatalf("certutil -N: %v %s", err, output)
 	}
 }
 
@@ -67,9 +76,7 @@ func useHome(t *testing.T) string {
 // from the home folder, and removal reaches a store the browser has since
 // dropped from its profiles.ini, because the install recorded it.
 func TestTheRootGoesToEveryStoreFoundAndLeavesEachOnRemoval(t *testing.T) {
-	if _, err := exec.LookPath("certutil"); err != nil {
-		t.Skip("certutil is not installed")
-	}
+	requireNSS(t)
 	home := useHome(t)
 	chromium := filepath.Join(home, ".pki", "nssdb")
 	librewolf := filepath.Join(home, ".config", "librewolf", "librewolf")
@@ -89,7 +96,7 @@ func TestTheRootGoesToEveryStoreFoundAndLeavesEachOnRemoval(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("install: exit %d, %s %s", code, stdout, stderr)
 	}
-	if !localtls.Installed(chromium) || !localtls.Installed(profile) {
+	if !installed(chromium) || !installed(profile) {
 		t.Fatalf("the root is not in every store found: %s", stdout)
 	}
 	if stdout, _, _ := run("afirma", "local-tls", "status", "--dir", directory); !strings.Contains(stdout, "LibreWolf (abcd.default) at "+profile+": installed") ||
@@ -103,7 +110,7 @@ func TestTheRootGoesToEveryStoreFoundAndLeavesEachOnRemoval(t *testing.T) {
 	if _, stderr, code := run("afirma", "local-tls", "remove", "--dir", directory); code != 0 {
 		t.Fatalf("remove: %s", stderr)
 	}
-	if localtls.Installed(chromium) || localtls.Installed(profile) {
+	if installed(chromium) || installed(profile) {
 		t.Error("the root stayed in a store it was installed in")
 	}
 }
@@ -111,9 +118,7 @@ func TestTheRootGoesToEveryStoreFoundAndLeavesEachOnRemoval(t *testing.T) {
 // TestAnExplicitStoreOverridesTheStoresFound: --nss-db names the one store, and
 // the browsers' stores found are left alone.
 func TestAnExplicitStoreOverridesTheStoresFound(t *testing.T) {
-	if _, err := exec.LookPath("certutil"); err != nil {
-		t.Skip("certutil is not installed")
-	}
+	requireNSS(t)
 	home := useHome(t)
 	found := filepath.Join(home, ".pki", "nssdb")
 	makeNSSStore(t, found)
@@ -124,10 +129,23 @@ func TestAnExplicitStoreOverridesTheStoresFound(t *testing.T) {
 	if _, stderr, code := run("afirma", "local-tls", "install", "--dir", directory, "--nss-db", explicit); code != 0 {
 		t.Fatalf("install: %s", stderr)
 	}
-	if !localtls.Installed(explicit) || localtls.Installed(found) {
+	if !installed(explicit) || installed(found) {
 		t.Error("--nss-db must name the only store the root goes into")
 	}
 	if _, stderr, code := run("afirma", "local-tls", "remove", "--dir", directory, "--nss-db", explicit); code != 0 {
 		t.Fatalf("remove: %s", stderr)
+	}
+}
+
+// TestStatusNamesAStoreItCannotCheck: a folder whose store cannot be read is
+// reported as one that cannot be checked, never as one without the root.
+func TestStatusNamesAStoreItCannotCheck(t *testing.T) {
+	database := t.TempDir()
+	if err := os.WriteFile(filepath.Join(database, "cert9.db"), []byte("not a database"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	stdout, _, _ := run("afirma", "local-tls", "status", "--dir", filepath.Join(t.TempDir(), "localtls"), "--nss-db", database)
+	if !strings.Contains(stdout, "cannot check") || strings.Contains(stdout, "not installed") {
+		t.Errorf("status: %s", stdout)
 	}
 }

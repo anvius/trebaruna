@@ -24,3 +24,4 @@ One decision per file. "Default pending owner confirmation" marks choices taken 
 | [ADR-0018](0018-own-pkcs11-session.md) | Signatures go through an own PKCS#11 session | Accepted |
 | [ADR-0019](0019-local-channel-certificate.md) | A key-less, name-constrained root for the afirma:// local channels | Proposed (implemented opt-in) |
 | [ADR-0020](0020-browser-store-discovery.md) | One discovery of the browsers' NSS stores, for signing and the local channel | Accepted |
+| [ADR-0021](0021-nss-stores-through-softokn.md) | The local channel's root goes into NSS stores through softokn3, not certutil | Accepted |

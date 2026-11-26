@@ -56,6 +56,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.109.2-unstable" date="2026-11-26">
+      <description>
+        <p>The local channel's root is installed in the browsers' certificate stores without certutil, so it works inside the Flatpak, and the status says when a store cannot be checked.</p>
+      </description>
+    </release>
     <release version="0.109.1-unstable" date="2026-11-26">
       <description>
         <p>A page that sends its document through the local channel with an upload (fileid) is answered with the document instead of asking for a file.</p>

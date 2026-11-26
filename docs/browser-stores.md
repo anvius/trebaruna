@@ -66,19 +66,19 @@ certificates imported in LibreWolf are invisible.
 
 Notes:
 
-- If `~/.pki/nssdb` does not exist, Chromium creates it on first run; when installing the
-  local root, create it with `certutil -N -d sql:$HOME/.pki/nssdb --empty-password` only if
-  a Chromium-family browser is installed.
+- If `~/.pki/nssdb` does not exist, Chromium creates it on first run. Installing the local
+  root into a folder that holds no store (no `cert9.db`) is refused, so nothing is created.
 - Windows/macOS are out of scope here: Chromium uses the OS store there; Firefox forks use
   `%APPDATA%\<Vendor>\<Product>\Profiles` / `~/Library/Application Support/<Product>/Profiles`
   with the same `profiles.ini` logic (LibreWolf: `%APPDATA%\librewolf`, `~/Library/Application Support/librewolf`).
 
 ## Operations per store
 
-- Install local-channel root: equivalent of `certutil -A -n "trebaruna local channel" -t "C,," -d sql:<dir> -i root.der`
-  (trust for TLS servers only; keep ADR-0019 name constraints).
-- Remove: `certutil -D -n … -d sql:<dir>` — must find every store it was installed in, so record
-  the list of directories touched.
+- Install local-channel root: the root's certificate and a trust object for TLS server
+  authority (`C,,`), written through softokn3 as ADR-0021 says (trust for TLS servers only;
+  keep ADR-0019 name constraints).
+- Remove: the same two objects are destroyed in each store; removal must find every store
+  it was installed in, so the list of directories touched is recorded.
 - Discover signing keys: open the store read-only through NSS/PKCS#11 (as today) — a running
   browser does not block reads of the sql format.
 

@@ -13,10 +13,10 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
+	"errors"
 	"math/big"
 	"net"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -130,34 +130,24 @@ func TestATLSClientTrustsTheServerOnlyThroughTheRoot(t *testing.T) {
 	}
 }
 
-// TestTheRootGoesInAndOutOfAnNSSStore, as Firefox and Chromium keep them.
-func TestTheRootGoesInAndOutOfAnNSSStore(t *testing.T) {
-	if _, err := exec.LookPath("certutil"); err != nil {
-		t.Skip("certutil is not installed")
-	}
-	database := t.TempDir()
-	if output, err := exec.Command("certutil", "-N", "-d", "sql:"+database, "--empty-password").CombinedOutput(); err != nil {
-		t.Fatalf("%v %s", err, output)
+// TestAStoreWithoutAnNSSDatabaseCannotBeChecked: a folder holding no store is
+// a store that cannot be checked, and nothing is written to it.
+func TestAStoreWithoutAnNSSDatabaseCannotBeChecked(t *testing.T) {
+	folder := t.TempDir()
+	if _, err := localtls.Check(folder); !errors.Is(err, localtls.ErrNoStore) {
+		t.Errorf("check: %v", err)
 	}
 	material, err := localtls.Generate(t.TempDir(), time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := localtls.Install(material, []string{database}); err != nil {
-		t.Fatal(err)
+	if err := localtls.Install(material, []string{folder}); !errors.Is(err, localtls.ErrNoStore) {
+		t.Errorf("install: %v", err)
 	}
-	listing, _ := exec.Command("certutil", "-L", "-d", "sql:"+database).CombinedOutput()
-	if !strings.Contains(string(listing), localtls.Nickname) || !strings.Contains(string(listing), "C,,") || !localtls.Installed(database) {
-		t.Errorf("not installed as a server authority:\n%s", listing)
+	if entries, _ := os.ReadDir(folder); len(entries) != 0 {
+		t.Errorf("the folder was written to: %d entries", len(entries))
 	}
-	// Installing again replaces it.
-	if err := localtls.Install(material, []string{database}); err != nil {
-		t.Fatal(err)
-	}
-	if listing, _ := exec.Command("certutil", "-L", "-d", "sql:"+database).CombinedOutput(); strings.Count(string(listing), localtls.Nickname) != 1 {
-		t.Errorf("installed twice:\n%s", listing)
-	}
-	if err := localtls.Remove([]string{database}); err != nil || localtls.Installed(database) {
-		t.Errorf("still installed: %v", err)
+	if err := localtls.Remove([]string{folder}); err != nil {
+		t.Errorf("removing from a folder with no store: %v", err)
 	}
 }

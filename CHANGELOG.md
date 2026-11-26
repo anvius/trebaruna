@@ -1018,6 +1018,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The local channel's root is written into the browsers' NSS stores through
+  softokn3's PKCS#11 interface, as certutil writes it, instead of running
+  `certutil`, which the Flatpak runtime does not have: the install failed in the
+  sandbox and `afirma local-tls status` reported a root that was there as "not
+  installed". A store that cannot be read or checked now says so, with the reason,
+  and is never reported as lacking the root. See ADR-0021.
+
 - An uploaded request on a local channel is fetched before the channel's
   parameters are dropped: a page that sends its document as `fileid` and
   `rtservlet` (the MiniApplet's route for a request too long for a message)

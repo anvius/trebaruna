@@ -75,11 +75,7 @@ func runLocalTLS(args []string, stdout, stderr io.Writer) int {
 			fmt.Fprintf(stdout, "root     %s, until %s\n", material.Fingerprint(), material.Root.NotAfter.Format("2006-01-02"))
 		}
 		for _, database := range databases {
-			state := "not installed"
-			if localtls.Installed(database) {
-				state = "installed"
-			}
-			fmt.Fprintf(stdout, "store    %s: %s\n", describeStore(database, names), state)
+			fmt.Fprintf(stdout, "store    %s: %s\n", describeStore(database, names), storeState(database))
 		}
 		if !named {
 			for _, skipped := range found.Skipped {
@@ -128,6 +124,20 @@ func runLocalTLS(args []string, stdout, stderr io.Writer) int {
 	}
 	flags.Usage()
 	return exitUsage
+}
+
+// storeState says whether a store holds the root, or why it cannot be checked:
+// a store that cannot be read is not reported as one without the root.
+func storeState(database string) string {
+	presence, err := localtls.Check(database)
+	switch {
+	case err != nil:
+		return "cannot check (" + err.Error() + ")"
+	case presence == localtls.Present:
+		return "installed"
+	default:
+		return "not installed"
+	}
 }
 
 // describeStore names a store by its browser when it is known, with its folder.
