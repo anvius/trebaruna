@@ -21,38 +21,40 @@
     <MajorUpgrade DowngradeErrorMessage="A newer trebaruna is already installed." />
     <MediaTemplate EmbedCab="yes" />
 
-    <StandardDirectory Id="ProgramFiles6432Folder">
-      <Directory Id="INSTALLFOLDER" Name="trebaruna">
-        <Component Id="Programs">
-          <File Id="Cli" Source="$(Stage)\trebaruna.exe" />
-          <File Id="Window" Source="$(Stage)\trebaruna-desktop.exe" />
-          <File Id="Licence" Source="$(Stage)\LICENSE" Name="LICENSE.txt" />
-          <RegistryValue Root="HKCU" Key="Software\Simplicer\trebaruna" Name="Programs" Type="integer" Value="1" KeyPath="yes" />
-          <RemoveFolder Id="RemoveInstallFolder" On="uninstall" />
-        </Component>
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="UserProgramsFolder" Name="Programs">
+        <Directory Id="INSTALLFOLDER" Name="trebaruna">
+          <Component Id="Programs" Guid="2CB41122-2215-4A7A-A819-224DD36CFEE7">
+            <File Id="Cli" Source="$(Stage)\trebaruna.exe" />
+            <File Id="Window" Source="$(Stage)\trebaruna-desktop.exe" />
+            <File Id="Licence" Source="$(Stage)\LICENSE" Name="LICENSE.txt" />
+            <RegistryValue Root="HKCU" Key="Software\Simplicer\trebaruna" Name="Programs" Type="integer" Value="1" KeyPath="yes" />
+            <RemoveFolder Id="RemoveInstallFolder" On="uninstall" />
+          </Component>
 
-        <Component Id="TrebarunaLinks">
-          <RegistryKey Root="HKCU" Key="Software\Classes\trebaruna">
-            <RegistryValue Type="string" Value="URL:trebaruna" />
-            <RegistryValue Name="URL Protocol" Type="string" Value="" />
-            <RegistryValue Key="shell\open\command" Type="string" Value="&quot;[INSTALLFOLDER]trebaruna-desktop.exe&quot; &quot;%1&quot;" />
-          </RegistryKey>
-          <RegistryValue Root="HKCU" Key="Software\Simplicer\trebaruna" Name="TrebarunaLinks" Type="integer" Value="1" KeyPath="yes" />
-        </Component>
+          <Component Id="TrebarunaLinks" Guid="35A91CEC-469E-4E31-9CE4-5916AF5A045A">
+            <RegistryKey Root="HKCU" Key="Software\Classes\trebaruna">
+              <RegistryValue Type="string" Value="URL:trebaruna" />
+              <RegistryValue Name="URL Protocol" Type="string" Value="" />
+              <RegistryValue Key="shell\open\command" Type="string" Value="&quot;[INSTALLFOLDER]trebaruna-desktop.exe&quot; &quot;%1&quot;" />
+            </RegistryKey>
+            <RegistryValue Root="HKCU" Key="Software\Simplicer\trebaruna" Name="TrebarunaLinks" Type="integer" Value="1" KeyPath="yes" />
+          </Component>
 
-        <Component Id="AfirmaLinks">
-          <RegistryKey Root="HKCU" Key="Software\Classes\afirma">
-            <RegistryValue Type="string" Value="URL:afirma" />
-            <RegistryValue Name="URL Protocol" Type="string" Value="" />
-            <RegistryValue Key="shell\open\command" Type="string" Value="&quot;[INSTALLFOLDER]trebaruna-desktop.exe&quot; &quot;%1&quot;" />
-          </RegistryKey>
-          <RegistryValue Root="HKCU" Key="Software\Simplicer\trebaruna" Name="AfirmaLinks" Type="integer" Value="1" KeyPath="yes" />
-        </Component>
+          <Component Id="AfirmaLinks" Guid="A81E039A-BE7B-4C5B-9B65-B580F203CAB8">
+            <RegistryKey Root="HKCU" Key="Software\Classes\afirma">
+              <RegistryValue Type="string" Value="URL:afirma" />
+              <RegistryValue Name="URL Protocol" Type="string" Value="" />
+              <RegistryValue Key="shell\open\command" Type="string" Value="&quot;[INSTALLFOLDER]trebaruna-desktop.exe&quot; &quot;%1&quot;" />
+            </RegistryKey>
+            <RegistryValue Root="HKCU" Key="Software\Simplicer\trebaruna" Name="AfirmaLinks" Type="integer" Value="1" KeyPath="yes" />
+          </Component>
+        </Directory>
       </Directory>
     </StandardDirectory>
 
     <StandardDirectory Id="ProgramMenuFolder">
-      <Component Id="StartMenu">
+      <Component Id="StartMenu" Guid="8E1412A4-E0B1-464C-A188-82DEAE2C0C49">
         <Shortcut Id="WindowShortcut" Name="trebaruna" Description="Sign and check documents"
                   Target="[INSTALLFOLDER]trebaruna-desktop.exe" WorkingDirectory="INSTALLFOLDER" />
         <RegistryValue Root="HKCU" Key="Software\Simplicer\trebaruna" Name="StartMenu" Type="integer" Value="1" KeyPath="yes" />

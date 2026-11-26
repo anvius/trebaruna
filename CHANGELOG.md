@@ -1018,6 +1018,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The Windows installer installs for the current user, under
+  `%LOCALAPPDATA%\Programs\trebaruna`, as the installation guide says, instead
+  of under Program Files, which needs administrator rights. Each of its
+  components has its own identifier, which the installer requires.
+
 - The envelopes window and the signing form run their background work on the
   window's own runner, as the rest of the window does. The form restores the
   remembered certificate while it is built, and that read no longer starts on a
