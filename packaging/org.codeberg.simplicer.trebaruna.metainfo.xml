@@ -56,6 +56,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.109.6-unstable" date="2026-11-26">
+      <description>
+        <p>Opening an envelope with a card finds the certificate it was encrypted for, including an encryption certificate that the signing listing leaves out.</p>
+      </description>
+    </release>
     <release version="0.109.5-unstable" date="2026-11-26">
       <description>
         <p>The approval window of a web page's request closes once the page has its answer, and ends its local channel with it.</p>

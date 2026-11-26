@@ -71,7 +71,7 @@ func inspectToken(path, parameters, pin string) ([]TokenSlot, error) {
 		entry.PUKState = domain.PUKStateOf(token.Flags&pkcs11.CKF_SO_PIN_LOCKED != 0,
 			token.Flags&pkcs11.CKF_SO_PIN_FINAL_TRY != 0, token.Flags&pkcs11.CKF_SO_PIN_COUNT_LOW != 0)
 		entry.Limits = pinLimits(token)
-		entry.Certificates = readCertificates(context, slot, pin)
+		entry.Certificates, entry.Keyed = readCertificates(context, slot, pin)
 		markDefault(entry.Certificates)
 
 		result = append(result, entry)
@@ -113,23 +113,24 @@ func describeLoginState(token pkcs11.TokenInfo) string {
 	}
 }
 
-// readCertificates lists the certificates the token holds that can sign: each
-// has its private key on the token, and it is usable for signing (see
-// domain.UsableForSigning). A certificate authority's root, or a certificate
-// whose key is gone, is not offered.
+// readCertificates lists the certificates the token holds with their private
+// keys. The first result is those usable for signing (see
+// domain.UsableForSigning); the second is every one with its key, whatever its
+// usage, which is what an envelope is opened with. A certificate whose key is
+// not on the token is listed by neither.
 //
 // The certificate objects are public: reading them needs no PIN on any card
 // that follows the profile. When a PIN is given, the session is opened for
 // reading anyway, because some drivers refuse the public objects on a
 // protected session.
-func readCertificates(context *pkcs11.Ctx, slot uint, pin string) []TokenCertificate {
+func readCertificates(context *pkcs11.Ctx, slot uint, pin string) (signing, keyed []TokenCertificate) {
 	session, err := context.OpenSession(slot, pkcs11.CKF_SERIAL_SESSION|pkcs11.CKF_RW_SESSION)
 	if err != nil {
 		// A read-only session is enough for the public objects.
 		session, err = context.OpenSession(slot, pkcs11.CKF_SERIAL_SESSION)
 	}
 	if err != nil {
-		return nil
+		return nil, nil
 	}
 	defer context.CloseSession(session)
 
@@ -152,10 +153,9 @@ func readCertificates(context *pkcs11.Ctx, slot uint, pin string) []TokenCertifi
 	now := time.Now()
 
 	if err := context.FindObjectsInit(session, template); err != nil {
-		return nil
+		return nil, nil
 	}
 
-	var certificates []TokenCertificate
 	for {
 		handles, _, err := context.FindObjects(session, 10)
 		if err != nil {
@@ -175,14 +175,18 @@ func readCertificates(context *pkcs11.Ctx, slot uint, pin string) []TokenCertifi
 				continue
 			}
 			parsed, err := brainpool.ParseCertificate(value)
-			if err != nil || !domain.UsableForSigning(parsed, now) {
+			if err != nil {
 				continue
 			}
-			certificates = append(certificates, describeCertificate(parsed))
+			described := describeCertificate(parsed)
+			keyed = append(keyed, described)
+			if domain.UsableForSigning(parsed, now) {
+				signing = append(signing, described)
+			}
 		}
 	}
 
-	return certificates
+	return signing, keyed
 }
 
 // privateKeyIdentifiers lists the identifiers (CKA_ID) of the private keys

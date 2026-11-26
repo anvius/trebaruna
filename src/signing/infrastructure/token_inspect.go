@@ -32,9 +32,14 @@ type TokenSlot struct {
 	PUKState domain.PINState
 	// Limits are the PIN lengths the card accepts.
 	Limits domain.PINLimits
-	// Certificates are the certificates the token holds, one per key object
-	// that has a certificate attached.
+	// Certificates are the certificates the token holds that can sign: each has
+	// its private key on the token and is usable for signing
+	// (domain.UsableForSigning).
 	Certificates []TokenCertificate
+	// Keyed are all the certificates whose private key the token holds, whatever
+	// their usage. An envelope is opened with the one it names, which may be an
+	// encryption certificate, and Certificates leaves those out.
+	Keyed []TokenCertificate
 }
 
 // TokenCertificate describes one certificate held by a token.

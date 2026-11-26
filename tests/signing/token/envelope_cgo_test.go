@@ -41,6 +41,31 @@ func TestACardOpensAnEnvelopeEncryptedForIt(t *testing.T) {
 	}
 }
 
+// TestACardOpensAnEnvelopeWithoutNamingItsToken: the card is found by the
+// certificate the envelope names, so --token can be left out.
+func TestACardOpensAnEnvelopeWithoutNamingItsToken(t *testing.T) {
+	token, recipient := encryptionCard(t)
+	original := []byte("Documento sin token nombrado\n")
+	t.Setenv("TREBARUNA_PIN", token.pin)
+	document := filepath.Join(t.TempDir(), "sin-token.txt")
+	os.WriteFile(document, original, 0o600)
+
+	var stdout, stderr bytes.Buffer
+	if code := cli.Run([]string{"encrypt", document, "--to", recipient}, &stdout, &stderr); code != 0 {
+		t.Fatalf("encrypt: %s", stderr.String())
+	}
+	os.Remove(document)
+
+	stderr.Reset()
+	if code := cli.Run([]string{"decrypt", document + ".p7e", "--module", token.module}, &stdout, &stderr); code != 0 {
+		t.Fatalf("decrypt without naming the token: %s", stderr.String())
+	}
+	decrypted, err := os.ReadFile(document)
+	if err != nil || !bytes.Equal(decrypted, original) {
+		t.Fatalf("decrypted %q, %v", decrypted, err)
+	}
+}
+
 // TestACardWithoutTheOAEPHashSaysSo: SoftHSM, like many cards, decrypts OAEP
 // with SHA-1 only; an OAEP-SHA-256 envelope gets a reason, not a code.
 func TestACardWithoutTheOAEPHashSaysSo(t *testing.T) {

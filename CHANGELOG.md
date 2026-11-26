@@ -1018,6 +1018,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Opening an envelope with a card finds the certificate it was encrypted for
+  among all the certificates whose key the card holds, not only those that can
+  sign. The signing listing had left out a key-encipherment certificate, so the
+  decryption failed with "several certificates on the card can sign". A named
+  certificate is looked for the same way, so `--token` can be left out.
+
 - The approval window of an `afirma://` request closes once the page has its
   answer. It shows the answer for a moment (about 1.5 seconds), then closes and
   ends the local channel, so the process exits instead of waiting on Close; a

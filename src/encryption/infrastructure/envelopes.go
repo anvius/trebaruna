@@ -71,7 +71,7 @@ func recipientOnCard(key signing.Signer, recipients []cms.RecipientID) (signing.
 		if key.PKCS11Token() != "" && slot.TokenLabel != key.PKCS11Token() {
 			continue
 		}
-		for _, certificate := range slot.Certificates {
+		for _, certificate := range slot.Keyed {
 			parsed := certificate.Parsed()
 			for _, recipient := range recipients {
 				if parsed != nil && recipient.Matches(parsed) {

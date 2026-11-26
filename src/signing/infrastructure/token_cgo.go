@@ -146,7 +146,7 @@ func findSlot(module, parameters, label string, choice domain.CertificateChoice)
 
 	var holding []TokenSlot
 	for _, slot := range present {
-		if _, err := choice.Pick(parsedCertificates(slot.Certificates)); !errors.Is(err, domain.ErrNoCertificateMatches) {
+		if _, err := choice.Pick(parsedCertificates(namable(slot, choice))); !errors.Is(err, domain.ErrNoCertificateMatches) {
 			holding = append(holding, slot)
 		}
 	}
@@ -173,6 +173,17 @@ func findSlot(module, parameters, label string, choice domain.CertificateChoice)
 		return TokenSlot{}, fmt.Errorf("several cards can sign (%s): name the certificate to use",
 			strings.Join(labels, ", "))
 	}
+}
+
+// namable lists the certificates of a slot that a choice can name. A named
+// certificate may be an encryption one, which the signing listing leaves out,
+// so it is looked for among every keyed certificate; the automatic choice is
+// made among those that sign.
+func namable(slot TokenSlot, choice domain.CertificateChoice) []TokenCertificate {
+	if choice.Automatic() {
+		return slot.Certificates
+	}
+	return slot.Keyed
 }
 
 // PKCS11Available reports that this build can talk to smartcards and tokens.
