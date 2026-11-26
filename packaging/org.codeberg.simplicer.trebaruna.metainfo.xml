@@ -56,6 +56,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.109.1-unstable" date="2026-11-26">
+      <description>
+        <p>A page that sends its document through the local channel with an upload (fileid) is answered with the document instead of asking for a file.</p>
+      </description>
+    </release>
     <release version="0.109.0-unstable" date="2026-11-26">
       <description>
         <p>The browsers' certificate stores are found where LibreWolf, Waterfox, Floorp, Zen, Thunderbird and sandboxed browsers keep them, and the local channel's root goes into each.</p>

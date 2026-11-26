@@ -1018,6 +1018,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- An uploaded request on a local channel is fetched before the channel's
+  parameters are dropped: a page that sends its document as `fileid` and
+  `rtservlet` (the MiniApplet's route for a request too long for a message)
+  was refused as having no document, and the approval window asked for a file.
+  See `AnswerLocalChannel`.
+
 - The Quit item Fyne adds at the end of the File menu is in the window's
   language: it read "Quit" in Italian, Catalan, Galician and Basque.
 

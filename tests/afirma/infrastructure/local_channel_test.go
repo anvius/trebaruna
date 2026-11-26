@@ -12,6 +12,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"net"
+	"net/url"
 	"strconv"
 	"strings"
 	"testing"
@@ -256,4 +257,31 @@ func TestAConnectionThatSaysNothingDoesNotHoldTheChannel(t *testing.T) {
 	}
 	fixture.connection.Close()
 	stranger.Close()
+}
+
+// TestAnUploadedRequestOverTheChannelIsFetched: a page on a WebSocket channel
+// uploads a request too long for its message, so the message names the upload
+// (fileid and rtservlet) and carries no data. The request is fetched and
+// answered; it is not refused for lacking a document.
+func TestAnUploadedRequestOverTheChannelIsFetched(t *testing.T) {
+	server := afirmaserver.New(t)
+	maria, _ := identity(t, "MARIA GARCIA", 31)
+	id, fileID, key := sessionID(), sessionID(), "11223344"
+	data := []byte("documento subido por la pagina\n")
+	xml := `<sign><e k="ver" v="3"/><e k="op" v="sign"/><e k="id" v="` + id + `"/><e k="key" v="` + key +
+		`"/><e k="format" v="CAdES"/><e k="algorithm" v="SHA256withRSA"/>` +
+		`<e k="properties" v="` + base64.StdEncoding.EncodeToString([]byte("mode=explicit")) + `"/>` +
+		`<e k="dat" v="` + base64.StdEncoding.EncodeToString(data) + `"/></sign>`
+	sealed, _ := infrastructure.DESEnvelope(key, []byte(xml))
+	server.Put(fileID, sealed)
+
+	message := "afirma://sign?op=sign&fileid=" + fileID + "&rtservlet=" + url.QueryEscape(retrieve) + "&key=" + key
+	answer := application.NewAnswerLocalChannel(useCase(server, approving{key: maria}),
+		domain.LocalChannel{Version: 4}).Answer(context.Background(), message)
+	if answer == "" || strings.HasPrefix(answer, "SAF_") {
+		t.Fatalf("the uploaded request was not answered with its document: %q", answer)
+	}
+	if _, read := server.Take(fileID); read {
+		t.Error("the uploaded request is read once, and it was")
+	}
 }

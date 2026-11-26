@@ -47,7 +47,6 @@ func (u *AnswerLocalChannel) Answer(ctx context.Context, message string) string 
 	if err != nil {
 		return failureText(err)
 	}
-	invocation = domain.BySocket(invocation, u.channel)
 	if !u.channel.Asynchronous {
 		return u.run(ctx, invocation)
 	}
@@ -83,7 +82,13 @@ func (u *AnswerLocalChannel) run(ctx context.Context, invocation domain.Invocati
 	if invocation.Operation == domain.WebSocket || invocation.Operation == domain.Service {
 		return domain.Failure{Code: domain.UnsupportedOperation}.Answer()
 	}
-	answer, err := u.page.Execute(ctx, invocation)
+	// A request the page uploaded is fetched before the by-socket parameters are
+	// dropped: fileid, rtservlet, key and cipher are what the fetch needs.
+	fetched, err := u.page.uploaded(ctx, invocation)
+	if err != nil {
+		return failureText(err)
+	}
+	answer, err := u.page.Execute(ctx, domain.BySocket(fetched, u.channel))
 	if text := answer.Text(); text != "" {
 		return text
 	}
