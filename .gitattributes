@@ -1,0 +1,24 @@
+# Checkouts keep LF in every text file, whatever core.autocrlf says: the test
+# fixtures and the signatures made from them are byte-exact, and a Windows
+# checkout that turned them into CRLF broke both. Binaries are never converted.
+* text=auto eol=lf
+*.pdf binary
+*.p7m binary
+*.p7s binary
+*.p7e binary
+*.p12 binary
+*.der binary
+*.tsr binary
+*.tsq binary
+*.asice binary
+*.asics binary
+*.zip binary
+*.png binary
+*.ico binary
+*.icc binary
+*.docx binary
+*.xlsx binary
+*.odt binary
+*.ods binary
+*.odp binary
+*.gz binary
