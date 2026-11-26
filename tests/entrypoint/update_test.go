@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -35,9 +36,21 @@ func TestTheUpdateCheckSaysWhereTheNewerReleaseIs(t *testing.T) {
 	if output, err := build.CombinedOutput(); err != nil {
 		t.Fatalf("build: %v\n%s", err, output)
 	}
+	// The server answers from its own goroutine, and the child process orders
+	// its requests after the writes below; the race detector knows only the
+	// mutex, so the tag list is guarded.
+	var mu sync.Mutex
 	tags := `[{"name":"v0.106.0-unstable"},{"name":"v0.20.5-unstable"}]`
+	setTags := func(list string) {
+		mu.Lock()
+		defer mu.Unlock()
+		tags = list
+	}
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		writer.Write([]byte(tags))
+		mu.Lock()
+		list := tags
+		mu.Unlock()
+		writer.Write([]byte(list))
 	}))
 	defer server.Close()
 	repository := server.URL + "/simplicer/trebaruna"
@@ -58,11 +71,11 @@ func TestTheUpdateCheckSaysWhereTheNewerReleaseIs(t *testing.T) {
 		t.Errorf("%v %s", err, output)
 	}
 
-	tags = `[{"name":"v0.105.0-unstable"}]`
+	setTags(`[{"name":"v0.105.0-unstable"}]`)
 	if output, _ := exec.Command(binary, "update", "--from", repository).CombinedOutput(); !strings.Contains(string(output), "0.105.0-unstable is the newest published release") {
 		t.Errorf("up to date: %s", output)
 	}
-	tags = `[{"name":"v0.20.5-unstable"}]`
+	setTags(`[{"name":"v0.20.5-unstable"}]`)
 	if output, _ := exec.Command(binary, "update", "--from", repository).CombinedOutput(); !strings.Contains(string(output), "newer than the newest published release, 0.20.5-unstable") {
 		t.Errorf("ahead: %s", output)
 	}
