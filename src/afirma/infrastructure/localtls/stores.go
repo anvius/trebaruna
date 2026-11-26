@@ -6,40 +6,56 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
+
+	"codeberg.org/simplicer/trebaruna/src/browserstores/domain"
+	browserstores "codeberg.org/simplicer/trebaruna/src/browserstores/infrastructure"
 )
 
 // ErrNoCertutil means NSS's certutil is not installed.
 var ErrNoCertutil = errors.New("certutil (NSS tools, package libnss3-tools or nss-tools) is needed to change the browsers' certificate stores")
 
-// UserDatabases are the user's NSS certificate databases: Chromium's and
-// Chrome's (~/.pki/nssdb), and each Firefox profile, also as Snap and
-// Flatpak install them. Only databases that exist are listed.
-func UserDatabases() []string {
-	home, err := os.UserHomeDir()
+// recordedStores is the file beside the certificate that lists the databases
+// the root was installed in. Removal takes the root out of each of them, even
+// one the browser has since dropped from its profiles.
+const recordedStores = "stores"
+
+// UserStores finds the NSS stores of the user's browsers and mail clients, and
+// the folders that were skipped (browserstores, ADR-0020). Nothing is found
+// when the user has no home folder.
+func UserStores() domain.Discovery {
+	env, err := browserstores.FromSystem()
+	if err != nil {
+		return domain.Discovery{}
+	}
+	return browserstores.Discover(env)
+}
+
+// Remember records, beside the certificate, the databases the root went into.
+func Remember(directory string, databases []string) error {
+	known := Recorded(directory)
+	for _, database := range databases {
+		if !slices.Contains(known, database) {
+			known = append(known, database)
+		}
+	}
+	if err := os.MkdirAll(directory, 0o700); err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(directory, recordedStores), []byte(strings.Join(known, "\n")+"\n"), 0o600)
+}
+
+// Recorded lists the databases the root was installed in, as Remember recorded them.
+func Recorded(directory string) []string {
+	content, err := os.ReadFile(filepath.Join(directory, recordedStores))
 	if err != nil {
 		return nil
 	}
-	candidates := []string{
-		filepath.Join(home, ".pki", "nssdb"),
-		filepath.Join(home, "snap", "chromium", "current", ".pki", "nssdb"),
-	}
-	for _, profiles := range []string{
-		filepath.Join(home, ".mozilla", "firefox"),
-		filepath.Join(home, "snap", "firefox", "common", ".mozilla", "firefox"),
-		filepath.Join(home, ".var", "app", "org.mozilla.firefox", ".mozilla", "firefox"),
-	} {
-		entries, _ := os.ReadDir(profiles)
-		for _, entry := range entries {
-			if entry.IsDir() {
-				candidates = append(candidates, filepath.Join(profiles, entry.Name()))
-			}
-		}
-	}
 	var databases []string
-	for _, candidate := range candidates {
-		if _, err := os.Stat(filepath.Join(candidate, "cert9.db")); err == nil {
-			databases = append(databases, candidate)
+	for _, line := range strings.Split(string(content), "\n") {
+		if line = strings.TrimSpace(line); line != "" {
+			databases = append(databases, line)
 		}
 	}
 	return databases

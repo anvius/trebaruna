@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The NSS certificate stores of the browsers and mail clients are found where
+  they keep them: Firefox (legacy, XDG, Snap, Flatpak and Nightly), LibreWolf
+  (legacy, XDG and Flatpak), Waterfox, Floorp, Zen and Thunderbird, and the store
+  Chromium-based browsers share on Linux (native, Snap and Flatpak). One
+  discovery serves signing (`--firefox`, `--nss-db`, `token`) and the local
+  channel's root (`afirma local-tls`), so both find the same stores. Each
+  profile list is read from `profiles.ini` and `installs.ini`: the profile an
+  installation names opens first, relative paths are taken inside the folder
+  that holds the list, and a launcher's `--profile <folder>` adds its folder.
+  `--nss-db` still names a store explicitly and overrides the search.
+  `afirma local-tls status` names each store and lists the folders skipped (a
+  legacy cert8.db store is not read); the root is recorded beside the
+  certificate, so a removal reaches every store it went into, even one the
+  browser has since dropped from its profiles. See ADR-0020.
+
 - The window, the approval windows, `certificate`, `verify` and the
   verification report speak Polish (`pl`, from `TREBARUNA_LANG`, `$LANG`
   or `--lang`), with its letters printed whole in the PDF report. On a

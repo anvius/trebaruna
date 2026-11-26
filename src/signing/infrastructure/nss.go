@@ -1,11 +1,12 @@
 package infrastructure
 
 import (
-	"bufio"
 	"os"
-	"path/filepath"
 	"runtime"
 	"strings"
+
+	browserdomain "codeberg.org/simplicer/trebaruna/src/browserstores/domain"
+	browserstores "codeberg.org/simplicer/trebaruna/src/browserstores/infrastructure"
 )
 
 // SoftwareStore is a certificate store a program keeps on disk in the NSS
@@ -30,123 +31,38 @@ func (s SoftwareStore) Parameters() string {
 		" certPrefix='' keyPrefix='' secmod='secmod.db' flags=readOnly"
 }
 
-// NSSStores lists the NSS stores of the user: the Firefox profiles, the one
-// Firefox starts with first, then the shared store Chromium uses on Linux.
-// Only directories that hold a database are listed.
+// NSSStores lists the NSS stores of the user on system, as the browserstores
+// module finds them: the profiles of the browsers, then the store Chromium
+// shares on Linux. Only stores that hold a database are listed.
 func NSSStores(home, system string) []SoftwareStore {
+	env := browserstores.NewEnvironment(home, system)
+	env.AppData = os.Getenv("APPDATA")
 	var stores []SoftwareStore
-	for _, root := range firefoxRoots(home, system) {
-		for _, profile := range firefoxProfiles(root) {
-			stores = appendStore(stores, SoftwareStore{Name: "Firefox (" + filepath.Base(profile) + ")", Directory: profile})
-		}
-	}
-	if system == "linux" {
-		stores = appendStore(stores, SoftwareStore{Name: "NSS (" + filepath.Join("~", ".pki", "nssdb") + ")",
-			Directory: filepath.Join(home, ".pki", "nssdb")})
+	for _, store := range browserstores.Discover(env).Stores {
+		stores = append(stores, softwareStore(store))
 	}
 	return stores
 }
 
-// FirefoxStore is the store of the profile Firefox starts with, or false
-// when this user has none.
+// FirefoxStore is the store of the profile a browser of the Firefox family
+// (Firefox, LibreWolf, Waterfox, ...) starts with, or false when this user has
+// none. A mail client's store is not one.
 func FirefoxStore() (SoftwareStore, bool) {
-	home, err := os.UserHomeDir()
+	env, err := browserstores.FromSystem()
 	if err != nil {
 		return SoftwareStore{}, false
 	}
-	for _, store := range NSSStores(home, runtime.GOOS) {
-		if strings.HasPrefix(store.Name, "Firefox") {
-			return store, true
+	for _, store := range browserstores.Discover(env).Stores {
+		if store.Profile != "" && store.Browsing() {
+			return softwareStore(store), true
 		}
 	}
 	return SoftwareStore{}, false
 }
 
-// appendStore adds a store that holds a database and is not listed yet.
-func appendStore(stores []SoftwareStore, store SoftwareStore) []SoftwareStore {
-	if _, err := os.Stat(filepath.Join(store.Directory, "cert9.db")); err != nil {
-		return stores
-	}
-	for _, listed := range stores {
-		if listed.Directory == store.Directory {
-			return stores
-		}
-	}
-	return append(stores, store)
-}
-
-// firefoxRoots are the directories that hold profiles.ini on each system,
-// including the sandboxed packages of Linux.
-func firefoxRoots(home, system string) []string {
-	switch system {
-	case "windows":
-		return []string{filepath.Join(os.Getenv("APPDATA"), "Mozilla", "Firefox")}
-	case "darwin":
-		return []string{filepath.Join(home, "Library", "Application Support", "Firefox")}
-	default:
-		return []string{
-			filepath.Join(home, ".mozilla", "firefox"),
-			filepath.Join(home, "snap", "firefox", "common", ".mozilla", "firefox"),
-			filepath.Join(home, ".var", "app", "org.mozilla.firefox", ".mozilla", "firefox"),
-		}
-	}
-}
-
-// firefoxProfiles reads profiles.ini: the profile an installation starts with
-// first ([Install…] Default=), then the one marked Default=1, then the rest.
-func firefoxProfiles(root string) []string {
-	file, err := os.Open(filepath.Join(root, "profiles.ini"))
-	if err != nil {
-		return nil
-	}
-	defer file.Close()
-
-	type profile struct {
-		path       string
-		relative   bool
-		preferred  bool
-		installing bool
-	}
-	var profiles []profile
-	var current *profile
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		switch {
-		case strings.HasPrefix(line, "["):
-			profiles = append(profiles, profile{relative: true, installing: strings.HasPrefix(line, "[Install")})
-			current = &profiles[len(profiles)-1]
-		case current == nil:
-		case strings.HasPrefix(line, "Path="):
-			current.path = strings.TrimPrefix(line, "Path=")
-		case strings.HasPrefix(line, "IsRelative="):
-			current.relative = strings.TrimPrefix(line, "IsRelative=") == "1"
-		case line == "Default=1":
-			current.preferred = true
-		case current.installing && strings.HasPrefix(line, "Default="):
-			current.path = strings.TrimPrefix(line, "Default=")
-		}
-	}
-
-	resolve := func(entry profile) string {
-		if entry.installing || entry.relative {
-			return filepath.Join(root, filepath.FromSlash(entry.path))
-		}
-		return entry.path
-	}
-	var ordered []string
-	for _, pass := range []func(profile) bool{
-		func(entry profile) bool { return entry.installing },
-		func(entry profile) bool { return !entry.installing && entry.preferred },
-		func(entry profile) bool { return !entry.installing && !entry.preferred },
-	} {
-		for _, entry := range profiles {
-			if entry.path != "" && pass(entry) {
-				ordered = append(ordered, resolve(entry))
-			}
-		}
-	}
-	return ordered
+// softwareStore is a found store as the signing code opens it.
+func softwareStore(store browserdomain.Store) SoftwareStore {
+	return SoftwareStore{Name: store.Name(), Directory: store.Directory}
 }
 
 // NSSModule returns NSS's PKCS#11 module (softokn3) on this system, or the

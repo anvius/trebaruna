@@ -10,7 +10,7 @@ import (
 )
 
 // errNoFirefoxProfile means this user has no Firefox profile with a store.
-var errNoFirefoxProfile = errors.New("no Firefox profile with a certificate store was found; " +
+var errNoFirefoxProfile = errors.New("no profile of Firefox or of a browser of its family with a certificate store was found; " +
 	"name the store's directory with --nss-db <dir>")
 
 // storeOptions are the flags that name an NSS software store: the Firefox
