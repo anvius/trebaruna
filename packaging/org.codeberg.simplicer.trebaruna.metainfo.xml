@@ -56,6 +56,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.109.7-unstable" date="2026-11-26">
+      <description>
+        <p>The envelopes window and the signing form run their background work on the window's own runner, as the rest of the window does.</p>
+      </description>
+    </release>
     <release version="0.109.6-unstable" date="2026-11-26">
       <description>
         <p>Opening an envelope with a card finds the certificate it was encrypted for, including an encryption certificate that the signing listing leaves out.</p>

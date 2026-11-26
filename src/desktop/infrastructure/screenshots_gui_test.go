@@ -52,6 +52,7 @@ func TestScreenshots(t *testing.T) {
 	for _, language := range []messaging.Language{messaging.Spanish, messaging.Italian, messaging.Catalan, messaging.Galician, messaging.Basque, messaging.Polish} {
 		window := test.NewTempWindow(t, nil)
 		desktop := newDesktop(window, messaging.For(language), "trebaruna")
+		desktop.background = inLine
 		desktop.inspect = application.NewInspectCertificate(portraitReader{})
 		window.SetContent(desktop.withTabs(desktop.buildContent(document)))
 		window.Resize(fyne.NewSize(1220, 800))
@@ -127,6 +128,7 @@ func TestScreenshots(t *testing.T) {
 	{
 		window := test.NewTempWindow(t, nil)
 		desktop := newDesktop(window, messaging.For(messaging.Spanish), "trebaruna")
+		desktop.background = inLine
 		desktop.inspect = application.NewInspectCertificate(portraitReader{})
 		window.SetContent(desktop.withTabs(desktop.buildContent(document)))
 		desktop.form.setCertificate("/home/mario/Documenti/firma/rossi-mario-infocert.p12")
@@ -149,6 +151,7 @@ func TestScreenshots(t *testing.T) {
 	app.Settings().SetTheme(NewAppTheme(LightPalette()))
 	window := test.NewTempWindow(t, nil)
 	desktop := newDesktop(window, messaging.For(messaging.Spanish), "trebaruna")
+	desktop.background = inLine
 	desktop.inspect = application.NewInspectCertificate(portraitReader{})
 	window.SetContent(desktop.withTabs(desktop.buildContent(document)))
 	window.Resize(fyne.NewSize(1220, 800))

@@ -61,7 +61,7 @@ type pagePane struct {
 }
 
 // newPagePane builds the pane with its empty state.
-func newPagePane(messages messaging.Catalogue, palette Palette, preview *application.PreviewPage) *pagePane {
+func newPagePane(messages messaging.Catalogue, palette Palette, preview *application.PreviewPage, run background) *pagePane {
 	pane := &pagePane{
 		messages:  messages,
 		palette:   palette,
@@ -70,7 +70,7 @@ func newPagePane(messages messaging.Catalogue, palette Palette, preview *applica
 		hint:      widget.NewLabel(""),
 		page:      1,
 		identity:  SealIdentity{Name: messages.SealHolderPlaceholder},
-		run:       offThread,
+		run:       run,
 	}
 	pane.hint.Wrapping = fyne.TextWrapWord
 	pane.pageLabel.Alignment = fyne.TextAlignCenter

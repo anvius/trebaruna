@@ -155,12 +155,13 @@ func newSignForm(
 	account *remoteAccount,
 	formFields *application.ListFormFields,
 	pages *pagePane,
+	run background,
 ) *signForm {
 	form := &signForm{
 		window: window, m: m, palette: palette, preferences: preferences,
 		signing: signing, inspect: inspect, pages: pages,
 		format: domain.FormatPAdES,
-		run:    offThread, pause: typingPause,
+		run:    run, pause: typingPause,
 		cardList: cards, storeList: firefox, remoteList: remote, remote: account, formFields: formFields,
 	}
 	form.remote.object().Hide()
@@ -176,7 +177,7 @@ func newSignForm(
 
 	// A card is offered next to the file, not in a menu: the Spanish DNIe and
 	// the Italian signature cards are how most people hold their certificate.
-	form.cards = newCardSource(m, cards, preferences, form.cardChosen, form.noCertificate)
+	form.cards = newCardSource(m, cards, preferences, form.cardChosen, form.noCertificate, run)
 	form.cards.object().Hide()
 	form.keySource = widget.NewRadioGroup([]string{m.KeyFromFile, m.KeyFromCard, m.KeyFromFirefox, m.KeyFromRemote},
 		func(string) { form.keySourceChanged() })

@@ -89,6 +89,7 @@ func newFormFixtureWithCards(t *testing.T, reader application.CertificateReader,
 	signer := capturingSigner{intents: make(chan domain.SigningIntent, 1)}
 
 	desktop := newDesktop(window, messaging.For(messaging.Spanish), "trebaruna")
+	desktop.background = inLine
 	desktop.application = application.NewSignFromDesktop(signer, func(string) bool { return true })
 	desktop.inspect = application.NewInspectCertificate(reader)
 	desktop.cards = application.NewListCards(cards)
@@ -98,9 +99,6 @@ func newFormFixtureWithCards(t *testing.T, reader application.CertificateReader,
 	desktop.formFields = application.NewListFormFields(&scriptedFields{})
 	window.SetContent(desktop.withTabs(desktop.buildContent("")))
 	window.Resize(fyne.NewSize(1220, 800))
-	// The work the form starts runs in line: the test driver runs fyne.Do on
-	// the calling goroutine, so nothing may still be running when a test ends.
-	desktop.form.run, desktop.form.cards.run, desktop.pages.run = inLine, inLine, inLine
 	desktop.form.pause = 0
 	return formFixture{desktop: desktop, signer: signer}
 }

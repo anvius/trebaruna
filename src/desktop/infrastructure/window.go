@@ -60,6 +60,8 @@ type Window struct {
 	formFields *application.ListFormFields
 	// envelopes is the open envelopes window, nil while it is closed.
 	envelopes *envelopesPanel
+	// background runs the envelopes window's work; tests run it in line.
+	background background
 	// tabs are the signing and verification tabs.
 	tabs *container.AppTabs
 }
@@ -127,6 +129,7 @@ func newDesktop(window fyne.Window, catalogue messaging.Catalogue, binaryPath st
 		messages:   catalogue,
 		palette:    currentPalette(),
 		activity:   &networkActivity{},
+		background: offThread,
 	}
 }
 
@@ -139,12 +142,12 @@ func (w *Window) Run() {
 // the right. The window is wide on purpose: a signature is placed while
 // reading the document, so the page must stay visible next to the controls.
 func (w *Window) buildContent(initialDocument string) fyne.CanvasObject {
-	w.pages = newPagePane(w.messages, w.palette, w.preview)
+	w.pages = newPagePane(w.messages, w.palette, w.preview, w.background)
 	preferences := fyne.CurrentApp().Preferences()
 	account := newRemoteAccount(w.messages, preferences)
 	remote := application.NewListCards(CommandLineCardReader{BinaryPath: w.binaryPath, Store: domain.StoreRemote, Account: account.account})
 	w.form = newSignForm(w.window, w.messages, w.palette, preferences,
-		w.application, w.inspect, w.cards, w.firefox, remote, account, w.formFields, w.pages)
+		w.application, w.inspect, w.cards, w.firefox, remote, account, w.formFields, w.pages, w.background)
 	w.form.onNetwork = w.activity.add
 	if initialDocument != "" {
 		w.form.setDocument(initialDocument)
@@ -334,6 +337,7 @@ func (w *Window) showEnvelopes(envelope string) {
 	if w.envelopes == nil {
 		window := fyne.CurrentApp().NewWindow(w.messages.EnvelopesTitle)
 		panel := newEnvelopesPanel(window, w.messages, w.palette)
+		panel.run = w.background
 		panel.encrypt = application.NewEncryptForRecipients(CommandLineEncrypter{BinaryPath: w.binaryPath})
 		panel.book = application.NewManageRecipientBook(CommandLineRecipientBook{BinaryPath: w.binaryPath})
 		panel.open = application.NewOpenEnvelope(CommandLineEnvelopeOpener{BinaryPath: w.binaryPath})

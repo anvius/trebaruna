@@ -58,9 +58,10 @@ func newCardSource(
 	preferences fyne.Preferences,
 	onChosen func(domain.CardCertificate),
 	onEmpty func(string, widget.Importance),
+	run background,
 ) *cardSource {
 	source := &cardSource{m: m, list: list, preferences: preferences, onChosen: onChosen, onEmpty: onEmpty,
-		run: offThread, empty: m.NoCards}
+		run: run, empty: m.NoCards}
 
 	// A list, not a drop-down: a drop-down cuts a long name to fit its width,
 	// and every certificate of the card stays in sight, which is the point of

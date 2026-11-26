@@ -1018,6 +1018,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The envelopes window and the signing form run their background work on the
+  window's own runner, as the rest of the window does. The form restores the
+  remembered certificate while it is built, and that read no longer starts on a
+  runner the window does not control.
+
 - Opening an envelope with a card finds the certificate it was encrypted for
   among all the certificates whose key the card holds, not only those that can
   sign. The signing listing had left out a key-encipherment certificate, so the

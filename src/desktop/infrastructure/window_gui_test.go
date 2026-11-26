@@ -240,6 +240,7 @@ func TestAboutReadsTheBuildTheCommandDescribes(t *testing.T) {
 	}
 	test.NewTempApp(t)
 	desktop := newDesktop(test.NewTempWindow(t, nil), messaging.For(messaging.Spanish), binary)
+	desktop.background = inLine
 
 	build, err := desktop.describeBuild()
 	if err != nil {
@@ -365,6 +366,7 @@ func TestAFolderOffersWhatIsWorthSigning(t *testing.T) {
 func TestAnUpdateCheckIsShownAndItsConnectionListed(t *testing.T) {
 	test.NewTempApp(t)
 	desktop := newDesktop(test.NewTempWindow(t, nil), messaging.For(messaging.Spanish), "/nonexistent/trebaruna")
+	desktop.background = inLine
 	connection := transparency.Connection{Purpose: transparency.PurposeUpdateCheck, Method: "GET",
 		URL: "https://codeberg.org/api/v1/repos/simplicer/trebaruna/tags", Status: 200}
 	desktop.showUpdate(updateReport{Running: "0.105.0-unstable", Latest: "0.106.0-unstable", Newer: true,

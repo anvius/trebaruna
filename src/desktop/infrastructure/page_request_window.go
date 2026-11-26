@@ -119,7 +119,7 @@ func newPageRequest(window fyne.Window, m messaging.Catalogue, review *applicati
 	request.fileSource = container.NewVBox(request.fileRow.object(), request.passphrase)
 	request.cards = newCardSource(m, cards, fyne.CurrentApp().Preferences(),
 		func(domain.CardCertificate) { request.say(request.rejection(), widget.DangerImportance) },
-		func(text string, importance widget.Importance) { request.say(text, importance) })
+		func(text string, importance widget.Importance) { request.say(text, importance) }, request.run)
 	request.cards.object().Hide()
 	request.keySource = widget.NewRadioGroup([]string{m.KeyFromFile, m.KeyFromCard, m.KeyFromFirefox}, func(string) { request.keySourceChanged() })
 	request.keySource.Horizontal = true
@@ -483,8 +483,7 @@ func (r *pageRequest) showSeal(path string) {
 		return
 	}
 	if r.sealPane == nil {
-		r.sealPane = newPagePane(r.m, currentPalette(), r.preview)
-		r.sealPane.run = r.run
+		r.sealPane = newPagePane(r.m, currentPalette(), r.preview, r.run)
 	}
 	objects := []fyne.CanvasObject{wrapped(r.m.PageSealTitle, widget.MediumImportance)}
 	if r.proposal.Seal == "optional" {
