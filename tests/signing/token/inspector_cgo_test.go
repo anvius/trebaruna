@@ -34,7 +34,9 @@ func TestTokenInspectorListsTheCard(t *testing.T) {
 	token := startSoftHSM(t)
 	token.keyPair(t, "01", "signing-key")
 
-	certificatePEM := issueCertificateForToken(t, token, "01")
+	// The certificate declares its signature usage: the listing offers only the
+	// certificates that can sign (domain.UsableForSigning).
+	certificatePEM := issueCertificateWithUsage(t, token, "01", "digitalSignature")
 	if certificatePEM == nil {
 		t.Skip("openssl is not available to issue a certificate")
 	}
