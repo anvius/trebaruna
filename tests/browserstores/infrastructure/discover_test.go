@@ -38,7 +38,7 @@ func describe(home string, stores []domain.Store) []string {
 	var lines []string
 	for _, store := range stores {
 		lines = append(lines, fmt.Sprintf("%s|%s|%s|%t", store.Browser, store.Packaging,
-			strings.TrimPrefix(store.Directory, home), store.Default))
+			filepath.ToSlash(strings.TrimPrefix(store.Directory, home)), store.Default))
 	}
 	return lines
 }

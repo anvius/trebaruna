@@ -31,6 +31,7 @@ import (
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure"
 	verification "codeberg.org/simplicer/trebaruna/src/verification/domain"
 	verificationinfra "codeberg.org/simplicer/trebaruna/src/verification/infrastructure"
+	"codeberg.org/simplicer/trebaruna/tests/support/portable"
 )
 
 // fixture is a running service with a token and an allowed directory.
@@ -474,7 +475,7 @@ func TestTokenFileIsPrivate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("stat: %v", err)
 	}
-	if mode := info.Mode().Perm(); mode != 0o600 {
+	if mode := info.Mode().Perm(); portable.PosixModes() && mode != 0o600 {
 		t.Errorf("mode = %o, want 600", mode)
 	}
 

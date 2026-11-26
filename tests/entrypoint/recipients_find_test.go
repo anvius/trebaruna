@@ -14,10 +14,11 @@ import (
 	"testing"
 
 	"codeberg.org/simplicer/trebaruna/tests/support/ldapserver"
+	"codeberg.org/simplicer/trebaruna/tests/support/portable"
 )
 
 func TestARecipientFoundInADirectoryIsKeptAndEncryptedFor(t *testing.T) {
-	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	portable.IsolateUserConfig(t)
 	directory := t.TempDir()
 	certificate, key, _ := opensslRecipient(t, directory, "MARIA LOPEZ", "x")
 	signingOnly := filepath.Join(directory, "firma.pem")
@@ -61,7 +62,7 @@ func TestARecipientFoundInADirectoryIsKeptAndEncryptedFor(t *testing.T) {
 		t.Fatalf("encrypt for the recipient found: %d %s", code, stderr)
 	}
 	opened, err := exec.Command("openssl", "cms", "-decrypt", "-inform", "DER", "-in", document+".p7e", "-recip", certificate, "-inkey", key).Output()
-	if err != nil || string(opened) != "reservado\n" {
+	if err != nil || string(portable.LF(opened)) != "reservado\n" {
 		t.Errorf("openssl opens the envelope: %v %q", err, opened)
 	}
 

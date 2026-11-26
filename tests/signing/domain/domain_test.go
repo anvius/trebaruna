@@ -2,6 +2,7 @@ package domain_test
 
 import (
 	"errors"
+	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -14,10 +15,10 @@ func TestSignedNameFollowsEstablishedConvention(t *testing.T) {
 		format domain.Format
 		want   string
 	}{
-		{"/tmp/contratto.docx", domain.Cades, "/tmp/contratto.docx.p7m"},
-		{"/tmp/contratto.pdf", domain.Pades, "/tmp/contratto_signed.pdf"},
-		{"/tmp/fattura.xml", domain.Xades, "/tmp/fattura_signed.xml"},
-		{"/tmp/relazione.PDF", domain.Pades, "/tmp/relazione_signed.pdf"},
+		{"/tmp/contratto.docx", domain.Cades, filepath.FromSlash("/tmp/contratto.docx.p7m")},
+		{"/tmp/contratto.pdf", domain.Pades, filepath.FromSlash("/tmp/contratto_signed.pdf")},
+		{"/tmp/fattura.xml", domain.Xades, filepath.FromSlash("/tmp/fattura_signed.xml")},
+		{"/tmp/relazione.PDF", domain.Pades, filepath.FromSlash("/tmp/relazione_signed.pdf")},
 	}
 
 	for _, testCase := range cases {
@@ -256,7 +257,7 @@ func TestAnOfficeDocumentTurnsIntoItsPDF(t *testing.T) {
 		}
 	}
 	document, _ := domain.OpenDocument("/docs/contrato.docx")
-	if pdf := document.AsPDF(); pdf.Path() != "/docs/contrato.pdf" || pdf.SignedName(domain.Pades) != "/docs/contrato_signed.pdf" {
+	if pdf := document.AsPDF(); pdf.Path() != filepath.FromSlash("/docs/contrato.pdf") || pdf.SignedName(domain.Pades) != filepath.FromSlash("/docs/contrato_signed.pdf") {
 		t.Errorf("as a PDF: %s, signed %s", pdf.Path(), pdf.SignedName(domain.Pades))
 	}
 }

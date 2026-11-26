@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"image"
 	"image/png"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -146,10 +147,10 @@ func TestSignDocumentWritesArtefactWithDerivedName(t *testing.T) {
 	if !cades.called {
 		t.Fatal("CAdES adapter was not called")
 	}
-	if artefact.Path != "/tmp/contratto.xml.p7m" {
+	if artefact.Path != filepath.FromSlash("/tmp/contratto.xml.p7m") {
 		t.Errorf("path = %q, want the CAdES convention", artefact.Path)
 	}
-	if string(store.written["/tmp/contratto.xml.p7m"]) != "cades-output" {
+	if string(store.written[filepath.FromSlash("/tmp/contratto.xml.p7m")]) != "cades-output" {
 		t.Error("artefact was not written to the store")
 	}
 	if artefact.Size != len("cades-output") {

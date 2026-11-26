@@ -62,7 +62,7 @@ func TestADetachedSignatureTravelsBesideItsDocument(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("exit %d: %s", code, stderr)
 	}
-	if !strings.Contains(stdout, `"path": "`+document+`.p7s"`) {
+	if !strings.Contains(stdout, `"path": `+jsonString(t, document+".p7s")) {
 		t.Fatalf("stdout = %s, want the .p7s beside the document", stdout)
 	}
 	signature := document + ".p7s"

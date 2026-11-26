@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"codeberg.org/simplicer/trebaruna/src/afirma/infrastructure/localtls"
+	"codeberg.org/simplicer/trebaruna/tests/support/portable"
 )
 
 func TestTheRootSignsOnlyTheLocalServerAndKeepsNoKey(t *testing.T) {
@@ -52,7 +53,7 @@ func TestTheRootSignsOnlyTheLocalServerAndKeepsNoKey(t *testing.T) {
 	for _, entry := range entries {
 		content, _ := os.ReadFile(filepath.Join(directory, entry.Name()))
 		keys += strings.Count(string(content), "PRIVATE KEY-----") / 2
-		if info, _ := entry.Info(); info.Mode().Perm() != 0o600 {
+		if info, _ := entry.Info(); portable.PosixModes() && info.Mode().Perm() != 0o600 {
 			t.Errorf("%s is %v, want 0600", entry.Name(), info.Mode().Perm())
 		}
 	}

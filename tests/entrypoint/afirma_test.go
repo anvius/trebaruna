@@ -82,7 +82,7 @@ func interactiveLines(t *testing.T, uri string, decisions ...string) []map[strin
 // out, the key and its passphrase come back through the pipe.
 func TestTheWindowsProtocolCarriesTheDecisionThroughStdin(t *testing.T) {
 	key := writeIdentityP12(t, "segreto", "MARIA GARCIA", 32)
-	decision := `{"approved":true,"key":{"p12":"` + key + `"},"passphrase":"segreto"}`
+	decision := `{"approved":true,"key":{"p12":` + jsonString(t, key) + `},"passphrase":"segreto"}`
 	lines := interactiveLines(t, "afirma://sign?format=CAdES&algorithm=SHA256&appname=SEDE&dat=aG9sYQ%3D%3D", decision)
 	if len(lines) != 2 || lines[0]["type"] != "proposal" || lines[1]["type"] != "outcome" {
 		t.Fatalf("lines %v", lines)
@@ -98,7 +98,7 @@ func TestTheWindowsProtocolCarriesTheDecisionThroughStdin(t *testing.T) {
 // TestTheWindowIsAskedAgainForACertificateThePageRefuses.
 func TestTheWindowIsAskedAgainForACertificateThePageRefuses(t *testing.T) {
 	key := writeIdentityP12(t, "segreto", "MARIA GARCIA", 33)
-	decision := `{"approved":true,"key":{"p12":"` + key + `"},"passphrase":"segreto"}`
+	decision := `{"approved":true,"key":{"p12":` + jsonString(t, key) + `},"passphrase":"segreto"}`
 	properties := base64.StdEncoding.EncodeToString([]byte("filter=subject.contains:ROSSI"))
 	lines := interactiveLines(t, "afirma://sign?format=CAdES&algorithm=SHA256&dat=aG9sYQ%3D%3D&properties="+properties,
 		decision, decision, decision)

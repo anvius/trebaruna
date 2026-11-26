@@ -19,6 +19,18 @@ import (
 	"codeberg.org/simplicer/trebaruna/src/entrypoint/cli"
 )
 
+// jsonString is s as encoding/json writes it, quotes included: how a path
+// appears in the command's JSON output, where a Windows path's backslashes
+// are escaped.
+func jsonString(t *testing.T, s string) string {
+	t.Helper()
+	encoded, err := json.Marshal(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(encoded)
+}
+
 // run executes the CLI and returns stdout, stderr and the exit code.
 func run(args ...string) (string, string, int) {
 	var stdout, stderr bytes.Buffer

@@ -72,7 +72,7 @@ func TestTheThreeFormatsSayTheSame(t *testing.T) {
 			t.Errorf("%q missing from Markdown or HTML", expected)
 		}
 	}
-	if strings.Contains(markdown+html, "/home/") || !strings.Contains(markdown, "~/.cache") {
+	if strings.Contains(markdown+html, "/home/") || !strings.Contains(markdown, filepath.Join("~", ".cache")) {
 		t.Error("the home directory must read as ~")
 	}
 }
@@ -119,7 +119,7 @@ func TestThePDFReadsBackInPoppler(t *testing.T) {
 	if _, err := exec.LookPath("pdftotext"); err != nil {
 		t.Skip("poppler is not installed")
 	}
-	text, err := exec.Command("pdftotext", "-layout", path, "-").Output()
+	text, err := exec.Command("pdftotext", "-enc", "UTF-8", "-layout", path, "-").Output()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -171,7 +171,7 @@ func TestCentralEuropeanLettersPrintInThePDFReport(t *testing.T) {
 	if _, err := exec.LookPath("pdftotext"); err != nil {
 		t.Skip("poppler is not installed")
 	}
-	text, err := exec.Command("pdftotext", "-layout", path, "-").Output()
+	text, err := exec.Command("pdftotext", "-enc", "UTF-8", "-layout", path, "-").Output()
 	if err != nil {
 		t.Fatal(err)
 	}

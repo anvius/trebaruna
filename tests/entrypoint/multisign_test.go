@@ -56,7 +56,7 @@ func TestAParallelSignatureIsAddedAndBothVerify(t *testing.T) {
 		t.Fatalf("cosign: exit %d: %s", code, stderr)
 	}
 	cosigned := strings.TrimSuffix(envelope, ".p7m") + "_cosigned.p7m"
-	if !strings.Contains(stdout, cosigned) {
+	if !strings.Contains(stdout, jsonString(t, cosigned)) {
 		t.Fatalf("stdout = %s, want %s", stdout, cosigned)
 	}
 

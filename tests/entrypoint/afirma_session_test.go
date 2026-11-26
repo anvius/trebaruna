@@ -22,10 +22,11 @@ import (
 	"codeberg.org/simplicer/trebaruna/src/afirma/infrastructure/localtls"
 	"codeberg.org/simplicer/trebaruna/src/afirma/infrastructure/websocket"
 	"codeberg.org/simplicer/trebaruna/src/entrypoint/cli"
+	"codeberg.org/simplicer/trebaruna/tests/support/portable"
 )
 
 func TestASessionOffersTheKeyThePageAskedToKeep(t *testing.T) {
-	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	portable.IsolateUserConfig(t)
 	directory, err := localtls.Directory()
 	if err != nil {
 		t.Fatal(err)
@@ -86,7 +87,7 @@ func TestASessionOffersTheKeyThePageAskedToKeep(t *testing.T) {
 	if proposal := next(); proposal["type"] != "proposal" || proposal["remembered"] != nil {
 		t.Fatalf("the first proposal offers no kept key: %v", proposal)
 	}
-	io.WriteString(decide, `{"approved":true,"key":{"p12":"`+key+`"},"passphrase":"segreto"}`+"\n")
+	io.WriteString(decide, `{"approved":true,"key":{"p12":`+jsonString(t, key)+`},"passphrase":"segreto"}`+"\n")
 	if outcome := next(); outcome["session"] != true {
 		t.Errorf("first outcome %v", outcome)
 	}

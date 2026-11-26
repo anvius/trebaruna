@@ -16,6 +16,7 @@ import (
 	"testing"
 
 	"codeberg.org/simplicer/trebaruna/src/entrypoint/cli"
+	"codeberg.org/simplicer/trebaruna/tests/support/portable"
 )
 
 func TestTheWindowPlacesTheSealOnAPrivateCopy(t *testing.T) {
@@ -55,7 +56,7 @@ func TestTheWindowPlacesTheSealOnAPrivateCopy(t *testing.T) {
 		t.Fatalf("the proposal asks to place the seal on a copy: %v", proposal)
 	}
 	info, err := os.Stat(copyPath)
-	if err != nil || info.Mode().Perm() != 0o600 {
+	if err != nil || portable.PosixModes() && info.Mode().Perm() != 0o600 {
 		t.Fatalf("the copy is the user's alone: %v %v", info, err)
 	}
 	if content, _ := os.ReadFile(copyPath); string(content) != string(pdf) {

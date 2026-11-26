@@ -45,7 +45,7 @@ func TestTheFirefoxProfileFirefoxStartsWithComesFirst(t *testing.T) {
 	stores := infrastructure.NSSStores(home, "linux")
 	var directories []string
 	for _, store := range stores {
-		directories = append(directories, strings.TrimPrefix(store.Directory, home))
+		directories = append(directories, filepath.ToSlash(strings.TrimPrefix(store.Directory, home)))
 	}
 	want := []string{
 		"/.mozilla/firefox/cccc.default-release",

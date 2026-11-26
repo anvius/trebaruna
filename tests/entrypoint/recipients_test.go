@@ -14,11 +14,11 @@ import (
 	"testing"
 
 	"codeberg.org/simplicer/trebaruna/src/entrypoint/cli"
+	"codeberg.org/simplicer/trebaruna/tests/support/portable"
 )
 
 func TestASavedRecipientIsEncryptedForByName(t *testing.T) {
-	config := t.TempDir()
-	t.Setenv("XDG_CONFIG_HOME", config)
+	config := portable.IsolateUserConfig(t)
 	directory := t.TempDir()
 	certificate, key, _ := opensslRecipient(t, directory, "LUCA BIANCHI", "x")
 
@@ -31,10 +31,10 @@ func TestASavedRecipientIsEncryptedForByName(t *testing.T) {
 		t.Fatalf("saved %v, %v", saved, err)
 	}
 	book := filepath.Join(config, "trebaruna", "recipients")
-	if info, err := os.Stat(book); err != nil || info.Mode().Perm() != 0o700 {
+	if info, err := os.Stat(book); err != nil || portable.PosixModes() && info.Mode().Perm() != 0o700 {
 		t.Errorf("the book is the user's alone: %v %v", info, err)
 	}
-	if info, err := os.Stat(saved["path"].(string)); err != nil || info.Mode().Perm() != 0o600 {
+	if info, err := os.Stat(saved["path"].(string)); err != nil || portable.PosixModes() && info.Mode().Perm() != 0o600 {
 		t.Errorf("each certificate file too: %v %v", info, err)
 	}
 
@@ -51,7 +51,7 @@ func TestASavedRecipientIsEncryptedForByName(t *testing.T) {
 	}
 	opened, err := exec.Command("openssl", "cms", "-decrypt", "-inform", "DER", "-in", document+".p7e",
 		"-recip", certificate, "-inkey", key).Output()
-	if err != nil || string(opened) != "riservato\n" {
+	if err != nil || string(portable.LF(opened)) != "riservato\n" {
 		t.Errorf("openssl opens the envelope with the saved recipient's key: %v %q", err, opened)
 	}
 

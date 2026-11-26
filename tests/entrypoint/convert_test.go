@@ -29,7 +29,7 @@ func TestADocumentIsSignedAsItsPDF(t *testing.T) {
 
 	stdout, stderr, code := run("sign", document, "--to-pdf", "--p12", key, "--json")
 	signed := filepath.Join(filepath.Dir(document), "contrato_signed.pdf")
-	if code != 0 || !strings.Contains(stdout, `"path": "`+signed+`"`) || !strings.Contains(stdout, `"format": "pades"`) {
+	if code != 0 || !strings.Contains(stdout, `"path": `+jsonString(t, signed)) || !strings.Contains(stdout, `"format": "pades"`) {
 		t.Fatalf("exit %d: %s %s", code, stdout, stderr)
 	}
 	entries, _ := os.ReadDir(filepath.Dir(document))

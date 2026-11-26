@@ -7,6 +7,7 @@ package application_test
 import (
 	"context"
 	"errors"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -43,7 +44,7 @@ func TestADocumentIsSignedAsItsPDF(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if artefact.Path != "/docs/contrato_signed.pdf" || artefact.Format != domain.Pades {
+	if artefact.Path != filepath.FromSlash("/docs/contrato_signed.pdf") || artefact.Format != domain.Pades {
 		t.Errorf("artefact %s in %s, want /docs/contrato_signed.pdf in PAdES", artefact.Path, artefact.Format)
 	}
 	if !pades.called || string(pades.request.Content) != "%PDF-1.7 converted" {
