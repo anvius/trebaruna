@@ -53,6 +53,7 @@ func TestScreenshots(t *testing.T) {
 		window := test.NewTempWindow(t, nil)
 		desktop := newDesktop(window, messaging.For(language), "trebaruna")
 		desktop.background = inLine
+		desktop.pause = 0
 		desktop.inspect = application.NewInspectCertificate(portraitReader{})
 		window.SetContent(desktop.withTabs(desktop.buildContent(document)))
 		window.Resize(fyne.NewSize(1220, 800))
@@ -129,6 +130,7 @@ func TestScreenshots(t *testing.T) {
 		window := test.NewTempWindow(t, nil)
 		desktop := newDesktop(window, messaging.For(messaging.Spanish), "trebaruna")
 		desktop.background = inLine
+		desktop.pause = 0
 		desktop.inspect = application.NewInspectCertificate(portraitReader{})
 		window.SetContent(desktop.withTabs(desktop.buildContent(document)))
 		desktop.form.setCertificate("/home/mario/Documenti/firma/rossi-mario-infocert.p12")
@@ -152,6 +154,7 @@ func TestScreenshots(t *testing.T) {
 	window := test.NewTempWindow(t, nil)
 	desktop := newDesktop(window, messaging.For(messaging.Spanish), "trebaruna")
 	desktop.background = inLine
+	desktop.pause = 0
 	desktop.inspect = application.NewInspectCertificate(portraitReader{})
 	window.SetContent(desktop.withTabs(desktop.buildContent(document)))
 	window.Resize(fyne.NewSize(1220, 800))

@@ -56,6 +56,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.109.9-unstable" date="2026-11-26">
+      <description>
+        <p>The signing form reads a certificate at once when the window's typing pause is zero, and the window hands that pause to the form as it does its runner.</p>
+      </description>
+    </release>
     <release version="0.109.8-unstable" date="2026-11-26">
       <description>
         <p>The Windows installer puts trebaruna in the current user's programs folder, as the installation guide describes, and builds.</p>

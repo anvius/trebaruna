@@ -1018,6 +1018,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The signing form's wait after typing a passphrase belongs to the window, as
+  its background runner does. A certificate read that waits on a timer no longer
+  runs the form's updates on a goroutine of its own.
+
 - The Windows installer installs for the current user, under
   `%LOCALAPPDATA%\Programs\trebaruna`, as the installation guide says, instead
   of under Program Files, which needs administrator rights. Each of its

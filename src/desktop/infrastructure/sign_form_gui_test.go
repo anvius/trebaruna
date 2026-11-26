@@ -90,6 +90,7 @@ func newFormFixtureWithCards(t *testing.T, reader application.CertificateReader,
 
 	desktop := newDesktop(window, messaging.For(messaging.Spanish), "trebaruna")
 	desktop.background = inLine
+	desktop.pause = 0
 	desktop.application = application.NewSignFromDesktop(signer, func(string) bool { return true })
 	desktop.inspect = application.NewInspectCertificate(reader)
 	desktop.cards = application.NewListCards(cards)
@@ -99,7 +100,6 @@ func newFormFixtureWithCards(t *testing.T, reader application.CertificateReader,
 	desktop.formFields = application.NewListFormFields(&scriptedFields{})
 	window.SetContent(desktop.withTabs(desktop.buildContent("")))
 	window.Resize(fyne.NewSize(1220, 800))
-	desktop.form.pause = 0
 	return formFixture{desktop: desktop, signer: signer}
 }
 

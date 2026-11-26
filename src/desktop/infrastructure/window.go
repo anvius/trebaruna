@@ -60,8 +60,12 @@ type Window struct {
 	formFields *application.ListFormFields
 	// envelopes is the open envelopes window, nil while it is closed.
 	envelopes *envelopesPanel
-	// background runs the envelopes window's work; tests run it in line.
+	// background runs the envelopes window's work and the signing form's; tests
+	// run it in line.
 	background background
+	// pause is how long the signing form waits after typing before it reads a
+	// certificate; tests set it to zero, so the reads run at once.
+	pause time.Duration
 	// tabs are the signing and verification tabs.
 	tabs *container.AppTabs
 }
@@ -130,6 +134,7 @@ func newDesktop(window fyne.Window, catalogue messaging.Catalogue, binaryPath st
 		palette:    currentPalette(),
 		activity:   &networkActivity{},
 		background: offThread,
+		pause:      typingPause,
 	}
 }
 
@@ -147,7 +152,7 @@ func (w *Window) buildContent(initialDocument string) fyne.CanvasObject {
 	account := newRemoteAccount(w.messages, preferences)
 	remote := application.NewListCards(CommandLineCardReader{BinaryPath: w.binaryPath, Store: domain.StoreRemote, Account: account.account})
 	w.form = newSignForm(w.window, w.messages, w.palette, preferences,
-		w.application, w.inspect, w.cards, w.firefox, remote, account, w.formFields, w.pages, w.background)
+		w.application, w.inspect, w.cards, w.firefox, remote, account, w.formFields, w.pages, w.background, w.pause)
 	w.form.onNetwork = w.activity.add
 	if initialDocument != "" {
 		w.form.setDocument(initialDocument)

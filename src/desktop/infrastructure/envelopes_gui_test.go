@@ -60,6 +60,7 @@ func TestTheEnvelopesWindowEncryptsAndOpens(t *testing.T) {
 	binary, decrypted := envelopeCommand(t)
 	desktop := newDesktop(test.NewTempWindow(t, nil), messaging.For(messaging.Spanish), binary)
 	desktop.background = inLine
+	desktop.pause = 0
 	desktop.window.SetContent(desktop.withTabs(desktop.buildContent("")))
 	m := desktop.messages
 
@@ -141,6 +142,7 @@ func TestADroppedEnvelopeOpensTheEnvelopesWindow(t *testing.T) {
 	binary, _ := envelopeCommand(t)
 	desktop := newDesktop(test.NewTempWindow(t, nil), messaging.For(messaging.Spanish), binary)
 	desktop.background = inLine
+	desktop.pause = 0
 	desktop.window.SetContent(desktop.withTabs(desktop.buildContent("")))
 
 	desktop.dropped("/tmp/offerta.pdf.p7e", false, func(string) { t.Error("an envelope is not checked") })
@@ -160,6 +162,7 @@ func TestTheAddressBookOffersWhomYouEncryptedFor(t *testing.T) {
 	binary, _ := envelopeCommand(t)
 	desktop := newDesktop(test.NewTempWindow(t, nil), messaging.For(messaging.Spanish), binary)
 	desktop.background = inLine
+	desktop.pause = 0
 	desktop.window.SetContent(desktop.withTabs(desktop.buildContent("")))
 	desktop.showEnvelopes("")
 	panel := desktop.envelopes

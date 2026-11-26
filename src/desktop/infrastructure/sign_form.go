@@ -156,12 +156,13 @@ func newSignForm(
 	formFields *application.ListFormFields,
 	pages *pagePane,
 	run background,
+	pause time.Duration,
 ) *signForm {
 	form := &signForm{
 		window: window, m: m, palette: palette, preferences: preferences,
 		signing: signing, inspect: inspect, pages: pages,
 		format: domain.FormatPAdES,
-		run:    run, pause: typingPause,
+		run:    run, pause: pause,
 		cardList: cards, storeList: firefox, remoteList: remote, remote: account, formFields: formFields,
 	}
 	form.remote.object().Hide()
