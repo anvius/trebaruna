@@ -63,7 +63,7 @@ func TestTheWindowPlacesTheSealOnAPrivateCopy(t *testing.T) {
 		t.Error("the copy is the page's PDF")
 	}
 
-	io.WriteString(decide, `{"approved":true,"key":{"p12":"`+key+`"},"passphrase":"segreto",`+
+	io.WriteString(decide, `{"approved":true,"key":{"p12":`+jsonString(t, key)+`},"passphrase":"segreto",`+
 		`"seal":{"page":1,"llx":300,"lly":60,"urx":520,"ury":120}}`+"\n")
 	outcome := next()
 	decide.Close()

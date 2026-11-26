@@ -98,7 +98,7 @@ func brainpoolChain(t *testing.T, directory, curve string) (authority, signer []
 	openssl(t, directory, "ecparam", "-name", curve, "-genkey", "-noout", "-out", "signer.key")
 	openssl(t, directory, "req", "-utf8", "-new", "-key", "signer.key", "-config", portable.SubjectFile(t, directory, "/C=DE/CN=Dr. Anna Müller"), "-out", "signer.csr")
 	openssl(t, directory, "x509", "-req", "-in", "signer.csr", "-CA", "ca.der", "-CAform", "DER", "-CAkey", "ca.key", "-days", "30",
-		"-extfile", "/dev/stdin", "-outform", "DER", "-out", "signer.der")
+		"-outform", "DER", "-out", "signer.der")
 	authority, _ = os.ReadFile(filepath.Join(directory, "ca.der"))
 	signer, _ = os.ReadFile(filepath.Join(directory, "signer.der"))
 	return authority, signer

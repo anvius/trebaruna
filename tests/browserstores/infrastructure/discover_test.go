@@ -38,7 +38,7 @@ func describe(home string, stores []domain.Store) []string {
 	var lines []string
 	for _, store := range stores {
 		lines = append(lines, fmt.Sprintf("%s|%s|%s|%t", store.Browser, store.Packaging,
-			filepath.ToSlash(strings.TrimPrefix(store.Directory, home)), store.Default))
+			strings.TrimPrefix(filepath.ToSlash(store.Directory), filepath.ToSlash(home)), store.Default))
 	}
 	return lines
 }
@@ -108,7 +108,7 @@ func TestAnAbsoluteProfileIsFoundWhereItIs(t *testing.T) {
 	writeFile(t, filepath.Join(root, "empty.default", "prefs.js"), "")
 
 	found := browserstores.Discover(browserstores.NewEnvironment(home, "linux"))
-	expectStores(t, home, found.Stores, "Zen||"+strings.TrimPrefix(elsewhere, home)+"|true")
+	expectStores(t, home, found.Stores, "Zen||"+strings.TrimPrefix(filepath.ToSlash(elsewhere), filepath.ToSlash(home))+"|true")
 	if len(found.Skipped) != 0 {
 		t.Errorf("skipped %v, want none: a folder without a database is not a store", found.Skipped)
 	}
@@ -174,9 +174,9 @@ func TestTheProfilesOfLaunchersAreAddedOnce(t *testing.T) {
 	makeStore(t, filepath.Join(home, "other.dir"))
 	makeStore(t, filepath.Join(home, "fourth"))
 	writeFile(t, filepath.Join(home, ".local", "share", "applications", "custom.desktop"),
-		"[Desktop Entry]\nName=Navigator Custom\nExec=/usr/bin/custom --profile \""+work+"\" %u\n"+
-			"Exec=/usr/bin/custom -profile "+filepath.Join(home, "other.dir")+"\n"+
-			"Exec=/usr/bin/custom --profile "+filepath.Join(xdg, "ox.default")+"\n"+
+		"[Desktop Entry]\nName=Navigator Custom\nExec=/usr/bin/custom --profile \""+filepath.ToSlash(work)+"\" %u\n"+
+			"Exec=/usr/bin/custom -profile "+filepath.ToSlash(filepath.Join(home, "other.dir"))+"\n"+
+			"Exec=/usr/bin/custom --profile "+filepath.ToSlash(filepath.Join(xdg, "ox.default"))+"\n"+
 			"Exec=/usr/bin/custom --profile relative.dir\n\n"+
 			"[Desktop Action private]\nName=Private\nExec=/usr/bin/custom --profile=~/fourth --private-window\n")
 

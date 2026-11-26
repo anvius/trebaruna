@@ -256,7 +256,7 @@ func TestAnOfficeDocumentTurnsIntoItsPDF(t *testing.T) {
 			t.Errorf("%s convertible %v, want %v", path, document.Convertible(), convertible)
 		}
 	}
-	document, _ := domain.OpenDocument("/docs/contrato.docx")
+	document, _ := domain.OpenDocument(filepath.FromSlash("/docs/contrato.docx"))
 	if pdf := document.AsPDF(); pdf.Path() != filepath.FromSlash("/docs/contrato.pdf") || pdf.SignedName(domain.Pades) != filepath.FromSlash("/docs/contrato_signed.pdf") {
 		t.Errorf("as a PDF: %s, signed %s", pdf.Path(), pdf.SignedName(domain.Pades))
 	}

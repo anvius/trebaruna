@@ -72,7 +72,9 @@ func TestTheThreeFormatsSayTheSame(t *testing.T) {
 			t.Errorf("%q missing from Markdown or HTML", expected)
 		}
 	}
-	if strings.Contains(markdown+html, "/home/") || !strings.Contains(markdown, filepath.Join("~", ".cache")) {
+	// Markdown doubles a backslash, so a Windows path reads with two of them.
+	tilde := strings.ReplaceAll(filepath.Join("~", ".cache"), `\`, `\\`)
+	if strings.Contains(markdown+html, "/home/") || !strings.Contains(markdown, tilde) {
 		t.Error("the home directory must read as ~")
 	}
 }
