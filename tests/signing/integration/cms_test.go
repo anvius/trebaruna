@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/cms"
+	"codeberg.org/simplicer/trebaruna/tests/support/portable"
 )
 
 // fixture holds a throwaway key pair on disk.
@@ -116,7 +117,7 @@ func TestCadesBESVerifiesWithOpenSSL(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read recovered content: %v", err)
 	}
-	if string(recovered) != string(content) {
+	if string(portable.LF(recovered)) != string(content) {
 		t.Errorf("recovered content = %q, want %q", recovered, content)
 	}
 }

@@ -105,7 +105,7 @@ func TestAPolishHolderIsPrintedWhole(t *testing.T) {
 	}
 	path := filepath.Join(t.TempDir(), "podpisany.pdf")
 	os.WriteFile(path, signed, 0o600)
-	text, err := exec.Command("pdftotext", path, "-").Output()
+	text, err := exec.Command("pdftotext", "-enc", "UTF-8", path, "-").Output()
 	if err != nil || !strings.Contains(string(text), "ŁUKASZ ŻÓŁĆ") {
 		t.Errorf("the seal reads %q: %v", text, err)
 	}

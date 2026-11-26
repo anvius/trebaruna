@@ -28,6 +28,7 @@ import (
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/cms"
 	verificationdomain "codeberg.org/simplicer/trebaruna/src/verification/domain"
 	verificationinfra "codeberg.org/simplicer/trebaruna/src/verification/infrastructure"
+	"codeberg.org/simplicer/trebaruna/tests/support/portable"
 )
 
 // cadesFixture returns a document and a signer whose certificate publishes an OCSP
@@ -94,6 +95,7 @@ func TestCadesLtCarriesItsValidationDataInSignedData(t *testing.T) {
 	if err != nil {
 		t.Fatalf("openssl cms -print: %v\n%s", err, printed)
 	}
+	printed = portable.LF(printed)
 	if !strings.Contains(string(printed), "\n    version: 5\n") || !strings.Contains(string(printed), "\n    crls:\n") ||
 		strings.Count(string(printed), "otherRevInfoFormat: undefined (1.3.6.1.5.5.7.16.2)") != 2 {
 		t.Errorf("openssl reads no version 5 SignedData with two OCSP answers among its crls:\n%s", printed)

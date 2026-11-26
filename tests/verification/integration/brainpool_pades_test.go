@@ -19,6 +19,7 @@ import (
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/pdffield"
 	"codeberg.org/simplicer/trebaruna/src/verification/domain"
 	"codeberg.org/simplicer/trebaruna/src/verification/infrastructure"
+	"codeberg.org/simplicer/trebaruna/tests/support/portable"
 )
 
 // brainpoolPDF signs a one-page PDF with a brainpool key through openssl.
@@ -27,10 +28,10 @@ func brainpoolPDF(t *testing.T, curve string) (string, string) {
 	directory := t.TempDir()
 	run := func(arguments ...string) { brainpoolOpenSSL(t, directory, arguments...) }
 	run("ecparam", "-name", curve, "-genkey", "-noout", "-out", "ca.key")
-	run("req", "-utf8", "-x509", "-new", "-key", "ca.key", "-subj", "/C=DE/O=Ärztekammer/CN=HBA-CA 7", "-days", "30",
+	run("req", "-utf8", "-x509", "-new", "-key", "ca.key", "-config", portable.SubjectFile(t, directory, "/C=DE/O=Ärztekammer/CN=HBA-CA 7"), "-days", "30",
 		"-addext", "basicConstraints=critical,CA:true", "-addext", "keyUsage=critical,keyCertSign,cRLSign", "-out", "ca.pem")
 	run("ecparam", "-name", curve, "-genkey", "-noout", "-out", "signer.key")
-	run("req", "-utf8", "-new", "-key", "signer.key", "-subj", "/C=DE/CN=Dr. Anna Müller", "-out", "signer.csr")
+	run("req", "-utf8", "-new", "-key", "signer.key", "-config", portable.SubjectFile(t, directory, "/C=DE/CN=Dr. Anna Müller"), "-out", "signer.csr")
 	os.WriteFile(filepath.Join(directory, "ext.cnf"), []byte("keyUsage=critical,nonRepudiation\n"), 0o600)
 	run("x509", "-req", "-in", "signer.csr", "-CA", "ca.pem", "-CAkey", "ca.key", "-days", "30", "-extfile", "ext.cnf", "-out", "signer.pem")
 

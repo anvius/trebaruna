@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/brainpool"
+	"codeberg.org/simplicer/trebaruna/tests/support/portable"
 )
 
 func openssl(t *testing.T, directory string, arguments ...string) []byte {
@@ -92,10 +93,10 @@ func TestAPointOffTheCurveIsRefused(t *testing.T) {
 func brainpoolChain(t *testing.T, directory, curve string) (authority, signer []byte) {
 	t.Helper()
 	openssl(t, directory, "ecparam", "-name", curve, "-genkey", "-noout", "-out", "ca.key")
-	openssl(t, directory, "req", "-utf8", "-x509", "-new", "-key", "ca.key", "-subj", "/C=DE/O=Ärztekammer/CN=HBA-CA 7", "-days", "30",
+	openssl(t, directory, "req", "-utf8", "-x509", "-new", "-key", "ca.key", "-config", portable.SubjectFile(t, directory, "/C=DE/O=Ärztekammer/CN=HBA-CA 7"), "-days", "30",
 		"-addext", "basicConstraints=critical,CA:true", "-addext", "keyUsage=critical,keyCertSign,cRLSign", "-outform", "DER", "-out", "ca.der")
 	openssl(t, directory, "ecparam", "-name", curve, "-genkey", "-noout", "-out", "signer.key")
-	openssl(t, directory, "req", "-utf8", "-new", "-key", "signer.key", "-subj", "/C=DE/CN=Dr. Anna Müller", "-out", "signer.csr")
+	openssl(t, directory, "req", "-utf8", "-new", "-key", "signer.key", "-config", portable.SubjectFile(t, directory, "/C=DE/CN=Dr. Anna Müller"), "-out", "signer.csr")
 	openssl(t, directory, "x509", "-req", "-in", "signer.csr", "-CA", "ca.der", "-CAform", "DER", "-CAkey", "ca.key", "-days", "30",
 		"-extfile", "/dev/stdin", "-outform", "DER", "-out", "signer.der")
 	authority, _ = os.ReadFile(filepath.Join(directory, "ca.der"))

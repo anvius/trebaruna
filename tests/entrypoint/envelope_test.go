@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"codeberg.org/simplicer/trebaruna/tests/support/portable"
 )
 
 // opensslRecipient makes an RSA key, its certificate and a .p12 with OpenSSL.
@@ -46,7 +48,7 @@ func TestAnEnvelopeOpensForItsRecipientsInOpenSSL(t *testing.T) {
 			t.Fatalf("openssl cannot open the %v envelope: %v", extra, err)
 		}
 		original, _ := os.ReadFile(document)
-		if !bytes.Equal(opened, original) {
+		if !bytes.Equal(portable.LF(opened), original) {
 			t.Errorf("%v: openssl got different content", extra)
 		}
 	}

@@ -17,6 +17,7 @@ import (
 	"codeberg.org/simplicer/trebaruna/src/signing/application"
 	"codeberg.org/simplicer/trebaruna/src/signing/domain"
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure"
+	"codeberg.org/simplicer/trebaruna/tests/support/portable"
 )
 
 func TestASignaturesTextReadsBackAsWritten(t *testing.T) {
@@ -25,7 +26,7 @@ func TestASignaturesTextReadsBackAsWritten(t *testing.T) {
 	}
 	directory := t.TempDir()
 	command := exec.Command("openssl", "req", "-utf8", "-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", "k.pem", "-out", "c.pem",
-		"-days", "2", "-subj", "/C=ES/CN=José García Núñez")
+		"-days", "2", "-config", portable.SubjectFile(t, directory, "/C=ES/CN=José García Núñez"))
 	command.Dir = directory
 	if output, err := command.CombinedOutput(); err != nil {
 		t.Fatalf("openssl: %v\n%s", err, output)

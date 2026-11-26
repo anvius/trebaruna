@@ -14,6 +14,7 @@ import (
 	"github.com/beevik/etree"
 
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/xmldsig"
+	"codeberg.org/simplicer/trebaruna/tests/support/portable"
 )
 
 var corpus = []string{"odf-content.xml", "odf-styles.xml", "attributes.xml", "namespaces.xml"}
@@ -47,6 +48,7 @@ func TestCanonicalFormsMatchLibxml2(t *testing.T) {
 			if err != nil {
 				t.Fatalf("xmllint %s %s: %v", flag, name, err)
 			}
+			reference = portable.LF(reference)
 			if ours := canonicalOf(t, name, algorithm); ours != string(reference) {
 				t.Errorf("%s %s differs from libxml2 at byte %d:\n ours %q\n  ref %q", flag, name,
 					firstDifference(ours, string(reference)), around(ours, string(reference)), around(string(reference), ours))

@@ -24,6 +24,7 @@ import (
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/xmldsig"
 	"codeberg.org/simplicer/trebaruna/src/verification/domain"
 	"codeberg.org/simplicer/trebaruna/src/verification/infrastructure"
+	"codeberg.org/simplicer/trebaruna/tests/support/portable"
 )
 
 const inclusiveC14N = "http://www.w3.org/TR/2001/REC-xml-c14n-20010315"
@@ -34,10 +35,10 @@ func brainpoolXML(t *testing.T, curve string) (string, *x509.Certificate) {
 	directory := t.TempDir()
 	run := func(arguments ...string) { brainpoolOpenSSL(t, directory, arguments...) }
 	run("ecparam", "-name", curve, "-genkey", "-noout", "-out", "ca.key")
-	run("req", "-utf8", "-x509", "-new", "-key", "ca.key", "-subj", "/C=DE/O=Ärztekammer/CN=HBA-CA 7", "-days", "30",
+	run("req", "-utf8", "-x509", "-new", "-key", "ca.key", "-config", portable.SubjectFile(t, directory, "/C=DE/O=Ärztekammer/CN=HBA-CA 7"), "-days", "30",
 		"-addext", "basicConstraints=critical,CA:true", "-addext", "keyUsage=critical,keyCertSign,cRLSign", "-outform", "DER", "-out", "ca.der")
 	run("ecparam", "-name", curve, "-genkey", "-noout", "-out", "signer.key")
-	run("req", "-utf8", "-new", "-key", "signer.key", "-subj", "/C=DE/CN=Dr. Anna Müller", "-out", "signer.csr")
+	run("req", "-utf8", "-new", "-key", "signer.key", "-config", portable.SubjectFile(t, directory, "/C=DE/CN=Dr. Anna Müller"), "-out", "signer.csr")
 	os.WriteFile(filepath.Join(directory, "ext.cnf"), []byte("keyUsage=critical,nonRepudiation\n"), 0o600)
 	run("x509", "-req", "-in", "signer.csr", "-CA", "ca.der", "-CAform", "DER", "-CAkey", "ca.key", "-days", "30", "-extfile", "ext.cnf",
 		"-outform", "DER", "-out", "signer.der")

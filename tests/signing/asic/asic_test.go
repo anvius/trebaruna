@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"codeberg.org/simplicer/trebaruna/src/signing/infrastructure/asic"
+	"codeberg.org/simplicer/trebaruna/tests/support/portable"
 )
 
 // TestTheMediaTypeComesFirstAndUncompressed: readers key on the first bytes.
@@ -89,7 +90,7 @@ func TestJavaReadsTheContainerEntryByEntry(t *testing.T) {
 		t.Fatal(err)
 	}
 	output, err := exec.Command(java, source, path).CombinedOutput()
-	if err != nil || string(output) != "mimetype 31\nacta.txt 5\nMETA-INF/signatures001.xml 4\n" {
+	if err != nil || string(portable.LF(output)) != "mimetype 31\nacta.txt 5\nMETA-INF/signatures001.xml 4\n" {
 		t.Errorf("java: %v\n%s", err, output)
 	}
 }
