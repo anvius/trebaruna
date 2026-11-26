@@ -68,7 +68,7 @@ func cardSigningIntent() domain.SigningIntent {
 }
 
 func TestACardSignsTheCertificateChosenWithThePINInTheEnvironment(t *testing.T) {
-	seen := filepath.Join(t.TempDir(), "environment")
+	seen := filepath.ToSlash(filepath.Join(t.TempDir(), "environment"))
 	binary, recorded := fakeCommand(t, "printf '%s' \"$TREBARUNA_PIN\" > "+seen+"; echo '"+receiptJSON+"'")
 
 	if _, err := (infrastructure.CommandLineSigner{BinaryPath: binary}).Sign(context.Background(), cardSigningIntent()); err != nil {
@@ -138,7 +138,7 @@ func TestTheFirefoxStoreIsListedAndSignedWithItsOwnFlag(t *testing.T) {
 }
 
 func TestAPINChangeRunsTheCommandWithItsSecretsInTheEnvironment(t *testing.T) {
-	seen := filepath.Join(t.TempDir(), "environment")
+	seen := filepath.ToSlash(filepath.Join(t.TempDir(), "environment"))
 	binary, recorded := fakeCommand(t, "printf '%s %s' \"$TREBARUNA_PUK\" \"$TREBARUNA_NEW_PIN\" > "+seen+"; echo '{\"changed\":true}'")
 
 	change := domain.PINChange{Action: domain.UnlockPIN, Token: "Carta Nazionale", Secret: "87654321", NewPIN: "2468", Repeat: "2468"}
@@ -186,7 +186,7 @@ func TestTheCardsAnswersToAPINChangeBecomeProblems(t *testing.T) {
 
 // TestAPUKChangeCarriesTheCurrentAndTheNewPUKInTheEnvironment.
 func TestAPUKChangeCarriesTheCurrentAndTheNewPUKInTheEnvironment(t *testing.T) {
-	seen := filepath.Join(t.TempDir(), "environment")
+	seen := filepath.ToSlash(filepath.Join(t.TempDir(), "environment"))
 	binary, recorded := fakeCommand(t, "printf '%s %s %s' \"$TREBARUNA_PUK\" \"$TREBARUNA_NEW_PUK\" \"$TREBARUNA_NEW_PIN\" > "+seen+"; echo '{\"changed\":true}'")
 	change := domain.PINChange{Action: domain.ChangePUK, Secret: "87654321", NewPIN: "11223344", Repeat: "11223344"}
 	if err := (infrastructure.CommandLinePINChanger{BinaryPath: binary}).Apply(context.Background(), change); err != nil {

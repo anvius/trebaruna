@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -30,6 +31,9 @@ func TestTheUpdateCheckSaysWhereTheNewerReleaseIs(t *testing.T) {
 		t.Skip("builds the command")
 	}
 	binary := filepath.Join(t.TempDir(), "trebaruna")
+	if runtime.GOOS == "windows" {
+		binary += ".exe" // go build -o writes the name as given, and Windows runs only files with an extension
+	}
 	build := exec.Command("go", "build", "-o", binary, "-ldflags",
 		"-X codeberg.org/simplicer/trebaruna/src/entrypoint/cli.injectedVersion=0.105.0-unstable", "./src/entrypoint/main")
 	build.Dir = filepath.Join("..", "..")

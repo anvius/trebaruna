@@ -15,7 +15,7 @@ import (
 // TestThePageRequestIsDrivenThroughTheCommandsPipes: the proposal is read,
 // the decision with its secret goes to stdin, the outcome comes back.
 func TestThePageRequestIsDrivenThroughTheCommandsPipes(t *testing.T) {
-	received := filepath.Join(t.TempDir(), "decision")
+	received := filepath.ToSlash(filepath.Join(t.TempDir(), "decision"))
 	proposal := `{"type":"proposal","operation":"sign","site":"sede.example","app_name":"SEDE","format":"CAdES","data_size":4,"items":[],"filters":["dnie:"],"warnings":["single DES"]}`
 	outcome := `{"type":"outcome","answer":"Y2VydA==|c2ln","delivered":true}`
 	binary, recorded := fakeCommand(t, "echo '"+proposal+"'; read line; printf '%s' \"$line\" > "+received+"; echo '"+outcome+"'")
@@ -74,7 +74,7 @@ func TestAnIncompleteApprovalNeverReachesTheCommand(t *testing.T) {
 // TestAKeptCertificateTravelsWithoutTheKey: the window approves with the
 // certificate the page asked to keep, and no key or secret goes back.
 func TestAKeptCertificateTravelsWithoutTheKey(t *testing.T) {
-	received := filepath.Join(t.TempDir(), "decision")
+	received := filepath.ToSlash(filepath.Join(t.TempDir(), "decision"))
 	proposal := `{"type":"proposal","operation":"sign","site":"sede.example","format":"CAdES","data_size":4,"items":[],"remembered":"MARIA GARCIA"}`
 	outcome := `{"type":"outcome","answer":"Y2VydA==|c2ln","delivered":true,"session":true}`
 	binary, _ := fakeCommand(t, "echo '"+proposal+"'; read line; printf '%s' \"$line\" > "+received+"; echo '"+outcome+"'")
@@ -100,7 +100,7 @@ func TestAKeptCertificateTravelsWithoutTheKey(t *testing.T) {
 // TestThePlacedSealTravelsInPoints: the page asks for a seal on a copy of
 // its PDF, and the box goes back in PDF points.
 func TestThePlacedSealTravelsInPoints(t *testing.T) {
-	received := filepath.Join(t.TempDir(), "decision")
+	received := filepath.ToSlash(filepath.Join(t.TempDir(), "decision"))
 	proposal := `{"type":"proposal","operation":"sign","site":"sede.example","format":"PAdES","data_size":4,"items":[],"seal":"want","seal_document":"/tmp/x/document.pdf"}`
 	outcome := `{"type":"outcome","answer":"Y2VydA==|c2ln","delivered":true}`
 	binary, _ := fakeCommand(t, "echo '"+proposal+"'; read line; printf '%s' \"$line\" > "+received+"; echo '"+outcome+"'")

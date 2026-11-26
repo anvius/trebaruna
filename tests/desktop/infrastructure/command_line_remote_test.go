@@ -21,7 +21,7 @@ const remoteListing = `{"slots":[{"index":0,"description":"firma-qualificata","t
 // address and the client id go on the command line, the user and password
 // in the environment; each credential comes back as a certificate.
 func TestARemoteServicesCredentialsAreListedAsCertificates(t *testing.T) {
-	seen := filepath.Join(t.TempDir(), "environment")
+	seen := filepath.ToSlash(filepath.Join(t.TempDir(), "environment"))
 	binary, recorded := fakeCommand(t, `printf '%s|%s' "$TREBARUNA_CSC_USER" "$TREBARUNA_CSC_PASSWORD" > `+seen+`; echo '`+remoteListing+`'`)
 	account := domain.RemoteAccount{Address: "https://provider.example/csc/v2", User: "mario", Password: "segreto", OAuthClient: "trebaruna"}
 	reader := infrastructure.CommandLineCardReader{BinaryPath: binary, Store: domain.StoreRemote,
@@ -59,7 +59,7 @@ func TestARemoteServicesCredentialsAreListedAsCertificates(t *testing.T) {
 // service and the client id on the command line; the account's secrets,
 // the PIN and the one-time code in the environment.
 func TestARemoteKeySignsThroughItsService(t *testing.T) {
-	seen := filepath.Join(t.TempDir(), "environment")
+	seen := filepath.ToSlash(filepath.Join(t.TempDir(), "environment"))
 	binary, recorded := fakeCommand(t, `printf '%s|%s|%s|%s' "$TREBARUNA_CSC_USER" "$TREBARUNA_CSC_PASSWORD" "$TREBARUNA_PIN" "$TREBARUNA_OTP" > `+
 		seen+`; echo '`+receiptJSON+`'`)
 	intent := fullIntent()

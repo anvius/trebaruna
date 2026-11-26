@@ -44,7 +44,7 @@ func TestADocumentIsEncryptedForEachRecipient(t *testing.T) {
 // TestAnEnvelopeOpensWithTheKeyChosenToSign: the key's flags are the
 // signing ones, and the passphrase and the PIN travel in the environment.
 func TestAnEnvelopeOpensWithTheKeyChosenToSign(t *testing.T) {
-	seen := filepath.Join(t.TempDir(), "environment")
+	seen := filepath.ToSlash(filepath.Join(t.TempDir(), "environment"))
 	binary, recorded := fakeCommand(t, `printf '%s|%s' "$TREBARUNA_PASSPHRASE" "$TREBARUNA_PIN" > `+seen+
 		`; echo '{"path":"/tmp/offerta.pdf","size":2048}'`)
 

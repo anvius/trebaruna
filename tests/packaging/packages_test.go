@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -113,6 +114,11 @@ func TestTheWindowsInstallerLeavesAfirmaLinksToTheirOwner(t *testing.T) {
 
 // TestTheAppImageIsTheWindowOrTheCommandLineByItsName.
 func TestTheAppImageIsTheWindowOrTheCommandLineByItsName(t *testing.T) {
+	// An AppImage exists only on Linux, and its AppRun is a shell script that
+	// Windows cannot run.
+	if runtime.GOOS == "windows" {
+		t.Skip("AppImages exist on Linux only")
+	}
 	appdir := t.TempDir()
 	for name, says := range map[string]string{"trebaruna": "command line", "trebaruna-desktop": "window"} {
 		path := filepath.Join(appdir, "usr", "bin", name)

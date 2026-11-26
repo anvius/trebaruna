@@ -10,22 +10,19 @@ import (
 
 	"codeberg.org/simplicer/trebaruna/src/desktop/domain"
 	"codeberg.org/simplicer/trebaruna/src/desktop/infrastructure"
+	"codeberg.org/simplicer/trebaruna/tests/support/fakecmd"
 
 	transparencydomain "codeberg.org/simplicer/trebaruna/src/transparency/domain"
 )
 
-// fakeCommand writes an executable that stands in for trebaruna: it records its
+// fakeCommand makes an executable that stands in for trebaruna: it records its
 // arguments one per line and then runs the given shell body.
 func fakeCommand(t *testing.T, body string) (binary, argumentsFile string) {
 	t.Helper()
 	directory := t.TempDir()
 	argumentsFile = filepath.Join(directory, "arguments")
-	binary = filepath.Join(directory, "trebaruna")
-	script := "#!/bin/sh\nfor a in \"$@\"; do printf '%s\\n' \"$a\"; done > " + argumentsFile + "\n" + body + "\n"
-	if err := os.WriteFile(binary, []byte(script), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	return binary, argumentsFile
+	script := "for a in \"$@\"; do printf '%s\\n' \"$a\"; done > " + filepath.ToSlash(argumentsFile) + "\n" + body + "\n"
+	return fakecmd.Script(t, directory, "trebaruna", script), argumentsFile
 }
 
 func recordedArguments(t *testing.T, path string) []string {
@@ -202,7 +199,7 @@ func contains(values []string, wanted string) bool {
 
 func TestThePassphraseNeverAppearsOnTheCommandLine(t *testing.T) {
 	directory := t.TempDir()
-	seen := filepath.Join(directory, "environment")
+	seen := filepath.ToSlash(filepath.Join(directory, "environment"))
 	binary, recorded := fakeCommand(t, "printf '%s' \"$TREBARUNA_PASSPHRASE\" > "+seen+"; echo '"+receiptJSON+"'")
 
 	if _, err := (infrastructure.CommandLineSigner{BinaryPath: binary}).Sign(context.Background(), fullIntent()); err != nil {
@@ -224,7 +221,7 @@ func TestThePassphraseNeverAppearsOnTheCommandLine(t *testing.T) {
 }
 
 func TestTheTimestampAccountTravelsWithoutItsPasswordOnTheCommandLine(t *testing.T) {
-	seen := filepath.Join(t.TempDir(), "environment")
+	seen := filepath.ToSlash(filepath.Join(t.TempDir(), "environment"))
 	binary, recorded := fakeCommand(t, "printf '%s' \"$TREBARUNA_TSA_PASS\" > "+seen+"; echo '"+receiptJSON+"'")
 	intent := fullIntent()
 	intent.TimestampUser = "studio.rossi"
@@ -381,7 +378,7 @@ func TestContainersInvoicesAndPoliciesBecomeFlags(t *testing.T) {
 
 // TestThePDFPasswordTravelsInTheEnvironment, never on the command line.
 func TestThePDFPasswordTravelsInTheEnvironment(t *testing.T) {
-	seen := filepath.Join(t.TempDir(), "environment")
+	seen := filepath.ToSlash(filepath.Join(t.TempDir(), "environment"))
 	binary, recorded := fakeCommand(t, "printf '%s' \"$TREBARUNA_PDF_PASSWORD\" > "+seen+"; echo '"+receiptJSON+"'")
 	intent := fullIntent()
 	intent.PDFPassword = "abierto"

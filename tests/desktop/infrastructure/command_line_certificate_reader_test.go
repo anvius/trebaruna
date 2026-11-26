@@ -40,7 +40,7 @@ func TestTheCertificateIsDescribedFromTheCommand(t *testing.T) {
 }
 
 func TestTheReaderHandsThePassphraseOverTheEnvironment(t *testing.T) {
-	seen := filepath.Join(t.TempDir(), "environment")
+	seen := filepath.ToSlash(filepath.Join(t.TempDir(), "environment"))
 	binary, _ := fakeCommand(t, "printf '%s' \"$TREBARUNA_PASSPHRASE\" > "+seen+"; echo '"+certificateJSON+"'")
 
 	if _, err := (infrastructure.CommandLineCertificateReader{BinaryPath: binary}).Read(

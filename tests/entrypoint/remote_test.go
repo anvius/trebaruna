@@ -2,14 +2,13 @@ package cli_test
 
 import (
 	"net/url"
-	"os"
 	"os/exec"
-	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
 
 	"codeberg.org/simplicer/trebaruna/tests/support/csc"
+	"codeberg.org/simplicer/trebaruna/tests/support/fakecmd"
 )
 
 // TestSignWithARemoteKeyAndSaySo: the receipt names the provider, the
@@ -94,10 +93,7 @@ func TestSignWithASignatureAuthorisedInTheBrowser(t *testing.T) {
 	if _, err := exec.LookPath("curl"); err != nil {
 		t.Skip("curl stands in for the browser")
 	}
-	browser := filepath.Join(t.TempDir(), "browser")
-	if err := os.WriteFile(browser, []byte("#!/bin/sh\nexec curl -sS -L -o /dev/null \"$1\"\n"), 0o755); err != nil {
-		t.Fatal(err)
-	}
+	browser := fakecmd.Script(t, t.TempDir(), "browser", "exec curl -sS -L -o /dev/null \"$1\"")
 	t.Setenv("BROWSER", browser)
 	server := csc.Start(t)
 	server.ClientSecret = "client-secret-value"
