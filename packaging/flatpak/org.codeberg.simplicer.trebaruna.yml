@@ -23,6 +23,16 @@ finish-args:
   - --share=network
   # The documents to sign, and the signed copies written beside them.
   - --filesystem=home
+  # The certificate stores of browsers that a Flatpak keeps in its own folder,
+  # ~/.var/app/<id>, which --filesystem=home does not reach (ADR-0020): the
+  # profiles of LibreWolf, Firefox and Chromium (and ungoogled-chromium) are
+  # read in place to sign, and the local channel's root is written into them
+  # when asked, hence read-write. Other browsers' folders are not granted here;
+  # `flatpak override --user --filesystem=~/.var/app/<id>` adds one.
+  - --filesystem=~/.var/app/io.gitlab.librewolf-community:rw
+  - --filesystem=~/.var/app/org.mozilla.firefox:rw
+  - --filesystem=~/.var/app/org.chromium.Chromium:rw
+  - --filesystem=~/.var/app/io.github.ungoogled_software.ungoogled_chromium:rw
 modules:
   - name: go
     buildsystem: simple
