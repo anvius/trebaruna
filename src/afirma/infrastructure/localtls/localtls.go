@@ -58,7 +58,8 @@ func (m Material) Fingerprint() string {
 	return hex.EncodeToString(digest[:])
 }
 
-// Directory is where the material lives: $XDG_CONFIG_HOME/trebaruna/localtls.
+// Directory is where the material lives: trebaruna/localtls under the user's
+// configuration folder (os.UserConfigDir: $XDG_CONFIG_HOME on Linux).
 func Directory() (string, error) {
 	base, err := os.UserConfigDir()
 	if err != nil {

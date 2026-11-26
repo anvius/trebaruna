@@ -21,7 +21,9 @@ type RecipientDirectory struct {
 	Directory string
 }
 
-// DefaultRecipientDirectory is $XDG_CONFIG_HOME/trebaruna/recipients.
+// DefaultRecipientDirectory is the recipients folder under the user's
+// configuration folder: $XDG_CONFIG_HOME/trebaruna/recipients on Linux, and the
+// equivalent that os.UserConfigDir names on macOS and Windows.
 func DefaultRecipientDirectory() (RecipientDirectory, error) {
 	base, err := os.UserConfigDir()
 	if err != nil {
