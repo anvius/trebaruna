@@ -8,7 +8,7 @@ PREFIX  ?= /usr/local
 DESTDIR ?= 
 LDFLAGS := -s -w -X codeberg.org/simplicer/trebaruna/src/entrypoint/cli.injectedVersion=$(VERSION)
 
-.PHONY: afirma-default afirma-autofirma help build build-token build-gui deps-gui test test-verbose check check-dss cross install install-desktop clean version
+.PHONY: afirma-default afirma-autofirma help build build-token build-gui deps-gui test test-verbose check ci ci-tools check-dss cross install install-desktop clean version
 
 help:
 	@echo "make build        binario estático (P12/PEM), sin dependencias"
@@ -17,6 +17,7 @@ help:
 	@echo "make deps-gui     paquetes de sistema que necesita la GUI"
 	@echo "make test         tests: dominio, caso de uso, CMS contra OpenSSL"
 	@echo "make check        tests + go vet + gofmt"
+	@echo "make ci           lo que corre el job Build and test de CI (race, SoftHSM, reproducible)"
 	@echo "make cross        linux/amd64, linux/arm64, darwin/{amd64,arm64}, windows/amd64"
 	@echo "make install          copia $(BIN) a ~/.local/bin"
 	@echo "make install-desktop  instala CLI + app + icono + lanzador (PREFIX=$(PREFIX))"
@@ -50,6 +51,30 @@ test-verbose:
 check: test
 	$(GO) vet ./src/... ./tests/...
 	@test -z "$$(gofmt -l src tests)" || (echo "gofmt needed:"; gofmt -l src tests; exit 1)
+
+# make ci runs, with the same flags, what the "Build and test" job of
+# .github/workflows/ci.yml runs: the race detector, the PKCS#11 tests against
+# SoftHSM and the binaries. make check skips the race detector and the token
+# tests when their tools are missing, so a green check was not a green CI.
+# Run it before a push. It needs the tools the job installs.
+SOFTHSM2_MODULE ?= $(firstword $(wildcard /usr/lib/softhsm/libsofthsm2.so /usr/lib/x86_64-linux-gnu/softhsm/libsofthsm2.so /usr/local/lib/softhsm/libsofthsm2.so))
+
+ci: ci-tools
+	$(GO) vet ./...
+	@test -z "$$(gofmt -l src tests)" || (echo "gofmt needed:"; gofmt -l src tests; exit 1)
+	CGO_ENABLED=1 SOFTHSM2_MODULE=$(SOFTHSM2_MODULE) $(GO) test ./tests/... -count=1 -race
+	$(MAKE) reproducible
+	CGO_ENABLED=1 SOFTHSM2_MODULE=$(SOFTHSM2_MODULE) $(GO) test -tags token ./tests/signing/token/ -count=1 -v
+	mkdir -p bin
+	CGO_ENABLED=1 $(GO) build -trimpath -tags token -o $(BIN_TOKEN) $(MAIN)
+	CGO_ENABLED=0 $(GO) build -trimpath -ldflags="-s -w" -o $(BIN) $(MAIN)
+	./$(BIN) version
+
+ci-tools:
+	@for tool in openssl pdftoppm qpdf softhsm2-util pkcs11-tool certutil; do \
+	  command -v $$tool >/dev/null 2>&1 || { echo "make ci: falta $$tool (el job instala openssl poppler-utils qpdf softhsm2 opensc libnss3-tools)"; exit 1; }; \
+	done
+	@test -n "$(SOFTHSM2_MODULE)" || { echo "make ci: falta libsofthsm2.so; indica su ruta en SOFTHSM2_MODULE"; exit 1; }
 
 cross:
 	@mkdir -p bin

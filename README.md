@@ -449,6 +449,7 @@ make            # help
 make build      # static CLI, no cgo
 make test       # the suite
 make check      # tests + vet
+make ci         # what CI's test job runs: race detector, SoftHSM tests, reproducible build
 make cross      # linux/windows/darwin binaries
 make build-gui  # desktop app (needs make deps-gui)
 ```
@@ -552,7 +553,9 @@ Issues and patches are welcome on Codeberg. Conventions used here:
   `feat` raises the minor and a `fix`, `refactor` or `perf` the patch; major
   0 is always `-unstable`. `VERSION` and the newest AppStream release say
   what the history gives, and `make check` fails when they do not.
-- `make check` must pass before a commit.
+- `make check` must pass before a commit, and `make ci` before a push: it runs
+  the steps of CI's test job (the race detector, the PKCS#11 tests against
+  SoftHSM, the reproducible build) and fails when a tool they need is missing.
 - New behaviour needs a test, and a claim needs a measurement.
 - A capability that is not tested is documented as a limit, not as a feature.
 

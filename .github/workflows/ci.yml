@@ -30,34 +30,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y openssl poppler-utils softhsm2 opensc qpdf libnss3-tools
 
-      - name: Static analysis
-        run: |
-          go vet ./...
-          test -z "$(gofmt -l src tests)" || (echo "gofmt needed:"; gofmt -l src tests; exit 1)
+      # The job's steps (vet, gofmt, the race-enabled tests, the reproducible
+      # build, the PKCS#11 tests against SoftHSM and the binaries) are the make
+      # ci target, so a developer runs exactly these before pushing.
+      - name: make ci
+        run: make ci
 
-      - name: Unit, domain and integration tests
-        run: CGO_ENABLED=1 go test ./tests/... -count=1 -race
-      # Two builds of the same commit from different directories must match:
-      # that is what lets anyone check a published binary (ADR-0017).
-      - name: Reproducible build
-        run: make reproducible
-
-      # The PKCS#11 adapter is behind the `token` tag, so the default run never
-      # compiles it. This job does, and exercises it against SoftHSM.
-      - name: PKCS#11 tests against SoftHSM
-        run: |
-          SOFTHSM2_MODULE=$(dpkg -L libsofthsm2 | grep -m1 'libsofthsm2\.so$')
-          CGO_ENABLED=1 SOFTHSM2_MODULE="$SOFTHSM2_MODULE" \
-            go test -tags token ./tests/signing/token/ -count=1 -v
-
-      - name: Build the PKCS#11 binary
-        run: CGO_ENABLED=1 go build -trimpath -tags token -o bin/trebaruna-token ./src/entrypoint/main
-
-      - name: Build the static CLI
-        run: CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o bin/trebaruna ./src/entrypoint/main
-
-      - name: Smoke test
-        run: ./bin/trebaruna version
 
   cross:
     name: Cross-compile

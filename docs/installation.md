@@ -259,6 +259,7 @@ make            # lists the targets
 make build      # static CLI
 make test       # the test suite
 make check      # tests + go vet
+make ci         # what CI runs: race detector and SoftHSM tests (needs its tools)
 make cross      # all release binaries, in ./bin
 make format     # gofmt
 ```
