@@ -286,7 +286,8 @@ Keeping the certificate (`sticky`): within one WebSocket session, a page may
 ask to keep the certificate you chose for its next request. The window then
 offers it already ticked, so you need not choose it and type its PIN again;
 you still approve every request, and you can untick it to choose another.
-Nothing is kept once the page leaves.
+Nothing is kept once the page leaves, or once the window has closed after its
+answer.
 
 Documents named by address (`XAdES Externally Detached`, `useManifest`): a
 page may ask for an XML signature over documents that stay on its servers,

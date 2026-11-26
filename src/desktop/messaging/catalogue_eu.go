@@ -185,7 +185,6 @@ var basque = Catalogue{
 	PageUseRemembered:          "Erabili aurreko eskaerako ziurtagiri bera",
 	PageRememberedHolder:       "%s: orriak gordetzeko eskatu zuen konexioak irauten duen bitartean.",
 	PageListening:              "Orria ordenagailu honetan trebarunarekin konektatzeko zain (%d ataka)…",
-	PageNextRequest:            "Orriaren hurrengo eskaeraren zain…",
 	PageSessionClosed:          "Orriak trebarunarekiko konexioa itxi du.",
 	PageLocalTLSMissing:        "Orri hau ordenagailu honetako kanal zifratu baten bidez komunikatzen da trebarunarekin, eta horrek trebarunaren tokiko ziurtagiria behar du. Zure erabiltzailearentzat bakarrik instalatzen da: bere erroak ez du gako pribaturik gordetzen eta 127.0.0.1erako bakarrik balio du.",
 	PageInstallLocalTLS:        "Instalatu tokiko ziurtagiria",

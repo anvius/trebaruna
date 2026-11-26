@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/test"
@@ -23,12 +24,28 @@ type scriptedSession struct {
 	steps     []domain.PageStep
 	decisions []domain.PageDecision
 	closed    bool
+	// held are the moments the window waits in after an answer; windowClosed
+	// is set when the window asks to close.
+	held         []func()
+	windowClosed bool
 }
 
+// Next plays the steps left; then the command has ended.
 func (s *scriptedSession) Next() (domain.PageStep, error) {
+	if len(s.steps) == 0 {
+		return domain.PageStep{Closed: true}, nil
+	}
 	step := s.steps[0]
 	s.steps = s.steps[1:]
 	return step, nil
+}
+
+// passMoment lets the moments after answers run, as time does.
+func (s *scriptedSession) passMoment() {
+	for _, moment := range s.held {
+		moment()
+	}
+	s.held = nil
 }
 func (s *scriptedSession) Decide(decision domain.PageDecision) error {
 	s.decisions = append(s.decisions, decision)
@@ -67,6 +84,8 @@ func pageFixture(t *testing.T, steps ...domain.PageStep) (*pageRequest, *scripte
 	request := newPageRequest(window, messaging.For(messaging.Spanish),
 		application.NewReviewPageRequest(scriptedRequests{session: session}), cards, cards)
 	request.run, request.cards.run = inLine, inLine
+	request.later = func(_ time.Duration, work func()) { session.held = append(session.held, work) }
+	request.quit = func() { session.windowClosed = true }
 	request.preview = application.NewPreviewPage(NewBuiltInRenderer(), application.InkFinder{})
 	window.SetContent(request.object())
 	window.Resize(fyne.NewSize(640, 720))
@@ -111,11 +130,15 @@ func TestApprovingWithACardSendsItsCertificateAndPIN(t *testing.T) {
 		session.decisions[0].Card.PIN != "123456" {
 		t.Fatalf("decisions %+v", session.decisions)
 	}
-	if request.status.Text != "Hecho: la respuesta ha llegado a sede.example." || !request.closing.Visible() || request.approve.Visible() {
+	if request.status.Text != "Hecho: la respuesta ha llegado a sede.example." || request.approve.Visible() {
 		t.Errorf("status %q", request.status.Text)
 	}
-	if !session.closed {
-		t.Error("the session ends with the outcome")
+	if session.windowClosed {
+		t.Error("the window stays a moment, so the answer can be read")
+	}
+	session.passMoment()
+	if !session.windowClosed || !request.finished {
+		t.Error("after the moment the window closes, and the command ends with it")
 	}
 }
 
@@ -140,8 +163,12 @@ func TestARefusedCertificateIsSaidAndAskedAgain(t *testing.T) {
 		t.Fatalf("status %q", request.status.Text)
 	}
 	test.Tap(request.approve)
-	if len(session.decisions) != 2 || !request.closing.Visible() {
-		t.Errorf("decisions %d", len(session.decisions))
+	if len(session.decisions) != 2 {
+		t.Fatalf("decisions %d", len(session.decisions))
+	}
+	session.passMoment()
+	if !session.windowClosed {
+		t.Error("the answer after a refused certificate closes the window too")
 	}
 }
 
@@ -150,6 +177,10 @@ func TestDecliningTellsThePage(t *testing.T) {
 	test.Tap(request.decline)
 	if len(session.decisions) != 1 || session.decisions[0].Approved || request.status.Text != request.m.PageDeclined {
 		t.Errorf("decisions %+v, status %q", session.decisions, request.status.Text)
+	}
+	session.passMoment()
+	if !session.windowClosed {
+		t.Error("a declined request answers CANCEL and closes the window")
 	}
 }
 
@@ -165,10 +196,14 @@ func TestASaveNeedsAPlaceBeforeAnythingIsSent(t *testing.T) {
 	}
 }
 
-func TestAFailureIsSaid(t *testing.T) {
-	request, _ := pageFixture(t, domain.PageStep{Outcome: &domain.PageOutcome{Answer: "SAF_06: Formato de firma no soportado", Error: "SAF_06: Formato de firma no soportado"}})
+func TestAFailureIsSaidAndKeptOpen(t *testing.T) {
+	request, session := pageFixture(t, domain.PageStep{Outcome: &domain.PageOutcome{Answer: "SAF_06: Formato de firma no soportado", Error: "SAF_06: Formato de firma no soportado", Delivered: true}})
 	if !strings.Contains(request.status.Text, "SAF_06") || request.status.Importance != widget.DangerImportance {
 		t.Errorf("status %q", request.status.Text)
+	}
+	session.passMoment()
+	if session.windowClosed || !request.closing.Visible() {
+		t.Error("a failure stays on screen with Close, until the person closes the window")
 	}
 }
 
@@ -309,16 +344,40 @@ func TestALocalChannelSessionShowsEachRequestInTurn(t *testing.T) {
 	if len(session.decisions) != 1 {
 		t.Fatalf("decisions %+v", session.decisions)
 	}
-	// The second request replaced the first.
+	// The page's next request, sent at once after its answer, replaces the
+	// answer on screen and keeps the window open: the moment closes nothing.
 	if !strings.Contains(detailText(request), "otra.sede.example") || !strings.Contains(detailText(request), "XAdES") || request.approve.Disabled() {
 		t.Errorf("the second request is not shown afresh: %q", detailText(request))
+	}
+	session.passMoment()
+	if session.windowClosed {
+		t.Error("a request that came after the answer keeps the window open")
 	}
 	test.Tap(request.decline)
 	if len(session.decisions) != 2 || session.decisions[1].Approved {
 		t.Fatalf("decisions %+v", session.decisions)
 	}
-	if request.status.Text != request.m.PageSessionClosed || !request.closing.Visible() || !session.closed {
-		t.Errorf("after the page left: %q, close shown %v, session closed %v", request.status.Text, request.closing.Visible(), session.closed)
+	if request.status.Text != request.m.PageDeclined {
+		t.Errorf("after CANCEL: %q", request.status.Text)
+	}
+	session.passMoment()
+	if !session.windowClosed {
+		t.Error("after CANCEL, with the page gone, the window closes")
+	}
+}
+
+// TestThePageLeavingAfterItsAnswerKeepsTheAnswer: the page closes the channel
+// once it has its answer; the answer stays on screen and nothing replaces it.
+func TestThePageLeavingAfterItsAnswerKeepsTheAnswer(t *testing.T) {
+	request, session := pageFixture(t, proposalStep(signProposal()), sessionOutcomeStep("Y2VydA==|c2ln"), domain.PageStep{Closed: true})
+	request.cards.pin.SetText("123456")
+	test.Tap(request.approve)
+	if request.status.Text != "Hecho: la respuesta ha llegado a sede.example." || request.finished {
+		t.Errorf("status %q, finished %t", request.status.Text, request.finished)
+	}
+	session.passMoment()
+	if !session.windowClosed {
+		t.Error("the window closes after the moment")
 	}
 }
 

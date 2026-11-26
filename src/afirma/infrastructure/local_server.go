@@ -27,6 +27,9 @@ type LocalServer struct {
 	Answer func(ctx context.Context, message string) string
 	// Listening hears the port bound, once.
 	Listening func(port int)
+	// Delivered hears each answer once it is on the socket, so an outcome
+	// reported for it is never ahead of the answer the page receives.
+	Delivered func(message, answer string)
 	Patience  time.Duration
 }
 
@@ -95,6 +98,9 @@ func (s LocalServer) Serve(ctx context.Context, ports []int) error {
 				}
 				if err := connection.WriteText(answer); err != nil {
 					return
+				}
+				if s.Delivered != nil {
+					s.Delivered(message, answer)
 				}
 			}
 		}),

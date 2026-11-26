@@ -108,7 +108,13 @@ func (o PageOutcome) Declined() bool { return o.Answer == "CANCEL" }
 
 // Succeeded reports an answer the page received without an error.
 func (o PageOutcome) Succeeded() bool {
-	return o.Error == "" && o.Answer != "" && !o.Declined() && !strings.HasPrefix(o.Answer, "SAF_")
+	return o.Delivered && o.Error == "" && o.Answer != "" && !o.Declined() && !strings.HasPrefix(o.Answer, "SAF_")
+}
+
+// Answered reports that the page has its answer: the signed one, or the CANCEL
+// it gets when the person declines. The window closes once it has one.
+func (o PageOutcome) Answered() bool {
+	return o.Succeeded() || (o.Declined() && o.Delivered && o.Error == "")
 }
 
 // PageStep is what comes next from the command: a proposal to decide, or the

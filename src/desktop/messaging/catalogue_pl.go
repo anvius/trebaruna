@@ -184,7 +184,6 @@ var polish = Catalogue{
 	PageUseRemembered:          "Użyj tego samego certyfikatu co w poprzednim żądaniu",
 	PageRememberedHolder:       "%s: strona poprosiła o zachowanie go na czas trwania połączenia.",
 	PageListening:              "Oczekiwanie na połączenie strony z programem trebaruna na tym komputerze (port %d)…",
-	PageNextRequest:            "Oczekiwanie na kolejne żądanie strony…",
 	PageSessionClosed:          "Strona zamknęła połączenie z programem trebaruna.",
 	PageLocalTLSMissing:        "Ta strona komunikuje się z programem trebaruna przez szyfrowany kanał na tym komputerze, co wymaga lokalnego certyfikatu programu trebaruna. Instaluje się go tylko dla bieżącego użytkownika: jego certyfikat główny nie przechowuje klucza prywatnego i jest ważny wyłącznie dla 127.0.0.1.",
 	PageInstallLocalTLS:        "Zainstaluj certyfikat lokalny",

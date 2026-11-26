@@ -246,9 +246,12 @@ computer (`wss://127.0.0.1`), which needs a certificate the browser trusts.
 Chromium, and removes it (ADR-0019): its root keeps no private key and is
 valid for 127.0.0.1 alone. When a page asks for the channel and the
 certificate is missing, the approval window offers to install it and opens
-the channel again. While the page keeps the channel, the window shows each
-of its requests in turn and waits for the next; it closes when the page
-leaves. When the page asks to keep the certificate (`sticky`), its next
+the channel again. While the page keeps the channel, the window shows each of its
+requests in turn. Once the page has its answer, the window says so and closes
+a moment later (about 1.5 seconds), unless the page has already asked for
+another request, which it then shows; closing the window ends the channel. A
+request you decline is answered CANCEL and the window closes the same way; a
+failed one stays open with its error. When the page asks to keep the certificate (`sticky`), its next
 request offers *Use the same certificate as in the previous request*,
 ticked, with the holder's name below: approving uses it without choosing it
 or typing its PIN again; unticking shows the key choice. Recent Chromium

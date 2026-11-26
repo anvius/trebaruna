@@ -181,7 +181,6 @@ var galician = Catalogue{
 	PageUseRemembered:          "Usar o mesmo certificado ca na petición anterior",
 	PageRememberedHolder:       "%s: a páxina pediu conservalo mentres dure a conexión.",
 	PageListening:              "Agardando a que a páxina se conecte con trebaruna neste equipo (porto %d)…",
-	PageNextRequest:            "Agardando a seguinte petición da páxina…",
 	PageSessionClosed:          "A páxina pechou a conexión con trebaruna.",
 	PageLocalTLSMissing:        "Esta páxina comunícase con trebaruna por unha canle cifrada neste equipo, que precisa o certificado local de trebaruna. Instálase só para o teu usuario: a súa raíz non garda chave privada e só vale para 127.0.0.1.",
 	PageInstallLocalTLS:        "Instalar o certificado local",

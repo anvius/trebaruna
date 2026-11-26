@@ -356,12 +356,15 @@ func serveLocalChannel(invocation domain.Invocation, use *application.AnswerPage
 		Answer: func(ctx context.Context, message string) string {
 			operationCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 			defer cancel()
-			answer := answers.Answer(operationCtx, message)
+			return answers.Answer(operationCtx, message)
+		},
+		// Reported once the answer is on the socket, so the window can end the
+		// channel after it without cutting the answer short.
+		Delivered: func(message, answer string) {
 			// An operation's answer, or over 4.1 the result getresult fetched.
 			if !strings.HasPrefix(message, "echo=") && answer != "#wait" {
 				report(map[string]any{"type": "outcome", "answer": answer, "delivered": true, "session": true})
 			}
-			return answer
 		},
 	}
 	if err := server.Serve(context.Background(), channel.Ports); err != nil {

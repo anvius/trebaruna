@@ -285,3 +285,59 @@ func TestAnUploadedRequestOverTheChannelIsFetched(t *testing.T) {
 		t.Error("the uploaded request is read once, and it was")
 	}
 }
+
+// TestAnAnswerIsReportedOnceThePageHasIt: the outcome the window hears names
+// the answer that went out on the socket, and comes after it was sent.
+func TestAnAnswerIsReportedOnceThePageHasIt(t *testing.T) {
+	material, err := localtls.Generate(t.TempDir(), time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	free, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	port := free.Addr().(*net.TCPAddr).Port
+	free.Close()
+
+	listening := make(chan struct{}, 1)
+	reported := make(chan string, 1)
+	served := make(chan error, 1)
+	server := infrastructure.LocalServer{
+		Certificate: material.Server,
+		Answer:      func(_ context.Context, message string) string { return "ANSWER " + message },
+		Delivered:   func(_, answer string) { reported <- answer },
+		Listening:   func(int) { listening <- struct{}{} },
+		Patience:    10 * time.Second,
+	}
+	go func() { served <- server.Serve(context.Background(), []int{port}) }()
+	<-listening
+
+	pool := x509.NewCertPool()
+	pool.AddCert(material.Root)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	page, err := websocket.Dial(ctx, "127.0.0.1:"+strconv.Itoa(port), "/", &tls.Config{RootCAs: pool})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := page.WriteText("first"); err != nil {
+		t.Fatal(err)
+	}
+	answer, err := page.ReadMessage()
+	if err != nil || answer != "ANSWER first" {
+		t.Fatalf("the page gets %q, %v", answer, err)
+	}
+	select {
+	case got := <-reported:
+		if got != answer {
+			t.Errorf("reported %q, the page had %q", got, answer)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("the answer is never reported")
+	}
+	page.Close()
+	if err := <-served; err != nil {
+		t.Errorf("the channel ends with the page: %v", err)
+	}
+}

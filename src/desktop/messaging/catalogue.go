@@ -249,7 +249,6 @@ type Catalogue struct {
 	PageUseRemembered        string
 	PageRememberedHolder     string
 	PageListening            string
-	PageNextRequest          string
 	PageSessionClosed        string
 	PageLocalTLSMissing      string
 	PageInstallLocalTLS      string
@@ -624,7 +623,6 @@ var spanish = Catalogue{
 	PageUseRemembered:          "Usar el mismo certificado que en la petición anterior",
 	PageRememberedHolder:       "%s: la página pidió conservarlo mientras dure la conexión.",
 	PageListening:              "Esperando a que la página se conecte con trebaruna en este equipo (puerto %d)…",
-	PageNextRequest:            "Esperando la siguiente petición de la página…",
 	PageSessionClosed:          "La página ha cerrado la conexión con trebaruna.",
 	PageLocalTLSMissing:        "Esta página se comunica con trebaruna por un canal cifrado en este equipo, que necesita el certificado local de trebaruna. Se instala solo para tu usuario: su raíz no conserva clave privada y solo vale para 127.0.0.1.",
 	PageInstallLocalTLS:        "Instalar el certificado local",
@@ -978,7 +976,6 @@ var italian = Catalogue{
 	PageUseRemembered:          "Usa lo stesso certificato della richiesta precedente",
 	PageRememberedHolder:       "%s: la pagina ha chiesto di conservarlo finché dura la connessione.",
 	PageListening:              "In attesa che la pagina si colleghi a trebaruna su questo computer (porta %d)…",
-	PageNextRequest:            "In attesa della prossima richiesta della pagina…",
 	PageSessionClosed:          "La pagina ha chiuso la connessione con trebaruna.",
 	PageLocalTLSMissing:        "Questa pagina comunica con trebaruna attraverso un canale cifrato su questo computer, che richiede il certificato locale di trebaruna. Si installa solo per il tuo utente: la sua radice non conserva la chiave privata e vale solo per 127.0.0.1.",
 	PageInstallLocalTLS:        "Installa il certificato locale",
@@ -1332,7 +1329,6 @@ var english = Catalogue{
 	PageUseRemembered:          "Use the same certificate as in the previous request",
 	PageRememberedHolder:       "%s: the page asked to keep it while the connection lasts.",
 	PageListening:              "Waiting for the page to connect to trebaruna on this computer (port %d)…",
-	PageNextRequest:            "Waiting for the page's next request…",
 	PageSessionClosed:          "The page closed its connection to trebaruna.",
 	PageLocalTLSMissing:        "This page talks to trebaruna over an encrypted channel on this computer, which needs trebaruna's local certificate. It is installed for your user only: its root keeps no private key and is valid for 127.0.0.1 alone.",
 	PageInstallLocalTLS:        "Install the local certificate",

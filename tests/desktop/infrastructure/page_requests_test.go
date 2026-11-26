@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"codeberg.org/simplicer/trebaruna/src/desktop/domain"
 	"codeberg.org/simplicer/trebaruna/src/desktop/infrastructure"
@@ -120,5 +121,29 @@ func TestThePlacedSealTravelsInPoints(t *testing.T) {
 	decision, _ := os.ReadFile(received)
 	if !strings.Contains(string(decision), `"seal":{"llx":300,"lly":60.5,"page":2,"urx":520,"ury":120}`) {
 		t.Errorf("decision %s", decision)
+	}
+}
+
+// TestEndingTheCommandReleasesAChannelThatStaysOpen: a WebSocket channel lasts
+// as long as the page keeps it; ending the command's context kills it, so the
+// window can let go of the channel's port before the process exits.
+func TestEndingTheCommandReleasesAChannelThatStaysOpen(t *testing.T) {
+	binary, _ := fakeCommand(t, "echo '{\"type\":\"listening\",\"port\":49152}'; exec sleep 60")
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	session, err := infrastructure.CommandLinePageRequests{BinaryPath: binary}.Open(ctx, "afirma://websocket?v=4")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if step, err := session.Next(); err != nil || step.Listening != 49152 {
+		t.Fatalf("step %+v, %v", step, err)
+	}
+	cancel()
+	closed := make(chan error, 1)
+	go func() { closed <- session.Close() }()
+	select {
+	case <-closed:
+	case <-time.After(10 * time.Second):
+		t.Fatal("the command outlived its context: the channel would stay open")
 	}
 }

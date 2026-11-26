@@ -182,7 +182,6 @@ var catalan = Catalogue{
 	PageUseRemembered:          "Fes servir el mateix certificat que a la petició anterior",
 	PageRememberedHolder:       "%s: la pàgina va demanar conservar-lo mentre duri la connexió.",
 	PageListening:              "S'està esperant que la pàgina es connecti amb trebaruna en aquest ordinador (port %d)…",
-	PageNextRequest:            "S'està esperant la petició següent de la pàgina…",
 	PageSessionClosed:          "La pàgina ha tancat la connexió amb trebaruna.",
 	PageLocalTLSMissing:        "Aquesta pàgina es comunica amb trebaruna per un canal xifrat en aquest ordinador, que necessita el certificat local de trebaruna. S'instal·la només per al teu usuari: la seva arrel no conserva clau privada i només val per a 127.0.0.1.",
 	PageInstallLocalTLS:        "Instal·la el certificat local",

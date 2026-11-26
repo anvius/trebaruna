@@ -59,6 +59,15 @@ type pageRequest struct {
 	closing       *widget.Button
 	finished      bool
 	cancel        context.CancelFunc
+	// answered is set once the page has its answer, or CANCEL: the window
+	// says so and closes after answeredHold, unless the page asks again
+	// meanwhile. generation counts the moments since, so an old one does not
+	// close the window for a newer request.
+	answered   bool
+	generation int
+	// later runs work on the UI thread after a delay; quit closes the window.
+	later func(delay time.Duration, work func())
+	quit  func()
 
 	// uri is the request, started again once the local certificate is
 	// installed; localChannel installs it; installLocal offers to.
@@ -95,11 +104,13 @@ func RunPageRequest(options Options, uri string) {
 	window.SetContent(request.object())
 	request.start(uri)
 	window.ShowAndRun()
+	request.stop(commandPatience)
 }
 
 func newPageRequest(window fyne.Window, m messaging.Catalogue, review *application.ReviewPageRequest,
 	cards, firefox *application.ListCards) *pageRequest {
-	request := &pageRequest{m: m, window: window, review: review, run: offThread, cardList: cards, storeList: firefox}
+	request := &pageRequest{m: m, window: window, review: review, run: offThread, later: afterDelay, quit: window.Close,
+		cardList: cards, storeList: firefox}
 
 	request.details = container.NewVBox()
 	request.fileRow = newFileRow(m.ChooseCertificate, m.ChangeButton, m.CertificateHint, request.pickKey)
@@ -141,8 +152,8 @@ func newPageRequest(window fyne.Window, m messaging.Catalogue, review *applicati
 		case !request.finished && request.session != nil && request.deciding:
 			request.declined()
 			return
-		case !request.finished && request.cancel != nil:
-			request.cancel()
+		case !request.finished:
+			request.endCommand()
 		}
 		window.Close()
 	})
@@ -182,6 +193,11 @@ func (r *pageRequest) start(uri string) {
 
 // show presents a proposal or the outcome.
 func (r *pageRequest) show(step domain.PageStep, err error) {
+	// Once the page has its answer, the command ending is no news: the window
+	// closes after its moment.
+	if r.finished || (r.answered && (err != nil || step.Closed)) {
+		return
+	}
 	switch {
 	case err != nil:
 		r.finish(domain.PageOutcome{Error: err.Error()})
@@ -193,13 +209,58 @@ func (r *pageRequest) show(step domain.PageStep, err error) {
 		r.say(r.m.PageSessionClosed, widget.MediumImportance)
 	case step.Outcome != nil && step.Outcome.MissingLocalTLS:
 		r.offerLocalChannel()
-	case step.Outcome != nil && step.Outcome.Session:
-		r.between(*step.Outcome)
+	case step.Outcome != nil && step.Outcome.Answered():
+		r.answer(*step.Outcome)
 	case step.Outcome != nil:
 		r.finish(*step.Outcome)
 	case step.Proposal != nil:
+		r.reopen()
 		r.present(*step.Proposal)
 	}
+}
+
+// answer says that the page has its answer, or CANCEL, and closes the window
+// after answeredHold. The command is still read meanwhile: a request the page
+// sends at once is shown instead, and the window stays open for it.
+func (r *pageRequest) answer(outcome domain.PageOutcome) {
+	text, importance := r.outcomeText(outcome)
+	r.answered = true
+	r.generation++
+	r.deciding = false
+	r.proposal = domain.PageProposal{}
+	r.approve.Hide()
+	r.decline.Hide()
+	r.details.Objects = nil
+	r.details.Refresh()
+	for _, box := range []fyne.CanvasObject{r.keyBox, r.rememberedBox, r.documentRow.object(), r.saveRow.object(), r.sealBox} {
+		box.Hide()
+	}
+	r.say(text, importance)
+	generation := r.generation
+	r.later(answeredHold, func() {
+		if r.answered && r.generation == generation {
+			r.leave()
+		}
+	})
+	r.next()
+}
+
+// reopen gets the window ready for a request the page asks after its answer.
+func (r *pageRequest) reopen() {
+	if !r.answered {
+		return
+	}
+	r.answered = false
+	r.generation++
+	r.proposal = domain.PageProposal{}
+	r.approve.Show()
+	r.decline.Show()
+}
+
+// leave closes the window; the command goes with it when the window is gone.
+func (r *pageRequest) leave() {
+	r.finished = true
+	r.quit()
 }
 
 // next shows the session's next step, read off the UI thread.
@@ -212,17 +273,6 @@ func (r *pageRequest) next() {
 		step, err := session.Next()
 		fyne.Do(func() { r.show(step, err) })
 	})
-}
-
-// between says how one request of a local channel ended and waits for the
-// page's next one, shown afresh.
-func (r *pageRequest) between(outcome domain.PageOutcome) {
-	text, importance := r.outcomeText(outcome)
-	r.say(text+"\n"+r.m.PageNextRequest, importance)
-	r.approve.Disable()
-	r.decline.Disable()
-	r.proposal = domain.PageProposal{}
-	r.next()
 }
 
 // offerLocalChannel explains that the page needs the local certificate
@@ -336,6 +386,7 @@ func (r *pageRequest) present(proposal domain.PageProposal) {
 	if proposal.Saves() {
 		r.saveRow.object().Show()
 	}
+	r.approve.SetText(m.PageApprove)
 	switch proposal.Operation {
 	case "selectcert":
 		r.approve.SetText(m.PageApproveCertificate)
@@ -528,22 +579,41 @@ func (r *pageRequest) send(decision domain.PageDecision) {
 	})
 }
 
-// finish says how the request ended and leaves only Close.
+// finish says how the request ended and leaves only Close. The command is
+// ended, so a page that is left waiting on a failed request is let go.
 func (r *pageRequest) finish(outcome domain.PageOutcome) {
 	r.finished = true
 	r.approve.Hide()
 	r.decline.Hide()
 	r.closing.Show()
 	r.say(r.outcomeText(outcome))
-	session, cancel := r.session, r.cancel
-	r.run(func() {
-		if session != nil {
-			_ = session.Close()
-		}
-		if cancel != nil {
-			cancel()
-		}
-	})
+	r.endCommand()
+}
+
+// endCommand kills the command, which ends a local channel with it.
+func (r *pageRequest) endCommand() {
+	if r.cancel != nil {
+		r.cancel()
+	}
+}
+
+// stop runs once the window is gone: it ends the command and waits, for at
+// most patience, until it has gone, so no local channel outlives the process.
+func (r *pageRequest) stop(patience time.Duration) {
+	r.endCommand()
+	session := r.session
+	if session == nil {
+		return
+	}
+	done := make(chan struct{})
+	go func() {
+		_ = session.Close()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(patience):
+	}
 }
 
 // outcomeText is how a request ended, in the person's words.
@@ -610,3 +680,15 @@ const pageRequestTimeout = 15 * time.Minute
 
 // localChannelTimeout bounds a local channel's whole session.
 const localChannelTimeout = 4 * time.Hour
+
+// answeredHold is how long an answer stays on screen before the window closes,
+// unless the page asks for another request meanwhile.
+const answeredHold = 1500 * time.Millisecond
+
+// commandPatience bounds the wait for the command to go once the window has.
+const commandPatience = 3 * time.Second
+
+// afterDelay runs work on the UI thread once the delay has passed.
+func afterDelay(delay time.Duration, work func()) {
+	time.AfterFunc(delay, func() { fyne.Do(work) })
+}

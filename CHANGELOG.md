@@ -1018,6 +1018,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The approval window of an `afirma://` request closes once the page has its
+  answer. It shows the answer for a moment (about 1.5 seconds), then closes and
+  ends the local channel, so the process exits instead of waiting on Close; a
+  request the page sends at once is shown in its place. A declined request is
+  answered `CANCEL` and the window closes the same way, and a failure stays on
+  screen with its error. The channel's outcome is reported once the answer is on
+  the socket, so ending the channel cannot cut it short.
+
 - The window names a browser's store after the browser that keeps it: the
   primary password's label reads "Contraseña maestra de LibreWolf" (or the
   browser's name in each language), where it said "Firefox" for any store of the
