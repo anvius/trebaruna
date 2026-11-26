@@ -56,7 +56,8 @@ func (r CommandLineCardReader) Cards(ctx context.Context) ([]domain.CardCertific
 	}
 
 	var printed struct {
-		Slots []struct {
+		Browser string `json:"browser"`
+		Slots   []struct {
 			Description  string `json:"description"`
 			Token        string `json:"token"`
 			PIN          string `json:"pin"`
@@ -97,6 +98,7 @@ func (r CommandLineCardReader) Cards(ctx context.Context) ([]domain.CardCertific
 				Serial:         certificate.Serial,
 				SignsByDefault: certificate.SignsByDefault,
 				Store:          r.Store,
+				Browser:        printed.Browser,
 				Credential:     certificate.Credential,
 				Summary: domain.CertificateSummary{
 					Holder:     certificate.Name,

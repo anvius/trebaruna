@@ -16,6 +16,9 @@ import (
 type SoftwareStore struct {
 	// Name says whose store it is, for messages and listings.
 	Name string
+	// Browser is the program the store belongs to as its users know it
+	// ("LibreWolf"); the window names it in the primary password's label.
+	Browser string
 	// Directory holds cert9.db and key4.db.
 	Directory string
 }
@@ -62,7 +65,7 @@ func FirefoxStore() (SoftwareStore, bool) {
 
 // softwareStore is a found store as the signing code opens it.
 func softwareStore(store browserdomain.Store) SoftwareStore {
-	return SoftwareStore{Name: store.Name(), Directory: store.Directory}
+	return SoftwareStore{Name: store.Name(), Browser: store.Browser, Directory: store.Directory}
 }
 
 // NSSModule returns NSS's PKCS#11 module (softokn3) on this system, or the

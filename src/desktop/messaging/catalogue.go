@@ -134,77 +134,78 @@ type Catalogue struct {
 	CertificateExpiresSoon     string
 
 	// The card source of the signing form.
-	KeyFromFile                string
-	KeyFromCard                string
-	KeyFromFirefox             string
-	KeyFromRemote              string
-	RemoteAddressLabel         string
-	RemoteUserLabel            string
-	RemotePasswordLabel        string
-	RemoteClientLabel          string
-	RemoteAccountHint          string
-	RemoteOTPLabel             string
-	SearchRemote               string
-	NoRemoteCredentials        string
-	RemotePINPlaceholder       string
-	RemoteWhere                string
-	MissingService             string
-	FirefoxWhere               string
-	FirefoxPasswordPlaceholder string
-	NoFirefoxCertificates      string
-	SearchCards                string
-	CardsSearching             string
-	NoCards                    string
-	CardPlaceholder            string
-	CardSigningRole            string
-	CardOtherRole              string
-	CardWhere                  string
-	PINPlaceholder             string
-	PINPadHint                 string
-	PINCountLow                string
-	PINFinalTry                string
-	CardLocked                 string
-	PINExpired                 string
-	MissingPIN                 string
-	WrongPIN                   string
-	WrongPINFinalTry           string
-	WrongPINNowLocked          string
-	BatchNotTried              string
-	FormatPAdESLabel           string
-	FormatCAdESLabel           string
-	FormatXAdESLabel           string
-	FormatODFLabel             string
-	FormatOOXMLLabel           string
-	FormatAsPDFLabel           string
-	RubricLabel                string
-	ChooseRubric               string
-	RubricHint                 string
-	RemoveRubric               string
-	RubricInvalid              string
-	PreviewApproximate         string
-	PreviousPage               string
-	NextPage                   string
-	FormatOnlyCAdES            string
-	SealOnPagePane             string
-	FormFieldLabel             string
-	FormFieldNone              string
-	FormFieldOption            string
-	FormFieldsOffered          string
-	FormFieldSealHint          string
-	MoreOptions                string
-	LevelBasicLabel            string
-	LevelTimestampLabel        string
-	LevelLongTermLabel         string
-	LevelArchiveLabel          string
-	LevelHint                  string
-	LocationPlaceholder        string
-	SignedAs                   string
-	OpenSigned                 string
-	ShowFolder                 string
-	CheckSignature             string
-	TSAUserLabel               string
-	TSAPasswordLabel           string
-	TSAAccountHint             string
+	KeyFromFile           string
+	KeyFromCard           string
+	KeyFromFirefox        string
+	KeyFromRemote         string
+	RemoteAddressLabel    string
+	RemoteUserLabel       string
+	RemotePasswordLabel   string
+	RemoteClientLabel     string
+	RemoteAccountHint     string
+	RemoteOTPLabel        string
+	SearchRemote          string
+	NoRemoteCredentials   string
+	RemotePINPlaceholder  string
+	RemoteWhere           string
+	MissingService        string
+	FirefoxWhere          string
+	StoreMasterPassword   string
+	StoreMasterPasswordOf string
+	NoFirefoxCertificates string
+	SearchCards           string
+	CardsSearching        string
+	NoCards               string
+	CardPlaceholder       string
+	CardSigningRole       string
+	CardOtherRole         string
+	CardWhere             string
+	PINPlaceholder        string
+	PINPadHint            string
+	PINCountLow           string
+	PINFinalTry           string
+	CardLocked            string
+	PINExpired            string
+	MissingPIN            string
+	WrongPIN              string
+	WrongPINFinalTry      string
+	WrongPINNowLocked     string
+	BatchNotTried         string
+	FormatPAdESLabel      string
+	FormatCAdESLabel      string
+	FormatXAdESLabel      string
+	FormatODFLabel        string
+	FormatOOXMLLabel      string
+	FormatAsPDFLabel      string
+	RubricLabel           string
+	ChooseRubric          string
+	RubricHint            string
+	RemoveRubric          string
+	RubricInvalid         string
+	PreviewApproximate    string
+	PreviousPage          string
+	NextPage              string
+	FormatOnlyCAdES       string
+	SealOnPagePane        string
+	FormFieldLabel        string
+	FormFieldNone         string
+	FormFieldOption       string
+	FormFieldsOffered     string
+	FormFieldSealHint     string
+	MoreOptions           string
+	LevelBasicLabel       string
+	LevelTimestampLabel   string
+	LevelLongTermLabel    string
+	LevelArchiveLabel     string
+	LevelHint             string
+	LocationPlaceholder   string
+	SignedAs              string
+	OpenSigned            string
+	ShowFolder            string
+	CheckSignature        string
+	TSAUserLabel          string
+	TSAPasswordLabel      string
+	TSAAccountHint        string
 
 	// Menus and dialogs.
 	MenuFile                 string
@@ -529,7 +530,8 @@ var spanish = Catalogue{
 	RemoteWhere:                "Guardada por %s: firma allí; de aquí solo sale la huella del documento.",
 	MissingService:             "Escribe la dirección del servicio de firma remota.",
 	FirefoxWhere:               "En el almacén de certificados de Firefox: se usa allí mismo, sin exportarlo.",
-	FirefoxPasswordPlaceholder: "Contraseña maestra de Firefox",
+	StoreMasterPassword:        "Contraseña maestra del navegador",
+	StoreMasterPasswordOf:      "Contraseña maestra de %s",
 	NoFirefoxCertificates:      "Firefox no guarda ningún certificado con su clave. Impórtalo en Firefox (Ajustes, Privacidad y seguridad, Ver certificados) o elige otro origen.",
 	SearchCards:                "Buscar tarjetas",
 	CardsSearching:             "Buscando tarjetas en los lectores…",
@@ -882,7 +884,8 @@ var italian = Catalogue{
 	RemoteWhere:                "Custodita da %s: firma lì; da qui esce solo l'impronta del documento.",
 	MissingService:             "Scrivi l'indirizzo del servizio di firma remota.",
 	FirefoxWhere:               "Nell'archivio certificati di Firefox: viene usato lì, senza esportarlo.",
-	FirefoxPasswordPlaceholder: "Password principale di Firefox",
+	StoreMasterPassword:        "Password principale del browser",
+	StoreMasterPasswordOf:      "Password principale di %s",
 	NoFirefoxCertificates:      "Firefox non conserva alcun certificato con la sua chiave. Importalo in Firefox (Impostazioni, Privacy e sicurezza, Mostra certificati) o scegli un'altra origine.",
 	SearchCards:                "Cerca carte",
 	CardsSearching:             "Ricerca delle carte nei lettori…",
@@ -1235,7 +1238,8 @@ var english = Catalogue{
 	RemoteWhere:                "Kept by %s: it signs there; only the document's hash leaves this computer.",
 	MissingService:             "Type the remote signing service's address.",
 	FirefoxWhere:               "In Firefox's certificate store: used there, never exported.",
-	FirefoxPasswordPlaceholder: "Firefox primary password",
+	StoreMasterPassword:        "Browser primary password",
+	StoreMasterPasswordOf:      "%s primary password",
 	NoFirefoxCertificates:      "Firefox holds no certificate with its key. Import it in Firefox (Settings, Privacy & Security, View Certificates) or choose another source.",
 	SearchCards:                "Look for cards",
 	CardsSearching:             "Looking for cards in the readers…",

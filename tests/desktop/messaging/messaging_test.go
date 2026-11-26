@@ -148,3 +148,24 @@ func contains(haystack, needle string) bool {
 	}
 	return false
 }
+
+// TestTheStoreMasterPasswordIsNamedAfterItsBrowser: the label says which
+// program keeps the store, in every language, and never the wrong one.
+func TestTheStoreMasterPasswordIsNamedAfterItsBrowser(t *testing.T) {
+	for _, language := range messaging.Languages() {
+		catalogue := messaging.For(language)
+		if n := len(verbs.FindAllString(catalogue.StoreMasterPasswordOf, -1)); n != 1 {
+			t.Errorf("%s StoreMasterPasswordOf has %d verbs, want one for the browser", language, n)
+		}
+		named := fmt.Sprintf(catalogue.StoreMasterPasswordOf, "LibreWolf")
+		if !strings.Contains(named, "LibreWolf") || strings.Contains(named, "Firefox") {
+			t.Errorf("%s names the store %q, want LibreWolf and no other browser", language, named)
+		}
+		if strings.Contains(catalogue.StoreMasterPassword, "Firefox") {
+			t.Errorf("%s has %q for a store of any browser", language, catalogue.StoreMasterPassword)
+		}
+	}
+	if got := fmt.Sprintf(messaging.For(messaging.Spanish).StoreMasterPasswordOf, "LibreWolf"); got != "Contraseña maestra de LibreWolf" {
+		t.Errorf("Spanish label %q", got)
+	}
+}

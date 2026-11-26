@@ -851,7 +851,7 @@ func (f *signForm) keySourceChanged() {
 		f.showListedSource("card", f.cardList, f.m.NoCards, f.m.PINPlaceholder, f.m.SearchCards)
 		return
 	case f.m.KeyFromFirefox:
-		f.showListedSource(domain.StoreFirefox, f.storeList, f.m.NoFirefoxCertificates, f.m.FirefoxPasswordPlaceholder, f.m.SearchCards)
+		f.showListedSource(domain.StoreFirefox, f.storeList, f.m.NoFirefoxCertificates, f.m.StoreMasterPassword, f.m.SearchCards)
 		return
 	case f.m.KeyFromRemote:
 		f.remote.object().Show()

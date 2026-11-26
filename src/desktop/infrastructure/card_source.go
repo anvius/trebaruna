@@ -133,6 +133,9 @@ func (c *cardSource) listed(certificates []domain.CardCertificate, err error) {
 		previous = c.chosen.Fingerprint
 	}
 	c.certificates = certificates
+	if browser := storeBrowser(certificates); browser != "" {
+		c.pin.SetPlaceHolder(fmt.Sprintf(c.m.StoreMasterPasswordOf, browser))
+	}
 	c.chosen = nil
 	c.choice.Options = c.labels()
 	c.choice.Selected = ""
@@ -163,6 +166,16 @@ func (c *cardSource) listed(certificates []domain.CardCertificate, err error) {
 		return
 	}
 	c.choice.SetSelected(c.choice.Options[selected])
+}
+
+// storeBrowser is the browser whose store the listing holds, or empty.
+func storeBrowser(certificates []domain.CardCertificate) string {
+	for _, certificate := range certificates {
+		if certificate.Store == domain.StoreFirefox && certificate.Browser != "" {
+			return certificate.Browser
+		}
+	}
+	return ""
 }
 
 // labels names each certificate by its holder. Two certificates with the

@@ -182,3 +182,36 @@ func TestTheStoreIsListedLikeACard(t *testing.T) {
 	}
 	t.Fatalf("the store's certificate was not listed:\n%s", stdout.String())
 }
+
+// TestTheStoreListingNamesTheBrowser: a LibreWolf profile's store is listed
+// with LibreWolf as its browser, which the window's label names.
+func TestTheStoreListingNamesTheBrowser(t *testing.T) {
+	directory, _ := nssStore(t, "")
+
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
+	t.Setenv("XDG_DATA_HOME", filepath.Join(home, ".local", "share"))
+	profiles := filepath.Join(home, ".config", "librewolf", "librewolf")
+	if err := os.MkdirAll(profiles, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	ini := "[Profile0]\nName=default\nIsRelative=0\nPath=" + directory + "\nDefault=1\n\n[General]\nVersion=2\n"
+	if err := os.WriteFile(filepath.Join(profiles, "profiles.ini"), []byte(ini), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if code := cli.Run([]string{"token", "--firefox", "--json"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("token --firefox: %s", stderr.String())
+	}
+	var listing struct {
+		Browser string `json:"browser"`
+	}
+	if err := json.Unmarshal(stdout.Bytes(), &listing); err != nil {
+		t.Fatalf("%v\n%s", err, stdout.String())
+	}
+	if listing.Browser != "LibreWolf" {
+		t.Errorf("browser %q, want LibreWolf (the store is the profile LibreWolf starts with)", listing.Browser)
+	}
+}

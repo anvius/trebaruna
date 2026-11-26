@@ -23,6 +23,19 @@ type storeOptions struct {
 // chosen reports whether a store was named.
 func (o storeOptions) chosen() bool { return o.firefox || o.directory != "" }
 
+// browser names the browser whose store --firefox opens, for the window's
+// label; any other store has none.
+func (o storeOptions) browser() string {
+	if !o.firefox {
+		return ""
+	}
+	found, ok := infrastructure.FirefoxStore()
+	if !ok {
+		return ""
+	}
+	return found.Browser
+}
+
 // resolve finds the store and NSS's module. The store opens read-only: the
 // browser's database is never changed.
 func (o storeOptions) resolve() (store infrastructure.SoftwareStore, module string, err error) {

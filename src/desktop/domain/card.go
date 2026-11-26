@@ -26,6 +26,9 @@ type CardCertificate struct {
 	// Store names the software store the certificate lives in ("firefox"),
 	// or the remote service ("csc"); empty for a card.
 	Store string
+	// Browser names the browser whose store holds the certificate ("LibreWolf"),
+	// empty when the certificate is not in a browser's store.
+	Browser string
 	// Credential is the remote service's credential the certificate is
 	// the key of; empty elsewhere.
 	Credential string

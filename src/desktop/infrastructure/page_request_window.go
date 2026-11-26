@@ -420,7 +420,7 @@ func (r *pageRequest) keySourceChanged() {
 	case r.m.KeyFromFirefox:
 		r.fileSource.Hide()
 		r.cards.object().Show()
-		r.cards.switchTo(r.storeList, r.m.NoFirefoxCertificates, r.m.FirefoxPasswordPlaceholder, r.m.SearchCards)
+		r.cards.switchTo(r.storeList, r.m.NoFirefoxCertificates, r.m.StoreMasterPassword, r.m.SearchCards)
 	}
 }
 

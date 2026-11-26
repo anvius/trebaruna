@@ -59,7 +59,7 @@ func runToken(args []string, stdout, stderr io.Writer) int {
 			return exitInvalid
 		}
 		if *asJSON {
-			return printTokenJSON(stdout, slots, *territory)
+			return printTokenJSON(stdout, slots, *territory, "")
 		}
 		for _, slot := range slots {
 			fmt.Fprint(stdout, formatTokenSlot(slot))
@@ -67,11 +67,12 @@ func runToken(args []string, stdout, stderr io.Writer) int {
 		return exitOK
 	}
 
-	path, parameters, err := cardModule(*module, storeOptions{firefox: *firefox, directory: *nssDB})
+	store := storeOptions{firefox: *firefox, directory: *nssDB}
+	path, parameters, err := cardModule(*module, store)
 	if errors.Is(err, errNoFirefoxProfile) && *asJSON {
 		// For a listing, no Firefox store holds no certificate: the window
 		// says how to import one instead of showing an error.
-		return printTokenJSON(stdout, nil, *territory)
+		return printTokenJSON(stdout, nil, *territory, "")
 	}
 	if err != nil {
 		fmt.Fprintf(stderr, "%v\n", err)
@@ -91,7 +92,7 @@ func runToken(args []string, stdout, stderr io.Writer) int {
 	}
 
 	if *asJSON {
-		return printTokenJSON(stdout, slots, *territory)
+		return printTokenJSON(stdout, slots, *territory, store.browser())
 	}
 
 	if len(slots) == 0 {
@@ -144,14 +145,16 @@ type tokenCertificateJSON struct {
 }
 
 // printTokenJSON writes the slots as JSON, judging each certificate's issuer
-// against the trusted list of the territory.
-func printTokenJSON(stdout io.Writer, slots []infrastructure.TokenSlot, territory string) int {
+// against the trusted list of the territory. browser names the browser whose
+// store the slots are, when a store was listed.
+func printTokenJSON(stdout io.Writer, slots []infrastructure.TokenSlot, territory, browser string) int {
 	list, _ := verificationinfra.NewCachedTrustProvider().Load(territory)
 	roots, _, _ := list.AnchorPool()
 
 	printed := struct {
-		Slots []tokenSlotJSON `json:"slots"`
-	}{Slots: []tokenSlotJSON{}}
+		Browser string          `json:"browser,omitempty"`
+		Slots   []tokenSlotJSON `json:"slots"`
+	}{Browser: browser, Slots: []tokenSlotJSON{}}
 	for _, slot := range slots {
 		entry := tokenSlotJSON{
 			Index: slot.Index, Description: slot.Description, Token: slot.TokenLabel,

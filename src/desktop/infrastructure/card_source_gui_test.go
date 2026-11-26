@@ -250,7 +250,7 @@ func TestTheFirefoxStoreIsASourceToo(t *testing.T) {
 	fixture := newFormFixtureWithCards(t, scriptedCertificate{summary: qualifiedRossi()}, &scriptedCards{})
 	form := fixture.desktop.form
 	store := identityCard(signing.PINNotRequired)[:1]
-	store[0].Store, store[0].Token = domain.StoreFirefox, "NSS Certificate DB"
+	store[0].Store, store[0].Token, store[0].Browser = domain.StoreFirefox, "NSS Certificate DB", "LibreWolf"
 	form.storeList = application.NewListCards(&scriptedCards{listings: [][]domain.CardCertificate{store}})
 	form.setDocument("/tmp/offerta.docx")
 
@@ -261,8 +261,8 @@ func TestTheFirefoxStoreIsASourceToo(t *testing.T) {
 		t.Errorf("where %q, PIN enabled %t: a store without a primary password asks for nothing",
 			form.cards.where.Text, !form.cards.pin.Disabled())
 	}
-	if form.cards.pin.PlaceHolder != form.m.FirefoxPasswordPlaceholder {
-		t.Errorf("the store's PIN is Firefox's primary password, not %q", form.cards.pin.PlaceHolder)
+	if want := strings.Replace(form.m.StoreMasterPasswordOf, "%s", "LibreWolf", 1); form.cards.pin.PlaceHolder != want {
+		t.Errorf("the store's PIN is named after its browser: %q, want %q", form.cards.pin.PlaceHolder, want)
 	}
 	test.Tap(form.signButton)
 	intent := <-fixture.signer.intents

@@ -1018,6 +1018,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The window names a browser's store after the browser that keeps it: the
+  primary password's label reads "Contraseña maestra de LibreWolf" (or the
+  browser's name in each language), where it said "Firefox" for any store of the
+  Firefox family. `trebaruna token --json` names the browser as `browser`, and
+  the card reader sets it on each certificate of a store.
+
 - The certificates the approval window and `trebaruna token` offer are only
   those that can sign: the certificate has its private key on the card or in
   the store, it is valid today, it is not a certificate authority's, and its key
